@@ -1,16 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Şifre Listesi{% endblock %}
+{% block title %}Sifre Listesi{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-10">
   <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
 
     <div class="bg-okul-800 px-6 py-4 text-white font-bold text-center">
-      🔑 Yönetici — Öğretmen Şifre Listesi
+      🔑 Yonetici — Ogretmen Sifre Listesi
     </div>
 
     {% if not liste %}
-    <!-- Doğrulama formu -->
     <form method="POST" class="p-6 space-y-4">
       {% if hata %}
       <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
@@ -18,28 +17,27 @@
       </div>
       {% endif %}
       <p class="text-sm text-slate-600 text-center">
-        Şifre listesini görmek için yönetici şifresini girin.
+        Sifre listesini gormek icin yonetici sifresini girin.
       </p>
-      <input type="password" name="admin_sifre" placeholder="Yönetici Şifresi"
+      <input type="password" name="admin_sifre" placeholder="Yonetici Sifresi"
              class="w-full border border-slate-300 rounded-xl px-4 py-3
                     font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
       <button type="submit"
               class="w-full bg-okul-800 hover:bg-okul-700 text-white
                      font-bold py-3 rounded-xl transition">
-        Görüntüle
+        Goruntule
       </button>
       <div class="text-center">
         <a href="{{ url_for('login') }}" class="text-xs text-slate-400 hover:text-slate-600">
-          ← Giriş sayfasına dön
+          Giris sayfasina don
         </a>
       </div>
     </form>
 
     {% else %}
-    <!-- Şifre listesi -->
     <div class="p-4">
       <p class="text-xs text-slate-500 text-center mb-3">
-        Bu listeyi yazdırıp öğretmenlere dağıtabilirsiniz.
+        Bu listeyi yazdirip ogretmenlere dagitabilirsiniz.
       </p>
       <div class="space-y-1">
         {% for k in liste %}
@@ -54,7 +52,7 @@
       <div class="mt-4 text-center">
         <a href="{{ url_for('login') }}"
            class="bg-okul-800 text-white text-sm px-6 py-2 rounded-xl hover:bg-okul-700">
-          ← Giriş Sayfası
+          Giris Sayfasi
         </a>
       </div>
     </div>

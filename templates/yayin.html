@@ -3,214 +3,814 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📺 Yayın Modu — {{ sinif_adi }}</title>
+  <title>Erenler Cumhuriyet Ortaokulu — Canli Pano</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
-    body { background:#060c1a; font-family:'Segoe UI',system-ui,sans-serif; }
+    body { background:#060c1a; font-family:'Segoe UI',system-ui,sans-serif; overflow:hidden; height:100vh; }
 
-    @keyframes pulse-danger {
+    @keyframes pulse-kirmizi {
       0%,100% { background-color:#1f0606; border-color:#7f1d1d; }
       50%      { background-color:#2d0a0a; border-color:#ef4444; }
     }
+    @keyframes pulse-mor {
+      0%,100% { background-color:#1a0a2e; border-color:#6b21a8; }
+      50%      { background-color:#250d3f; border-color:#a855f7; }
+    }
     @keyframes slide-in {
-      from { opacity:0; transform:translateX(60px); }
+      from { opacity:0; transform:translateX(40px); }
       to   { opacity:1; transform:translateX(0); }
     }
-    @keyframes count-up {
-      from { transform:scale(0.5); opacity:0; }
-      to   { transform:scale(1);   opacity:1; }
+    @keyframes glow-altin {
+      0%,100% { box-shadow: 0 0 12px #fbbf24; }
+      50%      { box-shadow: 0 0 32px #fbbf24, 0 0 60px #f59e0b; }
     }
-    @keyframes tick-clock {
+    @keyframes konfeti-zirve {
+      0%   { transform:scale(0.8); opacity:0; }
+      60%  { transform:scale(1.08); }
+      100% { transform:scale(1); opacity:1; }
+    }
+    @keyframes vs-pulse {
+      0%,100% { transform:scale(1);   color:#f97316; }
+      50%      { transform:scale(1.3); color:#ef4444; }
+    }
+    @keyframes mac-bekle-pulse {
       0%,100% { opacity:1; }
-      50%      { opacity:.5; }
+      50%      { opacity:0.4; }
+    }
+    @keyframes kadro-kart-giris {
+      0%   { opacity:0; transform:translateY(20px) scale(0.85); }
+      70%  { transform:translateY(-3px) scale(1.03); }
+      100% { opacity:1; transform:translateY(0) scale(1); }
+    }
+    @keyframes kadro-title-glow {
+      0%,100% { text-shadow: 0 0 8px #f59e0b; }
+      50%      { text-shadow: 0 0 20px #fbbf24, 0 0 40px #f59e0b; }
+    }
+    @keyframes kazanan-banner {
+      0%   { opacity:0; transform:scale(0.9); }
+      100% { opacity:1; transform:scale(1); }
+    }
+    @keyframes zemin-kayan {
+      from { background-position: 0 0; }
+      to   { background-position: 60px 60px; }
+    }
+    @keyframes fade-in {
+      from { opacity:0; }
+      to   { opacity:1; }
     }
 
-    .card-danger  { animation: pulse-danger 1.4s ease-in-out infinite; }
-    .card-warning { background:#1a1200; border-color:#92400e; }
-    .card-clean   { background:#091a0e; border-color:#166534; }
+    .card-disiplin { animation: pulse-mor 1.2s ease-in-out infinite; border-width:2px; }
+    .card-tutanak  { animation: pulse-kirmizi 1.4s ease-in-out infinite; border-width:2px; }
+    .card-veli     { background:#1a0900; border-color:#c2410c; border-width:2px; }
+    .card-uyari    { background:#1a1200; border-color:#92400e; }
+    .card-temiz    { background:#071a0e; border-color:#166534; }
+    .slide-in      { animation: slide-in .35s ease forwards; opacity:0; }
+    .altin-glow    { animation: glow-altin 2s ease-in-out infinite; }
+    .zirve-animasyon { animation: konfeti-zirve .6s ease forwards; }
+    .vs-text       { animation: vs-pulse 1s ease-in-out infinite; }
+    .mac-bekle     { animation: mac-bekle-pulse 2s ease-in-out infinite; }
+    .kadro-kart    { animation: kadro-kart-giris .5s ease both; opacity:0; }
+    .kadro-title   { animation: kadro-title-glow 2s ease-in-out infinite; }
+    .kazanan-banner { animation: kazanan-banner .6s ease both; }
 
-    .slide-in { animation: slide-in .4s ease forwards; opacity:0; }
-    .count-up { animation: count-up .3s ease forwards; }
-    .clock    { animation: tick-clock 1s step-end infinite; }
+    .futbol-zemini {
+      background-image:
+        linear-gradient(rgba(0,100,0,0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,100,0,0.08) 1px, transparent 1px);
+      background-size: 30px 30px;
+      animation: zemin-kayan 8s linear infinite;
+    }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width:4px; }
-    ::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px; }
+    .tab-aktif { background:#1e40af; color:#fff; }
+    .tab-pasif  { background:#0f172a; color:#64748b; }
+
+    .panel-scroll { overflow-y:auto; }
+    .panel-scroll::-webkit-scrollbar { width:3px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="flex flex-col" style="height:100vh">
 
-<!-- ── Üst Başlık ──────────────────────────────────────────────────────── -->
-<header style="background:#0a1228" class="flex-shrink-0 border-b border-slate-800">
-  <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header style="background:#08112a" class="flex-shrink-0 border-b border-slate-800">
+  <!-- Navigasyon şeridi -->
+  <div class="flex items-center gap-1.5 px-3 py-1 border-b border-slate-800" style="background:#04090f">
+    <button onclick="history.back()"
+            class="px-2 py-0.5 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+      ◀ Geri
+    </button>
+    <button onclick="history.forward()"
+            class="px-2 py-0.5 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+      İleri ▶
+    </button>
+    <a href="/dashboard"
+       class="px-2.5 py-0.5 rounded text-xs font-bold bg-blue-900 hover:bg-blue-800 text-blue-300 transition">
+      🏠 Ana Menü
+    </a>
+    <div class="flex-1"></div>
+    <button onclick="window.close()"
+            class="px-2.5 py-0.5 rounded text-xs font-bold bg-red-900 hover:bg-red-800 text-red-300 transition">
+      ✕ Kapat
+    </button>
+  </div>
+  <div class="px-4 py-1.5 flex items-center justify-between">
     <div>
-      <div class="text-blue-300 font-bold text-lg sm:text-xl">
-        Erenler Cumhuriyet Ortaokulu
-      </div>
-      <div class="text-slate-500 text-sm">
-        Canlı Disiplin Panosu &nbsp;·&nbsp;
-        <span class="text-blue-400 font-semibold">{{ sinif_adi }} Şubesi</span>
-      </div>
+      <div class="text-blue-300 font-bold text-sm">Erenler Cumhuriyet Ortaokulu</div>
+      <div class="text-slate-500 text-xs">Canlı Disiplin &amp; Süper Lig Panosu</div>
     </div>
     <div class="text-right">
-      <div id="saat" class="text-slate-300 font-mono text-xl sm:text-2xl clock">--:--:--</div>
-      <div class="text-slate-600 text-xs mt-0.5" id="guncelleme">Yükleniyor...</div>
+      <div id="saat" class="text-slate-300 font-mono text-xl">--:--:--</div>
+      <div class="text-slate-600 text-xs" id="guncelleme-bilgi">Yükleniyor...</div>
+    </div>
+  </div>
+  <div class="flex border-t border-slate-800 relative">
+    <button id="tab-disiplin"
+            class="tab-aktif flex-1 py-2 text-xs font-bold tracking-wide transition">
+      🚨 Disiplin
+    </button>
+    <button id="tab-lig"
+            class="tab-pasif flex-1 py-2 text-xs font-bold tracking-wide transition">
+      ⚽ Süper Lig
+    </button>
+    <button id="tab-oduller"
+            class="tab-pasif flex-1 py-2 text-xs font-bold tracking-wide transition">
+      🎮 Ödüller
+    </button>
+    <!-- Geri sayım göstergesi -->
+    <div class="absolute right-1 top-0 bottom-0 flex items-center pointer-events-none">
+      <span id="tab-countdown"
+            class="text-[9px] font-black text-slate-600 bg-slate-900 px-1.5 py-0.5 rounded-full border border-slate-700">
+        10s
+      </span>
     </div>
   </div>
 </header>
 
-<!-- ── Efsane ──────────────────────────────────────────────────────────── -->
-<div style="background:#080f20"
-     class="flex-shrink-0 flex justify-center gap-6 py-2 border-b border-slate-800/60">
-  <span class="text-xs text-emerald-400">✅ Temiz</span>
-  <span class="text-xs text-amber-400">⚠️ Uyarı (1–2 tik)</span>
-  <span class="text-xs text-red-400">🚨 İdari İşlem (3+ tik)</span>
+<!-- ────────────────────────── DİSİPLİN PANOSU ─────────────────────────── -->
+<div id="panel-disiplin" class="flex-1 panel-scroll px-3 py-3">
+  <div id="liste-disiplin" class="max-w-5xl mx-auto space-y-2">
+    <div class="text-slate-600 text-center py-10">Yukleniyor...</div>
+  </div>
 </div>
 
-<!-- ── Öğrenci Listesi ─────────────────────────────────────────────────── -->
-<main class="flex-1 overflow-y-auto px-3 py-4">
-  <div id="liste" class="max-w-4xl mx-auto space-y-2">
-    <div class="text-slate-600 text-center py-10 text-sm">Yükleniyor...</div>
-  </div>
-</main>
+<!-- ────────────────────────── SUPER LIG ───────────────────────────────── -->
+<div id="panel-lig" class="flex-1 hidden overflow-hidden relative">
 
-<!-- ── Alt Çubuk ───────────────────────────────────────────────────────── -->
-<footer style="background:#080f20"
-        class="flex-shrink-0 border-t border-slate-800 px-6 py-2
-               flex items-center justify-between">
-  <button onclick="window.close()"
-          class="text-slate-500 hover:text-slate-300 text-xs transition">
-    ✕ Kapat
-  </button>
-  <div class="flex gap-3 text-xs">
-    <span id="stat-temiz" class="text-emerald-600">— temiz</span>
-    <span id="stat-uyari" class="text-amber-600">— uyarı</span>
-    <span id="stat-idari" class="text-red-600">— idari</span>
+  <!-- Sampiyon karti (Cuma 15:00) -->
+  <div id="sampiyon-karti" class="hidden absolute inset-x-0 top-6 z-50 flex justify-center pointer-events-none">
+    <div class="rounded-2xl border-2 border-yellow-400 altin-glow zirve-animasyon
+                text-center py-6 px-10" style="background:#1a1200">
+      <div class="text-5xl mb-2">🏆</div>
+      <div class="text-yellow-300 text-xs font-bold tracking-widest mb-1">BU HAFTANIN SAMPIYONU</div>
+      <div class="text-yellow-400 text-3xl font-black" id="sampiyon-adi">—</div>
+      <div class="text-yellow-600 text-sm mt-1" id="sampiyon-puan">—</div>
+    </div>
   </div>
-  <button onclick="yukle()"
-          class="text-slate-500 hover:text-slate-300 text-xs transition">
-    🔄 Yenile
-  </button>
+
+  <!-- Ana ızgara: Sol=Maçlar | Sağ=Tablo + Kadro -->
+  <div class="h-full grid grid-cols-2 gap-0 divide-x divide-slate-800">
+
+    <!-- ── SOL: Bugünkü Maçlar ─────────────────────────────── -->
+    <div class="panel-scroll px-3 py-3 flex flex-col gap-3">
+      <div class="flex items-center justify-between flex-shrink-0">
+        <h2 class="text-white font-black text-sm tracking-wide">⚽ BUGUNKU MACLAR</h2>
+        <span id="mac-tarih" class="text-slate-500 text-xs"></span>
+      </div>
+      <div id="liste-maclar" class="space-y-2">
+        <div class="text-slate-600 text-center py-6 text-xs">Yukleniyor...</div>
+      </div>
+    </div>
+
+    <!-- ── SAĞ: Puan Tablosu + Kadro ──────────────────────── -->
+    <div class="flex flex-col overflow-hidden">
+
+      <!-- Puan Tablosu (sabit yükseklik) -->
+      <div class="flex-shrink-0 px-3 pt-3 pb-2 border-b border-slate-800">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-white font-black text-sm tracking-wide">🏆 PUAN TABLOSU</h2>
+          <span class="text-slate-600 text-[10px]">Olumlu + Mac puanlari</span>
+        </div>
+        <div class="rounded-xl overflow-hidden border border-slate-700" style="background:#080f20">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="border-b border-slate-700 text-slate-400">
+                <th class="py-1.5 px-2 text-left w-6">#</th>
+                <th class="py-1.5 px-2 text-left">Sinif</th>
+                <th class="py-1.5 px-2 text-center w-7">G</th>
+                <th class="py-1.5 px-2 text-center w-7">B</th>
+                <th class="py-1.5 px-2 text-center w-7">M</th>
+                <th class="py-1.5 px-2 text-center w-9">O+</th>
+                <th class="py-1.5 px-3 text-center w-10 font-black text-white">P</th>
+              </tr>
+            </thead>
+            <tbody id="tablo-body">
+              <tr><td colspan="7" class="py-4 text-center text-slate-600">Yukleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Kadro Alanı (kalan yükseklik) -->
+      <div class="flex-1 overflow-hidden flex flex-col futbol-zemini">
+
+        <!-- Kadro başlığı -->
+        <div class="flex-shrink-0 px-2 pt-1.5 pb-1" style="background:rgba(0,0,0,0.65)">
+          <div class="text-yellow-400 text-[9px] font-bold tracking-widest kadro-title text-center">
+            ERENLER SUPER LIG — KADRO LISTESI
+          </div>
+          <!-- İki takım adı yan yana -->
+          <div class="flex items-center justify-center gap-2 mt-0.5">
+            <div id="kadro-s1-adi" class="text-indigo-300 font-black text-xs flex-1 text-right truncate">—</div>
+            <div class="text-white font-black text-xs flex-shrink-0">⚔️</div>
+            <div id="kadro-s2-adi" class="text-purple-300 font-black text-xs flex-1 text-left truncate">—</div>
+          </div>
+          <div id="kadro-dongu-bilgi" class="text-slate-600 text-[9px] text-center mt-0.5"></div>
+        </div>
+
+        <!-- İki takım yan yana -->
+        <div class="flex-1 overflow-hidden grid grid-cols-2 divide-x divide-green-900/40">
+          <div id="kadro-grid-1"
+               class="panel-scroll p-1 grid grid-cols-2 gap-1"
+               style="align-content:start"></div>
+          <div id="kadro-grid-2"
+               class="panel-scroll p-1 grid grid-cols-2 gap-1"
+               style="align-content:start"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─────────────────────────── ÖDÜLLER PANOSU ──────────────────────────── -->
+<div id="panel-oduller" class="flex-1 hidden panel-scroll px-3 py-3">
+  <div class="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+    <!-- Gizli Müfettiş -->
+    <div class="rounded-2xl border border-amber-700 overflow-hidden" style="background:#1a0d00">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#78350f">
+        <span class="text-2xl">🕵️</span>
+        <div class="font-black text-amber-300 text-sm">Gizli Müfettiş</div>
+      </div>
+      <div id="od-mufettis" class="p-4 text-center text-slate-500 text-sm">Yükleniyor...</div>
+    </div>
+
+    <!-- Günlük Görev -->
+    <div class="rounded-2xl border border-indigo-700 overflow-hidden" style="background:#0f0b2e">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#312e81">
+        <span class="text-2xl">🎯</span>
+        <div class="font-black text-indigo-300 text-sm">Bugünün Gizli Görevi</div>
+      </div>
+      <div id="od-gorev" class="p-4 text-center text-slate-500 text-sm">Yükleniyor...</div>
+    </div>
+
+    <!-- Son Alkışlar -->
+    <div class="rounded-2xl border border-pink-800 overflow-hidden" style="background:#1a0015">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#831843">
+        <span class="text-2xl">👏</span>
+        <div class="font-black text-pink-300 text-sm">Son Alkışlar</div>
+      </div>
+      <div id="od-alkis" class="p-3 space-y-1.5 text-slate-500 text-xs">Yükleniyor...</div>
+    </div>
+
+    <!-- Sezon Sıralaması -->
+    <div class="rounded-2xl border border-yellow-700 overflow-hidden" style="background:#0d1526">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#78350f">
+        <span class="text-2xl">🏆</span>
+        <div class="font-black text-yellow-300 text-sm">Dönem Şampiyonluğu</div>
+      </div>
+      <div id="od-sezon" class="p-3 space-y-1.5 text-slate-500 text-xs">Yükleniyor...</div>
+    </div>
+
+    <!-- Son Rozetler -->
+    <div class="rounded-2xl border border-indigo-800 overflow-hidden" style="background:#0d1526">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#1e1b4b">
+        <span class="text-2xl">🏅</span>
+        <div class="font-black text-indigo-300 text-sm">Son Kazanılan Rozetler</div>
+      </div>
+      <div id="od-rozet" class="p-3 space-y-1.5 text-slate-500 text-xs">Yükleniyor...</div>
+    </div>
+
+    <!-- Seriler -->
+    <div class="rounded-2xl border border-orange-800 overflow-hidden" style="background:#0d1526">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#7c2d12">
+        <span class="text-2xl">🔥</span>
+        <div class="font-black text-orange-300 text-sm">Olumlu Davranış Serileri</div>
+      </div>
+      <div id="od-seri" class="p-3 space-y-1.5 text-slate-500 text-xs">Yükleniyor...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────── -->
+<footer style="background:#080f20"
+        class="flex-shrink-0 border-t border-slate-800 px-4 py-1.5 flex items-center justify-between">
+  <div class="flex gap-3 text-xs flex-wrap">
+    <span id="stat-temiz"    class="text-emerald-600">—</span>
+    <span id="stat-uyari"    class="text-amber-500">—</span>
+    <span id="stat-veli"     class="text-orange-500">—</span>
+    <span id="stat-tutanak"  class="text-red-500">—</span>
+    <span id="stat-disiplin" class="text-purple-400">—</span>
+    <span class="text-slate-700">|</span>
+    <span id="stat-lig"      class="text-blue-400">—</span>
+    <span class="text-slate-700">|</span>
+    <span id="stat-seviye"   class="text-yellow-400">—</span>
+    <span id="stat-streak"   class="text-orange-400">—</span>
+  </div>
+  <span class="text-slate-700 text-xs">📺 Yayın Ekranı</span>
 </footer>
 
 <script>
-const SINIF_ID  = {{ sinif_id }};
-const REFRESH_S = 10;
-let countdown   = REFRESH_S;
+// ════════════════════════════════════════════════════════════════════════
+// Global
+// ════════════════════════════════════════════════════════════════════════
+let _ligData     = null;
+let _kadroIndex  = 0;
+let _kadroTimer  = null;
+const KADRO_SURE = 10;   // Saniye — her karsılasma 10sn goster
 
-// ── Saat ─────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// Saat
+// ════════════════════════════════════════════════════════════════════════
 function saatGuncelle() {
-  document.getElementById('saat').textContent =
-    new Date().toLocaleTimeString('tr-TR');
+  document.getElementById('saat').textContent = new Date().toLocaleTimeString('tr-TR');
 }
 setInterval(saatGuncelle, 1000);
 saatGuncelle();
 
-// ── Veri Yükleme ─────────────────────────────────────────────────────────
-async function yukle() {
-  countdown = REFRESH_S;
-  try {
-    const res  = await fetch(`/api/yayin/${SINIF_ID}`);
-    const data = await res.json();
-    renderListe(data);
-    const now = new Date().toLocaleTimeString('tr-TR');
-    document.getElementById('guncelleme').textContent = `Son güncelleme: ${now}`;
-  } catch(e) {
-    console.warn('Güncelleme hatası', e);
+// ════════════════════════════════════════════════════════════════════════
+// Tab
+// ════════════════════════════════════════════════════════════════════════
+const TABLAR = ['disiplin', 'lig', 'oduller'];
+let aktifTabIdx = 0;
+let otoDonguTimer = null;
+let tabGeriSayim  = 10;
+
+function tabAc(id, kullaniciTiklamasi = false) {
+  aktifTabIdx = TABLAR.indexOf(id);
+  if (aktifTabIdx < 0) aktifTabIdx = 0;
+  TABLAR.forEach(t => {
+    document.getElementById('panel-' + t).classList.toggle('hidden', t !== id);
+    document.getElementById('tab-' + t).className =
+      (t === id ? 'tab-aktif' : 'tab-pasif') +
+      ' flex-1 py-2 text-xs font-bold tracking-wide transition';
+  });
+  if (id === 'lig')     ligYukle();
+  if (id === 'oduller') odullerYukle();
+  // Sayacı sıfırla (kullanıcı tıkladıysa döngüyü yeniden başlat)
+  if (kullaniciTiklamasi) {
+    tabGeriSayim = 10;
+    _tabSayacGuncelle();
   }
 }
 
-function renderListe(data) {
-  const konteyner = document.getElementById('liste');
-
-  if (!data.length) {
-    konteyner.innerHTML = '<p class="text-slate-600 text-center py-10">Bu sınıfta öğrenci yok.</p>';
-    return;
-  }
-
-  // İstatistikler
-  const temiz = data.filter(o => o.tik_sayisi === 0).length;
-  const uyari = data.filter(o => o.tik_sayisi >= 1 && o.tik_sayisi <= 2).length;
-  const idari = data.filter(o => o.tik_sayisi >= 3).length;
-  document.getElementById('stat-temiz').textContent = `${temiz} temiz`;
-  document.getElementById('stat-uyari').textContent = `${uyari} uyarı`;
-  document.getElementById('stat-idari').textContent = `${idari} idari`;
-
-  const maks   = Math.max(...data.map(o => o.tik_sayisi), 1);
-  const barRef = Math.max(maks, 5);
-
-  konteyner.innerHTML = data.map((o, idx) => kartHTML(o, idx + 1, barRef)).join('');
+function _tabSonraki() {
+  aktifTabIdx = (aktifTabIdx + 1) % TABLAR.length;
+  tabAc(TABLAR[aktifTabIdx]);
+  tabGeriSayim = 10;
+  _tabSayacGuncelle();
 }
 
-function kartHTML(o, sira, barRef) {
-  const tik = o.tik_sayisi;
+function _tabSayacGuncelle() {
+  const el = document.getElementById('tab-countdown');
+  if (el) el.textContent = tabGeriSayim + 's';
+}
 
-  let cardCls, textCls, barCls, rankBg;
-  if (tik === 0) {
-    cardCls = 'card-clean border';
-    textCls = '#4ade80'; barCls = '#22c55e'; rankBg = '#166534';
-  } else if (tik <= 2) {
-    cardCls = 'card-warning border';
-    textCls = '#fbbf24'; barCls = '#f59e0b'; rankBg = '#92400e';
-  } else {
-    cardCls = 'card-danger border';
-    textCls = '#f87171'; barCls = '#ef4444'; rankBg = '#7f1d1d';
-  }
+// Sekme butonlarına tıklama olayı (döngüyü sıfırlasın)
+document.addEventListener('DOMContentLoaded', () => {
+  TABLAR.forEach(t => {
+    const btn = document.getElementById('tab-' + t);
+    if (btn) btn.addEventListener('click', () => tabAc(t, true));
+  });
+});
 
-  const barPct = Math.min(100, (tik / barRef) * 100).toFixed(1);
-  const delay  = (sira - 1) * 70;
+// ════════════════════════════════════════════════════════════════════════
+// Disiplin
+// ════════════════════════════════════════════════════════════════════════
+const KART_CLS = {
+  disiplin:'card-disiplin border', tutanak:'card-tutanak border',
+  veli:'card-veli border', uyari:'card-uyari border', temiz:'card-temiz border',
+};
+const RENK = {
+  disiplin:'#c084fc', tutanak:'#f87171', veli:'#fb923c', uyari:'#fbbf24', temiz:'#4ade80',
+};
 
+function disiplinKartHTML(o, sira, maks) {
+  const cls   = KART_CLS[o.durum] || 'card-temiz border';
+  const renk  = RENK[o.durum] || '#4ade80';
+  const bar   = Math.min(100, maks > 0 ? (o.tik_sayisi / maks) * 100 : 0).toFixed(1);
+  const delay = (sira - 1) * 50;
+  const etiket = o.etiket ? `<span class="text-xs opacity-70 ml-1">(${o.etiket})</span>` : '';
   return `
-  <div class="${cardCls} rounded-xl overflow-hidden slide-in"
-       style="animation-delay:${delay}ms">
+  <div class="${cls} rounded-xl overflow-hidden slide-in" style="animation-delay:${delay}ms">
     <div class="flex items-stretch">
-
-      <!-- Sıra -->
-      <div class="flex-shrink-0 w-14 sm:w-16 flex items-center justify-center
-                  font-black text-lg sm:text-xl"
-           style="background:${rankBg}; color:${textCls}">
-        #${sira}
-      </div>
-
-      <!-- Orta: Emoji + Ad + Bar -->
-      <div class="flex-1 px-3 sm:px-4 py-2.5 min-w-0">
-        <div class="flex items-center gap-2">
-          <span class="text-xl sm:text-2xl">${o.emoji}</span>
-          <span class="font-bold text-sm sm:text-base truncate"
-                style="color:${textCls}">${o.ad_soyad}</span>
+      <div class="flex-shrink-0 w-12 flex items-center justify-center font-black text-base"
+           style="background:rgba(0,0,0,0.3); color:${renk}">#${sira}</div>
+      <div class="flex-1 px-3 py-2 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xl">${o.emoji}</span>
+          <span class="font-bold text-sm" style="color:${renk}">${o.ad_soyad}</span>
+          <span class="text-slate-500 text-xs">${o.sinif_adi}</span>${etiket}
         </div>
-        <!-- Progress bar -->
-        <div class="mt-1.5 h-2 rounded-full overflow-hidden" style="background:#0f172a">
-          <div class="h-full rounded-full transition-all duration-700"
-               style="width:${barPct}%; background:${barCls}"></div>
+        <div class="mt-1 h-1.5 rounded-full overflow-hidden" style="background:#0f172a">
+          <div class="h-full rounded-full" style="width:${bar}%; background:${renk}"></div>
         </div>
       </div>
-
-      <!-- Tik Sayısı -->
-      <div class="flex-shrink-0 w-16 sm:w-20 flex flex-col items-center justify-center"
-           style="background:${rankBg}">
-        <span class="font-black text-2xl sm:text-3xl count-up"
-              style="color:${textCls}">${tik}</span>
-        <span class="text-[10px]" style="color:${textCls}; opacity:.7">tik</span>
+      <div class="flex-shrink-0 w-14 flex flex-col items-center justify-center"
+           style="background:rgba(0,0,0,0.3)">
+        <span class="font-black text-2xl" style="color:${renk}">${o.tik_sayisi}</span>
+        <span class="text-[10px] opacity-50" style="color:${renk}">tik</span>
       </div>
     </div>
   </div>`;
 }
 
-// ── Geri Sayım ───────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// Ödüller Yükle
+// ════════════════════════════════════════════════════════════════════════
+async function odullerYukle() {
+  try {
+    const res  = await fetch('/api/oduller/veri');
+    const d    = await res.json();
+
+    // ── Gizli Müfettiş ────────────────────────────────────────────────
+    const muf = d.mufettis;
+    let mufHTML = '';
+    if (muf && muf.ad_soyad) {
+      if (muf.sonuc) {
+        const ikon  = muf.sonuc === 'iyi' ? '😇' : '😐';
+        const renk  = muf.sonuc === 'iyi' ? '#4ade80' : '#94a3b8';
+        const metin = muf.sonuc === 'iyi' ? '✅ Harika Performans!' : '📋 Değerlendirme Tamamlandı';
+        mufHTML = `<div class="text-3xl mb-2">${ikon}</div>
+          <div class="font-black text-white text-base">${muf.ad_soyad}</div>
+          <div class="text-slate-400 text-xs mt-0.5">${muf.sinif_adi || ''}</div>
+          <div class="text-sm font-bold mt-2" style="color:${renk}">${metin}</div>`;
+      } else {
+        mufHTML = `<div class="text-3xl mb-2">🔍</div>
+          <div class="text-amber-400 font-black text-sm">Bugün biri izleniyor...</div>
+          <div class="text-slate-600 text-xs mt-1">Gün sonu öğretmen değerlendirmesi bekliyor</div>`;
+      }
+    } else {
+      mufHTML = `<div class="text-3xl mb-2">🕵️</div><div class="text-slate-600 text-xs">Bugün müfettiş kaydı yok</div>`;
+    }
+    document.getElementById('od-mufettis').innerHTML = mufHTML;
+
+    // ── Günlük Görev ───────────────────────────────────────────────────
+    const g = d.gorev;
+    let gorevHTML = '';
+    if (g && g.gorev) {
+      const tamamlayc = g.tamamlayan_ids || [];
+      const tamSay = tamamlayc.length;
+      gorevHTML = `
+        <div class="text-xl mb-1">🎯</div>
+        <div class="text-white font-black text-sm mb-1">${g.gorev}</div>
+        <div class="text-indigo-400 text-xs mb-2">Ödül: +${g.puan} puan</div>
+        <div class="text-${tamSay > 0 ? 'green' : 'slate'}-400 text-xs font-bold">
+          ${tamSay > 0 ? `✅ ${tamSay} sınıf tamamladı!` : '⏳ Henüz tamamlayan yok'}
+        </div>`;
+    } else {
+      gorevHTML = '<div class="text-slate-600 text-xs">Bugün görev yok</div>';
+    }
+    document.getElementById('od-gorev').innerHTML = gorevHTML;
+
+    // ── Son Alkışlar ───────────────────────────────────────────────────
+    const alkislar = d.alkislar || [];
+    document.getElementById('od-alkis').innerHTML = alkislar.length
+      ? alkislar.slice(0, 6).map(a =>
+          `<div class="flex items-center gap-2 rounded-lg px-2 py-1.5 border border-pink-900/40" style="background:#2a0025">
+            <span>👏</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-pink-300 font-bold truncate">${a.ogrenci} <span class="text-slate-600 font-normal">(${a.sinif_adi})</span></div>
+              <div class="text-slate-400 text-[10px] italic truncate">"${a.mesaj}"</div>
+            </div>
+          </div>`).join('')
+      : '<div class="text-center py-4 text-slate-600">Henüz alkış yok</div>';
+
+    // ── Sezon Sıralaması ───────────────────────────────────────────────
+    const sezon = d.sezon || [];
+    const renkler = ['#fbbf24','#94a3b8','#d97706'];
+    document.getElementById('od-sezon').innerHTML = sezon.length
+      ? sezon.slice(0, 6).map((s, i) => {
+          const renk = i < 3 ? renkler[i] : '#475569';
+          const med  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+          return `<div class="flex items-center gap-2 rounded-lg px-2 py-1.5" style="background:#080f20">
+            <span class="font-black text-sm w-5 text-center" style="color:${renk}">${med}</span>
+            <span class="flex-1 font-bold" style="color:${renk}">${s.sinif_adi}</span>
+            <span class="font-black" style="color:${renk}">${s.sezon_puan}p</span>
+          </div>`;
+        }).join('')
+      : '<div class="text-center py-4 text-slate-600">Sezon puanı yok</div>';
+
+    // ── Son Rozetler ───────────────────────────────────────────────────
+    const rozetler = d.rozetler || [];
+    document.getElementById('od-rozet').innerHTML = rozetler.length
+      ? rozetler.slice(0, 6).map(r =>
+          `<div class="flex items-center gap-2 rounded-lg px-2 py-1.5 border border-indigo-900/40" style="background:#080f20">
+            <span class="text-xl">${r.emoji || '🏅'}</span>
+            <div>
+              <div class="text-indigo-300 font-bold">${r.rozet_adi || r.rozet_kodu}</div>
+              <div class="text-slate-500 text-[10px]">${r.sahip} — ${r.sinif_adi}</div>
+            </div>
+          </div>`).join('')
+      : '<div class="text-center py-4 text-slate-600">Henüz rozet yok</div>';
+
+    // ── Seriler ────────────────────────────────────────────────────────
+    const seri = d.seri || [];
+    document.getElementById('od-seri').innerHTML = seri.length
+      ? seri.slice(0, 6).map(s => {
+          const ates = '🔥'.repeat(Math.min(Math.floor(s.guncel_seri / 3), 5));
+          return `<div class="flex items-center gap-2 rounded-lg px-2 py-1.5" style="background:#080f20">
+            <span>${s.guncel_seri > 0 ? (ates || '🔥') : '❄️'}</span>
+            <span class="flex-1 font-bold text-white">${s.sinif_adi}</span>
+            <span class="text-orange-400 font-black">${s.guncel_seri}g</span>
+          </div>`;
+        }).join('')
+      : '<div class="text-center py-4 text-slate-600">Seri verisi yok</div>';
+
+  } catch(e) { console.warn('Oduller yukle hata:', e); }
+}
+
+async function disiplinYukle() {
+  try {
+    const res  = await fetch('/api/yayin/ogrenciler');
+    const data = await res.json();
+    const maks = Math.max(...data.map(o => o.tik_sayisi), 1);
+    document.getElementById('liste-disiplin').innerHTML =
+      data.length ? data.map((o,i) => disiplinKartHTML(o,i+1,maks)).join('')
+                  : '<p class="text-slate-600 text-center py-10">Kayit yok.</p>';
+    const say = d => data.filter(o => o.durum === d).length;
+    document.getElementById('stat-temiz').textContent    = `${say('temiz')} temiz`;
+    document.getElementById('stat-uyari').textContent    = `${say('uyari')} uyari`;
+    document.getElementById('stat-veli').textContent     = `${say('veli')} veli`;
+    document.getElementById('stat-tutanak').textContent  = `${say('tutanak')} tutanak`;
+    document.getElementById('stat-disiplin').textContent = `${say('disiplin')} disiplin`;
+    document.getElementById('guncelleme-bilgi').textContent =
+      'Guncellendi: ' + new Date().toLocaleTimeString('tr-TR');
+  } catch(e) { console.warn(e); }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Super Lig — Maçlar
+// ════════════════════════════════════════════════════════════════════════
+function macKartHTML(m) {
+  const tamam   = m.durum === 'tamamlandi';
+  const var_inc = m.durum === 'var_incelemesi';
+  const bg      = tamam ? '#071a0e' : var_inc ? '#1a0a2e' : '#060c1a';
+  const border  = tamam ? 'border-green-800' : var_inc ? 'border-purple-700' : 'border-slate-700';
+  const seansIcon = m.seans === 'sabah' ? '🌅 Sabah' : '🌆 Ogleden Sonra';
+  const seansRenk = m.seans === 'sabah' ? 'text-yellow-400' : 'text-blue-400';
+
+  const s1Skor = (m.s1_tamamlayan != null)
+    ? `<span class="font-black text-sm" style="color:${m.kazanan_id === m.sinif1_id ? '#4ade80' : '#f87171'}">${m.s1_tamamlayan}/${m.s1_toplam}</span>` : '';
+  const s2Skor = (m.s2_tamamlayan != null)
+    ? `<span class="font-black text-sm" style="color:${m.kazanan_id === m.sinif2_id ? '#4ade80' : '#f87171'}">${m.s2_tamamlayan}/${m.s2_toplam}</span>` : '';
+
+  let sonucHtml = '';
+  if (tamam && m.kazanan_id) {
+    const k = m.kazanan_id === m.sinif1_id ? m.sinif1_adi : m.sinif2_adi;
+    sonucHtml = `<div class="text-green-400 text-[10px] font-black text-center">🏆 ${k} Kazandi!</div>`;
+  } else if (tamam) {
+    sonucHtml = `<div class="text-slate-400 text-[10px] text-center">🤝 Berabere</div>`;
+  } else if (var_inc) {
+    sonucHtml = `<div class="text-purple-400 text-[10px] text-center mac-bekle">📺 VAR Incelemesinde</div>`;
+  } else {
+    sonucHtml = `<div class="text-slate-600 text-[10px] text-center mac-bekle">⏳ Bekliyor</div>`;
+  }
+
+  return `
+  <div class="rounded-lg border ${border} overflow-hidden" style="background:${bg}">
+    <div class="px-2.5 py-2">
+      <div class="flex justify-between items-center mb-1">
+        <span class="${seansRenk} text-[10px] font-bold">${seansIcon}</span>
+        <span class="text-slate-700 text-[9px]">${(m.tarih||'').slice(0,10)}</span>
+      </div>
+      <div class="flex items-center justify-between gap-1">
+        <div class="text-center flex-1">
+          <div class="text-white font-black text-xs">${m.sinif1_adi}</div>
+          ${s1Skor}
+        </div>
+        <div class="vs-text font-black text-sm flex-shrink-0 px-1">VS</div>
+        <div class="text-center flex-1">
+          <div class="text-white font-black text-xs">${m.sinif2_adi}</div>
+          ${s2Skor}
+        </div>
+      </div>
+      <div class="text-slate-500 text-[9px] text-center mt-1 leading-tight">📋 ${m.gorev}</div>
+      <div class="mt-1">${sonucHtml}</div>
+      ${kartlarHTML(m.kartlar || [])}
+    </div>
+  </div>`;
+}
+
+function kartlarHTML(kartlar) {
+  if (!kartlar || !kartlar.length) return '';
+  const rozetler = kartlar.map(k =>
+    `<span style="
+       font-size:9px; font-weight:bold; padding:1px 6px; border-radius:99px;
+       background:${k.kart_turu === 'sari' ? '#78350f' : '#7f1d1d'};
+       color:${k.kart_turu === 'sari' ? '#fbbf24' : '#f87171'};
+     ">${k.kart_turu === 'sari' ? '🟨' : '🟥'} ${k.ogrenci_adi}</span>`
+  ).join('');
+  return `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${rozetler}</div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Super Lig — Puan Tablosu
+// ════════════════════════════════════════════════════════════════════════
+function tabloSatirHTML(s, sira) {
+  const renkler = ['#fbbf24','#94a3b8','#d97706'];
+  const renk    = sira <= 3 ? renkler[sira-1] : '#475569';
+  const madalya = sira === 1 ? '🥇' : sira === 2 ? '🥈' : sira === 3 ? '🥉' : sira;
+  const sarBg   = sira === 1 && s.puan > 0 ? 'background:#1a1200' : '';
+  return `
+  <tr class="border-b border-slate-800" style="${sarBg}">
+    <td class="py-1 px-2 font-black text-xs" style="color:${renk}">${madalya}</td>
+    <td class="py-1 px-2 font-bold text-xs" style="color:${renk}">${s.sinif_adi}</td>
+    <td class="py-1 px-2 text-center text-xs text-green-400">${s.galibiyet}</td>
+    <td class="py-1 px-2 text-center text-xs text-yellow-400">${s.beraberlik}</td>
+    <td class="py-1 px-2 text-center text-xs text-red-400">${s.maglubiyet}</td>
+    <td class="py-1 px-2 text-center text-xs text-blue-300">${s.ag}</td>
+    <td class="py-1 px-3 text-center font-black text-sm" style="color:${renk}">${s.puan}</td>
+  </tr>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Kadro — Karşılaşma bazlı (iki takım yan yana)
+// ════════════════════════════════════════════════════════════════════════
+let _kadroMaclar = [];   // [{sinif1_id, sinif1_adi, sinif2_id, sinif2_adi}, ...]
+
+function _kadroSinifRender(sinifId, gridId) {
+  const kadro = (_ligData && _ligData.kadrolar) ? (_ligData.kadrolar[String(sinifId)] || []) : [];
+  const grid  = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (!kadro.length) {
+    grid.innerHTML = '<div style="color:#475569;font-size:9px;text-align:center;padding:10px;grid-column:1/-1">Kadro bos</div>';
+    return;
+  }
+
+  kadro.forEach((oyuncu, i) => {
+    const delay = 30 + i * 35;
+    const el    = document.createElement('div');
+    el.className = 'kadro-kart rounded-md text-center border border-green-900/40';
+    el.style.cssText = `background:linear-gradient(135deg,rgba(3,22,8,0.97),rgba(4,34,12,0.95));padding:3px 2px;animation-delay:${delay}ms;`;
+    el.innerHTML =
+      `<div style="font-size:13px;line-height:1.2">${oyuncu.emoji}</div>` +
+      `<div style="color:#4ade80;font-size:6.5px;font-weight:700;line-height:1.3;margin-top:1px">${oyuncu.mevki}</div>` +
+      `<div style="color:#fff;font-size:7.5px;font-weight:900;line-height:1.2">${oyuncu.ad_soyad}</div>`;
+    grid.appendChild(el);
+  });
+}
+
+function kadroMacGoster(mac, siraNo, toplam) {
+  document.getElementById('kadro-s1-adi').textContent = mac.sinif1_adi + ' Sinifi';
+  document.getElementById('kadro-s2-adi').textContent = mac.sinif2_adi + ' Sinifi';
+  document.getElementById('kadro-dongu-bilgi').textContent =
+    toplam > 1 ? `Karsılasma ${siraNo}/${toplam}` : '';
+  _kadroSinifRender(mac.sinif1_id, 'kadro-grid-1');
+  _kadroSinifRender(mac.sinif2_id, 'kadro-grid-2');
+}
+
+function _kadroDonguBaslat() {
+  if (_kadroTimer) clearInterval(_kadroTimer);
+  if (!_kadroMaclar.length) return;
+
+  kadroMacGoster(_kadroMaclar[0], 1, _kadroMaclar.length);
+  _kadroIndex = 0;
+
+  let saniye = KADRO_SURE;
+  _kadroTimer = setInterval(() => {
+    saniye--;
+    const bilgiEl = document.getElementById('kadro-dongu-bilgi');
+    if (bilgiEl && _kadroMaclar.length > 1)
+      bilgiEl.textContent = `Karsılasma ${_kadroIndex + 1}/${_kadroMaclar.length}  ·  ${saniye}s`;
+    if (saniye <= 0) {
+      saniye = KADRO_SURE;
+      _kadroIndex = (_kadroIndex + 1) % _kadroMaclar.length;
+      kadroMacGoster(_kadroMaclar[_kadroIndex], _kadroIndex + 1, _kadroMaclar.length);
+    }
+  }, 1000);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Lig Yükle
+// ════════════════════════════════════════════════════════════════════════
+async function ligYukle() {
+  try {
+    const res  = await fetch('/api/lig/maclar_ve_tablo');
+    _ligData   = await res.json();
+    const { maclar, tablo, kadrolar } = _ligData;
+
+    // Maçlar
+    document.getElementById('mac-tarih').textContent =
+      new Date().toLocaleDateString('tr-TR', {day:'numeric', month:'long', weekday:'long'});
+    document.getElementById('liste-maclar').innerHTML =
+      maclar.length
+        ? maclar.map(macKartHTML).join('')
+        : '<div class="text-slate-600 text-xs text-center py-6">Bugun mac olusturulmamis.<br>Lig sayfasindan olusturun.</div>';
+
+    // Puan tablosu
+    document.getElementById('tablo-body').innerHTML =
+      tablo.map((s, i) => tabloSatirHTML(s, i + 1)).join('');
+
+    // Footer
+    document.getElementById('stat-lig').textContent =
+      tablo.length ? `Lider: ${tablo[0].sinif_adi} (${tablo[0].puan}p)` : '';
+
+    // Seviye ve streak bilgilerini asenkron cek
+    fetch('/api/oduller/veri').then(r=>r.json()).then(d => {
+      if (d.seviye && d.seviye.length) {
+        const lider = d.seviye[0];
+        document.getElementById('stat-seviye').textContent =
+          `${lider.emoji} ${lider.sinif_adi}:${lider.ad}`;
+      }
+      if (d.seri && d.seri.length) {
+        const top = d.seri[0];
+        if (top.guncel_seri > 0)
+          document.getElementById('stat-streak').textContent =
+            `🔥 ${top.sinif_adi}: ${top.guncel_seri}g seri`;
+      }
+    }).catch(()=>{});
+
+    // ── Kadro dongusu: karsılasma bazlı ──────────────────
+    // Her karsilasma icin benzersiz cift olustur (sabah + ogleden sonra ayni cift = 1 kez)
+    const gorulmusCiftler = new Set();
+    _kadroMaclar = [];
+    for (const m of maclar) {
+      const ciftKey = [Math.min(m.sinif1_id, m.sinif2_id), Math.max(m.sinif1_id, m.sinif2_id)].join('-');
+      if (!gorulmusCiftler.has(ciftKey)) {
+        gorulmusCiftler.add(ciftKey);
+        _kadroMaclar.push({
+          sinif1_id:  m.sinif1_id,
+          sinif1_adi: m.sinif1_adi,
+          sinif2_id:  m.sinif2_id,
+          sinif2_adi: m.sinif2_adi,
+        });
+      }
+    }
+
+    // Hic mac yoksa puan tablosundaki ilk iki sinifi goster
+    if (!_kadroMaclar.length && tablo.length >= 2) {
+      _kadroMaclar = [{ sinif1_id: tablo[0].sinif_id, sinif1_adi: tablo[0].sinif_adi,
+                        sinif2_id: tablo[1].sinif_id, sinif2_adi: tablo[1].sinif_adi }];
+    }
+
+    if (_kadroMaclar.length) _kadroDonguBaslat();
+
+    // Cuma 15:00 sampiyonu
+    const now  = new Date();
+    const cuma = now.getDay() === 5;
+    const saat = now.getHours() * 60 + now.getMinutes();
+    if (cuma && saat >= 15*60 && saat < 15*60+10 && tablo[0] && tablo[0].puan > 0) {
+      document.getElementById('sampiyon-adi').textContent  = tablo[0].sinif_adi + ' Sinifi';
+      document.getElementById('sampiyon-puan').textContent = tablo[0].puan + ' puan ile birinci!';
+      document.getElementById('sampiyon-karti').classList.remove('hidden');
+      konfetiFirlatEkrana();
+    }
+
+  } catch(e) { console.warn('Lig yukle hatasi', e); }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Konfeti
+// ════════════════════════════════════════════════════════════════════════
+function konfetiFirlatEkrana() {
+  const bitis  = Date.now() + 8000;
+  const renkler = ['#ffd700','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff','#5f27cd'];
+  (function calistir() {
+    confetti({ particleCount:6, angle:60,  spread:55, origin:{x:0}, colors:renkler });
+    confetti({ particleCount:6, angle:120, spread:55, origin:{x:1}, colors:renkler });
+    if (Date.now() < bitis) requestAnimationFrame(calistir);
+  })();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Periyodik Güncelleme + Sekme Döngüsü
+// ════════════════════════════════════════════════════════════════════════
+let veriCountdown = 30;   // 30 saniyede bir veri yenile
+
 setInterval(() => {
-  countdown--;
-  if (countdown <= 0) yukle();
-  const el = document.getElementById('guncelleme');
-  if (el && countdown > 0 && countdown <= REFRESH_S) {
-    // Güncelleme satırındaki son kısmı değiştir
-    const parts = el.textContent.split('·');
-    el.textContent = (parts[0] || '') + `· ${countdown}s sonra güncellenir`;
+  // Sekme geri sayımı
+  tabGeriSayim--;
+  _tabSayacGuncelle();
+  if (tabGeriSayim <= 0) {
+    _tabSonraki();
+  }
+
+  // Veri yenileme
+  veriCountdown--;
+  if (veriCountdown <= 0) {
+    veriCountdown = 30;
+    disiplinYukle();
+    if (!document.getElementById('panel-lig').classList.contains('hidden')) ligYukle();
   }
 }, 1000);
 
-// ── İlk Yükleme ──────────────────────────────────────────────────────────
-yukle();
+disiplinYukle();
 </script>
 </body>
 </html>

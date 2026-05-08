@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.sqlite3
+*.xlsx
+.env
+venv/
+.venv/
+*.bat
+*.ps1
+ALAN_ADI_KURULUM.txt
+BULUT_KURULUM.txt

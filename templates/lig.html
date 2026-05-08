@@ -1,0 +1,1008 @@
+{% extends "base.html" %}
+{% block title %}Super Lig{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+  @keyframes kart-salla {
+    0%   { transform: rotate(-5deg) scale(1.1); }
+    25%  { transform: rotate(5deg)  scale(1.15); }
+    50%  { transform: rotate(-3deg) scale(1.12); }
+    75%  { transform: rotate(3deg)  scale(1.1); }
+    100% { transform: rotate(0deg)  scale(1); }
+  }
+  @keyframes kirmizi-alarm {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    50%      { box-shadow: 0 0 0 12px rgba(239,68,68,0.4); }
+  }
+  .kart-sari    { background:#ca8a04; color:#fff; animation:kart-salla .4s ease; }
+  .kart-kirmizi { background:#dc2626; color:#fff; animation:kart-salla .4s ease, kirmizi-alarm 1s ease infinite; }
+  .kart-badge-sari    { background:#854d0e; color:#fbbf24; }
+  .kart-badge-kirmizi { background:#7f1d1d; color:#f87171; }
+
+  @keyframes fire-flicker {
+    0%,100% { text-shadow: 0 0 10px #ff4400, 0 0 20px #ff8800, 0 0 40px #ffcc00; }
+    50%      { text-shadow: 0 0 20px #ff0000, 0 0 40px #ff4400, 0 0 80px #ff8800; }
+  }
+  @keyframes vs-pulse {
+    0%,100% { transform:scale(1);    color:#fff; }
+    50%      { transform:scale(1.15); color:#fbbf24; }
+  }
+  @keyframes slide-up {
+    from { opacity:0; transform:translateY(30px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  @keyframes glow-win {
+    0%,100% { box-shadow: 0 0 15px #22c55e; }
+    50%      { box-shadow: 0 0 40px #4ade80, 0 0 80px #22c55e; }
+  }
+  @keyframes glow-lose {
+    0%,100% { box-shadow: 0 0 8px #ef4444; }
+    50%      { box-shadow: 0 0 20px #f87171; }
+  }
+  @keyframes bounce-in {
+    0%  { transform:scale(0); opacity:0; }
+    70% { transform:scale(1.1); }
+    100%{ transform:scale(1); opacity:1; }
+  }
+
+  .fire-text  { animation: fire-flicker 1.5s ease-in-out infinite; }
+  .vs-badge   { animation: vs-pulse 1s ease-in-out infinite; font-weight:900; }
+  .slide-up   { animation: slide-up .5s ease forwards; }
+  .win-glow   { animation: glow-win 2s ease-in-out infinite; }
+  .lose-glow  { animation: glow-lose 2s ease-in-out infinite; }
+  .bounce-in  { animation: bounce-in .5s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+  @keyframes pulse-gold {
+    0%,100% { box-shadow: 0 0 0 0 rgba(234,179,8,0.5); }
+    50%      { box-shadow: 0 0 0 8px rgba(234,179,8,0); }
+  }
+  .pulse-gold-btn { animation: pulse-gold 1.4s ease-in-out infinite; }
+
+  .gold-shimmer {
+    background: linear-gradient(90deg, #f59e0b, #fcd34d, #f59e0b);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 2s linear infinite;
+  }
+
+  .mac-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    border: 1px solid #334155;
+    transition: all .3s;
+  }
+  .mac-card:hover { border-color:#6366f1; transform:translateY(-2px); }
+  .mac-card.tamamlandi { border-color:#22c55e30; }
+  .mac-card.var_incelemesi { border-color:#f59e0b; }
+
+  .team-box-win  { background:linear-gradient(135deg,#14532d,#166534); border-color:#22c55e; }
+  .team-box-lose { background:linear-gradient(135deg,#450a0a,#7f1d1d); border-color:#ef4444; }
+  .team-box-draw { background:linear-gradient(135deg,#1c1a07,#78350f); border-color:#f59e0b; }
+  .team-box-wait { background:linear-gradient(135deg,#0f172a,#1e293b); border-color:#475569; }
+
+  .sabah-badge   { background:#1e3a5f; color:#60a5fa; }
+  .revans-badge  { background:#3b1f5e; color:#c084fc; }
+
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-thumb { background:#334155; border-radius:2px; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="min-h-screen" style="background:linear-gradient(180deg,#020817 0%,#0f172a 100%)">
+
+  <!-- ── Baslik ─────────────────────────────────────────────────────── -->
+  <div class="text-center py-8 px-4">
+    <div class="text-5xl mb-2">⚽</div>
+    <h1 class="text-3xl sm:text-4xl font-black fire-text mb-1">
+      ERENLER CUMHURİYET SÜPER LİGİ
+    </h1>
+    <p class="text-slate-400 text-sm">
+      {{ maclar[0].tarih if maclar else '' }} &nbsp;·&nbsp;
+      {% set sabah_c = maclar|selectattr('seans','eq','sabah')|list|length %}
+      {% set revans_c = maclar|selectattr('seans','eq','ogleden_sonra')|list|length %}
+      {{ sabah_c }} sabah + {{ revans_c }} rövanş maçı
+    </p>
+  </div>
+
+  <!-- ── Tab Menu ───────────────────────────────────────────────────── -->
+  <div class="flex max-w-4xl mx-auto px-4 gap-2 mb-6">
+    <button onclick="tabAc('maclar')" id="tab-maclar"
+            class="flex-1 py-2.5 rounded-xl font-bold text-sm transition
+                   bg-indigo-600 text-white">
+      ⚔️ Bugünkü Maçlar
+    </button>
+    <button onclick="tabAc('tablo')" id="tab-tablo"
+            class="flex-1 py-2.5 rounded-xl font-bold text-sm transition
+                   bg-slate-800 text-slate-400 hover:bg-slate-700">
+      🏆 Puan Tablosu
+    </button>
+    {% if not maclar %}
+    <form action="{{ url_for('lig_olustur') }}" method="POST">
+      <button type="submit"
+              class="py-2.5 px-4 rounded-xl font-bold text-sm
+                     bg-emerald-600 text-white hover:bg-emerald-700">
+        🎲 Maç Oluştur
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MACLAR PANELİ
+  ════════════════════════════════════════════════════════════════ -->
+  <div id="panel-maclar" class="max-w-4xl mx-auto px-4 pb-10">
+
+    {% if not maclar %}
+    <div class="text-center py-20">
+      <div class="text-6xl mb-4">🎲</div>
+      <p class="text-slate-400 text-lg mb-6">Bugün henüz maç oluşturulmadı.</p>
+      <form action="{{ url_for('lig_olustur') }}" method="POST">
+        <button type="submit"
+                class="bg-indigo-600 hover:bg-indigo-500 text-white font-black
+                       text-lg px-10 py-4 rounded-2xl transition bounce-in">
+          🎲 Günün Maçlarını Oluştur!
+        </button>
+      </form>
+    </div>
+
+    {% else %}
+
+    <!-- Sabah Maclari -->
+    <h2 class="text-amber-400 font-black text-lg mb-3 flex items-center gap-2">
+      🌅 <span>SABAH MAÇLARI</span>
+    </h2>
+    <div class="space-y-4 mb-8">
+      {% for mac in maclar if mac.seans == 'sabah' %}
+      {{ mac_karti(mac, ogretmen_id) }}
+      {% endfor %}
+    </div>
+
+    <!-- Ogleden Sonra Maclari -->
+    <h2 class="text-purple-400 font-black text-lg mb-3 flex items-center gap-2">
+      🌆 <span>ÖĞLEDEN SONRA RÖVANŞ</span>
+    </h2>
+    <div class="space-y-4">
+      {% for mac in maclar if mac.seans == 'ogleden_sonra' %}
+      {{ mac_karti(mac, ogretmen_id) }}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       PUAN TABLOSU
+  ════════════════════════════════════════════════════════════════ -->
+  <div id="panel-tablo" class="max-w-4xl mx-auto px-4 pb-10 hidden">
+    <div class="rounded-2xl overflow-hidden border border-slate-700"
+         style="background:#0d1526">
+      <div class="px-6 py-4 flex items-center justify-between"
+           style="background:linear-gradient(90deg,#1e3a5f,#1e1b4b)">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🏆</span>
+          <span class="text-white font-black text-lg">Sezon Puan Tablosu</span>
+        </div>
+        <span class="text-slate-400 text-xs">Olumlu davranis + Mac puanlari</span>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-slate-400 text-xs border-b border-slate-800">
+            <th class="py-2 px-4 text-left">#</th>
+            <th class="py-2 px-4 text-left">Sınıf</th>
+            <th class="py-2 px-3 text-center" title="Galibiyet">G</th>
+            <th class="py-2 px-3 text-center" title="Beraberlik">B</th>
+            <th class="py-2 px-3 text-center" title="Maglubiyet">M</th>
+            <th class="py-2 px-3 text-center" title="Olumlu Davranis Bonusu">O+</th>
+            <th class="py-2 px-4 text-center font-black text-white">P</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in tablo %}
+          <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 transition
+                     {% if loop.index == 1 and s.puan > 0 %}bg-amber-950/20{% endif %}">
+            <td class="py-3 px-4">
+              {% if loop.index == 1 and s.puan > 0 %}<span class="text-xl">🥇</span>
+              {% elif loop.index == 2 and s.puan > 0 %}<span class="text-xl">🥈</span>
+              {% elif loop.index == 3 and s.puan > 0 %}<span class="text-xl">🥉</span>
+              {% else %}<span class="text-slate-500 font-bold">{{ loop.index }}</span>
+              {% endif %}
+            </td>
+            <td class="py-3 px-4">
+              <span class="{% if loop.index == 1 and s.puan > 0 %}text-amber-400{% elif loop.index == 2 and s.puan > 0 %}text-slate-300{% elif loop.index == 3 and s.puan > 0 %}text-amber-600{% else %}text-white{% endif %} font-bold">
+                {{ s.sinif_adi }}
+              </span>
+              <span class="text-slate-500 text-xs"> Subesi</span>
+            </td>
+            <td class="py-3 px-3 text-center text-emerald-400 font-bold">{{ s.galibiyet }}</td>
+            <td class="py-3 px-3 text-center text-yellow-500">{{ s.beraberlik }}</td>
+            <td class="py-3 px-3 text-center text-red-400">{{ s.maglubiyet }}</td>
+            <td class="py-3 px-3 text-center text-blue-400">{{ s.ag }}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="{% if s.puan > 0 %}text-amber-400 font-black text-lg{% else %}text-slate-600 font-bold{% endif %}">
+                {{ s.puan }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="px-4 py-2 text-slate-600 text-xs border-t border-slate-800">
+        G=Galibiyet &nbsp;·&nbsp; B=Beraberlik &nbsp;·&nbsp; M=Maglubiyet &nbsp;·&nbsp; O+=Olumlu Davranis Bonusu &nbsp;·&nbsp; P=Puan
+      </div>
+    </div>
+
+    <!-- Sezon sifirla -->
+    <div class="mt-4 text-center">
+      <button onclick="document.getElementById('sifirla-modal').classList.remove('hidden')"
+              class="text-xs text-slate-600 hover:text-red-400 transition">
+        🗑 Sezonu Sıfırla
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Sonuc Giris Modali ─────────────────────────────────────────── -->
+<div id="sonuc-modal"
+     class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4"
+     onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="w-full max-w-lg rounded-2xl overflow-hidden"
+       style="background:#0d1526; border:1px solid #6366f1"
+       onclick="event.stopPropagation()">
+    <div class="px-6 py-4 flex justify-between items-center"
+         style="background:linear-gradient(90deg,#312e81,#1e1b4b)">
+      <div>
+        <p class="text-indigo-300 text-xs font-bold tracking-widest">SONUÇ GİRİŞİ</p>
+        <p class="text-white font-black" id="modal-mac-adi">—</p>
+      </div>
+      <button onclick="document.getElementById('sonuc-modal').classList.add('hidden')"
+              class="text-white/50 hover:text-white text-2xl">×</button>
+    </div>
+    <form id="sonuc-form" method="POST" class="p-6">
+      <p class="text-slate-400 text-xs mb-4 text-center" id="modal-gorev">—</p>
+      <div class="grid grid-cols-2 gap-6">
+        <div class="text-center">
+          <div class="text-indigo-300 font-black text-lg mb-3" id="modal-s1">—</div>
+          <label class="text-slate-400 text-xs block mb-1">Tamamlayan</label>
+          <input type="number" name="s1_tamamlayan" min="0" max="40" value="0"
+                 class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                        text-white text-center text-2xl font-black py-3
+                        focus:outline-none focus:border-indigo-500">
+          <label class="text-slate-400 text-xs block mt-2 mb-1">Toplam Öğrenci</label>
+          <input type="number" name="s1_toplam" min="1" max="40" value="25"
+                 class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                        text-white text-center py-2 focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="text-center">
+          <div class="text-purple-300 font-black text-lg mb-3" id="modal-s2">—</div>
+          <label class="text-slate-400 text-xs block mb-1">Tamamlayan</label>
+          <input type="number" name="s2_tamamlayan" min="0" max="40" value="0"
+                 class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                        text-white text-center text-2xl font-black py-3
+                        focus:outline-none focus:border-indigo-500">
+          <label class="text-slate-400 text-xs block mt-2 mb-1">Toplam Öğrenci</label>
+          <input type="number" name="s2_toplam" min="1" max="40" value="25"
+                 class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                        text-white text-center py-2 focus:outline-none focus:border-indigo-500">
+        </div>
+      </div>
+      <button type="submit"
+              class="mt-6 w-full bg-indigo-600 hover:bg-indigo-500 text-white
+                     font-black py-3 rounded-xl text-sm transition">
+        ⚡ Sonucu Kaydet
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── Var Incelemesi Modali ──────────────────────────────────────── -->
+<div id="var-modal"
+     class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4"
+     onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="w-full max-w-lg rounded-2xl overflow-hidden"
+       style="background:#1a0d2e; border:2px solid #f59e0b"
+       onclick="event.stopPropagation()">
+    <div class="px-6 py-5 text-center"
+         style="background:linear-gradient(135deg,#78350f,#92400e)">
+      <div class="text-4xl mb-2">🔍</div>
+      <p class="text-amber-300 font-black text-xl">VAR İNCELEMESİ</p>
+      <p class="text-amber-200 text-xs mt-1" id="var-mac-adi">—</p>
+    </div>
+    <div class="p-6">
+      <p class="text-slate-400 text-xs text-center mb-6">
+        Beraberlik! Adem Akgül ve Yusuf Ertürk oylama yapıyor...
+      </p>
+      <div id="var-oylar" class="space-y-2 mb-4 text-sm text-slate-400 text-center">
+        Oylar yükleniyor...
+      </div>
+      <!-- Hakem butонları - sadece hakem görebilir -->
+      <div id="var-hakem-panel" class="hidden">
+        <p class="text-amber-400 text-xs text-center font-bold mb-3">
+          🏳️ Kazananı seçin:
+        </p>
+        <form id="var-form" method="POST" class="grid grid-cols-2 gap-3">
+          <button type="submit" name="sinif_id" id="var-btn-s1"
+                  class="bg-indigo-700 hover:bg-indigo-600 text-white
+                         font-black py-4 rounded-xl text-lg transition">
+            —
+          </button>
+          <button type="submit" name="sinif_id" id="var-btn-s2"
+                  class="bg-purple-700 hover:bg-purple-600 text-white
+                         font-black py-4 rounded-xl text-lg transition">
+            —
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Sezon Sifirla Modali ───────────────────────────────────────── -->
+<div id="sifirla-modal"
+     class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4"
+     onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="bg-slate-900 border border-red-800 rounded-2xl p-6 w-full max-w-sm"
+       onclick="event.stopPropagation()">
+    <h3 class="text-white font-bold mb-2">🗑 Sezonu Sıfırla</h3>
+    <p class="text-slate-400 text-sm mb-4">Tüm maç kayıtları ve puan tablosu silinir.</p>
+    <form action="{{ url_for('lig_sifirla_mac') }}" method="POST">
+      <input type="password" name="parola" placeholder="Parola (1234)"
+             class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                    px-4 py-3 text-white font-mono text-sm mb-3
+                    focus:outline-none focus:border-red-500">
+      <div class="flex gap-2">
+        <button type="submit"
+                class="flex-1 bg-red-700 hover:bg-red-600 text-white
+                       font-bold py-2.5 rounded-xl text-sm">Sıfırla</button>
+        <button type="button"
+                onclick="document.getElementById('sifirla-modal').classList.add('hidden')"
+                class="flex-1 bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-sm">
+          İptal
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══ KART MODALI ══════════════════════════════════════════════════════ -->
+<div id="kart-modal"
+     class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4"
+     onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="w-full max-w-lg rounded-2xl overflow-hidden"
+       style="background:#0d1526; border:2px solid #ca8a04"
+       onclick="event.stopPropagation()">
+
+    <!-- Baslik -->
+    <div class="px-6 py-4 flex justify-between items-center"
+         style="background:linear-gradient(90deg,#78350f,#92400e)">
+      <div>
+        <p class="text-amber-300 text-xs font-bold tracking-widest">KART İŞLEMİ</p>
+        <p class="text-white font-black text-sm" id="kart-mac-adi">—</p>
+      </div>
+      <button onclick="document.getElementById('kart-modal').classList.add('hidden')"
+              class="text-white/50 hover:text-white text-2xl leading-none">×</button>
+    </div>
+
+    <div class="p-5 space-y-4">
+
+      <!-- Kart Tipi Secimi -->
+      <div>
+        <p class="text-slate-400 text-xs font-bold mb-2">KART TÜRÜ</p>
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btn-sari" onclick="kartTipiSec('sari')"
+                  class="py-4 rounded-xl font-black text-lg border-2 border-yellow-600
+                         bg-yellow-900/50 text-yellow-300 transition hover:bg-yellow-800">
+            🟨 SARI KART
+            <div class="text-xs font-normal mt-1 opacity-70">3 olumsuz tik</div>
+          </button>
+          <button id="btn-kirmizi" onclick="kartTipiSec('kirmizi')"
+                  class="py-4 rounded-xl font-black text-lg border-2 border-red-700
+                         bg-red-950/50 text-red-300 transition hover:bg-red-900">
+            🟥 KIRMIZI KART
+            <div class="text-xs font-normal mt-1 opacity-70">6 tik + takımdan -3 puan</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Takim Secimi -->
+      <div>
+        <p class="text-slate-400 text-xs font-bold mb-2">TAKIM</p>
+        <div class="grid grid-cols-2 gap-2" id="kart-takim-sec">
+          <button id="btn-sinif1" onclick="kartTakimSec(1)"
+                  class="py-2 rounded-lg text-sm font-bold border border-slate-600
+                         text-slate-300 hover:border-indigo-500 transition">—</button>
+          <button id="btn-sinif2" onclick="kartTakimSec(2)"
+                  class="py-2 rounded-lg text-sm font-bold border border-slate-600
+                         text-slate-300 hover:border-purple-500 transition">—</button>
+        </div>
+      </div>
+
+      <!-- Ogrenci Secimi -->
+      <div>
+        <p class="text-slate-400 text-xs font-bold mb-2">ÖĞRENCİ</p>
+        <select id="kart-ogrenci-sec"
+                class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                       px-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-500">
+          <option value="">— Önce takım seçin —</option>
+        </select>
+      </div>
+
+      <!-- Neden Secimi -->
+      <div>
+        <p class="text-slate-400 text-xs font-bold mb-2">NEDEN</p>
+        <select id="kart-neden-sec"
+                class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                       px-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-500">
+          {% for neden in kart_nedenleri %}
+          <option value="{{ neden }}">{{ neden }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Gonder -->
+      <button onclick="kartGonder()"
+              class="w-full py-3 rounded-xl font-black text-sm transition"
+              id="kart-gonder-btn"
+              style="background:linear-gradient(90deg,#ca8a04,#92400e); color:white">
+        ⚡ Kartı Göster
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ ŞANS ÇARKI MODALI ════════════════════════════════════════════════ -->
+<div id="cark-modal"
+     class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4"
+     onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="w-full max-w-sm rounded-2xl overflow-hidden text-center"
+       style="background:#0d1526;border:2px solid #f59e0b"
+       onclick="event.stopPropagation()">
+    <div class="px-6 py-4" style="background:linear-gradient(90deg,#78350f,#92400e)">
+      <div class="text-4xl mb-1 float">🎡</div>
+      <div class="text-amber-300 font-black text-xl">ŞANS ÇARKI</div>
+      <div class="text-amber-200 text-sm" id="cark-sinif-adi">—</div>
+    </div>
+    <div class="p-5">
+      <div class="relative inline-block mb-4">
+        <div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:24px;z-index:10">▼</div>
+        <canvas id="cark-canvas-lig" width="240" height="240" style="border-radius:50%"></canvas>
+      </div>
+      <div class="text-xl font-black mb-3" id="cark-sonuc-text"></div>
+      <button id="btn-cevir" onclick="carkCevir()"
+              class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-black py-3 rounded-xl transition">
+        🎰 Çarkı Çevir!
+      </button>
+      <button onclick="document.getElementById('cark-modal').classList.add('hidden')"
+              class="mt-2 w-full text-slate-500 hover:text-slate-400 text-xs">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Kazanan Kutlama Overlay ────────────────────────────────────── -->
+<div id="kutlama"
+     class="fixed inset-0 z-50 hidden flex items-center justify-center"
+     style="background:rgba(0,0,0,0.6)">
+  <div class="text-center bounce-in">
+    <div class="text-8xl mb-4" id="kutlama-emoji">🏆</div>
+    <div class="text-4xl font-black text-white" id="kutlama-metin">—</div>
+    <div class="text-amber-400 text-xl font-bold mt-2">KAZANDI!</div>
+    <button id="kutlama-cark-btn"
+            class="mt-4 bg-yellow-600 hover:bg-yellow-500 text-white font-black px-6 py-2.5 rounded-xl transition text-sm">
+      🎡 Şans Çarkını Çevir!
+    </button>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{# ── Makro: Mac Karti ───────────────────────────────────────────── #}
+{% macro mac_karti(mac, ogretmen_id) %}
+{% set durum = mac.durum %}
+{% set kazandi_s1 = mac.kazanan_id == mac.sinif1_id %}
+{% set kazandi_s2 = mac.kazanan_id == mac.sinif2_id %}
+
+<div class="mac-card rounded-2xl overflow-hidden {{ durum }} slide-up">
+  <!-- Seans rozeti + Gorev -->
+  <div class="px-4 py-2 flex items-center justify-between border-b border-slate-700/50">
+    <span class="text-xs font-bold px-2 py-0.5 rounded-full
+                 {% if mac.seans == 'sabah' %}sabah-badge{% else %}revans-badge{% endif %}">
+      {% if mac.seans == 'sabah' %}🌅 Sabah{% else %}🔄 Rövanş{% endif %}
+    </span>
+    <span class="text-slate-400 text-xs text-center flex-1 mx-3 truncate">
+      📋 {{ mac.gorev }}
+    </span>
+    {% if durum == 'bekliyor' %}
+    <span class="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">Bekliyor</span>
+    {% elif durum == 'var_incelemesi' %}
+    <span class="text-xs text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded-full">🔍 VAR</span>
+    {% elif durum == 'tamamlandi' %}
+    <span class="text-xs text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded-full">✅ Bitti</span>
+    {% endif %}
+  </div>
+
+  <!-- Takimlar -->
+  <div class="flex items-center p-4 gap-3">
+
+    <!-- Sinif 1 -->
+    <div class="flex-1 rounded-xl p-3 text-center border
+                {% if durum == 'tamamlandi' %}
+                  {% if kazandi_s1 %}team-box-win win-glow{% else %}team-box-lose lose-glow{% endif %}
+                {% elif durum == 'var_incelemesi' %}team-box-draw
+                {% else %}team-box-wait{% endif %}">
+      <div class="text-2xl sm:text-3xl font-black text-white leading-tight">
+        {{ mac.sinif1_adi }}
+      </div>
+      <div class="text-xs mt-1 opacity-70 text-white">Şubesi</div>
+      {% if mac.s1_tamamlayan is not none and mac.s1_toplam %}
+      <div class="text-xs mt-2 text-white/80">
+        {{ mac.s1_tamamlayan }}/{{ mac.s1_toplam }}
+        <span class="text-xs opacity-60">
+          (%{{ ((mac.s1_tamamlayan / mac.s1_toplam) * 100)|round|int if mac.s1_toplam else 0 }})
+        </span>
+      </div>
+      {% endif %}
+      {% if kazandi_s1 %}<div class="text-lg mt-1">🏆</div>{% endif %}
+    </div>
+
+    <!-- VS / Skor / Butonlar -->
+    <div class="flex-shrink-0 text-center">
+      <div class="text-2xl font-black vs-badge
+                  {% if durum == 'tamamlandi' %}text-slate-600{% endif %}">
+        {% if durum == 'tamamlandi' %}
+          {{ mac.s1_tamamlayan }}<span class="text-slate-600 text-base">—</span>{{ mac.s2_tamamlayan }}
+        {% elif durum == 'var_incelemesi' %}
+          <span class="text-amber-400">🔍</span>
+        {% else %}
+          VS
+        {% endif %}
+      </div>
+
+      {% if durum == 'bekliyor' %}
+      <button onclick="sonucModalAc({{ mac.id }}, '{{ mac.sinif1_adi }}', '{{ mac.sinif2_adi }}', {{ mac.sinif1_id }}, {{ mac.sinif2_id }}, '{{ mac.gorev }}')"
+              class="mt-2 text-xs bg-indigo-600 hover:bg-indigo-500
+                     text-white px-3 py-1.5 rounded-lg font-bold transition block w-full">
+        ⚡ Sonuç Gir
+      </button>
+      {% elif durum == 'var_incelemesi' %}
+      <button onclick="varModalAc({{ mac.id }}, '{{ mac.sinif1_adi }}', '{{ mac.sinif2_adi }}', {{ mac.sinif1_id }}, {{ mac.sinif2_id }})"
+              class="mt-2 text-xs bg-amber-600 hover:bg-amber-500
+                     text-white px-3 py-1.5 rounded-lg font-bold transition block w-full">
+        🔍 VAR İncele
+      </button>
+      {% elif durum == 'tamamlandi' and mac.kazanan_id %}
+      {# Şans çarkı: SADECE maç tamamlanmış ve kazanan belirlenmiş ise #}
+      <button onclick="carkGoster({{ mac.id }}, {{ mac.kazanan_id }}, '{{ (mac.sinif1_adi if kazandi_s1 else mac.sinif2_adi)|e }}')"
+              class="mt-2 text-xs bg-yellow-600 hover:bg-yellow-500
+                     text-yellow-100 px-3 py-1.5 rounded-lg font-bold transition block w-full
+                     pulse-gold-btn">
+        🎡 Şans Çarkı
+      </button>
+      {% endif %}
+
+      <!-- Kart Ver: her durumda -->
+      <button onclick="kartModalAc({{ mac.id }}, '{{ mac.sinif1_adi }}', '{{ mac.sinif2_adi }}', {{ mac.sinif1_id }}, {{ mac.sinif2_id }})"
+              class="mt-1.5 text-xs bg-yellow-900 hover:bg-yellow-800
+                     text-yellow-200 px-3 py-1.5 rounded-lg font-bold transition block w-full">
+        🟨 Kart Ver
+      </button>
+    </div>
+
+    <!-- Sinif 2 -->
+    <div class="flex-1 rounded-xl p-3 text-center border
+                {% if durum == 'tamamlandi' %}
+                  {% if kazandi_s2 %}team-box-win win-glow{% else %}team-box-lose lose-glow{% endif %}
+                {% elif durum == 'var_incelemesi' %}team-box-draw
+                {% else %}team-box-wait{% endif %}">
+      <div class="text-2xl sm:text-3xl font-black text-white leading-tight">
+        {{ mac.sinif2_adi }}
+      </div>
+      <div class="text-xs mt-1 opacity-70 text-white">Şubesi</div>
+      {% if mac.s2_tamamlayan is not none and mac.s2_toplam %}
+      <div class="text-xs mt-2 text-white/80">
+        {{ mac.s2_tamamlayan }}/{{ mac.s2_toplam }}
+        <span class="text-xs opacity-60">
+          (%{{ ((mac.s2_tamamlayan / mac.s2_toplam) * 100)|round|int if mac.s2_toplam else 0 }})
+        </span>
+      </div>
+      {% endif %}
+      {% if kazandi_s2 %}<div class="text-lg mt-1">🏆</div>{% endif %}
+    </div>
+  </div>
+
+  {# Verilen kartlar #}
+  {% if mac.kartlar is defined and mac.kartlar %}
+  <div class="px-4 pb-3 flex flex-wrap gap-1.5" id="kartlar-{{ mac.id }}">
+    {% for k in mac.kartlar %}
+    <span class="text-xs font-bold px-2 py-0.5 rounded-full
+                 {% if k.kart_turu == 'sari' %}kart-badge-sari{% else %}kart-badge-kirmizi{% endif %}">
+      {% if k.kart_turu == 'sari' %}🟨{% else %}🟥{% endif %}
+      {{ k.ogrenci_adi }} ({{ k.sinif_adi }})
+    </span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="px-4 pb-2" id="kartlar-{{ mac.id }}"></div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{% block scripts %}
+<script>
+const OGRETMEN_ID = {{ ogretmen_id }};
+
+// ── Tab ────────────────────────────────────────────────────────────
+function tabAc(id) {
+  ['maclar','tablo'].forEach(t => {
+    document.getElementById('panel-' + t).classList.toggle('hidden', t !== id);
+    const btn = document.getElementById('tab-' + t);
+    btn.className = btn.className.replace(/bg-\w+-\d+\s*text-\w+/g,'').trim();
+    btn.className += t === id
+      ? ' bg-indigo-600 text-white'
+      : ' bg-slate-800 text-slate-400 hover:bg-slate-700';
+  });
+}
+
+// ── Sonuc Modal ────────────────────────────────────────────────────
+function sonucModalAc(macId, s1Adi, s2Adi, s1Id, s2Id, gorev) {
+  document.getElementById('modal-mac-adi').textContent = s1Adi + ' - ' + s2Adi;
+  document.getElementById('modal-gorev').textContent   = '📋 Görev: ' + gorev;
+  document.getElementById('modal-s1').textContent      = s1Adi;
+  document.getElementById('modal-s2').textContent      = s2Adi;
+  const form = document.getElementById('sonuc-form');
+  form.action = `/lig/mac/${macId}/sonuc`;
+  form._macId = macId;
+  document.getElementById('sonuc-modal').classList.remove('hidden');
+}
+
+// Sonuc form submit
+document.getElementById('sonuc-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fd  = new FormData(this);
+  const res = await fetch(this.action, {
+    method:'POST', body:fd,
+    headers:{'X-Requested-With':'XMLHttpRequest'}
+  });
+  const data = await res.json();
+  document.getElementById('sonuc-modal').classList.add('hidden');
+
+  if (data.durum === 'tamamlandi') {
+    kutlamaGoster(data.kazanan_id, document.getElementById('sonuc-form')._macId);
+    setTimeout(() => location.reload(), 5000);
+  } else if (data.durum === 'var_incelemesi') {
+    setTimeout(() => location.reload(), 500);
+  }
+});
+
+// ── VAR Modal ──────────────────────────────────────────────────────
+let varMacId = null, varS1Id = null, varS2Id = null;
+
+function varModalAc(macId, s1Adi, s2Adi, s1Id, s2Id) {
+  varMacId = macId; varS1Id = s1Id; varS2Id = s2Id;
+  document.getElementById('var-mac-adi').textContent = s1Adi + ' - ' + s2Adi;
+  document.getElementById('var-btn-s1').textContent  = s1Adi;
+  document.getElementById('var-btn-s1').value        = s1Id;
+  document.getElementById('var-btn-s2').textContent  = s2Adi;
+  document.getElementById('var-btn-s2').value        = s2Id;
+  document.getElementById('var-form').action         = `/lig/mac/${macId}/oyla`;
+  document.getElementById('var-modal').classList.remove('hidden');
+
+  // Hakem mi?
+  const varOgretmenler = {{ var_ogretmenler | tojson }};
+  // Not: ogretmen adini bilmiyoruz, server-side kontrol ediyor
+  document.getElementById('var-hakem-panel').classList.remove('hidden');
+
+  document.getElementById('var-oylar').textContent = 'Oylar bekleniyor...';
+}
+
+document.getElementById('var-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fd  = new FormData(this);
+  const res = await fetch(this.action, {
+    method:'POST', body:fd,
+    headers:{'X-Requested-With':'XMLHttpRequest'}
+  });
+  const data = await res.json();
+  document.getElementById('var-modal').classList.add('hidden');
+
+  if (data.durum === 'tamamlandi') {
+    kutlamaGoster(data.kazanan_id, varMacId);
+    setTimeout(() => location.reload(), 5000);
+  } else {
+    document.getElementById('var-oylar').textContent = 'Oyu kaydedildi. Diğer hakem bekleniyor...';
+  }
+});
+
+// ── Şans Çarkı ─────────────────────────────────────────────────────────
+const CARK_SECENEKLER = [
+  ["+1 Bonus Puan",1,"#22c55e"],["+3 Bonus Puan",3,"#16a34a"],
+  ["+5 SUPER Puan!",5,"#f59e0b"],["Rakipten 1 Al",-1,"#ef4444"],
+  ["Sifir — Iyi Sans!",0,"#64748b"],["+2 Bonus Puan",2,"#3b82f6"],
+  ["JACKPOT +10!",10,"#fbbf24"],["-1 Puan — Kader!",-1,"#dc2626"],
+];
+let _carkDonuyor = false;
+let _carkMacId = null, _carkSinifId = null;
+
+function carkGoster(macId, sinifId, sinifAdi) {
+  _carkMacId = macId; _carkSinifId = sinifId;
+  document.getElementById('cark-sinif-adi').textContent = sinifAdi + ' Şansını Deniyor!';
+  document.getElementById('cark-sonuc-text').textContent = '';
+  document.getElementById('cark-modal').classList.remove('hidden');
+  setTimeout(() => carkCizLig(), 100);
+}
+
+function carkCizLig(rotasyon = 0) {
+  const canvas = document.getElementById('cark-canvas-lig');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const n = CARK_SECENEKLER.length;
+  const aci = (2 * Math.PI) / n;
+  const cx = canvas.width/2, cy = canvas.height/2, r = cx - 8;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  CARK_SECENEKLER.forEach(([text, puan, renk], i) => {
+    const baslangic = rotasyon + i * aci - Math.PI / 2;
+    const bitis     = baslangic + aci;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, baslangic, bitis); ctx.closePath();
+    ctx.fillStyle = renk + (i%2===0?'dd':'aa'); ctx.fill();
+    ctx.strokeStyle = '#060c1a'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(baslangic + aci / 2);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Segoe UI, system-ui';
+    ctx.fillText(text.length>13?text.slice(0,12)+'…':text, r-6, 4);
+    ctx.restore();
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,16,0,2*Math.PI);
+  ctx.fillStyle='#020817'; ctx.fill();
+  ctx.strokeStyle='#f59e0b'; ctx.lineWidth=3; ctx.stroke();
+  ctx.fillStyle='#f59e0b'; ctx.font='bold 12px sans-serif';
+  ctx.textAlign='center'; ctx.fillText('🎰',cx,cy+4);
+}
+
+async function carkCevir() {
+  if (_carkDonuyor) return;
+  _carkDonuyor = true;
+  document.getElementById('btn-cevir').disabled = true;
+  const n       = CARK_SECENEKLER.length;
+  const donusler = 5 + Math.random() * 3;
+  const hedef   = Math.floor(Math.random() * n);
+  const hedefAci = donusler * 2 * Math.PI + (2 * Math.PI - (hedef / n) * 2 * Math.PI);
+  const sure    = 4000;
+  const baslangic = Date.now();
+
+  function animasyon() {
+    const gecen = Date.now() - baslangic;
+    const t     = Math.min(gecen / sure, 1);
+    const ease  = 1 - Math.pow(1 - t, 4);
+    const rot   = ease * hedefAci;
+    carkCizLig(rot);
+    if (t < 1) { requestAnimationFrame(animasyon); }
+    else {
+      _carkDonuyor = false;
+      // Sunucuya kaydet
+      const fd = new FormData();
+      fd.append('mac_id', _carkMacId); fd.append('sinif_id', _carkSinifId);
+      fetch('/api/sans-carki/cevir', {method:'POST',body:fd}).then(r=>r.json()).then(data => {
+        const [text,puan,renk] = CARK_SECENEKLER[hedef];
+        const el = document.getElementById('cark-sonuc-text');
+        el.textContent = `🎉 ${data.ok ? data.sonuc : text}`;
+        el.style.color = renk;
+        document.getElementById('btn-cevir').textContent = '✅ Çevrildi';
+        if (puan > 0) {
+          const r2 = ['#ffd700','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff'];
+          const b = Date.now()+3000;
+          (function at(){confetti({particleCount:8,angle:60,spread:55,origin:{x:0},colors:r2});confetti({particleCount:8,angle:120,spread:55,origin:{x:1},colors:r2});if(Date.now()<b)requestAnimationFrame(at);})();
+        }
+      });
+    }
+  }
+  requestAnimationFrame(animasyon);
+}
+
+// ── Kazanan Kutlama ────────────────────────────────────────────────
+const SINIF_ADI = {};
+{% for mac in maclar %}
+SINIF_ADI[{{ mac.sinif1_id }}] = '{{ mac.sinif1_adi }}';
+SINIF_ADI[{{ mac.sinif2_id }}] = '{{ mac.sinif2_adi }}';
+{% endfor %}
+
+function kutlamaGoster(kazananId, macId) {
+  const k = document.getElementById('kutlama');
+  const adi = SINIF_ADI[kazananId] || '?';
+  document.getElementById('kutlama-metin').textContent = adi + ' Şubesi';
+  document.getElementById('kutlama-cark-btn').onclick = () => {
+    k.classList.add('hidden');
+    carkGoster(macId, kazananId, adi);
+  };
+  k.classList.remove('hidden');
+  k.style.pointerEvents = 'auto';
+
+  const dur = 4000, bitis = Date.now() + dur;
+  const renkler = ['#ffd700','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff'];
+  (function at() {
+    confetti({ particleCount:8, angle:60,  spread:50, origin:{x:0}, colors:renkler });
+    confetti({ particleCount:8, angle:120, spread:50, origin:{x:1}, colors:renkler });
+    if (Date.now() < bitis) requestAnimationFrame(at);
+  })();
+
+  setTimeout(() => k.classList.add('hidden'), dur + 500);
+}
+
+// ── Otomatik Guncelleme ────────────────────────────────────────────
+setInterval(async () => {
+  const res  = await fetch('/api/lig/maclar').catch(() => null);
+  if (!res || !res.ok) return;
+  const data = await res.json();
+  const yeniTamamlanan = data.filter(m => m.durum === 'tamamlandi').length;
+  const mevcutTamamlanan = document.querySelectorAll('.mac-card.tamamlandi').length;
+  if (yeniTamamlanan > mevcutTamamlanan) location.reload();
+}, 15_000);
+
+// ════════════════════════════════════════════════════════════════════════
+// KART SİSTEMİ
+// ════════════════════════════════════════════════════════════════════════
+let _kartMacId  = null;
+let _kartTipi   = null;  // 'sari' | 'kirmizi'
+let _kartTakimNo = null; // 1 | 2
+let _kartS1Id   = null, _kartS2Id = null;
+let _kartS1Adi  = '', _kartS2Adi = '';
+
+function kartModalAc(macId, s1Adi, s2Adi, s1Id, s2Id) {
+  _kartMacId  = macId;
+  _kartS1Id   = s1Id;   _kartS2Id = s2Id;
+  _kartS1Adi  = s1Adi;  _kartS2Adi = s2Adi;
+  _kartTipi   = null;   _kartTakimNo = null;
+
+  document.getElementById('kart-mac-adi').textContent = s1Adi + ' - ' + s2Adi;
+  document.getElementById('btn-sinif1').textContent   = s1Adi;
+  document.getElementById('btn-sinif2').textContent   = s2Adi;
+  document.getElementById('kart-ogrenci-sec').innerHTML = '<option value="">— Önce takım seçin —</option>';
+
+  // Kart tipi secim sifirla
+  ['btn-sari','btn-kirmizi'].forEach(id =>
+    document.getElementById(id).style.outline = 'none'
+  );
+  ['btn-sinif1','btn-sinif2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.borderColor = '';
+    el.style.background  = '';
+  });
+
+  document.getElementById('kart-modal').classList.remove('hidden');
+}
+
+function kartTipiSec(tip) {
+  _kartTipi = tip;
+  document.getElementById('btn-sari').style.outline    = tip === 'sari'    ? '3px solid #ca8a04' : 'none';
+  document.getElementById('btn-kirmizi').style.outline = tip === 'kirmizi' ? '3px solid #dc2626' : 'none';
+}
+
+async function kartTakimSec(no) {
+  _kartTakimNo = no;
+  const sinifId  = no === 1 ? _kartS1Id : _kartS2Id;
+  const sinifAdi = no === 1 ? _kartS1Adi : _kartS2Adi;
+
+  // Buton renklendirme
+  document.getElementById('btn-sinif1').style.borderColor = no === 1 ? '#6366f1' : '';
+  document.getElementById('btn-sinif1').style.background  = no === 1 ? '#1e1b4b' : '';
+  document.getElementById('btn-sinif2').style.borderColor = no === 2 ? '#7c3aed' : '';
+  document.getElementById('btn-sinif2').style.background  = no === 2 ? '#2e1065' : '';
+
+  // Ogrencileri yukle
+  const sel = document.getElementById('kart-ogrenci-sec');
+  sel.innerHTML = '<option value="">Yükleniyor...</option>';
+  try {
+    const res  = await fetch(`/api/sinif/${sinifId}/ogrenciler`);
+    const data = await res.json();
+    sel.innerHTML = `<option value="">— ${sinifAdi} öğrencisi seçin —</option>` +
+      data.map(o => `<option value="${o.id}" data-sinif="${sinifId}">${o.ad_soyad} (${o.ogr_no})</option>`).join('');
+  } catch(e) {
+    sel.innerHTML = '<option value="">Yüklenemedi</option>';
+  }
+}
+
+async function kartGonder() {
+  const ogrenciSel = document.getElementById('kart-ogrenci-sec');
+  const ogrenciId  = ogrenciSel.value;
+  const sinifId    = _kartTakimNo === 1 ? _kartS1Id : _kartS2Id;
+  const neden      = document.getElementById('kart-neden-sec').value;
+
+  if (!_kartTipi)   { alert('Lütfen kart türü seçin!'); return; }
+  if (!_kartTakimNo){ alert('Lütfen takım seçin!');     return; }
+  if (!ogrenciId)   { alert('Lütfen öğrenci seçin!');   return; }
+
+  const btn = document.getElementById('kart-gonder-btn');
+  btn.textContent = '⏳ Gönderiliyor...';
+  btn.disabled    = true;
+
+  try {
+    const fd = new FormData();
+    fd.append('ogrenci_id', ogrenciId);
+    fd.append('sinif_id',   sinifId);
+    fd.append('kart_turu',  _kartTipi);
+    fd.append('neden',      neden);
+
+    const res  = await fetch(`/lig/mac/${_kartMacId}/kart`, {
+      method: 'POST', body: fd,
+      headers: {'X-Requested-With': 'XMLHttpRequest'}
+    });
+    const data = await res.json();
+
+    document.getElementById('kart-modal').classList.add('hidden');
+
+    if (data.ok) {
+      // Animasyon
+      kartAnimasyonGoster(_kartTipi, ogrenciSel.selectedOptions[0].text);
+
+      // Kart rozeti maç kartına ekle
+      const kartDiv = document.getElementById(`kartlar-${_kartMacId}`);
+      if (kartDiv) {
+        const badge = document.createElement('span');
+        badge.className = `text-xs font-bold px-2 py-0.5 rounded-full ${
+          _kartTipi === 'sari' ? 'kart-badge-sari' : 'kart-badge-kirmizi'
+        }`;
+        const sinifAdi = _kartTakimNo === 1 ? _kartS1Adi : _kartS2Adi;
+        badge.textContent = (_kartTipi === 'sari' ? '🟨 ' : '🟥 ') +
+          ogrenciSel.selectedOptions[0].text.split('(')[0].trim() + ` (${sinifAdi})`;
+        kartDiv.appendChild(badge);
+      }
+
+      // Bilgi tostu
+      const msg = _kartTipi === 'sari'
+        ? `🟨 Sarı Kart! ${data.tik_eklendi} tik eklendi.`
+        : `🟥 Kırmızı Kart! ${data.tik_eklendi} tik + takımdan ${data.puan_cezasi} puan silindi.`;
+      toastGoster(msg, _kartTipi === 'sari' ? '#ca8a04' : '#dc2626');
+    } else {
+      alert('Hata: ' + (data.hata || 'Bilinmeyen hata'));
+    }
+  } catch(e) {
+    alert('Sunucu hatası: ' + e.message);
+  } finally {
+    btn.textContent = '⚡ Kartı Göster';
+    btn.disabled    = false;
+  }
+}
+
+function kartAnimasyonGoster(tip, ogrenciAdi) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed; inset:0; z-index:9999; display:flex;
+    align-items:center; justify-content:center; pointer-events:none;
+    background:rgba(0,0,0,0.7);
+  `;
+  overlay.innerHTML = `
+    <div style="text-align:center; animation:bounce-in .5s cubic-bezier(.34,1.56,.64,1) both">
+      <div style="font-size:100px; line-height:1; filter:drop-shadow(0 0 30px ${tip === 'sari' ? '#ca8a04' : '#dc2626'})">
+        ${tip === 'sari' ? '🟨' : '🟥'}
+      </div>
+      <div style="color:${tip === 'sari' ? '#fbbf24' : '#f87171'}; font-size:20px; font-weight:900; margin-top:12px">
+        ${tip === 'sari' ? 'SARI KART' : 'KIRMIZI KART'}
+      </div>
+      <div style="color:white; font-size:14px; margin-top:6px; opacity:0.8">${ogrenciAdi.split('(')[0].trim()}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 2500);
+}
+
+function toastGoster(mesaj, renk) {
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:${renk}; color:white; padding:12px 20px; border-radius:12px;
+    font-weight:bold; font-size:13px; z-index:9999; max-width:90vw; text-align:center;
+    box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  `;
+  t.textContent = mesaj;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+</script>
+{% endblock %}

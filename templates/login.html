@@ -1,26 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Giriş{% endblock %}
+{% block title %}Giris{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-gradient-to-b from-okul-900 to-okul-800
             flex items-center justify-center px-4 py-12">
   <div class="w-full max-w-md">
 
-    <!-- Logo Alanı -->
     <div class="text-center mb-8">
       <div class="text-6xl mb-3">🏫</div>
       <h1 class="text-2xl font-bold text-white">Erenler Cumhuriyet Ortaokulu</h1>
-      <p class="text-blue-300 text-sm mt-1">Öğrenci Takip ve Disiplin Paneli</p>
+      <p class="text-blue-300 text-sm mt-1">Ogrenci Takip ve Disiplin Paneli</p>
     </div>
 
-    <!-- Kart -->
     <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
       <div class="bg-okul-800 px-6 py-4">
-        <h2 class="text-white font-semibold text-center">Öğretmen Girişi</h2>
+        <h2 class="text-white font-semibold text-center">Ogretmen Girisi</h2>
       </div>
 
       <form method="POST" class="p-6 space-y-5">
-
         {% if hata %}
         <div class="bg-red-50 border border-red-200 text-red-700 text-sm
                     rounded-lg px-4 py-3 flex items-center gap-2">
@@ -28,16 +25,15 @@
         </div>
         {% endif %}
 
-        <!-- Öğretmen Seçimi -->
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">
-            Öğretmen Seçin
+            Ogretmen Secin
           </label>
           <select name="ad_soyad" required
                   class="w-full border border-slate-300 rounded-xl px-4 py-3
                          text-slate-800 bg-slate-50 focus:outline-none
                          focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="">— Adınızı seçin —</option>
+            <option value="">— Adinizi secin —</option>
             {% for ogr in ogretmenler %}
             <option value="{{ ogr }}" {% if ogr == secili %}selected{% endif %}>
               {{ ogr }}
@@ -46,14 +42,13 @@
           </select>
         </div>
 
-        <!-- Şifre -->
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">
-            Şifre
+            Sifre
           </label>
           <div class="relative">
             <input type="password" name="sifre" id="sifre-input"
-                   placeholder="Şifrenizi girin..."
+                   placeholder="Sifrenizi girin..."
                    class="w-full border border-slate-300 rounded-xl px-4 py-3
                           pr-12 text-slate-800 bg-slate-50 focus:outline-none
                           focus:ring-2 focus:ring-blue-500 font-mono text-sm"
@@ -66,22 +61,31 @@
           </div>
         </div>
 
-        <!-- Giriş Butonu -->
         <button type="submit"
                 class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800
                        text-white font-bold py-3 rounded-xl transition
                        text-sm shadow-md">
-          Giriş Yap →
+          Giris Yap →
         </button>
       </form>
 
-      <!-- Alt bağlantı -->
-      <div class="border-t border-slate-100 px-6 py-4 flex justify-between items-center">
+      <!-- Öğrenci Girişi -->
+      <div class="border-t border-slate-100 px-6 py-4">
+        <a href="{{ url_for('ogrenci_gorunum') }}"
+           class="flex items-center justify-center gap-2 w-full
+                  bg-emerald-50 hover:bg-emerald-100
+                  border border-emerald-300 text-emerald-700
+                  font-bold py-2.5 rounded-xl transition text-sm">
+          👨‍🎓 Öğrenci Olarak Görüntüle
+          <span class="text-[10px] font-normal text-emerald-500">(Şifresiz)</span>
+        </a>
+      </div>
+      <div class="border-t border-slate-100 px-6 py-3 flex justify-between items-center">
         <a href="{{ url_for('admin_sifreler') }}"
            class="text-xs text-slate-400 hover:text-slate-600 transition">
-          🔑 Şifre Listesi (Yönetici)
+          🔑 Sifre Listesi (Yonetici)
         </a>
-        <span class="text-xs text-slate-300">2025–2026 II. Dönem</span>
+        <span class="text-xs text-slate-300">2025-2026</span>
       </div>
     </div>
 

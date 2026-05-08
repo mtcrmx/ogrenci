@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Öğrenci Paneli — Erenler Cumhuriyet Ortaokulu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background:#0b1220; font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; }
+
+    @keyframes slide-up   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pulse-gold { 0%,100%{box-shadow:0 0 8px #f59e0b44} 50%{box-shadow:0 0 20px #f59e0b88} }
+    @keyframes streak-fire{ 0%,100%{text-shadow:0 0 8px #f97316} 50%{text-shadow:0 0 20px #ef4444} }
+    @keyframes float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes badge-glow { 0%,100%{box-shadow:0 0 6px #6366f1} 50%{box-shadow:0 0 18px #818cf8} }
+    @keyframes vs-pulse   { 0%,100%{color:#f97316;transform:scale(1)} 50%{color:#ef4444;transform:scale(1.2)} }
+    @keyframes mac-blink  { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .slide-up   { animation:slide-up .4s ease both; }
+    .float      { animation:float 3s ease-in-out infinite; }
+    .streak-fire{ animation:streak-fire 1.5s ease-in-out infinite; }
+    .badge-glow { animation:badge-glow 2s ease-in-out infinite; }
+    .vs-text    { animation:vs-pulse 1.2s ease-in-out infinite; }
+    .mac-blink  { animation:mac-blink 2s ease-in-out infinite; }
+
+    /* Disiplin renkleri */
+    .d-disiplin { background:#150320; border-color:#a855f7; }
+    .d-tutanak  { background:#1f0606; border-color:#ef4444; }
+    .d-veli     { background:#1a0900; border-color:#f97316; }
+    .d-uyari    { background:#1a1200; border-color:#fbbf24; }
+    .d-temiz    { background:#071a0e; border-color:#4ade80; }
+
+    /* Tab */
+    .tab-btn { transition:all .2s; padding:.6rem 1.2rem; border-radius:.75rem;
+               font-size:.72rem; font-weight:800; }
+    .tab-btn.aktif  { background:#1d4ed8; color:#fff; }
+    .tab-btn.pasif  { background:#111827; color:#64748b; }
+    .tab-btn.pasif:hover { background:#1e293b; color:#94a3b8; }
+
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px; }
+
+    /* Rozet kartı */
+    .rozet-kart { background:linear-gradient(135deg,#0f172a,#1e293b); border:1px solid #334155; }
+    .rozet-kart:hover { border-color:#f59e0b; transform:translateY(-3px); }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header style="background:#080f20" class="sticky top-0 z-40 border-b border-slate-800">
+  <!-- Navigasyon -->
+  <div class="flex items-center gap-2 px-3 py-1.5 border-b border-slate-800" style="background:#04090f">
+    <button onclick="history.back()"
+            class="px-2 py-0.5 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+      ◀ Geri
+    </button>
+    <a href="{{ url_for('login') }}"
+       class="px-2.5 py-0.5 rounded text-xs font-bold bg-blue-900 hover:bg-blue-800 text-blue-300 transition">
+      🏠 Giriş
+    </a>
+    <a href="/quiz/{{ tablo[0].sinif_id if tablo else 1 }}"
+       class="px-2.5 py-0.5 rounded text-xs font-bold bg-purple-900 hover:bg-purple-800 text-purple-300 transition">
+      🧠 Quiz
+    </a>
+    <div class="flex-1 text-center">
+      <span class="text-xs text-emerald-500 font-bold">👨‍🎓 Öğrenci Görüntüleme Modu</span>
+    </div>
+    <div id="saat" class="font-mono text-xs text-slate-400">--:--</div>
+  </div>
+
+  <!-- Okul başlığı -->
+  <div class="px-4 py-2 flex items-center justify-between">
+    <div>
+      <div class="text-blue-300 font-black text-sm">🏫 Erenler Cumhuriyet Ortaokulu</div>
+      <div class="text-slate-500 text-xs">Salt Okunur · Veri girişi yok</div>
+    </div>
+    <div class="bg-emerald-900/50 border border-emerald-700 rounded-full px-3 py-1">
+      <span class="text-emerald-400 text-[10px] font-bold">👁 İzle</span>
+    </div>
+  </div>
+
+  <!-- Tab menüsü -->
+  <div class="flex gap-1 px-3 pb-2 overflow-x-auto">
+    <button onclick="tabAc('siralama')" id="tab-siralama" class="tab-btn aktif flex-shrink-0">
+      🚨 Disiplin
+    </button>
+    <button onclick="tabAc('lig')" id="tab-lig" class="tab-btn pasif flex-shrink-0">
+      ⚽ Süper Lig
+    </button>
+    <button onclick="tabAc('maclar')" id="tab-maclar" class="tab-btn pasif flex-shrink-0">
+      🆚 Maçlar
+    </button>
+    <button onclick="tabAc('oduller')" id="tab-oduller" class="tab-btn pasif flex-shrink-0">
+      🎮 Ödüller
+    </button>
+    <button onclick="tabAc('rozet')" id="tab-rozet" class="tab-btn pasif flex-shrink-0">
+      🏅 Rozetler
+    </button>
+    <button onclick="tabAc('ittifak')" id="tab-ittifak" class="tab-btn pasif flex-shrink-0">
+      🤝 İttifak
+    </button>
+  </div>
+</header>
+
+<main class="max-w-2xl mx-auto px-3 py-4 pb-20">
+
+  <!-- ══ DİSİPLİN SIRALAMA ═════════════════════════════════════════════ -->
+  <div id="panel-siralama">
+    <div class="text-slate-500 text-xs text-center mb-3">
+      Tüm öğrenciler tik sayısına göre sıralanmıştır. Düşük sıra = daha az tik = daha iyi!
+    </div>
+
+    <!-- Açıklama bandı -->
+    <div class="grid grid-cols-5 gap-1 mb-3">
+      {% for emoji, kod, metin, renk in [
+        ('✅','temiz','Temiz','text-emerald-400'),
+        ('⚠️','uyari','3 Tik: Uyarı','text-yellow-400'),
+        ('📱','veli','6 Tik: Veli','text-orange-400'),
+        ('📋','tutanak','9 Tik: Tutanak','text-red-400'),
+        ('🚨','disiplin','12 Tik: Disiplin','text-purple-400'),
+      ] %}
+      <div class="rounded-lg p-1.5 text-center border border-slate-700" style="background:#080f20">
+        <div class="text-base">{{ emoji }}</div>
+        <div class="text-[9px] {{ renk }} font-bold leading-tight">{{ metin }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div id="liste-siralama" class="space-y-1.5">
+      {% for o in ogrenciler %}
+      {% set sira = loop.index %}
+      {% set cls = 'd-' + o.durum %}
+      {% set renk_map = {'disiplin': '#a855f7', 'tutanak': '#f87171', 'veli': '#fb923c', 'uyari': '#fbbf24', 'temiz': '#4ade80'} %}
+      {% set renk = renk_map.get(o.durum, '#4ade80') %}
+      <div class="{{ cls }} border rounded-xl overflow-hidden slide-up"
+           style="animation-delay:{{ (sira - 1) * 30 }}ms">
+        <div class="flex items-stretch">
+          <div class="flex-shrink-0 w-10 flex items-center justify-center font-black text-sm"
+               style="background:rgba(0,0,0,0.35); color:{{ renk }}">#{{ sira }}</div>
+          <div class="flex-1 px-3 py-2 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-lg">{{ o.emoji }}</span>
+              <span class="font-bold text-sm text-white">{{ o.ad_soyad }}</span>
+              <span class="text-slate-500 text-xs">{{ o.sinif_adi }}</span>
+              {% if o.etiket %}
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                    style="background:{{ renk }}22; color:{{ renk }}">{{ o.etiket }}</span>
+              {% endif %}
+            </div>
+            <div class="mt-1 h-1.5 rounded-full overflow-hidden" style="background:#0f172a">
+              {% set maks_tik = ogrenciler[0].tik_sayisi if ogrenciler else 1 %}
+              <div class="h-full rounded-full"
+                   style="width:{{ [((o.tik_sayisi / (maks_tik if maks_tik > 0 else 1)) * 100)|round|int, 100]|min }}%;background:{{ renk }}"></div>
+            </div>
+          </div>
+          <div class="flex-shrink-0 w-12 flex flex-col items-center justify-center"
+               style="background:rgba(0,0,0,0.35)">
+            <span class="font-black text-xl" style="color:{{ renk }}">{{ o.tik_sayisi }}</span>
+            <span class="text-[9px] opacity-50" style="color:{{ renk }}">tik</span>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-slate-600 text-center py-10">Kayıt bulunamadı.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ══ SÜPER LİG ═══════════════════════════════════════════════════════ -->
+  <div id="panel-lig" class="hidden">
+    <h2 class="text-white font-black text-sm mb-1 text-center tracking-wide">
+      🏆 ERENLER CUMHURİYET SÜPER LİGİ
+    </h2>
+    <p class="text-slate-500 text-[11px] text-center mb-2">Sınıf adına tıklayarak kadroyu görebilirsin 👇</p>
+    <p class="text-green-500 text-[11px] text-center mb-3">
+      🟢 <strong>Taktik Tahtası</strong> için satıra tıkla ve formasyonu kendin düzenle!
+    </p>
+
+    <!-- Puan tablosu -->
+    <div class="rounded-2xl overflow-hidden border border-slate-700 mb-4" style="background:#080f20">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="border-b border-slate-700 text-slate-400" style="background:#0d1526">
+            <th class="py-2 px-2 text-left w-6">#</th>
+            <th class="py-2 px-2 text-left">Sınıf</th>
+            <th class="py-2 px-2 text-center w-8" title="Galibiyet">G</th>
+            <th class="py-2 px-2 text-center w-8" title="Beraberlik">B</th>
+            <th class="py-2 px-2 text-center w-8" title="Mağlubiyet">M</th>
+            <th class="py-2 px-2 text-center w-10" title="Olumlu Davranış Bonusu">O+</th>
+            <th class="py-2 px-3 text-center font-black text-white w-10">P</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in tablo %}
+          {% set renk = '#fbbf24' if loop.index==1 else '#94a3b8' if loop.index==2 else '#d97706' if loop.index==3 else '#475569' %}
+          {% set madalya = '🥇' if loop.index==1 else '🥈' if loop.index==2 else '🥉' if loop.index==3 else loop.index %}
+          <tr class="border-b border-slate-800 slide-up cursor-pointer hover:brightness-125 transition"
+              style="animation-delay:{{ loop.index0*40 }}ms{% if loop.index==1 %};background:#0d1000{% endif %}"
+              onclick="kadroGoster({{ s.sinif_id }}, '{{ s.sinif_adi }}')">
+            <td class="py-2 px-2 font-black text-sm" style="color:{{ renk }}">{{ madalya }}</td>
+            <td class="py-2 px-2 font-bold text-sm" style="color:{{ renk }}">
+              {{ s.sinif_adi }}
+              <span class="text-[9px] text-slate-600 font-normal ml-1">👤</span>
+              <a href="/taktik/{{ s.sinif_id }}"
+                 onclick="event.stopPropagation()"
+                 class="ml-1 text-[9px] text-green-500 font-bold hover:text-green-400 transition">🟢</a>
+            </td>
+            <td class="py-2 px-2 text-center text-green-400">{{ s.galibiyet }}</td>
+            <td class="py-2 px-2 text-center text-yellow-400">{{ s.beraberlik }}</td>
+            <td class="py-2 px-2 text-center text-red-400">{{ s.maglubiyet }}</td>
+            <td class="py-2 px-2 text-center text-blue-300">{{ s.ag }}</td>
+            <td class="py-2 px-3 text-center font-black text-base" style="color:{{ renk }}">{{ s.puan }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="py-6 text-center text-slate-600">Lig tablosu henüz oluşmadı.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Seri bilgisi -->
+    {% if seri %}
+    <div class="rounded-2xl border border-slate-700 p-3 mb-3" style="background:#0d1526">
+      <div class="text-orange-400 font-black text-xs mb-2">🔥 Olumlu Davranış Serileri</div>
+      <div class="space-y-1.5">
+        {% for s in seri %}
+        <div class="flex items-center gap-2">
+          <span class="{% if s.guncel_seri > 0 %}streak-fire{% endif %} text-lg">
+            {{ '🔥' if s.guncel_seri > 0 else '❄️' }}
+          </span>
+          <span class="flex-1 text-white text-sm font-bold">{{ s.sinif_adi }}</span>
+          <span class="text-orange-400 font-black">{{ s.guncel_seri }}g</span>
+          <span class="text-slate-600 text-xs">En uzun: {{ s.en_uzun_seri }}g</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Sezon şampiyonluğu -->
+    {% if sezon %}
+    <div class="rounded-2xl border border-yellow-800 p-3" style="background:#0d1526">
+      <div class="text-yellow-400 font-black text-xs mb-2">🏆 Dönem Şampiyonluğu (Sezon Puanı)</div>
+      <div class="space-y-1.5">
+        {% for s in sezon %}
+        {% set renk = '#fbbf24' if loop.index==1 else '#94a3b8' if loop.index==2 else '#d97706' if loop.index==3 else '#475569' %}
+        <div class="flex items-center gap-2 rounded-lg px-3 py-1.5" style="background:#080f20">
+          <span class="font-black text-sm w-5 text-center" style="color:{{ renk }}">
+            {{ '🥇' if loop.index==1 else '🥈' if loop.index==2 else '🥉' if loop.index==3 else loop.index }}
+          </span>
+          <span class="flex-1 font-bold text-sm" style="color:{{ renk }}">{{ s.sinif_adi }}</span>
+          <span class="font-black" style="color:{{ renk }}">{{ s.sezon_puan }}p</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ══ BUGÜNKÜ MAÇLAR ══════════════════════════════════════════════════ -->
+  <div id="panel-maclar" class="hidden">
+    <div class="text-slate-500 text-xs text-center mb-3">
+      Bugünkü maçlar ve sonuçları — canlı güncellenir
+    </div>
+    {% if maclar %}
+    <div class="space-y-3">
+      {% for m in maclar %}
+      {% set tamam = m.durum == 'tamamlandi' %}
+      {% set var_inc = m.durum == 'var_incelemesi' %}
+      <div class="rounded-2xl border overflow-hidden slide-up"
+           style="background:{% if tamam %}#071a0e{% elif var_inc %}#1a0a2e{% else %}#0c1526{% endif %};
+                  border-color:{% if tamam %}#166534{% elif var_inc %}#7e22ce{% else %}#1e3a5f{% endif %};
+                  animation-delay:{{ loop.index0 * 60 }}ms">
+        <div class="px-4 py-3">
+          <!-- Seans + tarih -->
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold {{ 'text-yellow-400' if m.seans == 'sabah' else 'text-blue-400' }}">
+              {{ '🌅 Sabah' if m.seans == 'sabah' else '🌆 Öğleden Sonra' }}
+            </span>
+            <span class="text-[10px] text-slate-600">{{ m.tarih[:10] if m.tarih else '' }}</span>
+          </div>
+
+          <!-- Takımlar -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-center flex-1">
+              <div class="text-white font-black text-base">{{ m.sinif1_adi }}</div>
+              {% if m.s1_tamamlayan is not none %}
+              <div class="font-black text-sm {{ 'text-green-400' if m.kazanan_id == m.sinif1_id else 'text-red-400' }}">
+                {{ m.s1_tamamlayan }}/{{ m.s1_toplam }}
+              </div>
+              {% endif %}
+            </div>
+            <div class="vs-text font-black text-xl flex-shrink-0 px-2">VS</div>
+            <div class="text-center flex-1">
+              <div class="text-white font-black text-base">{{ m.sinif2_adi }}</div>
+              {% if m.s2_tamamlayan is not none %}
+              <div class="font-black text-sm {{ 'text-green-400' if m.kazanan_id == m.sinif2_id else 'text-red-400' }}">
+                {{ m.s2_tamamlayan }}/{{ m.s2_toplam }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Görev -->
+          <div class="text-slate-400 text-xs text-center mt-1.5 italic">📋 {{ m.gorev }}</div>
+
+          <!-- Sonuç -->
+          <div class="mt-2 text-center">
+            {% if tamam and m.kazanan_id %}
+            <span class="text-green-400 text-sm font-black">
+              🏆 {{ m.sinif1_adi if m.kazanan_id == m.sinif1_id else m.sinif2_adi }} Kazandı!
+            </span>
+            {% elif tamam %}
+            <span class="text-slate-400 text-sm">🤝 Berabere</span>
+            {% elif var_inc %}
+            <span class="text-purple-400 text-sm mac-blink">📺 VAR İncelemesinde</span>
+            {% else %}
+            <span class="text-slate-600 text-sm mac-blink">⏳ Sonuç Bekleniyor</span>
+            {% endif %}
+          </div>
+
+          <!-- Kart uyarıları (varsa) -->
+          {% if m.kartlar %}
+          <div class="flex flex-wrap gap-1 mt-2">
+            {% for k in m.kartlar %}
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full
+                         {{ 'bg-yellow-900 text-yellow-400' if k.kart_turu == 'sari' else 'bg-red-900 text-red-400' }}">
+              {{ '🟨' if k.kart_turu == 'sari' else '🟥' }} {{ k.ogrenci_adi }}
+            </span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-16">
+      <div class="text-5xl mb-3 float">⚽</div>
+      <p class="text-slate-400">Bugün için maç planlanmamış.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ══ ÖDÜLLER ══════════════════════════════════════════════════════════ -->
+  <div id="panel-oduller" class="hidden">
+
+    <!-- Gizli Müfettiş -->
+    <div class="rounded-2xl border border-amber-700 overflow-hidden mb-4" style="background:#1a0d00">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#78350f">
+        <span class="text-xl">🕵️</span>
+        <div class="font-black text-amber-300 text-sm">Gizli Müfettiş</div>
+      </div>
+      <div class="p-4 text-center">
+        {% if mufettis and mufettis.sonuc %}
+          <div class="text-4xl mb-2">{{ '😇' if mufettis.sonuc == 'iyi' else '😐' }}</div>
+          <div class="text-white font-black text-lg">{{ mufettis.ad_soyad }}</div>
+          <div class="text-slate-400 text-sm">{{ mufettis.sinif_adi }}</div>
+          <div class="mt-2 font-bold {{ 'text-green-400' if mufettis.sonuc == 'iyi' else 'text-slate-400' }}">
+            {{ '✅ Harika performans! Sınıfa +2 puan eklendi!' if mufettis.sonuc == 'iyi' else '📋 Değerlendirme tamamlandı' }}
+          </div>
+        {% elif mufettis and mufettis.gizli %}
+          <div class="text-4xl mb-2">🔍</div>
+          <div class="text-amber-400 font-black">Bugün biri gizlice izleniyor...</div>
+          <div class="text-slate-600 text-xs mt-1">Sonuç gün sonu açıklanacak</div>
+        {% else %}
+          <div class="text-slate-600 text-sm">Bugün için kayıt yok.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Günlük Görev -->
+    <div class="rounded-2xl border border-indigo-700 overflow-hidden mb-4" style="background:#0f0b2e">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#312e81">
+        <span class="text-xl">🎯</span>
+        <div class="font-black text-indigo-300 text-sm">Bugünün Gizli Görevi</div>
+      </div>
+      <div class="p-4">
+        {% if gorev and gorev.gorev %}
+        <div class="text-white font-black text-base text-center mb-2">{{ gorev.gorev }}</div>
+        <div class="text-center text-indigo-400 text-sm mb-3">Ödül: +{{ gorev.puan }} puan</div>
+        {% set tamam_ids = gorev.tamamlayan_ids %}
+        <div class="space-y-1.5">
+          {% for s in seviyeleri %}
+          <div class="flex items-center gap-2 rounded-xl px-3 py-2 border
+                      {{ 'border-green-700 bg-green-950/40' if s.sinif_id in tamam_ids else 'border-slate-700 bg-slate-900/50' }}">
+            <span>{{ s.emoji if s.emoji else '🏫' }}</span>
+            <span class="flex-1 text-white text-sm font-bold">{{ s.sinif_adi }}</span>
+            {% if s.sinif_id in tamam_ids %}
+            <span class="text-green-400 text-xs font-bold">✅ Tamamladı!</span>
+            {% else %}
+            <span class="text-slate-600 text-xs">⏳ Bekliyor</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-slate-600 text-center">Bugün için görev yok.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Son Alkışlar -->
+    {% if alkislar %}
+    <div class="rounded-2xl border border-pink-800 overflow-hidden mb-4" style="background:#1a0015">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#831843">
+        <span class="text-xl">👏</span>
+        <div class="font-black text-pink-300 text-sm">Son Alkış Kuponları</div>
+      </div>
+      <div class="p-3 space-y-2">
+        {% for a in alkislar %}
+        <div class="flex items-start gap-2 rounded-xl px-3 py-2 border border-pink-900/30" style="background:#2a0025">
+          <span class="text-xl">👏</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-pink-300 font-bold text-sm">{{ a.ogrenci }}
+              <span class="text-slate-500 font-normal text-xs">({{ a.sinif_adi }})</span>
+            </div>
+            <div class="text-slate-400 text-xs italic">"{{ a.mesaj }}"</div>
+            <div class="text-slate-600 text-[10px]">{{ a.ogretmen }} · {{ a.tarih[:16] }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Sınıf Seviyeleri -->
+    {% if seviyeleri %}
+    <div class="rounded-2xl border border-slate-700 overflow-hidden mb-4" style="background:#0d1526">
+      <div class="px-4 py-2 flex items-center gap-2" style="background:#0f2144">
+        <span class="text-xl">⭐</span>
+        <div class="font-black text-slate-300 text-sm">Sınıf Seviyeleri</div>
+      </div>
+      <div class="p-3 grid grid-cols-2 gap-2">
+        {% for s in seviyeleri %}
+        {% set renk = '#fbbf24' if loop.index==1 else '#94a3b8' if loop.index==2 else '#d97706' if loop.index==3 else '#475569' %}
+        <div class="rounded-xl p-3 border text-center slide-up"
+             style="background:#080f20; border-color:{{ renk }}33; animation-delay:{{ loop.index0*40 }}ms">
+          <div class="text-2xl mb-1">{{ s.emoji }}</div>
+          <div class="font-black text-xs" style="color:{{ renk }}">{{ s.sinif_adi }}</div>
+          <div class="text-slate-400 text-[10px]">{{ s.ad }}</div>
+          <div class="mt-1 h-1 rounded-full overflow-hidden" style="background:#1e293b">
+            {% set maks = s.sonraki_esik if s.sonraki_esik > s.esik else s.puan + 1 %}
+            {% set ilerleme = [((s.puan - s.esik) / (maks - s.esik) * 100)|round|int, 100]|min %}
+            <div class="h-full rounded-full" style="width:{{ ilerleme }}%;background:{{ renk }}"></div>
+          </div>
+          <div class="text-[9px] mt-0.5 text-slate-600">{{ s.puan }}p</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ══ ROZETLER ═════════════════════════════════════════════════════════ -->
+  <div id="panel-rozet" class="hidden">
+    <div class="text-slate-500 text-xs text-center mb-3">
+      Öğrenciler ve sınıflar başarıları karşılığında otomatik rozet kazanır.
+    </div>
+
+    {% if rozetler %}
+    <div class="grid grid-cols-2 gap-3 mb-6">
+      {% for r in rozetler %}
+      <div class="rozet-kart rounded-2xl p-4 transition-all slide-up"
+           style="animation-delay:{{ loop.index0 * 50 }}ms">
+        <div class="text-3xl mb-2">{{ r.get('emoji','🏅') }}</div>
+        <div class="text-white font-black text-sm">{{ r.get('rozet_adi', r.rozet_kodu) }}</div>
+        <div class="text-indigo-400 text-xs mt-1 font-bold">{{ r.sahip }}</div>
+        <div class="text-slate-500 text-xs">{{ r.sinif_adi }}</div>
+        <div class="text-slate-600 text-[10px] mt-1">{{ r.tarih[:10] }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+      <div class="text-5xl mb-3 float">🏅</div>
+      <p class="text-slate-400">Henüz rozet kazanılmadı.</p>
+      <p class="text-slate-600 text-sm mt-1">Olumlu davranışlar sergiledikçe rozetler otomatik verilir.</p>
+    </div>
+    {% endif %}
+
+    <!-- Kazanılabilir rozetler kataloğu -->
+    <div class="rounded-2xl border border-slate-700 p-4" style="background:#0d1526">
+      <div class="text-white font-black text-sm mb-3">📋 Kazanılabilir Rozetler</div>
+      <div class="space-y-2">
+        {% for kod, (emoji, ad, aciklama) in rozet_tanimi.items() %}
+        <div class="flex items-center gap-3 py-2 border-b border-slate-800">
+          <span class="text-2xl">{{ emoji }}</span>
+          <div>
+            <div class="text-white text-xs font-bold">{{ ad }}</div>
+            <div class="text-slate-500 text-[10px]">{{ aciklama }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</main>
+
+  <!-- ══ İTTİFAK ═══════════════════════════════════════════════════════════ -->
+  <div id="panel-ittifak" class="hidden">
+
+    <!-- Açıklama -->
+    <div class="rounded-xl border border-teal-800 px-4 py-3 mb-5 flex gap-3 items-start"
+         style="background:#051a18">
+      <span class="text-2xl flex-shrink-0">🤝</span>
+      <div>
+        <div class="text-teal-300 font-black text-sm mb-1">İttifak Nedir?</div>
+        <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+          <li>İki sınıf birlikte ortak bir görev üstlenir, başarıyla tamamlarsa her iki sınıfa da <strong class="text-yellow-400">+5 Lig puanı</strong> verilir.</li>
+          <li>Günde <strong class="text-teal-300">iki slot</strong> var: <strong>🌅 Sabah</strong> ve <strong>🌆 Öğleden Sonra</strong>.</li>
+          <li>Talebiniz öğretmene gider — öğretmen onayladıktan sonra ittifak aktif olur.</li>
+          <li>Tamamlanması öğretmen tarafından işaretlenir.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Talep Formu -->
+    <div class="rounded-2xl border border-teal-700 p-5 mb-5" style="background:#051a18">
+      <h3 class="text-teal-300 font-black mb-4 text-sm">📋 İttifak Talebi Gönder</h3>
+
+      <!-- Seans seçimi -->
+      <div class="grid grid-cols-2 gap-2 mb-4">
+        <button onclick="seansSec('sabah', this)"
+                class="seans-btn aktif-seans rounded-xl py-3 text-sm font-bold transition"
+                style="background:#0d3330;border:2px solid #0d9488;color:#5eead4">
+          🌅 Sabah Seansı
+        </button>
+        <button onclick="seansSec('ogleden_sonra', this)"
+                class="seans-btn rounded-xl py-3 text-sm font-bold transition"
+                style="background:#111827;border:2px solid #1e3a5f;color:#64748b">
+          🌆 Öğleden Sonra
+        </button>
+      </div>
+      <input type="hidden" id="talep-seans" value="sabah">
+
+      <!-- Sınıf seçimi -->
+      <div class="mb-3">
+        <label class="block text-teal-400 text-xs font-bold mb-1">Kendi Sınıfınız (1. Sınıf)</label>
+        <select id="talep-sinif1" class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                                          px-3 py-2.5 text-white text-sm focus:outline-none
+                                          focus:border-teal-500">
+          <option value="">— Sınıf seçin —</option>
+          {% for s in seviyeleri %}
+          <option value="{{ s.sinif_id }}">{{ s.sinif_adi }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-4">
+        <label class="block text-teal-400 text-xs font-bold mb-1">İttifak Kurmak İstediğiniz Sınıf</label>
+        <select id="talep-sinif2" class="w-full bg-slate-800 border border-slate-600 rounded-xl
+                                          px-3 py-2.5 text-white text-sm focus:outline-none
+                                          focus:border-teal-500">
+          <option value="">— Sınıf seçin —</option>
+          {% for s in seviyeleri %}
+          <option value="{{ s.sinif_id }}">{{ s.sinif_adi }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button onclick="ittifakTalepGonder()"
+              class="w-full bg-teal-700 hover:bg-teal-600 text-white font-black
+                     py-3 rounded-xl transition text-sm">
+        🤝 Öğretmene Talep Gönder
+      </button>
+      <div id="talep-sonuc" class="mt-3 text-center text-sm hidden"></div>
+    </div>
+
+    <!-- Bugünkü ittifaklar (sezonun) -->
+    <div class="rounded-2xl border border-slate-700 p-4" style="background:#0d1526">
+      <h3 class="text-white font-black mb-3 text-sm">📅 Bugünkü İttifaklar</h3>
+      <div id="ittifak-listesi" class="space-y-2">
+        {% for it in seviyeleri %}{% endfor %}{# placeholder - JS ile doldurulur #}
+        <div class="text-slate-600 text-xs text-center py-4">Yükleniyor...</div>
+      </div>
+    </div>
+
+  </div>
+
+<!-- ══ KADRO MODALİ ═══════════════════════════════════════════════════════ -->
+<div id="kadro-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.85)" onclick="kadroKapat(event)">
+  <div class="w-full max-w-md rounded-2xl overflow-hidden border-2 border-green-700"
+       style="background:linear-gradient(180deg,#071a0e,#04120a);max-height:90vh;display:flex;flex-direction:column"
+       onclick="event.stopPropagation()">
+
+    <!-- Başlık -->
+    <div class="flex items-center justify-between px-4 py-3 flex-shrink-0"
+         style="background:linear-gradient(90deg,#052e10,#073d14)">
+      <div>
+        <div class="text-[9px] text-green-500 font-bold tracking-widest">ERENLER SÜPER LİGİ — KADRO</div>
+        <div id="kadro-sinif-adi" class="text-green-300 font-black text-lg leading-tight">—</div>
+      </div>
+      <button onclick="kadroKapat()"
+              class="w-8 h-8 rounded-full bg-green-900/60 hover:bg-red-900/60 text-white font-black text-lg
+                     flex items-center justify-center transition">
+        ✕
+      </button>
+    </div>
+
+    <!-- Yükleniyor / İçerik -->
+    <div id="kadro-icerik" class="flex-1 overflow-y-auto p-3">
+      <div class="text-center text-slate-500 py-8">Yükleniyor...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Otomatik güncelleme bilgisi ──────────────────────────────────────── -->
+<div class="fixed bottom-0 left-0 right-0 flex items-center justify-center py-2
+            border-t border-slate-800 text-xs text-slate-600"
+     style="background:#080f20">
+  <span id="guncelleme-bilgi">Yüklendi</span>
+  <span class="mx-2">·</span>
+  <span id="countdown-bilgi">30s'de yenilenecek</span>
+</div>
+
+<script>
+// ── Saat ──────────────────────────────────────────────────────────────────
+function saatGuncelle() {
+  const now = new Date();
+  document.getElementById('saat').textContent =
+    now.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+}
+setInterval(saatGuncelle, 1000);
+saatGuncelle();
+
+// ── Tab ───────────────────────────────────────────────────────────────────
+const TABS = ['siralama', 'lig', 'maclar', 'oduller', 'rozet', 'ittifak'];
+function tabAc(id) {
+  TABS.forEach(t => {
+    document.getElementById('panel-' + t).classList.toggle('hidden', t !== id);
+    const btn = document.getElementById('tab-' + t);
+    if (btn) { btn.className = 'tab-btn ' + (t === id ? 'aktif' : 'pasif') + ' flex-shrink-0'; }
+  });
+}
+
+// ── Otomatik Yenileme (30 saniye) ─────────────────────────────────────────
+const DURUM_RENK = {
+  disiplin: '#a855f7', tutanak: '#f87171', veli: '#fb923c', uyari: '#fbbf24', temiz: '#4ade80'
+};
+const DURUM_EMOJI = {
+  disiplin: '🚨', tutanak: '📋', veli: '📱', uyari: '⚠️', temiz: '✅'
+};
+const DURUM_ETIKET = {
+  disiplin: 'Disiplin Cezası', tutanak: 'Tutanak', veli: 'Veli Bilgilendirme', uyari: 'Uyarı', temiz: null
+};
+
+function durum_hesapla(tik) {
+  if (tik >= 12) return 'disiplin';
+  if (tik >= 9)  return 'tutanak';
+  if (tik >= 6)  return 'veli';
+  if (tik >= 3)  return 'uyari';
+  return 'temiz';
+}
+
+let countdown = 30;
+let guncellemeYapildi = false;
+
+async function veriYenile() {
+  try {
+    const res  = await fetch('/api/ogrenci/veri');
+    const d    = await res.json();
+
+    // Disiplin listesi güncelle
+    const liste = document.getElementById('liste-siralama');
+    if (liste && d.ogrenciler) {
+      const maks = Math.max(...d.ogrenciler.map(o => o.tik_sayisi), 1);
+      liste.innerHTML = d.ogrenciler.map((o, i) => {
+        const dur  = o.durum || durum_hesapla(o.tik_sayisi);
+        const renk = DURUM_RENK[dur] || '#4ade80';
+        const emoji = DURUM_EMOJI[dur] || '✅';
+        const etiket = DURUM_ETIKET[dur];
+        const bar  = Math.min(100, maks > 0 ? (o.tik_sayisi / maks) * 100 : 0).toFixed(1);
+        return `
+        <div class="d-${dur} border rounded-xl overflow-hidden slide-in">
+          <div class="flex items-stretch">
+            <div class="flex-shrink-0 w-10 flex items-center justify-center font-black text-sm"
+                 style="background:rgba(0,0,0,.35);color:${renk}">#${i+1}</div>
+            <div class="flex-1 px-3 py-2 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-lg">${emoji}</span>
+                <span class="font-bold text-sm text-white">${o.ad_soyad}</span>
+                <span class="text-slate-500 text-xs">${o.sinif_adi}</span>
+                ${etiket ? `<span class="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                  style="background:${renk}22;color:${renk}">${etiket}</span>` : ''}
+              </div>
+              <div class="mt-1 h-1.5 rounded-full overflow-hidden" style="background:#0f172a">
+                <div class="h-full rounded-full" style="width:${bar}%;background:${renk}"></div>
+              </div>
+            </div>
+            <div class="flex-shrink-0 w-12 flex flex-col items-center justify-center"
+                 style="background:rgba(0,0,0,.35)">
+              <span class="font-black text-xl" style="color:${renk}">${o.tik_sayisi}</span>
+              <span class="text-[9px] opacity-50" style="color:${renk}">tik</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('guncelleme-bilgi').textContent =
+      'Güncellendi: ' + new Date().toLocaleTimeString('tr-TR');
+    guncellemeYapildi = true;
+  } catch(e) { console.warn('Yenileme hatası:', e); }
+}
+
+setInterval(() => {
+  countdown--;
+  document.getElementById('countdown-bilgi').textContent = countdown + 's\'de yenilenecek';
+  if (countdown <= 0) {
+    countdown = 30;
+    veriYenile();
+  }
+}, 1000);
+
+// ── İttifak Sekmesi ───────────────────────────────────────────────────────
+let _secilenSeans = 'sabah';
+
+function seansSec(seans, btn) {
+  _secilenSeans = seans;
+  document.getElementById('talep-seans').value = seans;
+  document.querySelectorAll('.seans-btn').forEach(b => {
+    b.style.background = '#111827';
+    b.style.borderColor = '#1e3a5f';
+    b.style.color = '#64748b';
+  });
+  btn.style.background = '#0d3330';
+  btn.style.borderColor = '#0d9488';
+  btn.style.color = '#5eead4';
+}
+
+async function ittifakTalepGonder() {
+  const s1 = document.getElementById('talep-sinif1').value;
+  const s2 = document.getElementById('talep-sinif2').value;
+  const sn = document.getElementById('talep-seans').value;
+  const sonucEl = document.getElementById('talep-sonuc');
+
+  if (!s1 || !s2) {
+    sonucEl.textContent = '⚠️ İki sınıf da seçilmelidir.';
+    sonucEl.style.color = '#f59e0b';
+    sonucEl.classList.remove('hidden');
+    return;
+  }
+  if (s1 === s2) {
+    sonucEl.textContent = '⚠️ Farklı iki sınıf seçin.';
+    sonucEl.style.color = '#f59e0b';
+    sonucEl.classList.remove('hidden');
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append('sinif1_id', s1); fd.append('sinif2_id', s2); fd.append('seans', sn);
+  const res  = await fetch('/api/ogrenci/ittifak/talep', {method:'POST', body:fd});
+  const data = await res.json();
+
+  sonucEl.classList.remove('hidden');
+  if (data.ok) {
+    sonucEl.innerHTML = `✅ Talep gönderildi! Öğretmen onayını bekleyin.<br>
+      <span style="color:#a78bfa;font-size:11px">Görev: ${data.gorev}</span>`;
+    sonucEl.style.color = '#4ade80';
+    ittifakListesiYukle();
+  } else {
+    sonucEl.textContent = '❌ ' + (data.sebep || 'Hata oluştu');
+    sonucEl.style.color = '#f87171';
+  }
+}
+
+async function ittifakListesiYukle() {
+  try {
+    const res  = await fetch('/api/ogrenci/veri');
+    const data = await res.json();
+    // ittifaklar yok api/ogrenci/veri'de, ayrı endpoint kullan
+    const res2 = await fetch('/api/ogrenci/ittifaklar');
+    if (!res2.ok) return;
+    const ittifaklar = await res2.json();
+    const el = document.getElementById('ittifak-listesi');
+    if (!ittifaklar.length) {
+      el.innerHTML = '<div class="text-slate-600 text-xs text-center py-4">Bugün için ittifak yok.</div>';
+      return;
+    }
+    const durumRenk = {tamamlandi:'#4ade80', bekliyor:'#60a5fa', ogrenci_talebi:'#fbbf24', reddedildi:'#f87171'};
+    const durumIkon = {tamamlandi:'✅', bekliyor:'⏳', ogrenci_talebi:'📬', reddedildi:'❌'};
+    const durumMetin = {tamamlandi:'Tamamlandı', bekliyor:'Onaylandı — Aktif', ogrenci_talebi:'Onay Bekleniyor', reddedildi:'Reddedildi'};
+    el.innerHTML = ittifaklar.map(it => {
+      const renk  = durumRenk[it.durum] || '#94a3b8';
+      const ikon  = durumIkon[it.durum] || '?';
+      const metin = durumMetin[it.durum] || it.durum;
+      const seans = it.seans === 'sabah' ? '🌅 Sabah' : it.seans === 'ogleden_sonra' ? '🌆 Öğleden Sonra' : '';
+      return `
+      <div class="rounded-xl p-3 border slide-up" style="background:#080f20;border-color:${renk}44">
+        <div class="flex items-center justify-between mb-1">
+          <span class="font-black text-sm" style="color:${renk}">${it.sinif1_adi} 🤝 ${it.sinif2_adi}</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                style="background:${renk}22;color:${renk}">${ikon} ${metin}</span>
+        </div>
+        <div class="text-slate-400 text-xs italic mb-1">📋 ${it.gorev}</div>
+        ${seans ? `<div class="text-slate-600 text-[10px]">${seans}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+// ── Kadro Modalı ──────────────────────────────────────────────────────────
+const MEVKI_EMOJILERI = {
+  'Takım Kaptanı':        '🦁', 'Kaptan Yardımcısı':   '🦊',
+  'Kaleci':               '🥅', 'Libero (Süpürücü)':   '🧹',
+  'Sağ Bek':              '➡️',  'Sol Bek':             '⬅️',
+  'Stoper':               '🛡️', 'Sigorta Oyuncusu':    '🔒',
+  'Ön Libero':            '⚙️',  'Oyun Kurucu (10 Numara)': '🎮',
+  'Sağ Kanat':            '↗️',  'Sol Kanat':           '↖️',
+  'Dinamo İstasyon Oyuncusu': '⚡', 'Santrafor (Golcü)': '⚽',
+  'Gizli Forvet':         '🥷',  'Fırsatçı Golcü':     '🎯',
+  'Kanat Forvet':         '🌪️',  'Kondisyoner':        '🏃',
+  'Analiz Uzmanı':        '📊',  'Basın Sözcüsü':      '🎙️',
+  'Malzemeci':            '🎒',  'Fair-Play Elçisi':    '🕊️',
+};
+
+async function kadroGoster(sinifId, sinifAdi) {
+  const modal = document.getElementById('kadro-modal');
+  const icerik = document.getElementById('kadro-icerik');
+  document.getElementById('kadro-sinif-adi').textContent = sinifAdi + ' Sınıfı';
+  icerik.innerHTML = '<div class="text-center text-slate-500 py-8">⏳ Yükleniyor...</div>';
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+
+  try {
+    const res  = await fetch(`/api/ogrenci/kadro/${sinifId}`);
+    const data = await res.json();
+
+    if (!data || !data.length) {
+      icerik.innerHTML = '<div class="text-center text-slate-500 py-8">Bu sınıfın kadrosu henüz oluşturulmamış.</div>';
+      return;
+    }
+
+    // Kaptan öne çıkar
+    const kaptan = data.find(o => o.mevki === 'Takım Kaptanı');
+    const diger  = data.filter(o => o.mevki !== 'Takım Kaptanı');
+
+    let html = '';
+
+    if (kaptan) {
+      html += `
+      <div class="mb-3 rounded-xl p-3 border-2 border-yellow-600 text-center"
+           style="background:linear-gradient(135deg,#1a1200,#211700)">
+        <div class="text-3xl mb-1">🦁</div>
+        <div class="text-[10px] text-yellow-500 font-bold tracking-widest">TAKIM KAPTANI</div>
+        <div class="text-yellow-300 font-black text-lg">${kaptan.ad_soyad}</div>
+      </div>`;
+    }
+
+    html += '<div class="grid grid-cols-2 gap-2">';
+    diger.forEach((o, i) => {
+      const emoji = MEVKI_EMOJILERI[o.mevki] || '⚽';
+      html += `
+      <div class="rounded-xl p-2.5 border border-green-900/50 text-center slide-up"
+           style="background:rgba(3,18,8,0.9);animation-delay:${i*30}ms">
+        <div class="text-xl mb-0.5">${emoji}</div>
+        <div class="text-green-400 text-[9px] font-bold leading-tight">${o.mevki}</div>
+        <div class="text-white text-xs font-black leading-tight mt-0.5">${o.ad_soyad}</div>
+      </div>`;
+    });
+    html += '</div>';
+
+    icerik.innerHTML = html;
+  } catch(e) {
+    icerik.innerHTML = '<div class="text-center text-red-400 py-8">Kadro yüklenemedi.</div>';
+  }
+}
+
+function kadroKapat(event) {
+  if (event && event.target !== document.getElementById('kadro-modal')) return;
+  const modal = document.getElementById('kadro-modal');
+  modal.classList.add('hidden');
+  modal.style.display = '';
+}
+</script>
+</body>
+</html>
