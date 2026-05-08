@@ -1,0 +1,1055 @@
+{% extends "base.html" %}
+{% block title %}Ödüller & Motivasyon{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+  /* ── Animasyonlar ─────────────────────────── */
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  @keyframes pulse-gold { 0%,100%{box-shadow:0 0 12px #f59e0b} 50%{box-shadow:0 0 30px #fbbf24,0 0 60px #f59e0b} }
+  @keyframes spin-360 { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  @keyframes bounce-in { 0%{transform:scale(0);opacity:0} 70%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+  @keyframes slide-up { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes badge-shine {
+    0%{background-position:-200% center} 100%{background-position:200% center}
+  }
+  @keyframes streak-fire {
+    0%,100%{text-shadow:0 0 8px #f97316} 50%{text-shadow:0 0 20px #ef4444,0 0 40px #f97316}
+  }
+  @keyframes level-pulse {
+    0%,100%{transform:scale(1)} 50%{transform:scale(1.06)}
+  }
+  @keyframes cark-spin {
+    0%   {transform:rotate(0deg)}
+    100% {transform:rotate(var(--hedef-aci,1800deg))}
+  }
+  @keyframes rainbow {
+    0%{color:#ef4444} 16%{color:#f97316} 33%{color:#eab308}
+    50%{color:#22c55e} 66%{color:#3b82f6} 83%{color:#a855f7} 100%{color:#ef4444}
+  }
+  @keyframes star-twinkle {
+    0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)}
+  }
+
+  .float       { animation:float 3s ease-in-out infinite; }
+  .pulse-gold  { animation:pulse-gold 2s ease-in-out infinite; }
+  .bounce-in   { animation:bounce-in .5s cubic-bezier(.34,1.56,.64,1) both; }
+  .slide-up    { animation:slide-up .5s ease both; }
+  .streak-fire { animation:streak-fire 1.5s ease-in-out infinite; }
+  .level-pulse { animation:level-pulse 2s ease-in-out infinite; }
+  .rainbow     { animation:rainbow 3s linear infinite; }
+
+  .badge-card {
+    background:linear-gradient(135deg,#0f172a,#1e293b);
+    border:1px solid #334155;
+    transition:all .3s;
+  }
+  .badge-card:hover { transform:translateY(-4px); border-color:#f59e0b; }
+
+  .level-card {
+    transition:all .3s;
+    cursor:default;
+  }
+  .level-card:hover { transform:translateY(-3px); }
+
+  .seviye-bar { transition:width 1s cubic-bezier(.4,0,.2,1); }
+
+  /* Çark */
+  #cark-canvas { border-radius:50%; cursor:pointer; }
+  .cark-indicator {
+    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    font-size:28px; z-index:10;
+  }
+
+  /* Tabs */
+  .tab-btn { transition:all .2s; }
+  .tab-btn.aktif { background:#4f46e5; color:#fff; }
+  .tab-btn:not(.aktif) { background:#1e293b; color:#64748b; }
+  .tab-btn:not(.aktif):hover { background:#283548; color:#94a3b8; }
+
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-thumb { background:#334155; border-radius:2px; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="min-h-screen pb-16" style="background:linear-gradient(180deg,#020817 0%,#0f172a 100%)">
+
+  <!-- ── Başlık ──────────────────────────────────────────────────────── -->
+  <div class="text-center py-8 px-4 relative overflow-hidden">
+    <!-- Arka plan yıldızlar -->
+    <div class="absolute inset-0 pointer-events-none select-none" id="yildizlar"></div>
+    <div class="relative z-10">
+      <div class="text-6xl mb-2 float">🎮</div>
+      <h1 class="text-3xl sm:text-4xl font-black rainbow mb-1">
+        ÖDÜLLER & MOTİVASYON
+      </h1>
+      <p class="text-slate-400 text-sm">Erenler Cumhuriyet Ortaokulu — Gamification Merkezi</p>
+    </div>
+  </div>
+
+  <!-- ── Tab Menüsü ─────────────────────────────────────────────────── -->
+  <div class="flex max-w-5xl mx-auto px-4 gap-1.5 mb-6 flex-wrap">
+    <button onclick="tabAc('seviye')"   class="tab-btn aktif px-4 py-2 rounded-xl text-xs font-bold">🌟 Seviyeler</button>
+    <button onclick="tabAc('rozetler')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold">🏅 Rozetler</button>
+    <button onclick="tabAc('seri')"     class="tab-btn px-4 py-2 rounded-xl text-xs font-bold">🔥 Seri</button>
+    <button onclick="tabAc('gorev')"    class="tab-btn px-4 py-2 rounded-xl text-xs font-bold">🎯 Günlük Görev</button>
+    <button onclick="tabAc('mufettis')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold">🕵️ Müfettiş</button>
+    <button onclick="tabAc('ittifak')"  class="tab-btn px-4 py-2 rounded-xl text-xs font-bold">🤝 İttifak</button>
+    <button onclick="tabAc('sezon')"    class="tab-btn px-4 py-2 rounded-xl text-xs font-bold">🏆 Sezon</button>
+    <button onclick="tabAc('alkis')"    class="tab-btn px-4 py-2 rounded-xl text-xs font-bold">👏 Alkış</button>
+    <button onclick="tabAc('cark')"     class="tab-btn px-4 py-2 rounded-xl text-xs font-bold">🎡 Çark</button>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-4">
+
+    <!-- ══ TAB: SEVİYELER ══════════════════════════════════════════════ -->
+    <div id="panel-seviye">
+      <!-- Nasıl Çalışır? -->
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#0a1628">
+        <span class="text-2xl flex-shrink-0">💡</span>
+        <div>
+          <div class="text-white font-black text-sm mb-1">Sınıf Seviye Sistemi</div>
+          <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+            <li>Sınıflar olumlu davranış puanı kazandıkça <strong class="text-yellow-400">seviye atlar</strong>.</li>
+            <li>5 seviye var: <strong>🥚 Yumurta → 🐣 Civciv → 🦅 Kartal → 🦁 Aslan → 👑 Efsane</strong></li>
+            <li>Seviye, <strong class="text-white">Yayın ekranında</strong> ve <strong class="text-white">Lig tablosunda</strong> görünür.</li>
+            <li>Yüksek seviye sınıf özel <strong class="text-indigo-300">rozet</strong> ve <strong class="text-yellow-400">Sezon puanı</strong> kazanır.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {% for s in seviyeleri %}
+        {% set renk = '#fbbf24' if loop.index == 1 else '#94a3b8' if loop.index == 2 else '#d97706' if loop.index == 3 else '#475569' %}
+        <div class="level-card rounded-2xl p-4 border text-center level-pulse slide-up"
+             style="background:linear-gradient(135deg,#0a1628,#111827);border-color:{{ renk }}33;animation-delay:{{ (loop.index0)*80 }}ms">
+          <div class="text-4xl mb-1 float" style="animation-delay:{{ loop.index0*200 }}ms">{{ s.emoji }}</div>
+          <div class="font-black text-sm mb-0.5" style="color:{{ renk }}">{{ s.sinif_adi }}</div>
+          <div class="text-slate-400 text-xs mb-2">{{ s.ad }}</div>
+          <!-- Seviye çubuğu -->
+          {% set maks = s.sonraki_esik if s.sonraki_esik > s.esik else s.puan + 1 %}
+          {% set ilerleme = [((s.puan - s.esik) / (maks - s.esik) * 100)|round|int, 100]|min %}
+          <div class="h-1.5 rounded-full overflow-hidden" style="background:#1e293b">
+            <div class="h-full rounded-full seviye-bar" style="width:{{ ilerleme }}%;background:{{ renk }}"></div>
+          </div>
+          <div class="text-[10px] mt-1 text-slate-500">
+            {{ s.puan }}p → {{ s.sonraki_emoji }} {{ s.sonraki_ad }}
+          </div>
+        </div>
+        {% else %}
+        <p class="col-span-4 text-center text-slate-600 py-10">Henüz puan yok.</p>
+        {% endfor %}
+      </div>
+
+      <!-- Seviye Rehberi -->
+      <div class="rounded-2xl p-4 border border-slate-700 mb-4" style="background:#0d1526">
+        <h3 class="text-white font-bold mb-3 text-sm">📖 Seviye Rehberi</h3>
+        <div class="grid grid-cols-5 gap-2 text-center">
+          {% set seviye_listesi = [("🥚","Yumurta","0p"),("🐣","Civciv","10p"),("🦅","Kartal","25p"),("🦁","Aslan","50p"),("👑","Efsane","100p")] %}
+          {% for emoji, ad, esik in seviye_listesi %}
+          <div class="rounded-xl p-2 border border-slate-700" style="background:#080f20">
+            <div class="text-2xl">{{ emoji }}</div>
+            <div class="text-white text-xs font-bold">{{ ad }}</div>
+            <div class="text-slate-500 text-[10px]">{{ esik }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: ROZETLER ═══════════════════════════════════════════════ -->
+    <div id="panel-rozetler" class="hidden">
+      <!-- Nasıl Çalışır? -->
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#0a1628">
+        <span class="text-2xl flex-shrink-0">💡</span>
+        <div>
+          <div class="text-white font-black text-sm mb-1">Rozet Sistemi</div>
+          <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+            <li>Rozetler belirli başarılar karşılığında <strong class="text-indigo-300">otomatik</strong> verilir.</li>
+            <li><strong>🧹 Tertemiz</strong>: 7 gün hiç tik almayan öğrenciye verilir.</li>
+            <li><strong>⚡ Seri Yıldız</strong>: Sınıf 3 maç üst üste kazanınca verilir.</li>
+            <li><strong>🔥 Alevli Seri</strong>: 10 gün kesintisiz olumlu davranış serisi.</li>
+            <li><strong>👏 Alkış Efsanesi</strong>: 5 alkış kuponu biriktiren öğrenci kazanır.</li>
+            <li>Rozetler <strong class="text-white">Yayın → Ödüller</strong> ekranında duyurulur.</li>
+          </ul>
+        </div>
+      </div>
+
+      {% if rozetler %}
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {% for r in rozetler %}
+        <div class="badge-card rounded-2xl p-4 slide-up" style="animation-delay:{{ loop.index0*60 }}ms">
+          <div class="text-3xl mb-2">{{ r.get('emoji','🏅') }}</div>
+          <div class="text-white font-black text-sm">{{ r.get('rozet_adi', r.rozet_kodu) }}</div>
+          <div class="text-indigo-400 text-xs mt-1">{{ r.sahip }}</div>
+          <div class="text-slate-500 text-xs">{{ r.sinif_adi }}</div>
+          <div class="text-slate-600 text-[10px] mt-1">{{ r.tarih[:10] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-20">
+        <div class="text-6xl mb-4 float">🏅</div>
+        <p class="text-slate-400 text-lg">Henüz rozet kazanılmadı.</p>
+        <p class="text-slate-600 text-sm mt-2">Olumlu davranışlar, seriler ve görevler tamamlandıkça rozetler otomatik verilir.</p>
+      </div>
+      {% endif %}
+
+      <!-- Rozet Kataloğu -->
+      <div class="mt-6 rounded-2xl p-4 border border-slate-700" style="background:#0d1526">
+        <h3 class="text-white font-bold mb-3 text-sm">📋 Kazanılabilir Rozetler</h3>
+        <div class="space-y-2">
+          {% for kod, (emoji, ad, aciklama) in rozet_tanimi.items() %}
+          <div class="flex items-center gap-3 py-2 border-b border-slate-800">
+            <span class="text-2xl">{{ emoji }}</span>
+            <div>
+              <div class="text-white text-xs font-bold">{{ ad }}</div>
+              <div class="text-slate-500 text-[10px]">{{ aciklama }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: SERİ ═══════════════════════════════════════════════════ -->
+    <div id="panel-seri" class="hidden">
+      <!-- Nasıl Çalışır? -->
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#0a1628">
+        <span class="text-2xl flex-shrink-0">💡</span>
+        <div>
+          <div class="text-white font-black text-sm mb-1">Seri Takip Sistemi</div>
+          <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+            <li>Bir sınıf <strong class="text-orange-300">hiç olumsuz davranış almadan</strong> geçen her gün seriye eklenir.</li>
+            <li><strong>3 günlük seri</strong> = 🔥 Ateşli ikon; <strong>10 günlük seri</strong> = 🔥 Alevli Seri rozeti!</li>
+            <li>Herhangi bir öğrenci olumsuz tik alırsa seri <strong class="text-red-400">sıfırlanır</strong>.</li>
+            <li>En uzun seri, <strong class="text-white">Yayın → Footer</strong> alanında sürekli gösterilir.</li>
+            <li>Seri uzunluğu <strong class="text-yellow-400">Dönem Şampiyonluğu</strong> sıralamasını da etkiler.</li>
+          </ul>
+        </div>
+      </div>
+
+      {% if seri %}
+      <div class="space-y-3">
+        {% for s in seri %}
+        {% set ates = "🔥" * [s.guncel_seri // 3, 5]|min %}
+        <div class="rounded-2xl p-4 border border-slate-700 flex items-center gap-4 slide-up"
+             style="background:linear-gradient(90deg,#0a1628,#111827);animation-delay:{{ loop.index0*60 }}ms">
+          <div class="text-3xl flex-shrink-0 streak-fire">{{ ates if s.guncel_seri > 0 else '❄️' }}</div>
+          <div class="flex-1">
+            <div class="text-white font-black">{{ s.sinif_adi }} Sınıfı</div>
+            <div class="text-orange-400 text-xs mt-0.5">
+              Güncel seri: <span class="font-black text-lg">{{ s.guncel_seri }}</span> gün
+            </div>
+            <!-- Seri çubuğu -->
+            <div class="h-1.5 rounded-full overflow-hidden mt-1.5" style="background:#1e293b">
+              <div class="h-full rounded-full bg-orange-500 seviye-bar"
+                   style="width:{{ [s.guncel_seri * 10, 100]|min }}%"></div>
+            </div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <div class="text-slate-400 text-xs">En uzun</div>
+            <div class="text-yellow-400 font-black text-xl">{{ s.en_uzun_seri }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-20">
+        <div class="text-6xl mb-4">🔥</div>
+        <p class="text-slate-400">Henüz seri kaydı yok.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ══ TAB: GÜNLÜK GÖREV ═══════════════════════════════════════════ -->
+    <div id="panel-gorev" class="hidden">
+
+      <!-- Nasıl Çalışır? -->
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#0a1628">
+        <span class="text-2xl flex-shrink-0">💡</span>
+        <div>
+          <div class="text-white font-black text-sm mb-1">Nasıl Çalışır?</div>
+          <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+            <li>Her gün sabah <strong class="text-indigo-300">farklı ve gizli bir görev</strong> belirlenir.</li>
+            <li>Görev tüm sınıflara aynı anda duyurulur — hangisi önce tamamlarsa <strong class="text-indigo-300">+{{ gorev.puan }} puan</strong> kazanır.</li>
+            <li>Puan hem <strong class="text-white">Süper Lig</strong> tablosuna hem de <strong class="text-white">Dönem Şampiyonluğu</strong> sıralamasına işlenir.</li>
+            <li>Tamamlayan sınıf "Tamamladı" işaretlenir, diğerleri geç kalsa da işaretleyebilir.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="rounded-2xl overflow-hidden border border-indigo-700 mb-6"
+           style="background:linear-gradient(135deg,#0f172a,#1e1b4b)">
+        <div class="px-6 py-5 text-center" style="background:linear-gradient(90deg,#312e81,#1e1b4b)">
+          <div class="text-4xl mb-2 float">🎯</div>
+          <div class="text-indigo-300 text-xs font-bold tracking-widest">BUGÜNÜN GİZLİ GÖREVİ</div>
+          <div class="text-white font-black text-2xl mt-2">{{ gorev.gorev }}</div>
+          <div class="mt-2 inline-block bg-indigo-900/60 border border-indigo-600 rounded-full px-4 py-1">
+            <span class="text-indigo-300 text-xs font-bold">🏆 Ödül: </span>
+            <span class="text-yellow-400 font-black">+{{ gorev.puan }} puan</span>
+            <span class="text-slate-500 text-xs ml-1">(Lig + Sezon)</span>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-slate-400 text-sm text-center mb-4">
+            Görevi tamamlayan her sınıf için "✔ Tamamladı" düğmesine basın:
+          </p>
+
+          {% set tamamlayanlar = gorev.tamamlayan_ids %}
+          <div class="space-y-2" id="gorev-siniflar">
+            {% for s in seviyeleri %}
+            <div class="flex items-center justify-between rounded-xl px-4 py-2.5 border
+                        {% if s.sinif_id in tamamlayanlar %}border-green-700 bg-green-950{% else %}border-slate-700 bg-slate-900{% endif %}">
+              <div>
+                <span class="text-white text-sm font-bold">{{ s.seviye_emoji if s.seviye_emoji else s.emoji }} {{ s.sinif_adi }}</span>
+                <span class="text-slate-600 text-xs ml-2">Seviye: {{ s.ad if s.ad else '—' }}</span>
+              </div>
+              {% if s.sinif_id in tamamlayanlar %}
+              <span class="text-green-400 font-bold text-xs bg-green-900/50 px-3 py-1 rounded-full">✅ Tamamladı</span>
+              {% else %}
+              <button onclick="gorevTamamla({{ gorev.id }}, {{ s.sinif_id }}, this)"
+                      class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-bold transition">
+                ✔ Tamamladı
+              </button>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: GİZLİ MÜFETTİŞ ════════════════════════════════════════ -->
+    <div id="panel-mufettis" class="hidden">
+
+      <!-- Nasıl Çalışır? -->
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#0a1628">
+        <span class="text-2xl flex-shrink-0">💡</span>
+        <div>
+          <div class="text-white font-black text-sm mb-1">Nasıl Çalışır?</div>
+          <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+            <li>Her gün sistem rastgele bir öğrenciyi <strong class="text-amber-300">gizlice izler</strong>.</li>
+            <li>Öğrencinin adı <strong class="text-amber-300">gün boyunca gizli</strong> kalır — bu sayede davranışlar doğal gözlemlenir.</li>
+            <li>Gün sonunda öğretmen değerlendirme yapar: <strong class="text-green-400">Harika!</strong> seçilirse sınıfa <strong class="text-yellow-400">+2 puan</strong> eklenir.</li>
+            <li>Sonuç otomatik olarak <strong class="text-white">Yayın → Ödüller</strong> ekranında duyurulur.</li>
+            <li>Harika değerlendirme alan öğrenci <strong class="text-indigo-300">🕵️ Müfettiş İyisi</strong> rozetini kazanır.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Sadece yetkili öğretmenler görebilir / belirleyebilir -->
+      {% if mufettis_yetkili %}
+      <div class="max-w-md mx-auto mb-4">
+        {% if not mufettis %}
+        <!-- Müfettiş henüz belirlenmedi — yetkili öğretmen seçsin -->
+        <div class="rounded-2xl border-2 border-amber-600 overflow-hidden" style="background:#1a0d00">
+          <div class="px-6 py-4 text-center" style="background:#78350f">
+            <div class="text-4xl mb-1 float">🕵️</div>
+            <div class="text-amber-300 font-black">GİZLİ MÜFETTİŞ BELİRLE</div>
+            <div class="text-amber-600 text-xs mt-1">Sadece {{ ogretmen_adi }} (yetkili) bu formu görebilir</div>
+          </div>
+          <div class="p-5">
+            <p class="text-slate-400 text-sm mb-4 text-center">
+              Bugün gizlice izlenecek öğrenciyi seçin. İsim tüm gün gizli kalır.
+            </p>
+            <select id="mufettis-sinif" onchange="mufettisOgrenciYukle()"
+                    class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2.5
+                           text-white text-sm mb-2 focus:outline-none focus:border-amber-500">
+              <option value="">— Sınıf seçin —</option>
+              {% for s in seviyeleri %}<option value="{{ s.sinif_id }}">{{ s.sinif_adi }}</option>{% endfor %}
+            </select>
+            <select id="mufettis-ogrenci"
+                    class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2.5
+                           text-white text-sm mb-3 focus:outline-none focus:border-amber-500">
+              <option value="">— Öğrenci seçin —</option>
+            </select>
+            <button onclick="mufettisOgrenciBelirle()"
+                    class="w-full bg-amber-700 hover:bg-amber-600 text-white font-black py-3 rounded-xl transition">
+              🕵️ Bugünün Müfettişini Belirle
+            </button>
+            <div id="mufettis-belirle-sonuc" class="mt-3 text-center text-sm hidden"></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="max-w-md mx-auto mb-3">
+        <div class="rounded-xl border border-slate-700 px-4 py-2 text-center text-slate-500 text-xs" style="background:#0a1628">
+          🔒 Müfettişi yalnızca Adem Akgül ve Yusuf Yıldırım belirleyebilir
+        </div>
+      </div>
+      {% endif %}
+
+      {% if mufettis %}
+      <div class="max-w-md mx-auto">
+        <div class="rounded-2xl overflow-hidden border-2 border-amber-600 bounce-in"
+             style="background:linear-gradient(135deg,#1a0d00,#2d1800)">
+          <div class="px-6 py-5 text-center" style="background:linear-gradient(90deg,#78350f,#92400e)">
+            <div class="text-5xl mb-2 float">🕵️</div>
+            <div class="text-amber-300 font-black text-xl">GİZLİ MÜFETTİŞ</div>
+            <div class="text-amber-200 text-xs mt-1">Bugünün gizlice izlenen öğrencisi</div>
+          </div>
+          <div class="p-6 text-center">
+            {% if mufettis.sonuc %}
+              <div class="text-4xl mb-3">{{ '😇' if mufettis.sonuc == 'iyi' else '😐' }}</div>
+              <div class="text-white font-black text-xl">{{ mufettis.ad_soyad }}</div>
+              <div class="text-slate-400 text-sm">{{ mufettis.sinif_adi }}</div>
+              <div class="mt-3 px-4 py-2 rounded-xl {% if mufettis.sonuc == 'iyi' %}bg-green-900/50 border border-green-700{% else %}bg-slate-800 border border-slate-600{% endif %}">
+                <div class="text-lg font-bold {{ 'text-green-400' if mufettis.sonuc == 'iyi' else 'text-slate-300' }}">
+                  {{ '✅ Müazzam bir performans!' if mufettis.sonuc == 'iyi' else '📋 Değerlendirme tamamlandı' }}
+                </div>
+                {% if mufettis.sonuc == 'iyi' %}
+                <div class="text-yellow-400 text-xs mt-1 font-bold">+2 puan sınıfa eklendi · 🕵️ Rozet kazandı!</div>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="text-6xl mb-3">❓</div>
+              <div class="text-amber-400 font-black text-lg">Bugün kim izleniyor?</div>
+              <div class="text-slate-400 text-sm mt-2 mb-4 leading-relaxed">
+                Sistem bugün için bir öğrenci belirledi.<br>
+                Gün sonunda davranışını değerlendirin.<br>
+                <span class="text-yellow-400 font-bold">Harika → sınıfa +2 puan!</span>
+              </div>
+              <div class="text-amber-300 text-xs border border-amber-700 rounded-xl px-4 py-2 mb-4">
+                ⚠️ İsim kasıtlı olarak gizlidir — yansız değerlendirme için
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <button onclick="mufettisKaydet({{ mufettis.id }}, 'iyi')"
+                        class="bg-green-700 hover:bg-green-600 text-white font-black py-3 rounded-xl transition flex flex-col items-center gap-1">
+                  <span class="text-2xl">😇</span>
+                  <span class="text-sm">Harika performans!</span>
+                  <span class="text-xs opacity-70">+2 puan + rozet</span>
+                </button>
+                <button onclick="mufettisKaydet({{ mufettis.id }}, 'kotu')"
+                        class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition flex flex-col items-center gap-1">
+                  <span class="text-2xl">😐</span>
+                  <span class="text-sm">Ortalama</span>
+                  <span class="text-xs opacity-70">Puan yok</span>
+                </button>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      {% if not mufettis_yetkili %}
+      <div class="text-center py-16">
+        <div class="text-6xl mb-4">🕵️</div>
+        <p class="text-slate-400">Bugün için müfettiş henüz belirlenmedi.</p>
+        <p class="text-slate-600 text-sm mt-2">Adem Akgül veya Yusuf Yıldırım belirleyecek.</p>
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    <!-- ══ TAB: İTTİFAK ════════════════════════════════════════════════ -->
+    <div id="panel-ittifak" class="hidden">
+
+      <!-- Nasıl Çalışır? -->
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#0a1628">
+        <span class="text-2xl flex-shrink-0">💡</span>
+        <div>
+          <div class="text-white font-black text-sm mb-1">Nasıl Çalışır?</div>
+          <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+            <li>İki sınıf arasında <strong class="text-teal-300">ortak bir görev</strong> belirlenir (sistem rastgele seçer).</li>
+            <li>Örnek görevler: <em>"İki sınıf birlikte sessiz okuma yapar"</em>, <em>"Birbirlerine teşekkür notu yazar"</em>.</li>
+            <li>Görev tamamlanınca her iki sınıfa da <strong class="text-yellow-400">+3 puan (Lig) + Sezon puanı</strong> verilir.</li>
+            <li>Başarılı ittifaklar <strong class="text-white">🤝 Beraberlik Madalyası</strong> rozetini getirir.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 📬 Öğrenci Talepleri (Onay Bekleyen) -->
+      {% if bekleyen_talepler %}
+      <div class="rounded-2xl border-2 border-yellow-600 p-4 mb-5 slide-up" style="background:#1a1200">
+        <h3 class="text-yellow-300 font-black mb-3 text-sm flex items-center gap-2">
+          📬 Öğrenci Talepleri
+          <span class="bg-yellow-700 text-yellow-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+            {{ bekleyen_talepler|length }} bekliyor
+          </span>
+        </h3>
+        <div class="space-y-2">
+          {% for it in bekleyen_talepler %}
+          <div class="rounded-xl p-3 border border-yellow-700/50" style="background:#200e00" id="talep-{{ it.id }}">
+            <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+              <div class="text-white font-black text-sm">{{ it.sinif1_adi }} 🤝 {{ it.sinif2_adi }}</div>
+              <span class="text-[10px] text-slate-400">
+                {{ '🌅 Sabah' if it.get('seans') == 'sabah' else '🌆 Öğleden Sonra' if it.get('seans') == 'ogleden_sonra' else '' }}
+              </span>
+            </div>
+            <div class="text-yellow-200 text-xs italic mb-2">📋 {{ it.gorev }}</div>
+            <div class="flex gap-2">
+              <button onclick="ittifakOnayla({{ it.id }})"
+                      class="flex-1 bg-green-700 hover:bg-green-600 text-white text-xs font-bold py-2 rounded-lg transition">
+                ✅ Onayla
+              </button>
+              <button onclick="ittifakReddet({{ it.id }})"
+                      class="flex-1 bg-red-900 hover:bg-red-800 text-white text-xs font-bold py-2 rounded-lg transition">
+                ❌ Reddet
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 text-center text-slate-600 text-xs" style="background:#0a1628">
+        📭 Onay bekleyen öğrenci talebi yok
+      </div>
+      {% endif %}
+
+      <!-- Öğretmen oluşturma formu -->
+      <div class="rounded-2xl p-5 border border-slate-700 mb-6" style="background:#0d1526">
+        <h3 class="text-white font-black mb-4">🤝 Öğretmen Olarak İttifak Oluştur</h3>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <select id="ittifak-s1" class="bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm focus:outline-none">
+            <option value="">— 1. Sınıf —</option>
+            {% for s in seviyeleri %}<option value="{{ s.sinif_id }}">{{ s.sinif_adi }}</option>{% endfor %}
+          </select>
+          <select id="ittifak-s2" class="bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm focus:outline-none">
+            <option value="">— 2. Sınıf —</option>
+            {% for s in seviyeleri %}<option value="{{ s.sinif_id }}">{{ s.sinif_adi }}</option>{% endfor %}
+          </select>
+        </div>
+        <button onclick="ittifakOlustur()"
+                class="w-full bg-teal-700 hover:bg-teal-600 text-white font-black py-3 rounded-xl transition">
+          🤝 İttifak Görevi Oluştur
+        </button>
+        <div id="ittifak-sonuc" class="mt-3 text-center text-sm text-teal-400 hidden"></div>
+      </div>
+
+      <!-- Bugünkü ittifaklar -->
+      {% set aktif = ittifaklar | selectattr('durum', 'ne', 'ogrenci_talebi') | list %}
+      {% if aktif %}
+      <div class="space-y-3">
+        {% for it in aktif %}
+        {% set it_renk = 'border-green-700 bg-green-950/30' if it.durum == 'tamamlandi' else 'border-slate-600 bg-red-950/20' if it.durum == 'reddedildi' else 'border-teal-700 bg-teal-950/20' %}
+        <div class="rounded-2xl p-4 border slide-up {{ it_renk }}">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <div class="text-teal-400 font-black text-sm">{{ it.sinif1_adi }} 🤝 {{ it.sinif2_adi }}</div>
+            {% if it.durum == 'tamamlandi' %}
+            <span class="text-xs text-green-400 bg-green-900/50 px-2 py-0.5 rounded-full">✅ Tamamlandı</span>
+            {% elif it.durum == 'reddedildi' %}
+            <span class="text-xs text-red-400 bg-red-900/50 px-2 py-0.5 rounded-full">❌ Reddedildi</span>
+            {% else %}
+            <span class="text-xs text-teal-400 bg-teal-900/50 px-2 py-0.5 rounded-full">⏳ Devam Ediyor</span>
+            {% endif %}
+            {% if it.get('seans') %}
+            <span class="text-xs text-slate-500">{{ '🌅 Sabah' if it.seans == 'sabah' else '🌆 Ö.Sonrası' }}</span>
+            {% endif %}
+          </div>
+          <div class="text-slate-300 text-sm mb-3">📋 {{ it.gorev }}</div>
+          {% if it.durum == 'bekliyor' %}
+          <button onclick="ittifakTamamla({{ it.id }}, this)"
+                  class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-4 py-1.5 rounded-lg font-bold transition">
+            ✅ Tamamlandı Olarak İşaretle
+          </button>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-12 text-slate-600">Bugün için aktif ittifak yok.</div>
+      {% endif %}
+    </div>
+
+    <!-- ══ TAB: SEZON ══════════════════════════════════════════════════ -->
+    <div id="panel-sezon" class="hidden">
+      <!-- Nasıl Çalışır? -->
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#0a1628">
+        <span class="text-2xl flex-shrink-0">💡</span>
+        <div>
+          <div class="text-white font-black text-sm mb-1">Dönem Şampiyonluğu</div>
+          <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+            <li>Dönem (sezon) boyunca <strong class="text-yellow-300">biriken toplam puan</strong> sıralamasıdır — Süper Lig her hafta sıfırlansa da sezon puanı birikmez devam eder.</li>
+            <li>Sezon puanı şu şekillerde artır: <strong class="text-white">İttifak görevi tamamlama</strong>, <strong class="text-white">Şans çarkı ödülü</strong>, <strong class="text-white">Gizli müfettiş "Harika!"</strong>.</li>
+            <li>Dönem sonunda birinci sınıf <strong class="text-yellow-400">🏆 Sezon Zirvesi</strong> rozetini ve özel bir ödül kazanır.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="rounded-2xl overflow-hidden border border-amber-700 mb-4" style="background:#0d1526">
+        <div class="px-6 py-4 flex items-center gap-3" style="background:linear-gradient(90deg,#78350f,#92400e)">
+          <span class="text-3xl float">🏆</span>
+          <div>
+            <div class="text-amber-300 font-black text-lg">Dönem Şampiyonluğu</div>
+            <div class="text-amber-600 text-xs">2025-2026 Sezonu — Toplam Birikimli Puan</div>
+          </div>
+        </div>
+        <div class="p-4 space-y-2">
+          {% for s in sezon %}
+          {% set renk = '#fbbf24' if loop.index==1 else '#94a3b8' if loop.index==2 else '#d97706' if loop.index==3 else '#475569' %}
+          <div class="flex items-center gap-3 rounded-xl px-4 py-3 border border-slate-700 slide-up"
+               style="background:#080f20;animation-delay:{{ loop.index0*60 }}ms">
+            <div class="w-8 text-center font-black" style="color:{{ renk }}">
+              {{ '🥇' if loop.index==1 else '🥈' if loop.index==2 else '🥉' if loop.index==3 else loop.index }}
+            </div>
+            <div class="flex-1 text-white font-bold text-sm">{{ s.sinif_adi }} Sınıfı</div>
+            <div class="font-black text-lg" style="color:{{ renk }}">{{ s.sezon_puan }}</div>
+            <div class="text-slate-600 text-xs">puan</div>
+          </div>
+          {% else %}
+          <p class="text-center text-slate-600 py-6">Henüz sezon puanı yok.</p>
+          {% endfor %}
+        </div>
+      </div>
+      <p class="text-slate-600 text-xs text-center">
+        Sezon puanı; ittifak görevi, şans çarkı ve özel ödüller ile birikir.
+      </p>
+    </div>
+
+    <!-- ══ TAB: ALKIŞ KUPONU ═══════════════════════════════════════════ -->
+    <div id="panel-alkis" class="hidden">
+      <!-- Nasıl Çalışır? -->
+      <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#0a1628">
+        <span class="text-2xl flex-shrink-0">💡</span>
+        <div>
+          <div class="text-white font-black text-sm mb-1">Anlık Alkış Kuponu</div>
+          <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+            <li>Harika bir davranış sergileyen öğrenciye anında <strong class="text-pink-300">alkış kuponu</strong> verebilirsiniz.</li>
+            <li>Kupon, <strong class="text-white">Yayın ekranında</strong> duyurulur — sınıf önünde alenen takdir!</li>
+            <li>5 alkış toplayan öğrenci <strong class="text-pink-300">👏 Alkış Efsanesi</strong> rozetini kazanır.</li>
+            <li>Alkışlar Ana Menü → öğrenci yanındaki <strong class="text-white">👏 butonu</strong> ile de verilebilir.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Alkış ver -->
+        <div class="rounded-2xl p-5 border border-pink-700" style="background:#1a0015">
+          <h3 class="text-pink-400 font-black mb-4 text-sm">👏 Anlık Alkış Kuponu Ver</h3>
+          <select id="alkis-sinif" onchange="alkisOgrenciYukle()" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm mb-2 focus:outline-none">
+            <option value="">— Sınıf Seç —</option>
+            {% for s in seviyeleri %}<option value="{{ s.sinif_id }}">{{ s.sinif_adi }}</option>{% endfor %}
+          </select>
+          <select id="alkis-ogrenci" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm mb-2 focus:outline-none">
+            <option value="">— Öğrenci Seç —</option>
+          </select>
+          <input id="alkis-mesaj" type="text" placeholder="Mesaj (örn: Harika katılım!)" value="Harika iş!"
+                 class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm mb-3 focus:outline-none focus:border-pink-500">
+          <button onclick="alkisGonder()"
+                  class="w-full bg-pink-700 hover:bg-pink-600 text-white font-black py-3 rounded-xl transition text-sm">
+            👏 Alkış Gönder!
+          </button>
+          <div id="alkis-sonuc" class="mt-3 text-center text-pink-400 text-sm hidden"></div>
+        </div>
+
+        <!-- Son alkışlar -->
+        <div class="rounded-2xl p-5 border border-slate-700" style="background:#0d1526">
+          <h3 class="text-white font-black mb-3 text-sm">⭐ Son Alkışlar</h3>
+          {% if alkislar %}
+          <div class="space-y-2 max-h-72 overflow-y-auto">
+            {% for a in alkislar %}
+            <div class="rounded-xl p-2.5 border border-slate-700 slide-up" style="background:#080f20;animation-delay:{{ loop.index0*40 }}ms">
+              <div class="flex items-start gap-2">
+                <span class="text-xl">👏</span>
+                <div>
+                  <div class="text-pink-400 font-bold text-xs">{{ a.ogrenci }} <span class="text-slate-500">({{ a.sinif_adi }})</span></div>
+                  <div class="text-white text-xs italic">"{{ a.mesaj }}"</div>
+                  <div class="text-slate-600 text-[10px]">{{ a.ogretmen }} · {{ a.tarih[:16] }}</div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-slate-600 text-sm text-center py-6">Henüz alkış yok.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: ŞANS ÇARKI ═════════════════════════════════════════════ -->
+    <div id="panel-cark" class="hidden">
+      <div class="max-w-lg mx-auto">
+
+        <!-- Nasıl Kazanılır? -->
+        <div class="rounded-xl border border-yellow-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#1a1200">
+          <span class="text-2xl flex-shrink-0">💡</span>
+          <div>
+            <div class="text-yellow-300 font-black text-sm mb-1">Çark Hakkı Nasıl Kazanılır?</div>
+            <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
+              <li>Çark, <strong class="text-yellow-300">yalnızca Lig maçı kazanıldıktan sonra</strong> aktif olur.</li>
+              <li><strong class="text-white">Lig → Bugünkü Maçlar</strong> sayfasına gidin.</li>
+              <li>Maçın sonucunu girin — kazanan belirlendikten sonra <strong class="text-yellow-400">🎡 Şans Çarkı</strong> butonu görünür.</li>
+              <li>Kazanan sınıf adına butona basın, çark bir ödül veya ceza çeker.</li>
+              <li>Sonuç otomatik uygulanır (puan veya tik eklenir).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Çark seçenekleri tablosu -->
+        <div class="rounded-xl border border-slate-700 px-4 py-3 mb-5" style="background:#0a1628">
+          <div class="text-white font-black text-sm mb-3">🎰 Olası Ödüller &amp; Cezalar</div>
+          <div class="grid grid-cols-2 gap-2">
+            {% for ad, puan, renk in sans_secenekler %}
+            <div class="flex items-center gap-2 rounded-lg px-3 py-2 border border-slate-700" style="background:#080f20">
+              <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{{ renk }}"></span>
+              <span class="text-white text-xs flex-1">{{ ad }}</span>
+              <span class="font-black text-xs {% if puan > 0 %}text-green-400{% elif puan < 0 %}text-red-400{% else %}text-slate-500{% endif %}">
+                {% if puan > 0 %}+{{ puan }}p{% elif puan < 0 %}{{ puan }}p{% else %}—{% endif %}
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Demo Çark -->
+        <div class="text-center">
+          <div class="text-slate-500 text-xs mb-3">⬇ Demo çark — gerçek sonuç Lig sayfasından çevrilir</div>
+          <div class="relative inline-block mb-6">
+            <div class="cark-indicator">▼</div>
+            <canvas id="cark-canvas" width="280" height="280"></canvas>
+          </div>
+          <br>
+          <button onclick="demoCarikCevir()"
+                  class="bg-yellow-600 hover:bg-yellow-500 text-white font-black px-8 py-3 rounded-xl transition pulse-gold">
+            🎰 Demo Çevir!
+          </button>
+          <div id="cark-sonuc" class="mt-4 text-xl font-black text-yellow-400 hidden"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /max-w-5xl -->
+</div>
+
+<!-- Alkış Konfeti Overlay -->
+<div id="alkis-overlay" class="fixed inset-0 z-50 hidden flex items-center justify-center pointer-events-none">
+  <div class="text-center bounce-in">
+    <div class="text-8xl mb-4" id="alkis-emoji">👏</div>
+    <div class="text-white font-black text-2xl" id="alkis-overlay-adi">—</div>
+    <div class="text-pink-400 text-lg font-bold mt-1" id="alkis-overlay-mesaj">—</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ══ Tab ════════════════════════════════════════════════════════════════
+const TABS = ['seviye','rozetler','seri','gorev','mufettis','ittifak','sezon','alkis','cark'];
+function tabAc(id) {
+  TABS.forEach(t => {
+    document.getElementById('panel-'+t).classList.toggle('hidden', t !== id);
+    const btn = document.querySelector(`button[onclick="tabAc('${t}')"]`);
+    if (btn) btn.classList.toggle('aktif', t === id);
+  });
+  if (id === 'cark') setTimeout(carkCiz, 100);
+}
+
+// ══ Günlük Görev ═══════════════════════════════════════════════════════
+async function gorevTamamla(gorevId, sinifId, btn) {
+  btn.disabled = true; btn.textContent = '⏳';
+  const fd = new FormData();
+  fd.append('gorev_id', gorevId); fd.append('sinif_id', sinifId);
+  const res  = await fetch('/api/gorev/tamamla', {method:'POST',body:fd});
+  const data = await res.json();
+  if (data.ok) {
+    const row = btn.closest('div');
+    row.className = row.className.replace('border-slate-700 bg-slate-900', 'border-green-700 bg-green-950');
+    btn.outerHTML = '<span class="text-green-400 font-bold text-xs">✅ Tamamladı</span>';
+    toast(`+${data.puan} puan kazanıldı! 🎯`, '#16a34a');
+    konfeti();
+  } else {
+    btn.disabled = false; btn.textContent = '✔ Tamamladı';
+    toast(data.sebep || 'Hata', '#dc2626');
+  }
+}
+
+// ══ Müfettiş ══════════════════════════════════════════════════════════
+async function mufettisKaydet(id, sonuc) {
+  const fd = new FormData();
+  fd.append('mufettis_id', id); fd.append('sonuc', sonuc);
+  const res  = await fetch('/api/mufettis/degerlendir', {method:'POST',body:fd});
+  const data = await res.json();
+  if (data.ok) { toast('Değerlendirme kaydedildi!', '#16a34a'); setTimeout(() => location.reload(), 1500); }
+  else toast('Hata', '#dc2626');
+}
+
+// ══ Müfettiş Belirleme (sadece yetkili öğretmenler) ═══════════════════
+async function mufettisOgrenciYukle() {
+  const sinifId = document.getElementById('mufettis-sinif').value;
+  const sel     = document.getElementById('mufettis-ogrenci');
+  if (!sinifId) { sel.innerHTML = '<option value="">— Öğrenci seçin —</option>'; return; }
+  const res  = await fetch(`/api/sinif/${sinifId}/ogrenciler`);
+  const data = await res.json();
+  sel.innerHTML = '<option value="">— Öğrenci seçin —</option>' +
+    data.map(o => `<option value="${o.id}">${o.ad_soyad}</option>`).join('');
+}
+
+async function mufettisOgrenciBelirle() {
+  const ogrenciId = document.getElementById('mufettis-ogrenci').value;
+  const sonucEl   = document.getElementById('mufettis-belirle-sonuc');
+  if (!ogrenciId) { toast('Öğrenci seçin!', '#f59e0b'); return; }
+  const fd = new FormData(); fd.append('ogrenci_id', ogrenciId);
+  const res  = await fetch('/api/mufettis/belirle', {method:'POST', body:fd});
+  const data = await res.json();
+  sonucEl.classList.remove('hidden');
+  if (data.ok) {
+    sonucEl.textContent = '✅ Bugünün gizli müfettişi belirlendi!';
+    sonucEl.style.color = '#4ade80';
+    toast('Müfettiş belirlendi! Gizlilik korunuyor.', '#92400e');
+    setTimeout(() => location.reload(), 1800);
+  } else {
+    sonucEl.textContent = '❌ ' + (data.sebep || 'Hata');
+    sonucEl.style.color = '#f87171';
+  }
+}
+
+// ══ İttifak Onay / Ret ════════════════════════════════════════════════
+async function ittifakOnayla(id) {
+  const fd = new FormData(); fd.append('ittifak_id', id);
+  const res  = await fetch('/api/ittifak/onayla', {method:'POST', body:fd});
+  const data = await res.json();
+  if (data.ok) {
+    toast('✅ İttifak onaylandı! Aktif oldu.', '#0d9488');
+    document.getElementById('talep-'+id)?.remove();
+    setTimeout(() => location.reload(), 1500);
+  } else toast('Hata: ' + (data.sebep || ''), '#dc2626');
+}
+
+async function ittifakReddet(id) {
+  const fd = new FormData(); fd.append('ittifak_id', id);
+  const res  = await fetch('/api/ittifak/reddet', {method:'POST', body:fd});
+  const data = await res.json();
+  if (data.ok) {
+    toast('❌ Talep reddedildi.', '#dc2626');
+    document.getElementById('talep-'+id)?.remove();
+  } else toast('Hata', '#dc2626');
+}
+
+// ══ İttifak ═══════════════════════════════════════════════════════════
+async function ittifakOlustur() {
+  const s1 = document.getElementById('ittifak-s1').value;
+  const s2 = document.getElementById('ittifak-s2').value;
+  if (!s1 || !s2 || s1 === s2) { toast('İki farklı sınıf seçin!', '#f59e0b'); return; }
+  const fd = new FormData();
+  fd.append('sinif1_id', s1); fd.append('sinif2_id', s2);
+  const res  = await fetch('/api/ittifak/olustur', {method:'POST',body:fd});
+  const data = await res.json();
+  const el   = document.getElementById('ittifak-sonuc');
+  el.classList.remove('hidden');
+  if (data.ok) {
+    el.textContent = '🤝 Görev: ' + data.gorev;
+    el.style.color = '#2dd4bf';
+    toast('İttifak görevi oluşturuldu!', '#0d9488');
+    setTimeout(() => location.reload(), 2000);
+  } else {
+    el.textContent = data.sebep || 'Hata';
+    el.style.color = '#f87171';
+  }
+}
+
+async function ittifakTamamla(id, btn) {
+  btn.disabled = true;
+  const fd = new FormData(); fd.append('ittifak_id', id);
+  const res  = await fetch('/api/ittifak/tamamla', {method:'POST',body:fd});
+  const data = await res.json();
+  if (data.ok) { toast('İttifak tamamlandı! Her iki sınıfa puan eklendi. 🤝', '#0d9488'); konfeti(); setTimeout(() => location.reload(), 2000); }
+  else { btn.disabled = false; toast('Hata', '#dc2626'); }
+}
+
+// ══ Alkış ═════════════════════════════════════════════════════════════
+async function alkisOgrenciYukle() {
+  const sinifId = document.getElementById('alkis-sinif').value;
+  const sel     = document.getElementById('alkis-ogrenci');
+  if (!sinifId) { sel.innerHTML = '<option value="">— Öğrenci Seç —</option>'; return; }
+  const res  = await fetch(`/api/sinif/${sinifId}/ogrenciler`);
+  const data = await res.json();
+  sel.innerHTML = '<option value="">— Öğrenci Seç —</option>' +
+    data.map(o => `<option value="${o.id}" data-sinif="${sinifId}">${o.ad_soyad}</option>`).join('');
+}
+
+async function alkisGonder() {
+  const sel      = document.getElementById('alkis-ogrenci');
+  const ogrenciId= sel.value;
+  const sinifId  = document.getElementById('alkis-sinif').value;
+  const mesaj    = document.getElementById('alkis-mesaj').value || 'Harika iş!';
+  if (!ogrenciId) { toast('Öğrenci seçin!', '#f59e0b'); return; }
+
+  const fd = new FormData();
+  fd.append('ogrenci_id', ogrenciId); fd.append('sinif_id', sinifId); fd.append('mesaj', mesaj);
+  const res  = await fetch('/api/alkis/ver', {method:'POST',body:fd});
+  const data = await res.json();
+
+  if (data.ok) {
+    // Overlay animasyonu
+    const adText = sel.selectedOptions[0].text;
+    document.getElementById('alkis-overlay-adi').textContent    = adText;
+    document.getElementById('alkis-overlay-mesaj').textContent  = '"' + mesaj + '"';
+    const ov = document.getElementById('alkis-overlay');
+    ov.classList.remove('hidden');
+    konfeti();
+    setTimeout(() => ov.classList.add('hidden'), 3000);
+    toast(`👏 Alkış verildi! Toplam: ${data.toplam_alkis}`, '#db2777');
+  }
+}
+
+// ══ Şans Çarkı ════════════════════════════════════════════════════════
+const CARK_SECENEKLER = {{ sans_secenekler | tojson }};
+let carkDonuyor = false;
+
+function carkCiz(vurguluIndex = -1) {
+  const canvas = document.getElementById('cark-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2, cy = canvas.height / 2, r = cx - 8;
+  const n = CARK_SECENEKLER.length;
+  const aci = (2 * Math.PI) / n;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  CARK_SECENEKLER.forEach(([text, puan, renk], i) => {
+    const baslangic = i * aci - Math.PI / 2;
+    const bitis     = baslangic + aci;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, baslangic, bitis);
+    ctx.closePath();
+    ctx.fillStyle = i === vurguluIndex ? '#fff' : renk + (i % 2 === 0 ? 'dd' : 'aa');
+    ctx.fill();
+    ctx.strokeStyle = '#060c1a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Yazı
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(baslangic + aci / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = i === vurguluIndex ? '#000' : '#fff';
+    ctx.font      = 'bold 11px Segoe UI, system-ui';
+    ctx.fillText(text.length > 14 ? text.slice(0,13)+'…' : text, r - 8, 4);
+    ctx.restore();
+  });
+
+  // Merkez daire
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, 2 * Math.PI);
+  ctx.fillStyle = '#020817';
+  ctx.fill();
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#f59e0b';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🎰', cx, cy + 5);
+}
+
+function demoCarikCevir() {
+  if (carkDonuyor) return;
+  carkDonuyor = true;
+  const canvas  = document.getElementById('cark-canvas');
+  const n       = CARK_SECENEKLER.length;
+  const hedef   = Math.floor(Math.random() * n);
+  const donusler = 5 + Math.random() * 3;
+  const hedefAci = donusler * 360 + (360 - (hedef / n * 360));
+  const sure    = 4000;
+  const baslangic = Date.now();
+
+  let rotasyon = 0;
+
+  function animasyon() {
+    const gecen = Date.now() - baslangic;
+    const t     = Math.min(gecen / sure, 1);
+    const ease  = 1 - Math.pow(1 - t, 4);
+    rotasyon    = ease * hedefAci;
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotasyon * Math.PI) / 180);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    ctx.restore();
+
+    // Çarkı döndürerek çiz
+    const n2  = CARK_SECENEKLER.length;
+    const aci  = (2 * Math.PI) / n2;
+    const rot  = (rotasyon * Math.PI) / 180;
+    const cx = canvas.width / 2, cy = canvas.height / 2, r = cx - 8;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    CARK_SECENEKLER.forEach(([text, puan, renk], i) => {
+      const baslangicA = rot + i * aci - Math.PI / 2;
+      const bitisA     = baslangicA + aci;
+      ctx.beginPath(); ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, baslangicA, bitisA); ctx.closePath();
+      ctx.fillStyle = renk + (i % 2 === 0 ? 'dd' : 'aa'); ctx.fill();
+      ctx.strokeStyle = '#060c1a'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.save();
+      ctx.translate(cx, cy); ctx.rotate(baslangicA + aci / 2);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px Segoe UI, system-ui';
+      ctx.fillText(text.length > 14 ? text.slice(0,13)+'…' : text, r - 8, 4);
+      ctx.restore();
+    });
+    ctx.beginPath(); ctx.arc(cx, cy, 18, 0, 2 * Math.PI);
+    ctx.fillStyle = '#020817'; ctx.fill();
+    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText('🎰', cx, cy + 5);
+
+    if (t < 1) { requestAnimationFrame(animasyon); }
+    else {
+      carkDonuyor = false;
+      const [sonucText, puan] = CARK_SECENEKLER[hedef];
+      const el = document.getElementById('cark-sonuc');
+      el.classList.remove('hidden');
+      el.textContent = `🎉 ${sonucText}`;
+      toast(`Demo: ${sonucText}`, puan > 0 ? '#16a34a' : puan < 0 ? '#dc2626' : '#64748b');
+      if (puan > 0) konfeti();
+    }
+  }
+  requestAnimationFrame(animasyon);
+}
+
+// ══ Yardımcılar ════════════════════════════════════════════════════════
+function konfeti() {
+  const renkler = ['#ffd700','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff','#5f27cd'];
+  const bitis   = Date.now() + 3000;
+  (function at() {
+    confetti({ particleCount:6, angle:60,  spread:50, origin:{x:0}, colors:renkler });
+    confetti({ particleCount:6, angle:120, spread:50, origin:{x:1}, colors:renkler });
+    if (Date.now() < bitis) requestAnimationFrame(at);
+  })();
+}
+
+function toast(mesaj, renk='#4f46e5') {
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:${renk};color:#fff;padding:12px 20px;border-radius:12px;
+    font-weight:bold;font-size:13px;z-index:9999;max-width:90vw;text-align:center;
+    box-shadow:0 4px 20px rgba(0,0,0,0.5);animation:bounce-in .4s both;
+  `;
+  t.textContent = mesaj;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ── Arka plan yıldızları ────────────────────────────────────────────────
+(function() {
+  const el = document.getElementById('yildizlar');
+  if (!el) return;
+  for (let i = 0; i < 60; i++) {
+    const s = document.createElement('div');
+    s.style.cssText = `
+      position:absolute;border-radius:50%;background:#fff;
+      width:${Math.random()*2+1}px;height:${Math.random()*2+1}px;
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      animation:star-twinkle ${1.5+Math.random()*3}s ${Math.random()*3}s ease-in-out infinite;
+    `;
+    el.appendChild(s);
+  }
+})();
+
+// İlk yükleme
+setTimeout(() => carkCiz(), 200);
+</script>
+{% endblock %}

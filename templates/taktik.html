@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>⚽ Taktik Tahtası — {{ sinif_adi }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:#05090f;font-family:'Segoe UI',system-ui,sans-serif;
+         height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+
+    /* ── Saha ── */
+    #saha-wrap{
+      position:relative;flex:1;overflow:hidden;
+      background:linear-gradient(170deg,#1d6b2c 0%,#196028 100%);
+      cursor:crosshair;
+    }
+    #saha-wrap::before{
+      content:'';position:absolute;inset:0;pointer-events:none;
+      background:repeating-linear-gradient(to bottom,
+        rgba(0,0,0,.06) 0,rgba(0,0,0,.06) 3.5%,transparent 3.5%,transparent 7%);
+    }
+    #saha-svg{position:absolute;inset:0;width:100%;height:100%;}
+    #oyuncular-katmani{position:absolute;inset:0;pointer-events:none;}
+
+    /* ── Oyuncu tokeni (sahada) ── */
+    .oyuncu{
+      position:absolute;
+      transform:translate(-50%,-52%);
+      cursor:grab;user-select:none;touch-action:none;pointer-events:all;
+      display:flex;flex-direction:column;align-items:center;
+      filter:drop-shadow(0 3px 8px rgba(0,0,0,.8));
+      transition:filter .12s,transform .12s;
+      z-index:10;
+    }
+    .oyuncu:active{cursor:grabbing;filter:drop-shadow(0 5px 16px rgba(0,0,0,1)) brightness(1.15);z-index:50;}
+    .oyuncu.secili{filter:drop-shadow(0 0 14px #fff) brightness(1.25);z-index:49;}
+
+    .daire{
+      width:54px;height:54px;border-radius:50%;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      border:3px solid rgba(255,255,255,.75);
+      position:relative;flex-shrink:0;
+      font-size:20px;line-height:1;gap:0;
+    }
+    .daire .jer{
+      position:absolute;top:-7px;right:-7px;
+      background:#fff;color:#111;font-size:9px;font-weight:900;
+      border-radius:50%;width:18px;height:18px;
+      display:flex;align-items:center;justify-content:center;
+      border:1.5px solid rgba(0,0,0,.3);
+      box-shadow:0 1px 3px rgba(0,0,0,.5);
+    }
+    .daire .emoji{font-size:22px;line-height:1;}
+
+    .oyuncu-isim{
+      background:rgba(0,0,0,.82);color:#fff;
+      font-size:8.5px;font-weight:900;padding:2px 6px;
+      border-radius:5px;white-space:nowrap;
+      max-width:80px;overflow:hidden;text-overflow:ellipsis;
+      margin-top:3px;letter-spacing:.3px;
+      border:1px solid rgba(255,255,255,.15);
+    }
+    .oyuncu-rol{
+      font-size:7px;color:rgba(255,255,255,.65);
+      max-width:80px;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;text-align:center;
+      margin-top:1px;font-weight:700;
+    }
+
+    /* ── Kadro listesi öğesi (sürüklenebilir) ── */
+    .kadro-item{
+      display:flex;align-items:center;gap:8px;
+      padding:7px 8px;border-radius:10px;cursor:grab;
+      border:1.5px solid rgba(255,255,255,.1);
+      background:rgba(255,255,255,.06);
+      transition:all .18s;user-select:none;touch-action:none;
+    }
+    .kadro-item:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25);}
+    .kadro-item.sahada{opacity:.35;cursor:default;}
+    .kadro-item.drag-over-field{background:rgba(59,130,246,.25);}
+
+    .mini-daire{
+      width:36px;height:36px;border-radius:50%;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      border:2px solid rgba(255,255,255,.5);
+      font-size:14px;font-weight:900;color:#fff;
+      position:relative;
+    }
+    .mini-jer{
+      position:absolute;top:-5px;right:-5px;
+      background:#fff;color:#000;font-size:7px;font-weight:900;
+      border-radius:50%;width:13px;height:13px;
+      display:flex;align-items:center;justify-content:center;
+    }
+
+    /* ── Saha drop-zone ── */
+    #saha-wrap.drop-hedef{
+      outline:3px solid #3b82f6;outline-offset:-3px;
+    }
+
+    /* ── Hayalet (ghost) sürükleme ── */
+    #ghost{
+      position:fixed;pointer-events:none;z-index:9999;
+      display:none;transform:translate(-50%,-50%);opacity:.8;
+    }
+
+    /* ── Renk butonları ── */
+    .renk-btn{width:24px;height:24px;border-radius:50%;cursor:pointer;
+              border:2px solid transparent;transition:all .2s;flex-shrink:0;}
+    .renk-btn.aktif{border-color:#fff;transform:scale(1.25);box-shadow:0 0 8px rgba(255,255,255,.4);}
+
+    /* ── Modal ── */
+    #rol-modal{display:none;}
+    #rol-modal.acik{display:flex;}
+
+    /* ── Formasyon ── */
+    .f-btn{padding:.3rem .55rem;border-radius:.5rem;font-size:.62rem;font-weight:800;
+           background:#0f172a;color:#475569;border:1px solid #1e293b;
+           cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .f-btn:hover,.f-btn.aktif{background:#1e40af;color:#fff;border-color:#3b82f6;}
+
+    /* ── Kaydet butonu animasyon ── */
+    @keyframes save-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+                          50%{box-shadow:0 0 0 6px rgba(34,197,94,.25)}}
+    #btn-kaydet.degisti{animation:save-pulse 1.2s infinite;}
+
+    @keyframes token-in{from{transform:translate(-50%,-52%) scale(0);opacity:0}
+                        to{transform:translate(-50%,-52%) scale(1);opacity:1}}
+    .token-in{animation:token-in .3s cubic-bezier(.34,1.56,.64,1) both;}
+
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-thumb{background:#1e293b;border-radius:2px;}
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+<header class="flex-shrink-0 border-b border-slate-800 px-2 py-1.5 flex items-center gap-1.5 flex-wrap"
+        style="background:#060d1c">
+  <button onclick="history.back()"
+          class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex-shrink-0">
+    ◀ Geri
+  </button>
+  <div class="flex-shrink-0">
+    <div class="text-green-300 font-black text-sm leading-tight">{{ sinif_adi }} — Taktik Tahtası</div>
+    <div class="text-slate-600 text-[9px]">Sağdan sahaya sürükle · Tokene tıkla → rol belirle</div>
+  </div>
+  <div class="flex-1"></div>
+  <!-- Formasyon seçimi -->
+  <div class="flex gap-1 flex-wrap">
+    {% for f in ['4-4-2','4-3-3','4-2-3-1','3-5-2','5-3-2','4-1-4-1','3-4-3'] %}
+    <button class="f-btn" onclick="formasyonUygula('{{ f }}')">{{ f }}</button>
+    {% endfor %}
+  </div>
+  <button onclick="sahayiSifirla()"
+          class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-700 hover:bg-red-900 text-slate-300 transition flex-shrink-0">
+    🗑
+  </button>
+  <button id="btn-kaydet" onclick="kaydet()"
+          class="px-3 py-1 rounded-lg text-xs font-bold bg-green-700 hover:bg-green-600 text-white transition flex-shrink-0">
+    💾 Kaydet
+  </button>
+</header>
+
+<!-- ═══ ANA ALAN ═══════════════════════════════════════════════════════ -->
+<div class="flex flex-1 overflow-hidden">
+
+  <!-- SOL PANEL: Renk + Görünüm ──────────────────────────────────────── -->
+  <aside class="flex-shrink-0 w-24 border-r border-slate-800 flex flex-col overflow-y-auto"
+         style="background:#09111f">
+    <div class="p-2 space-y-3">
+
+      <div>
+        <div class="text-slate-500 text-[8px] font-bold mb-1.5 tracking-wider">RENK</div>
+        <div class="flex flex-wrap gap-1.5" id="renk-secici">
+          {% for renk in ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#f97316','#06b6d4','#fff','#111'] %}
+          <button class="renk-btn" style="background:{{ renk }}"
+                  onclick="renkSec('{{ renk }}',this)"></button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <div class="text-slate-500 text-[8px] font-bold mb-1.5 tracking-wider">GÖRÜNÜM</div>
+        <label class="flex items-center gap-1 text-slate-400 text-[9px] cursor-pointer mb-1">
+          <input type="checkbox" id="cb-isim" checked onchange="tokenlarGuncelle()"> İsim
+        </label>
+        <label class="flex items-center gap-1 text-slate-400 text-[9px] cursor-pointer">
+          <input type="checkbox" id="cb-rol" checked onchange="tokenlarGuncelle()"> Mevki
+        </label>
+      </div>
+
+      <div class="rounded-lg p-1.5" style="background:#050b15">
+        <div class="text-slate-600 text-[8px] space-y-0.5 leading-relaxed">
+          <div class="text-slate-500 font-bold mb-0.5">İPUCU</div>
+          <div>Sağdan sürükle</div>
+          <div>Tokene tıkla → rol</div>
+          <div>Sahada sürükle → taşı</div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- SAHA ──────────────────────────────────────────────────────────────── -->
+  <div id="saha-wrap" class="flex-1 relative"
+       ondragover="sahaDragOver(event)"
+       ondragleave="sahaDragLeave(event)"
+       ondrop="sahaDrop(event)">
+
+    <!-- SVG Çizgiler -->
+    <svg id="saha-svg" viewBox="0 0 68 105" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x=".5" y=".5" width="67" height="104" fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <line x1=".5" y1="52.5" x2="67.5" y2="52.5" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <circle cx="34" cy="52.5" r="9.15" fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <circle cx="34" cy="52.5" r=".75" fill="rgba(255,255,255,.85)"/>
+      <!-- Üst ceza sahası -->
+      <rect x="13.84" y=".5" width="40.32" height="16.5" fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <rect x="24.84" y=".5" width="18.32" height="5.5"  fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <rect x="27.5"  y="-.4" width="13"   height="2"    rx=".4" fill="rgba(255,255,255,.35)"/>
+      <circle cx="34" cy="11" r=".65" fill="rgba(255,255,255,.85)"/>
+      <path d="M 24,16.5 A 9.15,9.15 0 0 0 44,16.5" fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <!-- Alt ceza sahası -->
+      <rect x="13.84" y="88"  width="40.32" height="16.5" fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <rect x="24.84" y="99"  width="18.32" height="5.5"  fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <rect x="27.5"  y="103.4" width="13" height="2"    rx=".4" fill="rgba(255,255,255,.35)"/>
+      <circle cx="34" cy="94" r=".65" fill="rgba(255,255,255,.85)"/>
+      <path d="M 24,88 A 9.15,9.15 0 0 1 44,88" fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".5"/>
+      <!-- Köşe yayları -->
+      <path d="M .5,2.5 A 2,2 0 0 0 2.5,.5" fill="none" stroke="rgba(255,255,255,.7)" stroke-width=".5"/>
+      <path d="M 65.5,.5 A 2,2 0 0 0 67.5,2.5" fill="none" stroke="rgba(255,255,255,.7)" stroke-width=".5"/>
+      <path d="M .5,102.5 A 2,2 0 0 1 2.5,104.5" fill="none" stroke="rgba(255,255,255,.7)" stroke-width=".5"/>
+      <path d="M 67.5,102.5 A 2,2 0 0 0 65.5,104.5" fill="none" stroke="rgba(255,255,255,.7)" stroke-width=".5"/>
+    </svg>
+
+    <!-- Oyuncu tokenları -->
+    <div id="oyuncular-katmani"></div>
+  </div>
+
+  <!-- SAĞ PANEL: Kadro listesi ───────────────────────────────────────── -->
+  <aside class="flex-shrink-0 w-40 border-l border-slate-800 flex flex-col"
+         style="background:#09111f">
+    <div class="px-2 py-1.5 border-b border-slate-800 flex-shrink-0">
+      <div class="text-slate-300 font-black text-xs">👥 Kadro</div>
+      <div class="text-slate-600 text-[8px]">Sahaya sürükle ↓</div>
+    </div>
+    <div id="kadro-listesi" class="flex-1 overflow-y-auto p-1.5 space-y-1"></div>
+    <div class="px-2 py-1.5 border-t border-slate-800">
+      <div class="text-slate-600 text-[8px]" id="alt-durum">0 sahada</div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- Durum çubuğu -->
+<div class="flex-shrink-0 flex items-center gap-3 px-3 py-1 border-t border-slate-800 text-[10px] text-slate-600"
+     style="background:#04080f">
+  <span id="durum-mesaj">Hazır — formasyonu seç veya oyuncuları sürükle</span>
+</div>
+
+<!-- ═══ Hayalet / Ghost element ═══════════════════════════════════════ -->
+<div id="ghost">
+  <div class="daire" id="ghost-daire" style="width:50px;height:50px;background:#3b82f6;border:3px solid rgba(255,255,255,.7);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">
+    ⚽
+  </div>
+</div>
+
+<!-- ═══ ROL MODAL ═══════════════════════════════════════════════════════ -->
+<div id="rol-modal" class="fixed inset-0 z-50 items-end sm:items-center justify-center"
+     style="background:rgba(0,0,0,.82)">
+  <div class="w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl overflow-hidden flex flex-col"
+       style="background:#0f172a;border:1px solid #1e3a5f;max-height:80vh">
+    <div class="flex items-center justify-between px-4 py-3 flex-shrink-0" style="background:#0d2244">
+      <div>
+        <div class="text-white font-black text-sm" id="rol-oyuncu-adi">Oyuncu</div>
+        <div class="text-slate-500 text-[10px]">Mevki seç</div>
+      </div>
+      <button onclick="rolModalKapat()"
+              class="w-7 h-7 rounded-full bg-slate-700 hover:bg-slate-600 text-white font-black text-sm flex items-center justify-center">✕</button>
+    </div>
+    <div class="overflow-y-auto p-3" id="rol-secenekler"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════
+// VERİ
+// ════════════════════════════════════════════════════════════════════════
+const SINIF_ID  = {{ sinif_id }};
+const KADRO_HAM = {{ kadro | tojson }};
+const KAYIT     = {{ kayit | tojson }};
+
+// DB'den gelen mevkiler: [{no, emoji, ad}]
+const MEVKILER_DB  = {{ mevkiler_json | tojson }};
+const MEVKILER     = MEVKILER_DB.map(m => m.ad);          // ad listesi (modal için)
+const EMOJI        = Object.fromEntries(MEVKILER_DB.map(m => [m.ad, m.emoji]));
+const MEVKI_NO_MAP = Object.fromEntries(MEVKILER_DB.map(m => [m.ad, m.no])); // ad→no
+const FORMASYONLAR = {
+  '4-4-2':[{r:'Kaleci',x:50,y:90},{r:'Sağ Bek',x:82,y:76},{r:'Stoper',x:62,y:76},{r:'Stoper',x:38,y:76},{r:'Sol Bek',x:18,y:76},{r:'Sağ Kanat',x:83,y:53},{r:'Dinamo İstasyon Oyuncusu',x:62,y:53},{r:'Dinamo İstasyon Oyuncusu',x:38,y:53},{r:'Sol Kanat',x:17,y:53},{r:'Santrafor (Golcü)',x:62,y:22},{r:'Santrafor (Golcü)',x:38,y:22}],
+  '4-3-3':[{r:'Kaleci',x:50,y:90},{r:'Sağ Bek',x:80,y:76},{r:'Stoper',x:60,y:76},{r:'Stoper',x:40,y:76},{r:'Sol Bek',x:20,y:76},{r:'Oyun Kurucu (10 Numara)',x:65,y:53},{r:'Dinamo İstasyon Oyuncusu',x:50,y:56},{r:'Oyun Kurucu (10 Numara)',x:35,y:53},{r:'Sağ Kanat',x:80,y:24},{r:'Santrafor (Golcü)',x:50,y:17},{r:'Sol Kanat',x:20,y:24}],
+  '4-2-3-1':[{r:'Kaleci',x:50,y:90},{r:'Sağ Bek',x:82,y:76},{r:'Stoper',x:60,y:76},{r:'Stoper',x:40,y:76},{r:'Sol Bek',x:18,y:76},{r:'Sigorta Oyuncusu',x:62,y:62},{r:'Sigorta Oyuncusu',x:38,y:62},{r:'Sağ Kanat',x:80,y:43},{r:'Oyun Kurucu (10 Numara)',x:50,y:40},{r:'Sol Kanat',x:20,y:43},{r:'Santrafor (Golcü)',x:50,y:18}],
+  '3-5-2':[{r:'Kaleci',x:50,y:90},{r:'Stoper',x:70,y:76},{r:'Stoper',x:50,y:76},{r:'Stoper',x:30,y:76},{r:'Sağ Kanat',x:88,y:55},{r:'Dinamo İstasyon Oyuncusu',x:67,y:53},{r:'Oyun Kurucu (10 Numara)',x:50,y:52},{r:'Dinamo İstasyon Oyuncusu',x:33,y:53},{r:'Sol Kanat',x:12,y:55},{r:'Santrafor (Golcü)',x:62,y:22},{r:'Santrafor (Golcü)',x:38,y:22}],
+  '5-3-2':[{r:'Kaleci',x:50,y:90},{r:'Sağ Bek',x:88,y:76},{r:'Stoper',x:68,y:76},{r:'Stoper',x:50,y:76},{r:'Stoper',x:32,y:76},{r:'Sol Bek',x:12,y:76},{r:'Dinamo İstasyon Oyuncusu',x:65,y:55},{r:'Oyun Kurucu (10 Numara)',x:50,y:55},{r:'Dinamo İstasyon Oyuncusu',x:35,y:55},{r:'Santrafor (Golcü)',x:62,y:22},{r:'Santrafor (Golcü)',x:38,y:22}],
+  '4-1-4-1':[{r:'Kaleci',x:50,y:90},{r:'Sağ Bek',x:82,y:76},{r:'Stoper',x:60,y:76},{r:'Stoper',x:40,y:76},{r:'Sol Bek',x:18,y:76},{r:'Sigorta Oyuncusu',x:50,y:64},{r:'Sağ Kanat',x:82,y:47},{r:'Dinamo İstasyon Oyuncusu',x:62,y:47},{r:'Dinamo İstasyon Oyuncusu',x:38,y:47},{r:'Sol Kanat',x:18,y:47},{r:'Santrafor (Golcü)',x:50,y:18}],
+  '3-4-3':[{r:'Kaleci',x:50,y:90},{r:'Stoper',x:70,y:76},{r:'Stoper',x:50,y:76},{r:'Stoper',x:30,y:76},{r:'Sağ Kanat',x:82,y:55},{r:'Dinamo İstasyon Oyuncusu',x:60,y:55},{r:'Dinamo İstasyon Oyuncusu',x:40,y:55},{r:'Sol Kanat',x:18,y:55},{r:'Sağ Kanat',x:78,y:24},{r:'Santrafor (Golcü)',x:50,y:17},{r:'Sol Kanat',x:22,y:24}],
+};
+
+// ════════════════════════════════════════════════════════════════════════
+// DURUM
+// ════════════════════════════════════════════════════════════════════════
+let takimRengi = '#3b82f6';
+let degisti    = false;
+
+// oyuncular map: id → {id, ad, numara, rol, x, y, sahada}
+const oyuncular = {};
+
+KADRO_HAM.forEach((o, i) => {
+  oyuncular[o.id] = {
+    id:     o.id,
+    ad:     o.ad_soyad || o.ad || '?',
+    numara: i + 1,
+    rol:    o.mevki || MEVKILER[i % MEVKILER.length] || MEVKILER[0],
+    x: -1, y: -1, sahada: false,
+  };
+});
+
+// Kayıt varsa uygula
+if (KAYIT && KAYIT.oyuncular) {
+  if (KAYIT.renk) takimRengi = KAYIT.renk;
+  Object.entries(KAYIT.oyuncular).forEach(([id, v]) => {
+    if (oyuncular[id]) {
+      oyuncular[id].x      = v.x;
+      oyuncular[id].y      = v.y;
+      oyuncular[id].rol    = v.rol || oyuncular[id].rol;
+      oyuncular[id].sahada = true;
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// SAHA & OYUNCU RENDER
+// ════════════════════════════════════════════════════════════════════════
+const katman = document.getElementById('oyuncular-katmani');
+
+function soyadiAl(ad) {
+  const p = (ad || '').trim().split(' ');
+  // Soyad genellikle son kelime — ama tam görünsün (max 10 char)
+  return p.length > 1 ? p[p.length - 1].substring(0, 10) : (p[0] || '?').substring(0, 10);
+}
+
+function tokenHTML(o) {
+  const goIsim = document.getElementById('cb-isim')?.checked !== false;
+  const goRol  = document.getElementById('cb-rol')?.checked  !== false;
+  const em     = EMOJI[o.rol] || '⚽';
+  const soyad  = o.ad.length <= 10 ? o.ad : soyadiAl(o.ad);
+  return `
+    <div class="daire" style="background:${takimRengi}">
+      <span class="emoji">${em}</span>
+      <span class="jer">${o.numara}</span>
+    </div>
+    ${goIsim ? `<div class="oyuncu-isim">${soyad}</div>` : ''}
+    ${goRol  ? `<div class="oyuncu-rol">${(o.rol||'').split('(')[0].trim().substring(0,12)}</div>` : ''}
+  `;
+}
+
+function tokenOlustur(o) {
+  let el = document.getElementById('tok-'+o.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'oyuncu token-in';
+    el.id = 'tok-'+o.id;
+    el.dataset.id = o.id;
+    katman.appendChild(el);
+    baglaTokenOlaylar(el, o.id);
+  }
+  el.style.left = o.x + '%';
+  el.style.top  = o.y + '%';
+  el.innerHTML  = tokenHTML(o);
+  return el;
+}
+
+function tokenSil(id) {
+  const el = document.getElementById('tok-'+id);
+  if (el) el.remove();
+}
+
+function sahaRender() {
+  katman.innerHTML = '';
+  let n = 0;
+  Object.values(oyuncular).forEach(o => {
+    if (o.sahada && o.x >= 0) { tokenOlustur(o); n++; }
+  });
+  document.getElementById('alt-durum').textContent = n + ' sahada';
+}
+
+function kadroRender() {
+  const liste = document.getElementById('kadro-listesi');
+  liste.innerHTML = '';
+  const sira = [...Object.values(oyuncular)].sort((a,b) => a.numara - b.numara);
+  sira.forEach(o => {
+    const div = document.createElement('div');
+    div.id = 'ki-'+o.id;
+    div.className = 'kadro-item' + (o.sahada ? ' sahada' : '');
+    div.setAttribute('draggable', o.sahada ? 'false' : 'true');
+    div.dataset.id = o.id;
+    div.innerHTML = `
+      <div class="mini-daire" style="background:${takimRengi}">
+        ${EMOJI[o.rol]||'⚽'}
+        <span class="mini-jer">${o.numara}</span>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="text-white text-[9px] font-black leading-tight truncate">${o.ad}</div>
+        <div class="text-slate-500 text-[8px] truncate">${(o.rol||'').split('(')[0].trim()}</div>
+      </div>
+      ${o.sahada ? '<span class="text-green-500 text-[9px]">✓</span>' : '<span class="text-slate-600 text-[9px]">⋮⋮</span>'}
+    `;
+    if (!o.sahada) {
+      div.addEventListener('dragstart', listeDragStart);
+      div.addEventListener('touchstart', listeTouchStart, {passive:false});
+    }
+    liste.appendChild(div);
+  });
+}
+
+function tokenlarGuncelle() {
+  Object.values(oyuncular).forEach(o => {
+    if (o.sahada) {
+      const el = document.getElementById('tok-'+o.id);
+      if (el) el.innerHTML = tokenHTML(o);
+    }
+  });
+}
+
+function altDurumGuncelle() {
+  const n = Object.values(oyuncular).filter(o=>o.sahada).length;
+  document.getElementById('alt-durum').textContent = n + ' sahada';
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// HTML5 DRAG — LİSTEDEN SAHAYA
+// ════════════════════════════════════════════════════════════════════════
+let dragId = null;
+
+function listeDragStart(e) {
+  dragId = e.currentTarget.dataset.id;
+  e.dataTransfer.setData('playerId', dragId);
+  e.dataTransfer.effectAllowed = 'move';
+  // Şeffaf ghost
+  const ghost = document.createElement('div');
+  ghost.style.cssText = 'width:1px;height:1px;position:fixed;top:-100px;';
+  document.body.appendChild(ghost);
+  e.dataTransfer.setDragImage(ghost, 0, 0);
+  setTimeout(()=>ghost.remove(), 0);
+}
+
+function sahaDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.getElementById('saha-wrap').classList.add('drop-hedef');
+}
+function sahaDragLeave(e) {
+  if (!document.getElementById('saha-wrap').contains(e.relatedTarget))
+    document.getElementById('saha-wrap').classList.remove('drop-hedef');
+}
+function sahaDrop(e) {
+  e.preventDefault();
+  document.getElementById('saha-wrap').classList.remove('drop-hedef');
+  const id = e.dataTransfer.getData('playerId') || dragId;
+  if (!id) return;
+  const rect = document.getElementById('saha-wrap').getBoundingClientRect();
+  const x = Math.max(4, Math.min(96, (e.clientX - rect.left) / rect.width * 100));
+  const y = Math.max(4, Math.min(96, (e.clientY - rect.top)  / rect.height * 100));
+  yerleştir(id, x, y, true);
+  dragId = null;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// TOUCH DRAG — LİSTEDEN SAHAYA (Mobil)
+// ════════════════════════════════════════════════════════════════════════
+let touchDragId   = null;
+const ghost        = document.getElementById('ghost');
+const ghostDaire   = document.getElementById('ghost-daire');
+
+function listeTouchStart(e) {
+  e.preventDefault();
+  touchDragId = e.currentTarget.dataset.id;
+  const o = oyuncular[touchDragId];
+  ghostDaire.style.background = takimRengi;
+  ghostDaire.textContent = EMOJI[o?.rol] || '⚽';
+  ghost.style.display = 'block';
+  const t = e.touches[0];
+  ghost.style.left = t.clientX + 'px';
+  ghost.style.top  = t.clientY + 'px';
+
+  document.addEventListener('touchmove', listeTouchMove, {passive:false});
+  document.addEventListener('touchend',  listeTouchEnd);
+}
+function listeTouchMove(e) {
+  if (!touchDragId) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  ghost.style.left = t.clientX + 'px';
+  ghost.style.top  = t.clientY + 'px';
+}
+function listeTouchEnd(e) {
+  if (!touchDragId) return;
+  ghost.style.display = 'none';
+  const t = e.changedTouches[0];
+  const saha = document.getElementById('saha-wrap');
+  const rect = saha.getBoundingClientRect();
+  if (t.clientX >= rect.left && t.clientX <= rect.right &&
+      t.clientY >= rect.top  && t.clientY <= rect.bottom) {
+    const x = Math.max(4, Math.min(96, (t.clientX - rect.left) / rect.width  * 100));
+    const y = Math.max(4, Math.min(96, (t.clientY - rect.top)  / rect.height * 100));
+    yerleştir(touchDragId, x, y, true);
+  }
+  document.removeEventListener('touchmove', listeTouchMove);
+  document.removeEventListener('touchend',  listeTouchEnd);
+  touchDragId = null;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// SAHAYA YERLEŞTIR
+// ════════════════════════════════════════════════════════════════════════
+function yerleştir(id, x, y, rolSorulsun = false) {
+  const o = oyuncular[id];
+  if (!o) return;
+  o.x = x; o.y = y; o.sahada = true;
+  tokenOlustur(o);
+  // Kadro listesi güncelle
+  const ki = document.getElementById('ki-'+id);
+  if (ki) {
+    ki.classList.add('sahada');
+    ki.setAttribute('draggable','false');
+    ki.removeEventListener('dragstart', listeDragStart);
+  }
+  altDurumGuncelle();
+  degistiIsaretle();
+  if (rolSorulsun) {
+    setTimeout(() => rolModalAc(id), 250);
+  }
+}
+
+function sahadanCikar(id) {
+  const o = oyuncular[id];
+  if (!o) return;
+  o.sahada = false;
+  tokenSil(id);
+  const ki = document.getElementById('ki-'+id);
+  if (ki) {
+    ki.classList.remove('sahada');
+    ki.setAttribute('draggable','true');
+    ki.addEventListener('dragstart', listeDragStart);
+    ki.addEventListener('touchstart', listeTouchStart, {passive:false});
+  }
+  altDurumGuncelle();
+  degistiIsaretle();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// SAHA ÜZERINDE DRAG (Mevcut Token Taşıma)
+// ════════════════════════════════════════════════════════════════════════
+let dragToken   = null;
+let dragOfsX    = 0, dragOfsY = 0;
+let didMove     = false;
+
+function baglaTokenOlaylar(el, id) {
+  // Mouse
+  el.addEventListener('mousedown', e => {
+    e.stopPropagation();
+    baslaDrag(e.clientX, e.clientY, id);
+  });
+  // Touch
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const t = e.touches[0];
+    baslaDrag(t.clientX, t.clientY, id);
+  }, {passive:false});
+  // Click (rol seç)
+  el.addEventListener('click', e => {
+    if (!didMove) rolModalAc(id);
+    didMove = false;
+  });
+}
+
+function baslaDrag(cx, cy, id) {
+  dragToken = id;
+  didMove   = false;
+  const saha = document.getElementById('saha-wrap');
+  const rect = saha.getBoundingClientRect();
+  const o = oyuncular[id];
+  dragOfsX = cx - rect.left - (o.x / 100 * rect.width);
+  dragOfsY = cy - rect.top  - (o.y / 100 * rect.height);
+  const el = document.getElementById('tok-'+id);
+  if (el) { el.style.zIndex = '50'; el.style.transition = 'none'; }
+
+  const mvM = ev => {
+    if (!dragToken) return;
+    ev.preventDefault();
+    const cx2 = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const cy2 = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    const r   = document.getElementById('saha-wrap').getBoundingClientRect();
+    const nx  = Math.max(3, Math.min(97, (cx2 - dragOfsX - r.left) / r.width  * 100));
+    const ny  = Math.max(3, Math.min(97, (cy2 - dragOfsY - r.top)  / r.height * 100));
+    const diff = Math.abs(nx - oyuncular[dragToken].x) + Math.abs(ny - oyuncular[dragToken].y);
+    if (diff > .5) didMove = true;
+    oyuncular[dragToken].x = nx;
+    oyuncular[dragToken].y = ny;
+    const tok = document.getElementById('tok-'+dragToken);
+    if (tok) { tok.style.left = nx+'%'; tok.style.top = ny+'%'; }
+    if (didMove) degistiIsaretle();
+  };
+  const upM = () => {
+    if (dragToken) {
+      const el2 = document.getElementById('tok-'+dragToken);
+      if (el2) { el2.style.zIndex = ''; el2.style.transition = ''; }
+    }
+    dragToken = null;
+    document.removeEventListener('mousemove', mvM);
+    document.removeEventListener('mouseup',   upM);
+    document.removeEventListener('touchmove', mvM);
+    document.removeEventListener('touchend',  upM);
+  };
+  document.addEventListener('mousemove', mvM, {passive:false});
+  document.addEventListener('mouseup',   upM);
+  document.addEventListener('touchmove', mvM, {passive:false});
+  document.addEventListener('touchend',  upM);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// ROL MODAL
+// ════════════════════════════════════════════════════════════════════════
+let rolModalId = null;
+
+function rolModalAc(id) {
+  rolModalId = id;
+  const o = oyuncular[id];
+  document.getElementById('rol-oyuncu-adi').textContent = `${o.numara}. ${o.ad}`;
+  const sec = document.getElementById('rol-secenekler');
+  sec.innerHTML = `
+    <div class="grid grid-cols-2 gap-1.5 mb-3">
+      ${MEVKILER.map(m => `
+        <button onclick="rolSec('${m}')"
+                class="flex items-center gap-1.5 px-2 py-2 rounded-xl text-xs font-bold text-left transition
+                       ${o.rol===m ? 'bg-blue-700 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+          <span class="text-base flex-shrink-0">${EMOJI[m]||'⚽'}</span>
+          <span class="leading-tight">${m}</span>
+        </button>`).join('')}
+    </div>
+    <button onclick="sahadanCikar(${id});rolModalKapat()"
+            class="w-full py-2 rounded-xl text-xs font-bold bg-red-900 hover:bg-red-800 text-red-300 transition">
+      🗑 Sahadaki Yerini Kaldır
+    </button>
+  `;
+  document.getElementById('rol-modal').classList.add('acik');
+}
+function rolSec(rol) {
+  if (!rolModalId) return;
+  oyuncular[rolModalId].rol = rol;
+  const tok = document.getElementById('tok-'+rolModalId);
+  if (tok) tok.innerHTML = tokenHTML(oyuncular[rolModalId]);
+  const ki = document.getElementById('ki-'+rolModalId);
+  if (ki) {
+    const mini = ki.querySelector('.mini-daire');
+    if (mini) { mini.innerHTML = `${EMOJI[rol]||'⚽'}<span class="mini-jer">${oyuncular[rolModalId].numara}</span>`; }
+    const rolEl = ki.querySelector('.text-slate-500');
+    if (rolEl) rolEl.textContent = (rol||'').split('(')[0].trim();
+  }
+  degistiIsaretle();
+  rolModalKapat();
+  durum('✅ ' + oyuncular[rolModalId].ad.split(' ').pop() + ' → ' + rol);
+}
+function rolModalKapat() {
+  document.getElementById('rol-modal').classList.remove('acik');
+  rolModalId = null;
+}
+document.getElementById('rol-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('rol-modal')) rolModalKapat();
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// FORMASYON
+// ════════════════════════════════════════════════════════════════════════
+function formasyonUygula(ad) {
+  const pozlar = FORMASYONLAR[ad];
+  if (!pozlar) return;
+  // Herkesi çıkar
+  Object.values(oyuncular).forEach(o => { o.sahada = false; tokenSil(o.id); });
+  // Formasyona yerleştir
+  const sira = [...Object.values(oyuncular)].sort((a,b) => a.numara - b.numara);
+  pozlar.forEach((p, i) => {
+    if (!sira[i]) return;
+    const o = sira[i];
+    o.x = p.x; o.y = p.y; o.rol = p.r; o.sahada = true;
+    tokenOlustur(o);
+  });
+  kadroRender();
+  altDurumGuncelle();
+  document.querySelectorAll('.f-btn').forEach(b =>
+    b.classList.toggle('aktif', b.textContent.trim() === ad));
+  degistiIsaretle();
+  durum('✅ Formasyon: ' + ad);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// KAYDET
+// ════════════════════════════════════════════════════════════════════════
+async function kaydet() {
+  const veri = { renk: takimRengi, oyuncular: {} };
+  Object.values(oyuncular).forEach(o => {
+    if (o.sahada) veri.oyuncular[o.id] = {
+      x: o.x, y: o.y,
+      rol: o.rol,
+      mevki_no: MEVKI_NO_MAP[o.rol] || 15,   // kadro güncellemesi için
+    };
+  });
+  durum('⏳ Kaydediliyor...');
+  try {
+    const res  = await fetch(`/api/taktik/${SINIF_ID}/kaydet`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(veri),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      degisti = false;
+      document.getElementById('btn-kaydet').classList.remove('degisti');
+      toast('💾 Formasyon kaydedildi!');
+      durum('✅ Kaydedildi');
+    } else { durum('❌ Kayıt hatası'); }
+  } catch { durum('❌ Bağlantı hatası'); }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// SIFIRLA
+// ════════════════════════════════════════════════════════════════════════
+function sahayiSifirla() {
+  if (!confirm('Saha sıfırlansın mı?')) return;
+  Object.values(oyuncular).forEach(o => { o.sahada = false; tokenSil(o.id); });
+  kadroRender();
+  altDurumGuncelle();
+  document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('aktif'));
+  degistiIsaretle();
+  durum('🗑 Sıfırlandı');
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// RENK
+// ════════════════════════════════════════════════════════════════════════
+function renkSec(renk, btn) {
+  takimRengi = renk;
+  document.querySelectorAll('.renk-btn').forEach(b => b.classList.remove('aktif'));
+  btn.classList.add('aktif');
+  tokenlarGuncelle();
+  kadroRender();
+  // Sahada olanlar için token yenile
+  Object.values(oyuncular).forEach(o => {
+    if (o.sahada) {
+      const el = document.getElementById('tok-'+o.id);
+      if (el) el.innerHTML = tokenHTML(o);
+    }
+  });
+  degistiIsaretle();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// YARDIMCILAR
+// ════════════════════════════════════════════════════════════════════════
+function degistiIsaretle() {
+  degisti = true;
+  document.getElementById('btn-kaydet').classList.add('degisti');
+}
+function durum(m) {
+  document.getElementById('durum-mesaj').textContent = m;
+}
+function toast(m) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);'+
+    'background:#15803d;color:#fff;padding:9px 18px;border-radius:12px;'+
+    'font-weight:bold;font-size:12px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5);';
+  t.textContent = m;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2800);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// BAŞLAT
+// ════════════════════════════════════════════════════════════════════════
+// Başlangıç renk butonu
+document.querySelectorAll('.renk-btn').forEach(b => {
+  if (b.style.background === takimRengi) b.classList.add('aktif');
+});
+
+sahaRender();
+kadroRender();
+
+const sahaSayisi = Object.values(oyuncular).filter(o=>o.sahada).length;
+if (sahaSayisi === 0 && KADRO_HAM.length >= 11) formasyonUygula('4-4-2');
+</script>
+</body>
+</html>
