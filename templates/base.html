@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Öğrenci Takip{% endblock %} — Erenler Cumhuriyet Ortaokulu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            okul: { 900:'#0f2144', 800:'#1a3a6b', 700:'#1e4a8a', 100:'#dbeafe' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Pulse animasyonu kırmızı kartlar için */
+    @keyframes pulse-red {
+      0%,100% { background-color: #fef2f2; }
+      50%      { background-color: #fee2e2; }
+    }
+    .pulse-red { animation: pulse-red 1.2s ease-in-out infinite; }
+
+    /* Kart slide-in */
+    @keyframes slide-in {
+      from { opacity:0; transform:translateX(30px); }
+      to   { opacity:1; transform:translateX(0); }
+    }
+    .slide-in { animation: slide-in .35s ease forwards; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:#f1f5f9; }
+    ::-webkit-scrollbar-thumb { background:#94a3b8; border-radius:3px; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-slate-100 min-h-screen">
+
+{% if session.ogretmen_adi %}
+<!-- ── Üst Bar ─────────────────────────────────────────────────────────── -->
+<header class="bg-okul-800 text-white shadow-lg sticky top-0 z-40">
+  <div class="flex items-center justify-between px-4 py-3 max-w-screen-xl mx-auto">
+    <div class="flex items-center gap-3">
+      <!-- Mobil menü butonu -->
+      <button id="sidebar-toggle"
+              class="lg:hidden p-1 rounded hover:bg-okul-700 transition"
+              onclick="toggleSidebar()">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+      <div>
+        <div class="font-bold text-sm sm:text-base leading-tight">
+          🏫 Erenler Cumhuriyet Ortaokulu
+        </div>
+        <div class="text-xs text-blue-300 hidden sm:block">Öğrenci Takip Paneli</div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 sm:gap-3">
+      <span class="hidden sm:block text-xs text-blue-200">👤 {{ session.ogretmen_adi }}</span>
+
+      {% if aktif %}
+      <!-- Yayın Modu -->
+      <a href="{{ url_for('yayin', sinif_id=aktif.id) }}"
+         target="_blank"
+         class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold
+                px-3 py-1.5 rounded-lg transition hidden sm:block">
+        📺 Yayın
+      </a>
+      <!-- Excel -->
+      <a href="{{ url_for('rapor_excel', sinif_id=aktif.id) }}"
+         class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold
+                px-3 py-1.5 rounded-lg transition hidden sm:block">
+        📊 Excel
+      </a>
+      {% endif %}
+
+      <a href="{{ url_for('logout') }}"
+         class="bg-slate-600 hover:bg-slate-500 text-white text-xs
+                px-3 py-1.5 rounded-lg transition">
+        Çıkış
+      </a>
+    </div>
+  </div>
+</header>
+{% endif %}
+
+{% block body %}{% endblock %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
