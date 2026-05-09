@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+.venv/
+venv/
+.env
+.env.*
+
+# Yerel DB (Render /data kullanır; repoda tutmak isteğe bağlı)
+# ogrenci_takip.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+_log_*.txt
+push_*.ps1
