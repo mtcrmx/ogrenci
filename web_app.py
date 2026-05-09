@@ -1,5 +1,6 @@
 """
 web_app.py  —  Erenler Cumhuriyet Ortaokulu Ogrenci Takip
+(Flask rotalari <int:...> ile tam; GitHub/Render senkron)
 """
 
 import os, tempfile
