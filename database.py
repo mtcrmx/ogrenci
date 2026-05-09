@@ -40,6 +40,18 @@ KRITERLER = [
     ("❓", "Diğer"),
 ]
 
+# ── Olumlu davranış kriterleri (sınıf bazlı Süper Lig) ──────────────────────
+OLUMLU_KRITERLER = [
+    ("🏆", "Sınıf Düzeni"),
+    ("🤫", "Öğretmeni Sessiz Bekleme"),
+    ("✋", "Söz İsteyerek Konuşma"),
+    ("📚", "Derse Hazırlıklı Gelme"),
+    ("🧹", "Sınıf Temizliği"),
+    ("🤝", "Dayanışma ve Yardımlaşmak"),
+    ("📖", "Sessiz Okuma Etkinliği"),
+    ("🎯", "Günlük Hedef Tamamlama"),
+]
+
 # ── PDF'lerden alınan öğretmen–sınıf eşleşmeleri ──────────────────────────
 _OGRETMEN_SINIF: dict[str, list[str]] = {
     "ADEM AKGÜL":       ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B"],
