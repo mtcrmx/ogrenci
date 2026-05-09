@@ -375,6 +375,22 @@ def sinif_ogrencileri(sinif_id: int) -> list[dict]:
     return rows
 
 
+def tum_okul_ogrencileri() -> list[dict]:
+    """Tüm sınıflardaki öğrencileri tik sayısına göre azalan sırada döndürür."""
+    con = _conn()
+    rows = [dict(r) for r in con.execute("""
+        SELECT o.id, o.ad_soyad, o.ogr_no, s.sinif_adi,
+               COUNT(t.id) AS tik_sayisi
+        FROM ogrenciler o
+        JOIN siniflar s ON s.id = o.sinif_id
+        LEFT JOIN tik_kayitlari t ON t.ogrenci_id = o.id
+        GROUP BY o.id
+        ORDER BY COUNT(t.id) DESC, o.ad_soyad
+    """).fetchall()]
+    con.close()
+    return rows
+
+
 def tum_siniflar_ogrencileri(sinif_id_listesi: list[int]) -> list[dict]:
     """
     Birden fazla sınıfın öğrencilerini tek sorgu ile getirir (global arama).
