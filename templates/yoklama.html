@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Yoklama{% endblock %}
+{% block body %}
+<main class="max-w-5xl mx-auto px-4 py-5 space-y-4">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900">Yoklama</h1>
+      <p class="text-sm text-slate-500">Bu ekran cihazda saklanır, hızlı sınıf takibi içindir.</p>
+    </div>
+    <div class="flex gap-2">
+      {% for s in siniflar %}
+      <a href="{{ url_for('yoklama', sinif=s.id) }}"
+         class="rounded-xl px-3 py-2 text-sm font-bold {{ 'bg-blue-600 text-white' if aktif and aktif.id == s.id else 'bg-white border border-slate-200 text-slate-700' }}">
+        {{ s.sinif_adi }}
+      </a>
+      {% endfor %}
+    </div>
+  </header>
+
+  <section class="rounded-2xl bg-white border border-slate-200 overflow-hidden">
+    {% for o in ogrenciler %}
+    <label class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 last:border-0">
+      <span class="font-bold text-slate-800">{{ o.ad_soyad }}</span>
+      <input type="checkbox" data-id="{{ o.id }}" class="w-6 h-6 accent-blue-600" onchange="kaydet()">
+    </label>
+    {% else %}
+    <div class="p-8 text-center text-slate-500">Sınıf seçin.</div>
+    {% endfor %}
+  </section>
+
+  <div class="flex justify-between rounded-2xl bg-slate-900 text-white px-4 py-3">
+    <span class="font-bold">Gelen: <span id="gelen">0</span></span>
+    <span class="font-bold">Gelmeyen: <span id="gelmeyen">0</span></span>
+  </div>
+</main>
+<script>
+const KEY = 'yoklama-{{ aktif.id if aktif else 0 }}-' + new Date().toISOString().slice(0,10);
+const kutular = [...document.querySelectorAll('input[type="checkbox"][data-id]')];
+const kayit = JSON.parse(localStorage.getItem(KEY) || '{}');
+kutular.forEach(k => k.checked = !!kayit[k.dataset.id]);
+function kaydet() {
+  const veri = {};
+  kutular.forEach(k => veri[k.dataset.id] = k.checked);
+  localStorage.setItem(KEY, JSON.stringify(veri));
+  say();
+}
+function say() {
+  const gelen = kutular.filter(k => k.checked).length;
+  document.getElementById('gelen').textContent = gelen;
+  document.getElementById('gelmeyen').textContent = kutular.length - gelen;
+}
+say();
+</script>
+{% endblock %}

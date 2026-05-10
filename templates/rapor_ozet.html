@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Özet Rapor{% endblock %}
+{% block body %}
+<main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900">Okul Özet Raporu</h1>
+      <p class="text-sm text-slate-500">Sınıf bazlı tik, temizlik, lig ve rozet özeti</p>
+    </div>
+    <a href="{{ url_for('rapor_ozet_csv') }}" class="rounded-xl bg-teal-700 text-white px-4 py-2 text-sm font-bold">CSV İndir</a>
+  </header>
+
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+      <div class="text-xs text-slate-500">Öğrenci</div>
+      <div class="text-3xl font-black">{{ okul|length }}</div>
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+      <div class="text-xs text-slate-500">Toplam tik</div>
+      <div class="text-3xl font-black">{{ okul|sum(attribute='tik_sayisi') }}</div>
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+      <div class="text-xs text-slate-500">İdari izlem</div>
+      <div class="text-3xl font-black">{{ okul|selectattr('tik_sayisi','ge',3)|list|length }}</div>
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+      <div class="text-xs text-slate-500">Temiz öğrenci</div>
+      <div class="text-3xl font-black">{{ okul|selectattr('tik_sayisi','equalto',0)|list|length }}</div>
+    </div>
+  </section>
+
+  <section class="grid lg:grid-cols-2 gap-4">
+    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+      <h2 class="font-black mb-3">Sınıf özeti</h2>
+      <div class="space-y-2">
+        {% for s in sinif_ozetleri %}
+        <div class="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+          <div class="flex justify-between text-sm font-bold">
+            <span>{{ s.sinif_adi }}</span>
+            <span>{{ s.tik }} tik</span>
+          </div>
+          <div class="mt-2 h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div class="h-full bg-blue-600" style="width:{{ [100, s.tik * 4]|min }}%"></div>
+          </div>
+          <div class="text-xs text-slate-500 mt-1">{{ s.ogrenci }} öğrenci · {{ s.temiz }} temiz · {{ s.idari }} idari</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+      <h2 class="font-black mb-3">Lig ve sezon liderleri</h2>
+      <div class="grid gap-2">
+        {% for s in tablo[:5] %}
+        <div class="flex justify-between rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2 text-sm">
+          <span class="font-bold">{{ loop.index }}. {{ s.sinif_adi }}</span>
+          <span>{{ s.puan }} puan</span>
+        </div>
+        {% endfor %}
+      </div>
+      <h2 class="font-black mt-5 mb-3">Son rozetler</h2>
+      <div class="flex flex-wrap gap-2">
+        {% for r in rozetler %}
+        <span class="rounded-full bg-amber-50 border border-amber-200 text-amber-900 px-3 py-1 text-xs font-bold">
+          {{ r.emoji }} {{ r.sahip }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}

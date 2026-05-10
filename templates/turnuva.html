@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Turnuva{% endblock %}
+{% block body %}
+<main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
+  <header>
+    <h1 class="text-2xl font-black text-slate-900">Turnuva Modu</h1>
+    <p class="text-sm text-slate-500">Süper Lig puanlarına göre otomatik final yolu</p>
+  </header>
+
+  <section class="grid md:grid-cols-4 gap-3">
+    {% for f in finalistler %}
+    <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
+      <div class="text-xs text-slate-500">Seri başı {{ loop.index }}</div>
+      <div class="text-xl font-black text-slate-900">{{ f.sinif_adi }}</div>
+      <div class="text-sm text-slate-500">{{ f.puan }} puan · averaj {{ f.ag }}</div>
+    </div>
+    {% else %}
+    <div class="rounded-2xl bg-white border border-slate-200 p-6 text-slate-500">Lig tablosu henüz hazır değil.</div>
+    {% endfor %}
+  </section>
+
+  <section class="grid md:grid-cols-3 gap-3">
+    <div class="rounded-2xl bg-indigo-50 border border-indigo-200 p-4">
+      <h2 class="font-black text-indigo-950">Yarı Final A</h2>
+      <p class="mt-3 text-sm">{{ finalistler[0].sinif_adi if finalistler|length > 0 else '-' }} - {{ finalistler[3].sinif_adi if finalistler|length > 3 else '-' }}</p>
+    </div>
+    <div class="rounded-2xl bg-indigo-50 border border-indigo-200 p-4">
+      <h2 class="font-black text-indigo-950">Yarı Final B</h2>
+      <p class="mt-3 text-sm">{{ finalistler[1].sinif_adi if finalistler|length > 1 else '-' }} - {{ finalistler[2].sinif_adi if finalistler|length > 2 else '-' }}</p>
+    </div>
+    <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4">
+      <h2 class="font-black text-amber-950">Final</h2>
+      <p class="mt-3 text-sm">Yarı final kazananları</p>
+    </div>
+  </section>
+
+  <section class="rounded-2xl bg-white border border-slate-200 p-4">
+    <h2 class="font-black mb-3">Bugünkü maçlar</h2>
+    <div class="grid md:grid-cols-2 gap-2">
+      {% for m in maclar %}
+      <div class="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-sm">
+        {{ m.sinif1_adi }} - {{ m.sinif2_adi }} · {{ m.gorev }}
+      </div>
+      {% else %}
+      <p class="text-sm text-slate-500">Bugün maç yok.</p>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+{% endblock %}

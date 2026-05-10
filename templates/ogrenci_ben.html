@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ ogrenci.ad_soyad }} - Öğrenci Ekranı</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="max-w-5xl mx-auto px-4 py-5 space-y-4">
+    <header class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-xl"
+             style="background:{{ avatar.renk }}">{{ avatar.initials }}</div>
+        <div class="min-w-0">
+          <h1 class="font-black text-xl truncate">{{ ogrenci.ad_soyad }}</h1>
+          <p class="text-sm text-slate-400">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}</p>
+        </div>
+      </div>
+      <a href="{{ url_for('ogrenci_gorunum') }}" class="text-xs font-bold bg-slate-800 px-3 py-2 rounded-xl">Genel Pano</a>
+    </header>
+
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+        <div class="text-xs text-slate-500">Tik</div>
+        <div class="text-3xl font-black">{{ ogrenci.tik_sayisi }}</div>
+      </div>
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+        <div class="text-xs text-slate-500">Durum</div>
+        <div class="text-lg font-black">{{ ogrenci.emoji }} {{ ogrenci.etiket or 'Temiz' }}</div>
+      </div>
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+        <div class="text-xs text-slate-500">Sınıf sırası</div>
+        <div class="text-3xl font-black">{{ disiplin_sira or '-' }}</div>
+      </div>
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+        <div class="text-xs text-slate-500">Lig puanı</div>
+        <div class="text-3xl font-black">{{ sinif_tablo.puan if sinif_tablo else 0 }}</div>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-3">
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+        <h2 class="font-black mb-3">Bugünkü maçlar</h2>
+        <div class="space-y-2">
+          {% for m in maclar %}
+          <div class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            {{ m.sinif1_adi }} - {{ m.sinif2_adi }} · {{ m.gorev }}
+          </div>
+          {% else %}
+          <p class="text-sm text-slate-500">Bugün sınıfına ait maç yok.</p>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+        <h2 class="font-black mb-3">Rozet vitrini</h2>
+        <div class="flex flex-wrap gap-2">
+          {% for r in rozetler %}
+          <span class="rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-200 px-3 py-1 text-xs font-bold">
+            {{ r.emoji }} {{ r.rozet_adi }}
+          </span>
+          {% else %}
+          <p class="text-sm text-slate-500">Henüz rozet yok.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+      <h2 class="font-black mb-3">Geçmiş</h2>
+      <div class="space-y-2">
+        {% for g in gecmis[:10] %}
+        <div class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+          <span class="font-bold">{{ g.kriter }}</span>
+          <span class="text-slate-500">· {{ g.ogretmen }} · {{ g.tarih }}</span>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-500">Kayıt yok.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -7,7 +7,7 @@ import os, tempfile
 from datetime import datetime
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    session, jsonify, send_file,
+    session, jsonify, send_file, make_response,
 )
 from database import (
     initialize_db, KRITERLER, OLUMLU_KRITERLER,
@@ -55,6 +55,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "erenler-cumhuriyet-2025-gizli")
 SIFIR_PAROLA = "1234"
 ADMIN_SIFRE  = "ECadmin"
 OGRENCI_SIFRE = os.environ.get("OGRENCI_SIFRE", "ogrenci")
+VELI_SIFRE = os.environ.get("VELI_SIFRE", "veli")
 
 initialize_db()
 
@@ -109,6 +110,114 @@ def _ogrencilere_durum_ekle(liste: list[dict]) -> list[dict]:
     return liste
 
 
+def _tum_siniflar() -> list[dict]:
+    from database import _conn as _db
+    con = _db()
+    rows = [dict(r) for r in con.execute(
+        "SELECT id, sinif_adi FROM siniflar ORDER BY sinif_adi"
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def _ogrenci_bul(ogrenci_id: int) -> dict | None:
+    from database import _conn as _db
+    con = _db()
+    row = con.execute("""
+        SELECT o.id, o.ad_soyad, o.ogr_no, o.sinif_id, s.sinif_adi,
+               COUNT(t.id) AS tik_sayisi
+        FROM ogrenciler o
+        JOIN siniflar s ON s.id = o.sinif_id
+        LEFT JOIN tik_kayitlari t ON t.ogrenci_id = o.id
+        WHERE o.id = ?
+        GROUP BY o.id
+    """, (ogrenci_id,)).fetchone()
+    con.close()
+    if not row:
+        return None
+    return _ogrencilere_durum_ekle([dict(row)])[0]
+
+
+def _ogrenci_rozetleri(ogrenci_id: int) -> list[dict]:
+    from database import _conn as _db
+    con = _db()
+    rows = []
+    for r in con.execute("""
+        SELECT rozet_kodu, tarih
+        FROM rozet_kayitlari
+        WHERE ogrenci_id = ?
+        ORDER BY tarih DESC
+    """, (ogrenci_id,)).fetchall():
+        d = dict(r)
+        emoji, ad = ROZET_TANIMI.get(d["rozet_kodu"], ("🏅", d["rozet_kodu"]))
+        d["emoji"] = emoji
+        d["rozet_adi"] = ad
+        rows.append(d)
+    con.close()
+    return rows
+
+
+def _avatar(ogrenci: dict) -> dict:
+    palette = ["#2563eb", "#16a34a", "#9333ea", "#dc2626", "#0891b2", "#ca8a04", "#be185d"]
+    ad = ogrenci.get("ad_soyad", "?")
+    initials = "".join(parca[:1] for parca in ad.split()[:2]).upper() or "?"
+    renk = palette[int(ogrenci.get("id", 0)) % len(palette)]
+    return {"initials": initials, "renk": renk}
+
+
+def _ogrenci_ozeti(ogrenci_id: int) -> dict | None:
+    ogrenci = _ogrenci_bul(ogrenci_id)
+    if not ogrenci:
+        return None
+    sinif_id = ogrenci["sinif_id"]
+    sinif_liste = _ogrencilere_durum_ekle(sinif_ogrencileri(sinif_id))
+    sirali = sorted(sinif_liste, key=lambda x: (x["tik_sayisi"], x["ad_soyad"]))
+    disiplin_sira = next((i + 1 for i, o in enumerate(sirali) if o["id"] == ogrenci_id), None)
+    kadro = sinif_kadro_getir(sinif_id)
+    return {
+        "ogrenci": ogrenci,
+        "avatar": _avatar(ogrenci),
+        "gecmis": ogrenci_tik_gecmisi(ogrenci_id),
+        "rozetler": _ogrenci_rozetleri(ogrenci_id),
+        "maclar": [m for m in bugun_maclar() if m.get("sinif1_id") == sinif_id or m.get("sinif2_id") == sinif_id],
+        "sinif_tablo": next((r for r in lig_puan_tablosu() if r.get("sinif_id") == sinif_id), None),
+        "sezon": next((r for r in sezon_siralama() if r.get("sinif_id") == sinif_id), None),
+        "kadro": kadro,
+        "disiplin_sira": disiplin_sira,
+    }
+
+
+def _bildirimleri_hazirla() -> list[dict]:
+    bildirimler = []
+    for talep in bekleyen_ogrenci_talepleri():
+        bildirimler.append({
+            "tur": "Ittifak",
+            "renk": "cyan",
+            "baslik": f"{talep['sinif1_adi']} + {talep['sinif2_adi']}",
+            "detay": "Ogrencilerden gelen bekleyen ittifak talebi",
+            "hedef": url_for("oduller"),
+        })
+    for o in _ogrencilere_durum_ekle(tum_okul_ogrencileri()):
+        if o["tik_sayisi"] >= 3:
+            bildirimler.append({
+                "tur": "Disiplin",
+                "renk": "red",
+                "baslik": f"{o['ad_soyad']} ({o['sinif_adi']})",
+                "detay": f"{o['tik_sayisi']} tik ile {o['etiket'] or 'izlem'} seviyesinde",
+                "hedef": url_for("dashboard"),
+            })
+    gorev = bugun_gorev()
+    if gorev:
+        bildirimler.append({
+            "tur": "Gorev",
+            "renk": "emerald",
+            "baslik": gorev.get("gorev", "Gunluk gorev"),
+            "detay": f"{gorev.get('puan', 0)} puanlik gunluk sinif gorevi",
+            "hedef": url_for("oduller"),
+        })
+    return bildirimler[:50]
+
+
 # ══════════════════════════════════════════════════════════════════════════
 # Giris / Cikis
 # ══════════════════════════════════════════════════════════════════════════
@@ -151,6 +260,8 @@ def logout():
 @app.route("/ogrenci/giris", methods=["GET", "POST"])
 def ogrenci_giris():
     hata = None
+    siniflar = _tum_siniflar()
+    ogrenciler = tum_okul_ogrencileri()
     next_url = request.values.get("next") or url_for("ogrenci_gorunum")
     if not next_url.startswith("/"):
         next_url = url_for("ogrenci_gorunum")
@@ -162,16 +273,71 @@ def ogrenci_giris():
         sifre = request.form.get("sifre", "").strip()
         if sifre == OGRENCI_SIFRE:
             session["ogrenci_giris"] = True
+            ogrenci_id = request.form.get("ogrenci_id", type=int)
+            if ogrenci_id:
+                session["ogrenci_id"] = ogrenci_id
+                if next_url == url_for("ogrenci_gorunum"):
+                    next_url = url_for("ogrenci_ben")
             return redirect(next_url)
         hata = "Ogrenci sifresi hatali."
 
-    return render_template("ogrenci_login.html", hata=hata, next_url=next_url)
+    return render_template("ogrenci_login.html", hata=hata, next_url=next_url,
+                           siniflar=siniflar, ogrenciler=ogrenciler)
 
 
 @app.route("/ogrenci/cikis")
 def ogrenci_cikis():
     session.pop("ogrenci_giris", None)
+    session.pop("ogrenci_id", None)
     return redirect(url_for("ogrenci_giris"))
+
+
+@app.route("/ogrenci/ben")
+@ogrenci_giris_zorunlu
+def ogrenci_ben():
+    ogrenci_id = session.get("ogrenci_id")
+    if not ogrenci_id:
+        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_ben")))
+    ozet = _ogrenci_ozeti(int(ogrenci_id))
+    if not ozet:
+        session.pop("ogrenci_id", None)
+        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_ben")))
+    return render_template("ogrenci_ben.html", **ozet)
+
+
+@app.route("/veli/giris", methods=["GET", "POST"])
+def veli_giris():
+    hata = None
+    ogrenciler = tum_okul_ogrencileri()
+    if request.method == "POST":
+        sifre = request.form.get("sifre", "").strip()
+        ogrenci_id = request.form.get("ogrenci_id", type=int)
+        if sifre != VELI_SIFRE:
+            hata = "Veli sifresi hatali."
+        elif not ogrenci_id:
+            hata = "Lutfen ogrenci secin."
+        else:
+            session["veli_ogrenci_id"] = ogrenci_id
+            return redirect(url_for("veli_panel"))
+    return render_template("veli_login.html", hata=hata, ogrenciler=ogrenciler)
+
+
+@app.route("/veli")
+def veli_panel():
+    ogrenci_id = session.get("veli_ogrenci_id")
+    if not ogrenci_id:
+        return redirect(url_for("veli_giris"))
+    ozet = _ogrenci_ozeti(int(ogrenci_id))
+    if not ozet:
+        session.pop("veli_ogrenci_id", None)
+        return redirect(url_for("veli_giris"))
+    return render_template("veli.html", **ozet)
+
+
+@app.route("/veli/cikis")
+def veli_cikis():
+    session.pop("veli_ogrenci_id", None)
+    return redirect(url_for("veli_giris"))
 
 
 @app.route("/admin/sifreler", methods=["GET", "POST"])
@@ -250,6 +416,85 @@ def dashboard():
 @giris_zorunlu
 def api_sinif(sinif_id):
     return jsonify(_ogrencilere_durum_ekle(sinif_ogrencileri(sinif_id)))
+
+
+@app.route("/bildirimler")
+@giris_zorunlu
+def bildirimler():
+    return render_template("bildirimler.html", bildirimler=_bildirimleri_hazirla())
+
+
+@app.route("/rapor/ozet")
+@giris_zorunlu
+def rapor_ozet():
+    siniflar = _tum_siniflar()
+    okul = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
+    sinif_ozetleri = []
+    for s in siniflar:
+        liste = _ogrencilere_durum_ekle(sinif_ogrencileri(s["id"]))
+        sinif_ozetleri.append({
+            "id": s["id"],
+            "sinif_adi": s["sinif_adi"],
+            "ogrenci": len(liste),
+            "tik": sum(o["tik_sayisi"] for o in liste),
+            "idari": sum(1 for o in liste if o["tik_sayisi"] >= 3),
+            "temiz": sum(1 for o in liste if o["tik_sayisi"] == 0),
+        })
+    return render_template(
+        "rapor_ozet.html",
+        sinif_ozetleri=sinif_ozetleri,
+        okul=okul,
+        tablo=lig_puan_tablosu(),
+        sezon=sezon_siralama(),
+        rozetler=son_rozetler(12),
+    )
+
+
+@app.route("/rapor/ozet.csv")
+@giris_zorunlu
+def rapor_ozet_csv():
+    satirlar = ["sinif,ogrenci,tik,idari,temiz"]
+    for s in _tum_siniflar():
+        liste = _ogrencilere_durum_ekle(sinif_ogrencileri(s["id"]))
+        satirlar.append(
+            f"{s['sinif_adi']},{len(liste)},{sum(o['tik_sayisi'] for o in liste)},"
+            f"{sum(1 for o in liste if o['tik_sayisi'] >= 3)},"
+            f"{sum(1 for o in liste if o['tik_sayisi'] == 0)}"
+        )
+    resp = make_response("\n".join(satirlar))
+    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
+    resp.headers["Content-Disposition"] = "attachment; filename=okul-ozet-raporu.csv"
+    return resp
+
+
+@app.route("/turnuva")
+@giris_zorunlu
+def turnuva():
+    tablo = lig_puan_tablosu()
+    sirali = sorted(tablo, key=lambda x: (-x.get("puan", 0), -x.get("ag", 0), x.get("sinif_adi", "")))
+    return render_template("turnuva.html", tablo=tablo, finalistler=sirali[:4], maclar=bugun_maclar())
+
+
+@app.route("/yoklama")
+@giris_zorunlu
+def yoklama():
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    aktif_id = request.args.get("sinif", type=int) or (siniflar[0]["id"] if siniflar else 0)
+    aktif = next((s for s in siniflar if s["id"] == aktif_id), siniflar[0] if siniflar else None)
+    ogrenciler = sinif_ogrencileri(aktif["id"]) if aktif else []
+    return render_template("yoklama.html", siniflar=siniflar, aktif=aktif, ogrenciler=ogrenciler)
+
+
+@app.route("/manifest.json")
+def manifest():
+    return app.send_static_file("manifest.json")
+
+
+@app.route("/sw.js")
+def service_worker():
+    resp = make_response(app.send_static_file("sw.js"))
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -375,7 +620,13 @@ def yayin(sinif_id=None):
         (s["sinif_adi"] for s in siniflar if s["id"] == sinif_id),
         f"{sinif_id}" if sinif_id is not None else "Sinif",
     )
-    return render_template("yayin.html", sinif_id=sinif_id or 0, sinif_adi=sinif_adi)
+    return render_template(
+        "yayin.html",
+        sinif_id=sinif_id or 0,
+        sinif_adi=sinif_adi,
+        liderler=lig_puan_tablosu()[:3],
+        rozetler=son_rozetler(5),
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════
