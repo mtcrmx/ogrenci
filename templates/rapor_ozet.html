@@ -1,55 +1,116 @@
 {% extends "base.html" %}
 {% block title %}Özet Rapor{% endblock %}
 {% block body %}
-<main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
+<style>
+@keyframes rise { from { opacity:0; transform:translateY(16px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes fill { from { width:0; } }
+.anim-card { animation: rise .55s ease both; }
+.bar-fill { animation: fill .9s ease both; }
+.heat-cell { transition: transform .18s ease, box-shadow .18s ease; }
+.heat-cell:hover { transform: translateY(-3px) scale(1.02); box-shadow:0 18px 40px rgba(15,23,42,.16); }
+</style>
+<main class="max-w-7xl mx-auto px-4 py-5 space-y-5">
   <header class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900">Okul Özet Raporu</h1>
-      <p class="text-sm text-slate-500">Sınıf bazlı tik, temizlik, lig ve rozet özeti</p>
+      <h1 class="text-2xl font-black text-slate-900">Detaylı Okul Raporu</h1>
+      <p class="text-sm text-slate-500">Grafikler, durum dağılımı, sınıf karşılaştırması ve risk ısı haritası</p>
     </div>
     <a href="{{ url_for('rapor_ozet_csv') }}" class="rounded-xl bg-teal-700 text-white px-4 py-2 text-sm font-bold">CSV İndir</a>
   </header>
 
   <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm" style="animation-delay:.02s">
       <div class="text-xs text-slate-500">Öğrenci</div>
       <div class="text-3xl font-black">{{ okul|length }}</div>
     </div>
-    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm" style="animation-delay:.08s">
       <div class="text-xs text-slate-500">Toplam tik</div>
-      <div class="text-3xl font-black">{{ okul|sum(attribute='tik_sayisi') }}</div>
+      <div class="text-3xl font-black">{{ toplam_tik }}</div>
     </div>
-    <div class="rounded-2xl bg-white border border-slate-200 p-4">
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm" style="animation-delay:.14s">
       <div class="text-xs text-slate-500">İdari izlem</div>
       <div class="text-3xl font-black">{{ okul|selectattr('tik_sayisi','ge',3)|list|length }}</div>
     </div>
-    <div class="rounded-2xl bg-white border border-slate-200 p-4">
-      <div class="text-xs text-slate-500">Temiz öğrenci</div>
-      <div class="text-3xl font-black">{{ okul|selectattr('tik_sayisi','equalto',0)|list|length }}</div>
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm" style="animation-delay:.20s">
+      <div class="text-xs text-slate-500">Ortalama tik</div>
+      <div class="text-3xl font-black">{{ ortalama_tik }}</div>
     </div>
   </section>
 
-  <section class="grid lg:grid-cols-2 gap-4">
-    <div class="rounded-2xl bg-white border border-slate-200 p-4">
-      <h2 class="font-black mb-3">Sınıf özeti</h2>
+  <section class="grid lg:grid-cols-[1.4fr_.8fr] gap-4">
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-5 shadow-sm">
+      <h2 class="font-black mb-4">Sınıf Performans Grafiği</h2>
       <div class="space-y-2">
         {% for s in sinif_ozetleri %}
-        <div class="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-          <div class="flex justify-between text-sm font-bold">
+        {% set max_tik = sinif_ozetleri|map(attribute='tik')|max or 1 %}
+        {% set oran = (s.tik * 100 / max_tik)|round(0) %}
+        <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
+          <div class="flex justify-between text-sm font-black">
             <span>{{ s.sinif_adi }}</span>
-            <span>{{ s.tik }} tik</span>
+            <span>{{ s.tik }} tik · ort. {{ s.ortalama }}</span>
           </div>
           <div class="mt-2 h-2 rounded-full bg-slate-200 overflow-hidden">
-            <div class="h-full bg-blue-600" style="width:{{ [100, s.tik * 4]|min }}%"></div>
+            <div class="bar-fill h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width:{{ oran }}%"></div>
           </div>
-          <div class="text-xs text-slate-500 mt-1">{{ s.ogrenci }} öğrenci · {{ s.temiz }} temiz · {{ s.idari }} idari</div>
+          <div class="grid grid-cols-5 gap-1 mt-3 text-[10px] font-bold text-center">
+            <span class="rounded bg-emerald-100 text-emerald-800 py-1">Temiz {{ s.dagilim.temiz }}</span>
+            <span class="rounded bg-amber-100 text-amber-800 py-1">Uyarı {{ s.dagilim.uyari }}</span>
+            <span class="rounded bg-orange-100 text-orange-800 py-1">Veli {{ s.dagilim.veli }}</span>
+            <span class="rounded bg-red-100 text-red-800 py-1">Tutanak {{ s.dagilim.tutanak }}</span>
+            <span class="rounded bg-purple-100 text-purple-800 py-1">Disiplin {{ s.dagilim.disiplin }}</span>
+          </div>
         </div>
         {% endfor %}
       </div>
     </div>
 
-    <div class="rounded-2xl bg-white border border-slate-200 p-4">
-      <h2 class="font-black mb-3">Lig ve sezon liderleri</h2>
+    <div class="anim-card rounded-3xl bg-slate-950 text-white p-5 shadow-sm">
+      <h2 class="font-black mb-4">Durum Dağılımı</h2>
+      {% set toplam = okul|length or 1 %}
+      {% for ad, sayi, renk in [
+        ('Temiz', durum_dagilimi.temiz, 'bg-emerald-400'),
+        ('Uyarı', durum_dagilimi.uyari, 'bg-amber-400'),
+        ('İdari', durum_dagilimi.idari, 'bg-orange-400'),
+        ('Veli', durum_dagilimi.veli, 'bg-red-400'),
+        ('Tutanak', durum_dagilimi.tutanak, 'bg-fuchsia-400'),
+        ('Disiplin', durum_dagilimi.disiplin, 'bg-purple-400')
+      ] %}
+      {% set oran = (sayi * 100 / toplam)|round(0) %}
+      <div class="mb-3">
+        <div class="flex justify-between text-xs font-bold mb-1"><span>{{ ad }}</span><span>{{ sayi }} öğrenci</span></div>
+        <div class="h-3 bg-white/10 rounded-full overflow-hidden"><div class="bar-fill h-full {{ renk }}" style="width:{{ oran }}%"></div></div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="anim-card rounded-3xl bg-white border border-slate-200 p-5 shadow-sm">
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <div>
+        <h2 class="font-black">Risk Isı Haritası</h2>
+        <p class="text-xs text-slate-500">Tik yoğunluğu yüksek öğrenciler daha sıcak renkle görünür.</p>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {% for h in heatmap %}
+      {% set sicaklik = [100, h.tik * 9]|min %}
+      <div class="heat-cell rounded-2xl border p-3"
+           style="background:linear-gradient(135deg, rgba(239,68,68,{{ sicaklik / 140 }}), rgba(251,191,36,.10)); border-color:rgba(239,68,68,.22)">
+        <div class="flex justify-between gap-2">
+          <span class="font-black text-sm text-slate-900">{{ h.ad }}</span>
+          <span class="font-black text-red-700">{{ h.tik }}</span>
+        </div>
+        <div class="text-xs text-slate-600 mt-1">{{ h.sinif }} · {{ h.etiket }}</div>
+      </div>
+      {% else %}
+      <div class="text-sm text-slate-500">Risk kaydı yok.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="grid lg:grid-cols-2 gap-4">
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm">
+      <h2 class="font-black mb-3">Lig liderleri</h2>
       <div class="grid gap-2">
         {% for s in tablo[:5] %}
         <div class="flex justify-between rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2 text-sm">
@@ -58,7 +119,10 @@
         </div>
         {% endfor %}
       </div>
-      <h2 class="font-black mt-5 mb-3">Son rozetler</h2>
+    </div>
+
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm">
+      <h2 class="font-black mb-3">Son rozetler</h2>
       <div class="flex flex-wrap gap-2">
         {% for r in rozetler %}
         <span class="rounded-full bg-amber-50 border border-amber-200 text-amber-900 px-3 py-1 text-xs font-bold">

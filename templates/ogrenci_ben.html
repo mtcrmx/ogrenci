@@ -67,6 +67,34 @@
     </section>
 
     <section class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <h2 class="font-black">Ödev durumu</h2>
+        {% set tamamlanan_odev = odevler|selectattr('tamamlandi')|list|length %}
+        <span class="text-xs font-bold rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-200 px-3 py-1">
+          {{ tamamlanan_odev }}/{{ odevler|length }} tamamlandı
+        </span>
+      </div>
+      <div class="grid md:grid-cols-2 gap-2">
+        {% for od in odevler[:8] %}
+        <div class="rounded-xl bg-slate-950 border {{ 'border-emerald-500/40' if od.tamamlandi else 'border-amber-500/30' }} px-3 py-3 text-sm">
+          <div class="flex justify-between gap-2">
+            <span class="font-black">{{ od.baslik }}</span>
+            <span class="text-xs font-bold {{ 'text-emerald-300' if od.tamamlandi else 'text-amber-300' }}">
+              {{ 'Yapıldı' if od.tamamlandi else 'Bekliyor' }}
+            </span>
+          </div>
+          <div class="text-slate-400 text-xs mt-1">{{ od.ders }} · Son: {{ od.son_tarih }} · {{ od.ogretmen }}</div>
+          {% if od.aciklama %}
+          <p class="text-slate-300 text-xs mt-2">{{ od.aciklama }}</p>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-500">Henüz ödev girilmedi.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
       <h2 class="font-black mb-3">Geçmiş</h2>
       <div class="space-y-2">
         {% for g in gecmis[:10] %}

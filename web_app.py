@@ -43,6 +43,8 @@ from database import (
     quiz_sorular_getir, quiz_sonuc_kaydet, quiz_gunluk_dersleri,
     quiz_sinif_istatistik, quiz_sorulari_yukle,
     tik_dondur,
+    odev_ekle, sinif_odevleri, odev_detay, odev_tamamla,
+    odev_tamamlandi_kaldir, ogrenci_odevleri,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 
@@ -138,6 +140,26 @@ def _ogrenci_bul(ogrenci_id: int) -> dict | None:
     return _ogrencilere_durum_ekle([dict(row)])[0]
 
 
+def _ogrenci_no_ile_bul(ogr_no: int) -> dict | None:
+    from database import _conn as _db
+    con = _db()
+    row = con.execute("""
+        SELECT o.id, o.ad_soyad, o.ogr_no, o.sinif_id, s.sinif_adi,
+               COUNT(t.id) AS tik_sayisi
+        FROM ogrenciler o
+        JOIN siniflar s ON s.id = o.sinif_id
+        LEFT JOIN tik_kayitlari t ON t.ogrenci_id = o.id
+        WHERE o.ogr_no = ?
+        GROUP BY o.id
+        ORDER BY s.sinif_adi, o.ad_soyad
+        LIMIT 1
+    """, (ogr_no,)).fetchone()
+    con.close()
+    if not row:
+        return None
+    return _ogrencilere_durum_ekle([dict(row)])[0]
+
+
 def _ogrenci_rozetleri(ogrenci_id: int) -> list[dict]:
     from database import _conn as _db
     con = _db()
@@ -184,6 +206,7 @@ def _ogrenci_ozeti(ogrenci_id: int) -> dict | None:
         "sezon": next((r for r in sezon_siralama() if r.get("sinif_id") == sinif_id), None),
         "kadro": kadro,
         "disiplin_sira": disiplin_sira,
+        "odevler": ogrenci_odevleri(ogrenci_id),
     }
 
 
@@ -308,18 +331,21 @@ def ogrenci_ben():
 @app.route("/veli/giris", methods=["GET", "POST"])
 def veli_giris():
     hata = None
-    ogrenciler = tum_okul_ogrencileri()
     if request.method == "POST":
         sifre = request.form.get("sifre", "").strip()
-        ogrenci_id = request.form.get("ogrenci_id", type=int)
+        ogr_no = request.form.get("ogr_no", type=int)
         if sifre != VELI_SIFRE:
             hata = "Veli sifresi hatali."
-        elif not ogrenci_id:
-            hata = "Lutfen ogrenci secin."
+        elif not ogr_no:
+            hata = "Lutfen ogrenci numarasini girin."
         else:
-            session["veli_ogrenci_id"] = ogrenci_id
-            return redirect(url_for("veli_panel"))
-    return render_template("veli_login.html", hata=hata, ogrenciler=ogrenciler)
+            ogrenci = _ogrenci_no_ile_bul(ogr_no)
+            if not ogrenci:
+                hata = "Bu numarayla ogrenci bulunamadi."
+            else:
+                session["veli_ogrenci_id"] = ogrenci["id"]
+                return redirect(url_for("veli_panel"))
+    return render_template("veli_login.html", hata=hata)
 
 
 @app.route("/veli")
@@ -430,20 +456,54 @@ def rapor_ozet():
     siniflar = _tum_siniflar()
     okul = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
     sinif_ozetleri = []
+    toplam_tik = sum(o["tik_sayisi"] for o in okul)
+    heatmap = []
     for s in siniflar:
         liste = _ogrencilere_durum_ekle(sinif_ogrencileri(s["id"]))
+        sinif_tik = sum(o["tik_sayisi"] for o in liste)
+        ogrenci_sayisi = len(liste)
+        ortalama = round(sinif_tik / ogrenci_sayisi, 2) if ogrenci_sayisi else 0
+        dagilim = {
+            "temiz": sum(1 for o in liste if o["tik_sayisi"] == 0),
+            "uyari": sum(1 for o in liste if 1 <= o["tik_sayisi"] <= 2),
+            "veli": sum(1 for o in liste if 6 <= o["tik_sayisi"] <= 8),
+            "tutanak": sum(1 for o in liste if 9 <= o["tik_sayisi"] <= 11),
+            "disiplin": sum(1 for o in liste if o["tik_sayisi"] >= 12),
+        }
         sinif_ozetleri.append({
             "id": s["id"],
             "sinif_adi": s["sinif_adi"],
-            "ogrenci": len(liste),
-            "tik": sum(o["tik_sayisi"] for o in liste),
+            "ogrenci": ogrenci_sayisi,
+            "tik": sinif_tik,
             "idari": sum(1 for o in liste if o["tik_sayisi"] >= 3),
             "temiz": sum(1 for o in liste if o["tik_sayisi"] == 0),
+            "ortalama": ortalama,
+            "dagilim": dagilim,
         })
+        for o in sorted(liste, key=lambda x: (-x["tik_sayisi"], x["ad_soyad"]))[:12]:
+            heatmap.append({
+                "ad": o["ad_soyad"],
+                "sinif": s["sinif_adi"],
+                "tik": o["tik_sayisi"],
+                "durum": o["durum"],
+                "etiket": o["etiket"] or "Temiz",
+            })
+    durum_dagilimi = {
+        "temiz": sum(1 for o in okul if o["tik_sayisi"] == 0),
+        "uyari": sum(1 for o in okul if 1 <= o["tik_sayisi"] <= 2),
+        "idari": sum(1 for o in okul if 3 <= o["tik_sayisi"] <= 5),
+        "veli": sum(1 for o in okul if 6 <= o["tik_sayisi"] <= 8),
+        "tutanak": sum(1 for o in okul if 9 <= o["tik_sayisi"] <= 11),
+        "disiplin": sum(1 for o in okul if o["tik_sayisi"] >= 12),
+    }
     return render_template(
         "rapor_ozet.html",
         sinif_ozetleri=sinif_ozetleri,
         okul=okul,
+        toplam_tik=toplam_tik,
+        ortalama_tik=round(toplam_tik / len(okul), 2) if okul else 0,
+        durum_dagilimi=durum_dagilimi,
+        heatmap=heatmap,
         tablo=lig_puan_tablosu(),
         sezon=sezon_siralama(),
         rozetler=son_rozetler(12),
@@ -482,7 +542,48 @@ def yoklama():
     aktif_id = request.args.get("sinif", type=int) or (siniflar[0]["id"] if siniflar else 0)
     aktif = next((s for s in siniflar if s["id"] == aktif_id), siniflar[0] if siniflar else None)
     ogrenciler = sinif_ogrencileri(aktif["id"]) if aktif else []
-    return render_template("yoklama.html", siniflar=siniflar, aktif=aktif, ogrenciler=ogrenciler)
+    odevler = sinif_odevleri(aktif["id"]) if aktif else []
+    secili_odev_id = request.args.get("odev", type=int) or (odevler[0]["id"] if odevler else 0)
+    secili_odev = odev_detay(secili_odev_id) if secili_odev_id else None
+    if secili_odev and aktif and secili_odev["sinif_id"] != aktif["id"]:
+        secili_odev = None
+    return render_template("yoklama.html", siniflar=siniflar, aktif=aktif,
+                           ogrenciler=ogrenciler, odevler=odevler,
+                           secili_odev=secili_odev)
+
+
+@app.route("/odev/ekle", methods=["POST"])
+@giris_zorunlu
+def odev_olustur():
+    sinif_id = request.form.get("sinif_id", type=int)
+    sonuc = odev_ekle(
+        sinif_id=sinif_id,
+        ogretmen_id=session["ogretmen_id"],
+        baslik=request.form.get("baslik", ""),
+        aciklama=request.form.get("aciklama", ""),
+        son_tarih=request.form.get("son_tarih", ""),
+        ders=request.form.get("ders", "Genel"),
+    )
+    if not sonuc.get("ok"):
+        return redirect(url_for("yoklama", sinif=sinif_id))
+    return redirect(url_for("yoklama", sinif=sinif_id, odev=sonuc["odev_id"]))
+
+
+@app.route("/odev/<int:odev_id>/tamamla/<int:ogrenci_id>", methods=["POST"])
+@giris_zorunlu
+def odev_tamamla_route(odev_id, ogrenci_id):
+    isaretli = request.form.get("tamamlandi") == "1"
+    if isaretli:
+        odev_tamamla(odev_id, ogrenci_id, session["ogretmen_id"])
+    else:
+        odev_tamamlandi_kaldir(odev_id, ogrenci_id)
+    detay = odev_detay(odev_id)
+    if isaretli and detay:
+        tik_ekle(ogrenci_id, session["ogretmen_id"], f"Odev Tamamladi: {detay['baslik']}")
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"ok": True})
+    sinif_id = detay["sinif_id"] if detay else request.form.get("sinif_id", "")
+    return redirect(url_for("yoklama", sinif=sinif_id, odev=odev_id))
 
 
 @app.route("/manifest.json")

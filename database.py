@@ -1550,7 +1550,7 @@ _SIFIRLANACAK_TABLOLAR = [
     "lig_mac_tablo", "kadro_ogrenci", "kart_kayitlari", "rozet_kayitlari",
     "sinif_rozet", "sinif_seri", "gunluk_gorev", "gizli_mufettis",
     "alkis_kuponu", "sezon_puan", "ittifak_gorev", "sans_carki",
-    "taktik_formasyonu", "quiz_sonuclari",
+    "taktik_formasyonu", "quiz_sonuclari", "odev_tamamlayanlar", "odevler",
 ]
 
 
@@ -1567,6 +1567,158 @@ def tum_verileri_sifirla() -> dict:
     con.commit()
     con.close()
     return {"ok": True, "silinen": silinen}
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Odev Sistemi
+# ══════════════════════════════════════════════════════════════════════════
+
+def _odev_init(con) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS odevler (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            baslik TEXT NOT NULL,
+            aciklama TEXT NOT NULL DEFAULT '',
+            son_tarih TEXT NOT NULL,
+            ders TEXT NOT NULL DEFAULT 'Genel',
+            tarih TEXT NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS odev_tamamlayanlar (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            odev_id INTEGER NOT NULL REFERENCES odevler(id) ON DELETE CASCADE,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            tarih TEXT NOT NULL,
+            UNIQUE(odev_id, ogrenci_id)
+        )
+    """)
+    con.commit()
+
+
+def odev_ekle(sinif_id: int, ogretmen_id: int, baslik: str,
+              aciklama: str, son_tarih: str, ders: str = "Genel") -> dict:
+    baslik = (baslik or "").strip()
+    aciklama = (aciklama or "").strip()
+    ders = (ders or "Genel").strip()
+    son_tarih = (son_tarih or datetime.now().strftime("%Y-%m-%d")).strip()
+    if not baslik:
+        return {"ok": False, "sebep": "Baslik bos olamaz"}
+    con = _conn()
+    _odev_init(con)
+    con.execute("""
+        INSERT INTO odevler (sinif_id, ogretmen_id, baslik, aciklama, son_tarih, ders, tarih)
+        VALUES (?,?,?,?,?,?,?)
+    """, (sinif_id, ogretmen_id, baslik, aciklama, son_tarih, ders,
+          datetime.now().strftime("%Y-%m-%d %H:%M")))
+    con.commit()
+    odev_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+    con.close()
+    return {"ok": True, "odev_id": odev_id}
+
+
+def sinif_odevleri(sinif_id: int, limit: int = 30) -> list[dict]:
+    con = _conn()
+    _odev_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT od.*, og.ad_soyad AS ogretmen,
+               COUNT(ot.id) AS tamamlayan,
+               (SELECT COUNT(*) FROM ogrenciler WHERE sinif_id = od.sinif_id) AS toplam_ogrenci
+        FROM odevler od
+        JOIN ogretmenler og ON og.id = od.ogretmen_id
+        LEFT JOIN odev_tamamlayanlar ot ON ot.odev_id = od.id
+        WHERE od.sinif_id = ?
+        GROUP BY od.id
+        ORDER BY od.son_tarih DESC, od.id DESC
+        LIMIT ?
+    """, (sinif_id, limit)).fetchall()]
+    con.close()
+    return rows
+
+
+def odev_detay(odev_id: int) -> dict | None:
+    con = _conn()
+    _odev_init(con)
+    row = con.execute("""
+        SELECT od.*, s.sinif_adi, og.ad_soyad AS ogretmen
+        FROM odevler od
+        JOIN siniflar s ON s.id = od.sinif_id
+        JOIN ogretmenler og ON og.id = od.ogretmen_id
+        WHERE od.id = ?
+    """, (odev_id,)).fetchone()
+    if not row:
+        con.close()
+        return None
+    d = dict(row)
+    rows = [dict(r) for r in con.execute("""
+        SELECT o.id, o.ad_soyad, o.ogr_no,
+               CASE WHEN ot.id IS NULL THEN 0 ELSE 1 END AS tamamlandi,
+               ot.tarih AS tamamlanma_tarihi
+        FROM ogrenciler o
+        LEFT JOIN odev_tamamlayanlar ot ON ot.odev_id = ? AND ot.ogrenci_id = o.id
+        WHERE o.sinif_id = ?
+        ORDER BY o.ad_soyad
+    """, (odev_id, d["sinif_id"])).fetchall()]
+    con.close()
+    d["ogrenciler"] = rows
+    d["tamamlayan"] = sum(1 for r in rows if r["tamamlandi"])
+    d["toplam_ogrenci"] = len(rows)
+    return d
+
+
+def odev_tamamla(odev_id: int, ogrenci_id: int, ogretmen_id: int) -> dict:
+    con = _conn()
+    _odev_init(con)
+    row = con.execute("""
+        SELECT od.baslik, od.sinif_id, o.ad_soyad
+        FROM odevler od
+        JOIN ogrenciler o ON o.id = ? AND o.sinif_id = od.sinif_id
+        WHERE od.id = ?
+    """, (ogrenci_id, odev_id)).fetchone()
+    if not row:
+        con.close()
+        return {"ok": False, "sebep": "Odev veya ogrenci bulunamadi"}
+    con.execute("""
+        INSERT OR IGNORE INTO odev_tamamlayanlar (odev_id, ogrenci_id, ogretmen_id, tarih)
+        VALUES (?,?,?,?)
+    """, (odev_id, ogrenci_id, ogretmen_id, datetime.now().strftime("%Y-%m-%d %H:%M")))
+    yeni = con.total_changes > 0
+    con.commit()
+    con.close()
+    return {"ok": True, "yeni": yeni}
+
+
+def odev_tamamlandi_kaldir(odev_id: int, ogrenci_id: int) -> dict:
+    con = _conn()
+    _odev_init(con)
+    con.execute("DELETE FROM odev_tamamlayanlar WHERE odev_id=? AND ogrenci_id=?",
+                (odev_id, ogrenci_id))
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def ogrenci_odevleri(ogrenci_id: int, limit: int = 30) -> list[dict]:
+    con = _conn()
+    _odev_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT od.id, od.baslik, od.aciklama, od.son_tarih, od.ders, od.tarih,
+               og.ad_soyad AS ogretmen,
+               CASE WHEN ot.id IS NULL THEN 0 ELSE 1 END AS tamamlandi,
+               ot.tarih AS tamamlanma_tarihi
+        FROM ogrenciler o
+        JOIN odevler od ON od.sinif_id = o.sinif_id
+        JOIN ogretmenler og ON og.id = od.ogretmen_id
+        LEFT JOIN odev_tamamlayanlar ot ON ot.odev_id = od.id AND ot.ogrenci_id = o.id
+        WHERE o.id = ?
+        ORDER BY od.son_tarih DESC, od.id DESC
+        LIMIT ?
+    """, (ogrenci_id, limit)).fetchall()]
+    con.close()
+    return rows
 
 
 def _taktik_tablosu_olustur(con) -> None:
