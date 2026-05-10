@@ -62,7 +62,30 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-2 sm:gap-3">
+    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+      <nav class="hidden md:flex items-center gap-1.5">
+        <a href="{{ url_for('lig') }}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
+          Süper Lig
+        </a>
+        <a href="{{ url_for('oduller') }}"
+           class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
+          Ödüller
+        </a>
+        <a href="{{ url_for('ogrenci_panel') }}"
+           class="bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
+          Öğrenci
+        </a>
+        <a href="{{ url_for('sifirla_sayfasi') }}"
+           class="bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
+          Genel Sıfırla
+        </a>
+      </nav>
+
       <span class="hidden sm:block text-xs text-blue-200">👤 {{ session.ogretmen_adi }}</span>
 
       {% if aktif %}

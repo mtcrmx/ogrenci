@@ -23,6 +23,7 @@ from database import (
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
+from web_features import register_feature_routes
 
 # ── Uygulama ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -272,6 +273,9 @@ def rapor_excel():
 # ══════════════════════════════════════════════════════════════════════════
 # Başlatma
 # ══════════════════════════════════════════════════════════════════════════
+
+register_feature_routes(app, giris_zorunlu, SIFIR_PAROLA, ADMIN_SIFRE)
+
 
 if __name__ == "__main__":
     import socket
