@@ -582,9 +582,9 @@ def dashboard():
     aktif      = next((s for s in siniflar if s["id"] == aktif_id), siniflar[0])
     ogrenciler = _ogrencilere_durum_ekle(sinif_ogrencileri(aktif["id"]))
 
-    yetkili = ogretmen_adi in MUFETTIS_YETKILILERI
-    bugunki_muf = bugun_mufettis() if yetkili else None
-    bek_talepler = bekleyen_ogrenci_talepleri() if yetkili else []
+    yetkili = True
+    bugunki_muf = bugun_mufettis()
+    bek_talepler = bekleyen_ogrenci_talepleri()
 
     popup_ogrenciler = []
     if yetkili and not bugunki_muf:
@@ -1282,7 +1282,7 @@ def oduller():
     return render_template("oduller.html",
         ogretmen_adi    = ogretmen_adi,
         ogretmen_id     = session["ogretmen_id"],
-        mufettis_yetkili = ogretmen_adi in MUFETTIS_YETKILILERI,
+        mufettis_yetkili = True,
         sezon           = sezon_siralama(),
         seviyeleri      = tum_sinif_seviyeleri(),
         rozetler        = son_rozetler(30),
@@ -1385,8 +1385,6 @@ def api_ogrenci_ittifak_talep():
 @app.route("/api/mufettis/belirle", methods=["POST"])
 @giris_zorunlu
 def api_mufettis_belirle():
-    if session.get("ogretmen_adi") not in MUFETTIS_YETKILILERI:
-        return jsonify({"ok": False, "sebep": "Yetkiniz yok"}), 403
     ogrenci_id = int(request.form["ogrenci_id"])
     return jsonify(mufettis_belirle(ogrenci_id))
 

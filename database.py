@@ -1034,7 +1034,7 @@ ROZET_TANIMI = {
     "sinif_yildizi":  ("⭐", "Sinif Yildizi",      "Haftanin en cok olumlu puanli ogrencisi"),
     "seri_yildiz":    ("⚡", "Seri Yildiz",        "3 mac ust uste kazanildi"),
     "donusum":        ("🦋", "Donusum",             "Kirmizi karttan sonra 5 gun temiz kalindi"),
-    "mufettis_iyisi": ("🕵️","Muazzam Performans", "Gizli mufettis degerlendirmesi: Mukemmel"),
+    "mufettis_iyisi": ("🌟","Gizli Kahraman", "Gunun gizli kahramani secildi"),
     "alkis_efsane":   ("👏", "Alkis Efsanesi",     "5 alkis kuponu kazanildi"),
     "streak_10":      ("🔥", "Alevli Seri",        "10 gun kesintisiz temiz"),
     "sezon_zirvesi":  ("🏆", "Sezon Zirvesi",      "Sezon birincisi"),
@@ -1320,14 +1320,17 @@ def mufettis_belirle(ogrenci_id: int) -> dict:
     con   = _conn(); _gami_init(con)
     mevcut = con.execute("SELECT id FROM gizli_mufettis WHERE tarih=?", (bugun,)).fetchone()
     if mevcut:
-        con.close(); return {"ok": False, "sebep": "Bugün zaten belirlendi"}
+        con.close(); return {"ok": False, "sebep": "Bugunun gizli kahramani zaten secildi"}
     ogr = con.execute("SELECT id, sinif_id FROM ogrenciler WHERE id=?", (ogrenci_id,)).fetchone()
     if not ogr:
         con.close(); return {"ok": False, "sebep": "Ogrenci bulunamadi"}
-    con.execute("INSERT INTO gizli_mufettis (tarih,ogrenci_id,sinif_id) VALUES(?,?,?)",
+    con.execute("INSERT INTO gizli_mufettis (tarih,ogrenci_id,sinif_id,sonuc) VALUES(?,?,?,'kahraman')",
                 (bugun, ogrenci_id, ogr["sinif_id"]))
+    _gelisim_init(con)
+    puan_kaydi = _gelisim_puan_ekle(con, ogrenci_id, 10)
     con.commit(); con.close()
-    return {"ok": True}
+    rozet_ver_ogrenci(ogrenci_id, ogr["sinif_id"], "mufettis_iyisi")
+    return {"ok": True, "xp": 10, "puan": puan_kaydi}
 
 
 def mufettis_degerlendir(mufettis_id: int, sonuc: str) -> dict:
