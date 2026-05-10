@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gelişim Merkezi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
+    <header class="flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-black">Gelişim Merkezi</h1>
+        <p class="text-sm text-slate-400">{{ ogrenci.ad_soyad }} · olumlu davranış, görev, sandık ve avatar sistemi</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="{{ url_for('index') }}" class="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold">Ana Menü</a>
+        <a href="{{ url_for('oyunlar') }}" class="rounded-xl bg-indigo-700 px-3 py-2 text-xs font-bold">Oyunlar</a>
+        <a href="{{ url_for('ogrenci_ben') }}" class="rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold">Profil</a>
+      </div>
+    </header>
+
+    <section class="grid md:grid-cols-[1fr_1.2fr] gap-4">
+      <div class="rounded-3xl bg-gradient-to-br from-indigo-700/40 to-blue-700/20 border border-indigo-500/30 p-5">
+        <div class="text-7xl">{{ gelisim.avatar.emoji }}</div>
+        <div class="mt-3 text-3xl font-black">{{ gelisim.avatar.ad }}</div>
+        <div class="text-sm text-indigo-200">XP: {{ gelisim.puan.xp }} · Sandık hakkı: {{ gelisim.puan.sandik_hakki }}</div>
+        {% set ilerleme = ((gelisim.puan.xp - gelisim.avatar.esik) * 100 / ((gelisim.avatar.sonraki_esik - gelisim.avatar.esik) or 1))|round(0) %}
+        <div class="mt-4 h-4 bg-slate-950/60 rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400" style="width:{{ [100, ilerleme]|min }}%"></div>
+        </div>
+        <div class="text-xs text-slate-300 mt-2">Sonraki seviye: {{ gelisim.avatar.sonraki_ad }}</div>
+      </div>
+
+      <div class="rounded-3xl bg-slate-900 border border-slate-800 p-5">
+        <div class="flex justify-between gap-3">
+          <div>
+            <h2 class="font-black text-xl">Günün kişisel görevi</h2>
+            <p class="text-sm text-slate-400">{{ gelisim.gorev.gorev }}</p>
+          </div>
+          <span class="rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-3 py-1 text-xs font-black h-fit">
+            +{{ gelisim.gorev.xp }} XP
+          </span>
+        </div>
+        {% if gelisim.gorev.tamamlandi %}
+        <div class="mt-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-4 py-3 font-bold">Bugünkü görev tamamlandı.</div>
+        {% else %}
+        <form method="POST" action="{{ url_for('gelisim_gorev_tamamla_route') }}" class="mt-5">
+          <button class="rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 font-black">Görevi Tamamladım</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-3 gap-4">
+      <div class="rounded-3xl bg-slate-900 border border-slate-800 p-5">
+        <h2 class="font-black text-lg">Sandık Aç</h2>
+        <p class="text-sm text-slate-400 mt-1">Her 50 XP'de yeni sandık hakkı kazanılır.</p>
+        <form method="POST" action="{{ url_for('gelisim_sandik_ac_route') }}" class="mt-4">
+          <button class="w-full rounded-2xl bg-amber-600 hover:bg-amber-500 px-5 py-3 font-black">🎁 Sandık Aç</button>
+        </form>
+        <div class="mt-4 space-y-2">
+          {% for s in gelisim.sandiklar %}
+          <div class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <span class="font-bold">{{ s.sandik }}</span> · {{ s.odul }} · +{{ s.xp }} XP
+          </div>
+          {% else %}
+          <p class="text-sm text-slate-500">Henüz sandık açılmadı.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="rounded-3xl bg-slate-900 border border-slate-800 p-5">
+        <h2 class="font-black text-lg">Kurtarma / Telafi Görevi</h2>
+        <p class="text-sm text-slate-400 mt-1">Tik sonrası olumlu davranışla geri dönüş hedefi.</p>
+        <form method="POST" action="{{ url_for('gelisim_telafi_route') }}" class="mt-4">
+          <button class="w-full rounded-2xl bg-rose-600 hover:bg-rose-500 px-5 py-3 font-black">Telafi Görevi Al</button>
+        </form>
+        <div class="mt-4 space-y-2">
+          {% for t in gelisim.telafiler %}
+          <div class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <div class="font-bold">{{ t.gorev }}</div>
+            <div class="text-xs text-slate-500">{{ t.durum }} · {{ t.tarih }}</div>
+          </div>
+          {% else %}
+          <p class="text-sm text-slate-500">Telafi görevi yok.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="rounded-3xl bg-slate-900 border border-slate-800 p-5">
+        <h2 class="font-black text-lg">Arkadaş Tebriki</h2>
+        <p class="text-sm text-slate-400 mt-1">Olumlu davranış gördüğün arkadaşını tebrik et.</p>
+        <form method="POST" action="{{ url_for('gelisim_tebrik_route') }}" class="mt-4 space-y-2">
+          <select name="alan_id" required class="w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <option value="">Arkadaş seç</option>
+            {% for a in sinif_arkadaslari %}
+            <option value="{{ a.id }}">{{ a.ad_soyad }}</option>
+            {% endfor %}
+          </select>
+          <input name="mesaj" maxlength="160" placeholder="Tebrik mesajı"
+                 class="w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+          <button class="w-full rounded-2xl bg-cyan-600 hover:bg-cyan-500 px-5 py-3 font-black">Tebrik Gönder</button>
+        </form>
+        <div class="mt-4 space-y-2">
+          {% for t in gelisim.tebrikler %}
+          <div class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+            <div class="font-bold">{{ t.gonderen }}</div>
+            <div class="text-xs text-slate-300">{{ t.mesaj }}</div>
+          </div>
+          {% else %}
+          <p class="text-sm text-slate-500">Henüz tebrik kartı yok.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-3xl bg-slate-900 border border-slate-800 p-5">
+      <h2 class="font-black text-lg mb-3">Seviye Basamakları</h2>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3"><div class="text-3xl">🥚</div><div class="font-bold text-sm">Yumurta</div><div class="text-xs text-slate-500">0 XP</div></div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3"><div class="text-3xl">🐣</div><div class="font-bold text-sm">Civciv</div><div class="text-xs text-slate-500">50 XP</div></div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3"><div class="text-3xl">🦅</div><div class="font-bold text-sm">Kartal</div><div class="text-xs text-slate-500">120 XP</div></div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3"><div class="text-3xl">🦁</div><div class="font-bold text-sm">Aslan</div><div class="text-xs text-slate-500">250 XP</div></div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3"><div class="text-3xl">👑</div><div class="font-bold text-sm">Efsane</div><div class="text-xs text-slate-500">500 XP</div></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

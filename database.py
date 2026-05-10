@@ -1551,6 +1551,8 @@ _SIFIRLANACAK_TABLOLAR = [
     "sinif_rozet", "sinif_seri", "gunluk_gorev", "gizli_mufettis",
     "alkis_kuponu", "sezon_puan", "ittifak_gorev", "sans_carki",
     "taktik_formasyonu", "quiz_sonuclari", "odev_tamamlayanlar", "odevler",
+    "gelisim_puan", "gelisim_gorevleri", "sandik_kayitlari", "telafi_gorevleri",
+    "tebrik_kartlari",
 ]
 
 
@@ -1719,6 +1721,257 @@ def ogrenci_odevleri(ogrenci_id: int, limit: int = 30) -> list[dict]:
     """, (ogrenci_id, limit)).fetchall()]
     con.close()
     return rows
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Gelisim Merkezi
+# ══════════════════════════════════════════════════════════════════════════
+
+GELISIM_GOREV_HAVUZU = [
+    ("Bugun derse hazirlikli gir", 8),
+    ("Bir arkadasina ders konusunda yardim et", 10),
+    ("Odevini zamaninda tamamla", 12),
+    ("Ders boyunca soz kesmeden dinle", 8),
+    ("Sinif duzenine katkida bulun", 10),
+    ("Bugun hic tik almadan gunu tamamla", 15),
+    ("Kitabini/defterini eksiksiz getir", 8),
+]
+
+TELAFI_GOREV_HAVUZU = [
+    "Ogretmenden kisa bir oz-degerlendirme formu al",
+    "Bir ders boyunca sorumluluk gorevi ustlen",
+    "Arkadasina yardim ederek olumlu davranis goster",
+    "Eksik odevini tamamlayip teslim et",
+    "Sinif duzeni icin 5 dakikalik katkida bulun",
+]
+
+SANDIK_ODULLERI = [
+    ("Bronz Sandik", 20, "Avatar parcasi"),
+    ("Gumus Sandik", 35, "Bonus gorev"),
+    ("Altin Sandik", 50, "Efsane rozet sansi"),
+    ("Surpriz Sandik", 30, "Sans puani"),
+]
+
+AVATAR_SEVIYELERI = [
+    (0, "Yumurta", "🥚"),
+    (50, "Civciv", "🐣"),
+    (120, "Kartal", "🦅"),
+    (250, "Aslan", "🦁"),
+    (500, "Efsane", "👑"),
+]
+
+
+def _gelisim_init(con) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS gelisim_puan (
+            ogrenci_id INTEGER PRIMARY KEY REFERENCES ogrenciler(id),
+            xp INTEGER NOT NULL DEFAULT 0,
+            sandik_hakki INTEGER NOT NULL DEFAULT 0,
+            guncelleme TEXT NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS gelisim_gorevleri (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            tarih TEXT NOT NULL,
+            gorev TEXT NOT NULL,
+            xp INTEGER NOT NULL DEFAULT 10,
+            tamamlandi INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(ogrenci_id, tarih)
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS sandik_kayitlari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            sandik TEXT NOT NULL,
+            odul TEXT NOT NULL,
+            xp INTEGER NOT NULL DEFAULT 0,
+            tarih TEXT NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS telafi_gorevleri (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            gorev TEXT NOT NULL,
+            durum TEXT NOT NULL DEFAULT 'bekliyor',
+            tarih TEXT NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS tebrik_kartlari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            gonderen_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            alan_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            mesaj TEXT NOT NULL,
+            tarih TEXT NOT NULL
+        )
+    """)
+    con.commit()
+
+
+def _gelisim_puan_ekle(con, ogrenci_id: int, xp: int) -> dict:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute("""
+        INSERT INTO gelisim_puan (ogrenci_id, xp, sandik_hakki, guncelleme)
+        VALUES (?, 0, 0, ?)
+        ON CONFLICT(ogrenci_id) DO NOTHING
+    """, (ogrenci_id, now))
+    con.execute("""
+        UPDATE gelisim_puan
+        SET xp = xp + ?, sandik_hakki = sandik_hakki + CASE WHEN ((xp + ?) / 50) > (xp / 50) THEN 1 ELSE 0 END,
+            guncelleme = ?
+        WHERE ogrenci_id = ?
+    """, (xp, xp, now, ogrenci_id))
+    return dict(con.execute("SELECT * FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone())
+
+
+def avatar_seviyesi(xp: int) -> dict:
+    secili = AVATAR_SEVIYELERI[0]
+    sonraki = None
+    for seviye in AVATAR_SEVIYELERI:
+        if xp >= seviye[0]:
+            secili = seviye
+        elif not sonraki:
+            sonraki = seviye
+    return {
+        "esik": secili[0], "ad": secili[1], "emoji": secili[2],
+        "sonraki_esik": sonraki[0] if sonraki else xp,
+        "sonraki_ad": sonraki[1] if sonraki else "Zirve",
+    }
+
+
+def gelisim_ozeti(ogrenci_id: int) -> dict:
+    import random
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    con = _conn()
+    _gelisim_init(con)
+    con.execute("""
+        INSERT INTO gelisim_puan (ogrenci_id, xp, sandik_hakki, guncelleme)
+        VALUES (?, 0, 0, ?)
+        ON CONFLICT(ogrenci_id) DO NOTHING
+    """, (ogrenci_id, bugun))
+    if not con.execute("SELECT id FROM gelisim_gorevleri WHERE ogrenci_id=? AND tarih=?",
+                       (ogrenci_id, bugun)).fetchone():
+        gorev, xp = random.choice(GELISIM_GOREV_HAVUZU)
+        con.execute("""
+            INSERT INTO gelisim_gorevleri (ogrenci_id, tarih, gorev, xp)
+            VALUES (?,?,?,?)
+        """, (ogrenci_id, bugun, gorev, xp))
+    con.commit()
+    puan = dict(con.execute("SELECT * FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone())
+    gorev = dict(con.execute("""
+        SELECT * FROM gelisim_gorevleri WHERE ogrenci_id=? AND tarih=?
+    """, (ogrenci_id, bugun)).fetchone())
+    sandiklar = [dict(r) for r in con.execute("""
+        SELECT * FROM sandik_kayitlari WHERE ogrenci_id=? ORDER BY tarih DESC LIMIT 8
+    """, (ogrenci_id,)).fetchall()]
+    telafiler = [dict(r) for r in con.execute("""
+        SELECT * FROM telafi_gorevleri WHERE ogrenci_id=? ORDER BY id DESC LIMIT 5
+    """, (ogrenci_id,)).fetchall()]
+    tebrikler = [dict(r) for r in con.execute("""
+        SELECT tk.*, o.ad_soyad AS gonderen
+        FROM tebrik_kartlari tk JOIN ogrenciler o ON o.id = tk.gonderen_id
+        WHERE tk.alan_id=? ORDER BY tk.id DESC LIMIT 8
+    """, (ogrenci_id,)).fetchall()]
+    con.close()
+    return {
+        "puan": puan,
+        "avatar": avatar_seviyesi(puan["xp"]),
+        "gorev": gorev,
+        "sandiklar": sandiklar,
+        "telafiler": telafiler,
+        "tebrikler": tebrikler,
+        "sandik_odulleri": SANDIK_ODULLERI,
+    }
+
+
+def gelisim_gorev_tamamla(ogrenci_id: int) -> dict:
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    con = _conn()
+    _gelisim_init(con)
+    row = con.execute("SELECT * FROM gelisim_gorevleri WHERE ogrenci_id=? AND tarih=?",
+                      (ogrenci_id, bugun)).fetchone()
+    if not row:
+        con.close()
+        gelisim_ozeti(ogrenci_id)
+        return gelisim_gorev_tamamla(ogrenci_id)
+    if row["tamamlandi"]:
+        con.close()
+        return {"ok": False, "sebep": "Bugunku gorev zaten tamamlandi"}
+    con.execute("UPDATE gelisim_gorevleri SET tamamlandi=1 WHERE id=?", (row["id"],))
+    puan = _gelisim_puan_ekle(con, ogrenci_id, row["xp"])
+    con.commit(); con.close()
+    return {"ok": True, "xp": row["xp"], "puan": puan}
+
+
+def sandik_ac(ogrenci_id: int) -> dict:
+    import random
+    con = _conn()
+    _gelisim_init(con)
+    puan = con.execute("SELECT * FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone()
+    if not puan or puan["sandik_hakki"] <= 0:
+        con.close()
+        return {"ok": False, "sebep": "Sandik hakki yok"}
+    sandik, xp, odul = random.choice(SANDIK_ODULLERI)
+    con.execute("UPDATE gelisim_puan SET sandik_hakki=sandik_hakki-1 WHERE ogrenci_id=?", (ogrenci_id,))
+    _gelisim_puan_ekle(con, ogrenci_id, xp)
+    con.execute("""
+        INSERT INTO sandik_kayitlari (ogrenci_id, sandik, odul, xp, tarih)
+        VALUES (?,?,?,?,?)
+    """, (ogrenci_id, sandik, odul, xp, datetime.now().strftime("%Y-%m-%d %H:%M")))
+    con.commit(); con.close()
+    return {"ok": True, "sandik": sandik, "odul": odul, "xp": xp}
+
+
+def telafi_gorevi_olustur(ogrenci_id: int) -> dict:
+    import random
+    con = _conn()
+    _gelisim_init(con)
+    gorev = random.choice(TELAFI_GOREV_HAVUZU)
+    con.execute("""
+        INSERT INTO telafi_gorevleri (ogrenci_id, gorev, durum, tarih)
+        VALUES (?,?,'bekliyor',?)
+    """, (ogrenci_id, gorev, datetime.now().strftime("%Y-%m-%d %H:%M")))
+    con.commit(); con.close()
+    return {"ok": True, "gorev": gorev}
+
+
+def tebrik_gonder(gonderen_id: int, alan_id: int, mesaj: str) -> dict:
+    mesaj = (mesaj or "Harika is cikardin!").strip()[:160]
+    if gonderen_id == alan_id:
+        return {"ok": False, "sebep": "Kendine tebrik gonderemezsin"}
+    con = _conn()
+    _gelisim_init(con)
+    con.execute("""
+        INSERT INTO tebrik_kartlari (gonderen_id, alan_id, mesaj, tarih)
+        VALUES (?,?,?,?)
+    """, (gonderen_id, alan_id, mesaj, datetime.now().strftime("%Y-%m-%d %H:%M")))
+    _gelisim_puan_ekle(con, alan_id, 5)
+    con.commit(); con.close()
+    return {"ok": True}
+
+
+def haftalik_veli_ozeti(ogrenci_id: int) -> dict:
+    hafta_once = (datetime.now() - __import__("datetime").timedelta(days=7)).strftime("%Y-%m-%d")
+    con = _conn()
+    _gelisim_init(con)
+    tik = con.execute("""
+        SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id=? AND tarih>=?
+    """, (ogrenci_id, hafta_once)).fetchone()[0]
+    odev = con.execute("""
+        SELECT COUNT(*) FROM odev_tamamlayanlar WHERE ogrenci_id=? AND tarih>=?
+    """, (ogrenci_id, hafta_once)).fetchone()[0]
+    tebrik = con.execute("""
+        SELECT COUNT(*) FROM tebrik_kartlari WHERE alan_id=? AND tarih>=?
+    """, (ogrenci_id, hafta_once)).fetchone()[0]
+    gorev = con.execute("""
+        SELECT COUNT(*) FROM gelisim_gorevleri WHERE ogrenci_id=? AND tarih>=? AND tamamlandi=1
+    """, (ogrenci_id, hafta_once)).fetchone()[0]
+    con.close()
+    return {"tik": tik, "odev": odev, "tebrik": tebrik, "gorev": gorev}
 
 
 def _taktik_tablosu_olustur(con) -> None:

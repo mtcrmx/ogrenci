@@ -45,6 +45,8 @@ from database import (
     tik_dondur,
     odev_ekle, sinif_odevleri, odev_detay, odev_tamamla,
     odev_tamamlandi_kaldir, ogrenci_odevleri,
+    gelisim_ozeti, gelisim_gorev_tamamla, sandik_ac, telafi_gorevi_olustur,
+    tebrik_gonder, haftalik_veli_ozeti,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 
@@ -236,6 +238,8 @@ def _ogrenci_ozeti(ogrenci_id: int) -> dict | None:
         "disiplin_sira": disiplin_sira,
         "odevler": odevler,
         "istatistik": stats,
+        "gelisim": gelisim_ozeti(ogrenci_id),
+        "veli_haftalik": haftalik_veli_ozeti(ogrenci_id),
     }
 
 
@@ -366,6 +370,59 @@ def oyunlar():
     ogrenci_id = session.get("ogrenci_id")
     ozet = _ogrenci_ozeti(int(ogrenci_id)) if ogrenci_id else None
     return render_template("oyunlar.html", ozet=ozet)
+
+
+@app.route("/gelisim")
+@ogrenci_giris_zorunlu
+def gelisim_merkezi():
+    ogrenci_id = session.get("ogrenci_id")
+    if not ogrenci_id:
+        return redirect(url_for("ogrenci_giris", next=url_for("gelisim_merkezi")))
+    ozet = _ogrenci_ozeti(int(ogrenci_id))
+    sinif_arkadaslari = [
+        o for o in sinif_ogrencileri(ozet["ogrenci"]["sinif_id"])
+        if o["id"] != int(ogrenci_id)
+    ] if ozet else []
+    return render_template("gelisim.html", **ozet, sinif_arkadaslari=sinif_arkadaslari)
+
+
+@app.route("/gelisim/gorev-tamamla", methods=["POST"])
+@ogrenci_giris_zorunlu
+def gelisim_gorev_tamamla_route():
+    ogrenci_id = session.get("ogrenci_id")
+    if ogrenci_id:
+        gelisim_gorev_tamamla(int(ogrenci_id))
+    return redirect(url_for("gelisim_merkezi"))
+
+
+@app.route("/gelisim/sandik-ac", methods=["POST"])
+@ogrenci_giris_zorunlu
+def gelisim_sandik_ac_route():
+    ogrenci_id = session.get("ogrenci_id")
+    if ogrenci_id:
+        sonuc = sandik_ac(int(ogrenci_id))
+        session["son_sandik"] = sonuc
+    return redirect(url_for("gelisim_merkezi"))
+
+
+@app.route("/gelisim/telafi", methods=["POST"])
+@ogrenci_giris_zorunlu
+def gelisim_telafi_route():
+    ogrenci_id = session.get("ogrenci_id")
+    if ogrenci_id:
+        telafi_gorevi_olustur(int(ogrenci_id))
+    return redirect(url_for("gelisim_merkezi"))
+
+
+@app.route("/gelisim/tebrik", methods=["POST"])
+@ogrenci_giris_zorunlu
+def gelisim_tebrik_route():
+    gonderen_id = session.get("ogrenci_id")
+    alan_id = request.form.get("alan_id", type=int)
+    mesaj = request.form.get("mesaj", "")
+    if gonderen_id and alan_id:
+        tebrik_gonder(int(gonderen_id), alan_id, mesaj)
+    return redirect(url_for("gelisim_merkezi"))
 
 
 @app.route("/veli/giris", methods=["GET", "POST"])
@@ -570,9 +627,7 @@ def rapor_ozet_csv():
 @app.route("/turnuva")
 @giris_zorunlu
 def turnuva():
-    tablo = lig_puan_tablosu()
-    sirali = sorted(tablo, key=lambda x: (-x.get("puan", 0), -x.get("ag", 0), x.get("sinif_adi", "")))
-    return render_template("turnuva.html", tablo=tablo, finalistler=sirali[:4], maclar=bugun_maclar())
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/yoklama")

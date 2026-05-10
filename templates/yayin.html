@@ -37,9 +37,12 @@
           Okul Geneli Canlı Yayın Panosu · Tüm sınıflar ve öğrenciler tik sayısına göre sıralanır
         </div>
       </div>
-      <div class="text-right">
-        <div id="saat" class="font-mono text-2xl sm:text-4xl font-black blink">--:--:--</div>
-        <div id="guncelleme" class="text-xs text-slate-500 mt-1">Yükleniyor...</div>
+      <div class="text-right flex items-center gap-3">
+        <a href="{{ url_for('dashboard') }}" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-black text-white">Ana Menü</a>
+        <div>
+          <div id="saat" class="font-mono text-2xl sm:text-4xl font-black blink">--:--:--</div>
+          <div id="guncelleme" class="text-xs text-slate-500 mt-1">Yükleniyor...</div>
+        </div>
       </div>
     </div>
   </header>

@@ -74,15 +74,10 @@
                 bg-teal-100 text-teal-800 hover:bg-teal-200 transition">
         Rapor
       </a>
-      <a href="{{ url_for('turnuva') }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-orange-100 text-orange-800 hover:bg-orange-200 transition">
-        Turnuva
-      </a>
       <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
          class="block w-full text-center text-xs font-bold py-2 rounded-lg
                 bg-slate-200 text-slate-800 hover:bg-slate-300 transition">
-        Yoklama
+        Ödev
       </a>
       <button onclick="sifirlaModalAc('sinif', {{ aktif.id }})"
               class="w-full text-xs font-semibold py-2 rounded-lg
@@ -198,18 +193,11 @@
           <div class="font-black text-sm leading-tight">Rapor</div>
           <div class="text-[10px] text-teal-600 mt-0.5">Grafik ve CSV</div>
         </a>
-        <a href="{{ url_for('turnuva') }}"
-           class="rounded-xl border border-orange-200 bg-orange-50 px-3 py-3
-                  text-orange-900 hover:bg-orange-100 transition">
-          <div class="text-lg">🏆</div>
-          <div class="font-black text-sm leading-tight">Turnuva</div>
-          <div class="text-[10px] text-orange-600 mt-0.5">Final yolu</div>
-        </a>
         <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
            class="rounded-xl border border-slate-200 bg-white px-3 py-3
                   text-slate-900 hover:bg-slate-50 transition">
           <div class="text-lg">✅</div>
-          <div class="font-black text-sm leading-tight">Yoklama</div>
+          <div class="font-black text-sm leading-tight">Ödev</div>
           <div class="text-[10px] text-slate-500 mt-0.5">Gelen-gelmeyen</div>
         </a>
       </div>
