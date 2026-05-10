@@ -59,6 +59,10 @@
        class="px-2.5 py-0.5 rounded text-xs font-bold bg-blue-900 hover:bg-blue-800 text-blue-300 transition">
       🏠 Giriş
     </a>
+    <a href="{{ url_for('ogrenci_cikis') }}"
+       class="px-2.5 py-0.5 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+      Çıkış
+    </a>
     <a href="/quiz/{{ tablo[0].sinif_id if tablo else 1 }}"
        class="px-2.5 py-0.5 rounded text-xs font-bold bg-purple-900 hover:bg-purple-800 text-purple-300 transition">
       🧠 Quiz

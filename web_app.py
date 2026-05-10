@@ -54,6 +54,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "erenler-cumhuriyet-2025-gizli")
 
 SIFIR_PAROLA = "1234"
 ADMIN_SIFRE  = "ECadmin"
+OGRENCI_SIFRE = os.environ.get("OGRENCI_SIFRE", "ogrenci")
 
 initialize_db()
 
@@ -65,6 +66,18 @@ def giris_zorunlu(fn):
     def wrapper(*args, **kwargs):
         if "ogretmen_id" not in session:
             return redirect(url_for("login"))
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def ogrenci_giris_zorunlu(fn):
+    from functools import wraps
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not session.get("ogrenci_giris"):
+            if request.path.startswith("/api/"):
+                return jsonify({"ok": False, "sebep": "Ogrenci sifresi gerekli"}), 401
+            return redirect(url_for("ogrenci_giris", next=request.path))
         return fn(*args, **kwargs)
     return wrapper
 
@@ -133,6 +146,32 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/ogrenci/giris", methods=["GET", "POST"])
+def ogrenci_giris():
+    hata = None
+    next_url = request.values.get("next") or url_for("ogrenci_gorunum")
+    if not next_url.startswith("/"):
+        next_url = url_for("ogrenci_gorunum")
+
+    if session.get("ogrenci_giris"):
+        return redirect(next_url)
+
+    if request.method == "POST":
+        sifre = request.form.get("sifre", "").strip()
+        if sifre == OGRENCI_SIFRE:
+            session["ogrenci_giris"] = True
+            return redirect(next_url)
+        hata = "Ogrenci sifresi hatali."
+
+    return render_template("ogrenci_login.html", hata=hata, next_url=next_url)
+
+
+@app.route("/ogrenci/cikis")
+def ogrenci_cikis():
+    session.pop("ogrenci_giris", None)
+    return redirect(url_for("ogrenci_giris"))
 
 
 @app.route("/admin/sifreler", methods=["GET", "POST"])
@@ -329,10 +368,11 @@ def yayin():
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# Ogrenci Goruntulemesi (sifresiz, salt okunur)
+# Ogrenci Goruntulemesi (sifreli, salt okunur)
 # ══════════════════════════════════════════════════════════════════════════
 
 @app.route("/ogrenci")
+@ogrenci_giris_zorunlu
 def ogrenci_gorunum():
     ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
     mufettis_veri = bugun_mufettis()
@@ -355,6 +395,7 @@ def ogrenci_gorunum():
 
 
 @app.route("/api/ogrenci/veri")
+@ogrenci_giris_zorunlu
 def api_ogrenci_veri():
     ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
     muf = bugun_mufettis()
@@ -519,11 +560,13 @@ def api_kadro(sinif_id):
 
 
 @app.route("/api/ogrenci/kadro/<int:sinif_id>")
+@ogrenci_giris_zorunlu
 def api_ogrenci_kadro(sinif_id):
     return jsonify(sinif_kadro_getir(sinif_id))
 
 
 @app.route("/api/ogrenci/ittifaklar")
+@ogrenci_giris_zorunlu
 def api_ogrenci_ittifaklar():
     return jsonify(aktif_ittifaklar())
 
@@ -684,6 +727,7 @@ def api_ittifak_reddet():
 
 
 @app.route("/api/ogrenci/ittifak/talep", methods=["POST"])
+@ogrenci_giris_zorunlu
 def api_ogrenci_ittifak_talep():
     try:
         sinif1_id = int(request.form["sinif1_id"])
