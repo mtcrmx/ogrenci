@@ -3,7 +3,7 @@ web_app.py  —  Erenler Cumhuriyet Ortaokulu Ogrenci Takip
 (Flask rotalari <int:...> ile tam; GitHub/Render senkron)
 """
 
-import os, tempfile, unicodedata
+import os, tempfile
 from datetime import datetime
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -64,10 +64,6 @@ SIFIR_PAROLA = "1234"
 ADMIN_SIFRE  = "ECadmin"
 OGRENCI_SIFRE = os.environ.get("OGRENCI_SIFRE", "ogrenci")
 VELI_SIFRE = os.environ.get("VELI_SIFRE", "veli")
-BILGILENDIRME_YETKILILERI = os.environ.get(
-    "BILGILENDIRME_YETKILILERI",
-    "ADEM AKGÜL,YUSUF ERTÜRK",
-)
 
 initialize_db()
 
@@ -95,20 +91,8 @@ def ogrenci_giris_zorunlu(fn):
     return wrapper
 
 
-def _ad_normalize(ad: str | None) -> str:
-    metin = unicodedata.normalize("NFKD", ad or "")
-    metin = "".join(ch for ch in metin if not unicodedata.combining(ch))
-    return metin.upper().strip()
-
-
 def bilgilendirme_yetkili_mi() -> bool:
-    ogretmen = _ad_normalize(session.get("ogretmen_adi"))
-    yetkililer = {
-        _ad_normalize(ad)
-        for ad in BILGILENDIRME_YETKILILERI.split(",")
-        if ad.strip()
-    }
-    return "*" in yetkililer or ogretmen in yetkililer
+    return "ogretmen_id" in session
 
 
 def _bilgilendirme_hedefi() -> str | None:
@@ -170,6 +154,28 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
     return veriler.get(hedef)
 
 
+def _odev_bildirimi_verisi(hedef: str) -> dict | None:
+    if hedef == "ogrenci":
+        ogrenci_id = session.get("ogrenci_id")
+        hedef_adi = "Öğrenci"
+    elif hedef == "veli":
+        ogrenci_id = session.get("veli_ogrenci_id")
+        hedef_adi = "Veli"
+    else:
+        return None
+    if not ogrenci_id:
+        return None
+    odevler = ogrenci_odevleri(int(ogrenci_id), 30)
+    if not odevler:
+        return None
+    son_odev = max(odevler, key=lambda o: int(o.get("id") or 0))
+    return {
+        "hedef": hedef_adi,
+        "odev": son_odev,
+        "ogrenci_id": int(ogrenci_id),
+    }
+
+
 @app.context_processor
 def _bilgilendirme_context():
     return {
@@ -203,6 +209,13 @@ def _bilgilendirme_modal_ekle(response):
                 "_alan_tanitimi.html",
                 tanitim=tanitim,
                 tanitim_hedef=hedef,
+            ))
+        odev_bildirimi = _odev_bildirimi_verisi(hedef)
+        if odev_bildirimi:
+            parcaciklar.append(render_template(
+                "_odev_bildirimi_modal.html",
+                odev_bildirimi=odev_bildirimi,
+                odev_hedef=hedef,
             ))
         if not parcaciklar:
             return response

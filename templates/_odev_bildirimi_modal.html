@@ -1,0 +1,75 @@
+{% set odev = odev_bildirimi.odev %}
+<div id="odev-bildirimi-modal"
+     class="fixed inset-0 z-[9996] hidden items-center justify-center bg-slate-950/55 px-4 py-6">
+  <div class="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+    <div class="bg-amber-500 px-5 py-4 text-slate-950">
+      <div class="text-xs font-black uppercase tracking-wide">Yeni ödev bildirimi</div>
+      <h2 class="mt-1 text-xl font-black">{{ odev.baslik }}</h2>
+    </div>
+
+    <div class="space-y-3 px-5 py-4 text-sm text-slate-700">
+      <div class="grid grid-cols-2 gap-2">
+        <div class="rounded-xl bg-slate-100 p-3">
+          <div class="text-xs font-bold uppercase text-slate-500">Ders</div>
+          <div class="mt-1 font-black text-slate-900">{{ odev.ders }}</div>
+        </div>
+        <div class="rounded-xl bg-slate-100 p-3">
+          <div class="text-xs font-bold uppercase text-slate-500">Son tarih</div>
+          <div class="mt-1 font-black text-slate-900">{{ odev.son_tarih }}</div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 p-3">
+        <div class="text-xs font-bold uppercase text-slate-500">Öğretmen</div>
+        <div class="mt-1 font-bold text-slate-900">{{ odev.ogretmen }}</div>
+      </div>
+
+      {% if odev.aciklama %}
+        <div class="max-h-40 overflow-y-auto whitespace-pre-line rounded-xl border border-slate-200 p-3 leading-6">
+          {{ odev.aciklama }}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
+      <button type="button"
+              data-odev-kapat
+              class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+        Kapat
+      </button>
+      <button type="button"
+              data-odev-okundu
+              class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-slate-950 hover:bg-amber-400">
+        Okudum, bir daha gösterme
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const modal = document.getElementById("odev-bildirimi-modal");
+  if (!modal) return;
+  const key = "odev-bildirimi-okundu-{{ odev_hedef }}-{{ odev_bildirimi.ogrenci_id }}-{{ odev.id }}";
+
+  function hide() {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+
+  function show() {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+
+  if (!localStorage.getItem(key)) {
+    window.setTimeout(show, 350);
+  }
+
+  modal.querySelector("[data-odev-kapat]")?.addEventListener("click", hide);
+  modal.querySelector("[data-odev-okundu]")?.addEventListener("click", function () {
+    localStorage.setItem(key, "1");
+    hide();
+  });
+})();
+</script>
