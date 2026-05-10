@@ -196,17 +196,46 @@ def _ogrenci_ozeti(ogrenci_id: int) -> dict | None:
     sirali = sorted(sinif_liste, key=lambda x: (x["tik_sayisi"], x["ad_soyad"]))
     disiplin_sira = next((i + 1 for i, o in enumerate(sirali) if o["id"] == ogrenci_id), None)
     kadro = sinif_kadro_getir(sinif_id)
+    gecmis = ogrenci_tik_gecmisi(ogrenci_id)
+    odevler = ogrenci_odevleri(ogrenci_id)
+    toplam_odev = len(odevler)
+    tamamlanan_odev = sum(1 for o in odevler if o.get("tamamlandi"))
+    kriter_sayim = {}
+    for g in gecmis:
+        kriter_sayim[g["kriter"]] = kriter_sayim.get(g["kriter"], 0) + 1
+    en_sik_kriterler = sorted(
+        [{"kriter": k, "sayi": v} for k, v in kriter_sayim.items()],
+        key=lambda x: (-x["sayi"], x["kriter"])
+    )[:6]
+    son_gunler = {}
+    for g in gecmis:
+        gun = (g.get("tarih") or "")[:10]
+        if gun:
+            son_gunler[gun] = son_gunler.get(gun, 0) + 1
+    gunluk_tikler = [{"gun": k, "tik": v} for k, v in sorted(son_gunler.items())[-10:]]
+    stats = {
+        "toplam_odev": toplam_odev,
+        "tamamlanan_odev": tamamlanan_odev,
+        "odev_orani": round(tamamlanan_odev * 100 / toplam_odev) if toplam_odev else 0,
+        "rozet_sayisi": len(_ogrenci_rozetleri(ogrenci_id)),
+        "gecmis_sayisi": len(gecmis),
+        "temiz_mi": ogrenci["tik_sayisi"] == 0,
+        "risk_yuzde": min(100, ogrenci["tik_sayisi"] * 8),
+        "en_sik_kriterler": en_sik_kriterler,
+        "gunluk_tikler": gunluk_tikler,
+    }
     return {
         "ogrenci": ogrenci,
         "avatar": _avatar(ogrenci),
-        "gecmis": ogrenci_tik_gecmisi(ogrenci_id),
+        "gecmis": gecmis,
         "rozetler": _ogrenci_rozetleri(ogrenci_id),
         "maclar": [m for m in bugun_maclar() if m.get("sinif1_id") == sinif_id or m.get("sinif2_id") == sinif_id],
         "sinif_tablo": next((r for r in lig_puan_tablosu() if r.get("sinif_id") == sinif_id), None),
         "sezon": next((r for r in sezon_siralama() if r.get("sinif_id") == sinif_id), None),
         "kadro": kadro,
         "disiplin_sira": disiplin_sira,
-        "odevler": ogrenci_odevleri(ogrenci_id),
+        "odevler": odevler,
+        "istatistik": stats,
     }
 
 
@@ -283,8 +312,6 @@ def logout():
 @app.route("/ogrenci/giris", methods=["GET", "POST"])
 def ogrenci_giris():
     hata = None
-    siniflar = _tum_siniflar()
-    ogrenciler = tum_okul_ogrencileri()
     next_url = request.values.get("next") or url_for("ogrenci_gorunum")
     if not next_url.startswith("/"):
         next_url = url_for("ogrenci_gorunum")
@@ -294,18 +321,23 @@ def ogrenci_giris():
 
     if request.method == "POST":
         sifre = request.form.get("sifre", "").strip()
-        if sifre == OGRENCI_SIFRE:
-            session["ogrenci_giris"] = True
-            ogrenci_id = request.form.get("ogrenci_id", type=int)
-            if ogrenci_id:
-                session["ogrenci_id"] = ogrenci_id
+        ogr_no = request.form.get("ogr_no", type=int)
+        if sifre != OGRENCI_SIFRE:
+            hata = "Ogrenci sifresi hatali."
+        elif not ogr_no:
+            hata = "Lutfen ogrenci numarasini girin."
+        else:
+            ogrenci = _ogrenci_no_ile_bul(ogr_no)
+            if not ogrenci:
+                hata = "Bu numarayla ogrenci bulunamadi."
+            else:
+                session["ogrenci_giris"] = True
+                session["ogrenci_id"] = ogrenci["id"]
                 if next_url == url_for("ogrenci_gorunum"):
                     next_url = url_for("ogrenci_ben")
-            return redirect(next_url)
-        hata = "Ogrenci sifresi hatali."
+                return redirect(next_url)
 
-    return render_template("ogrenci_login.html", hata=hata, next_url=next_url,
-                           siniflar=siniflar, ogrenciler=ogrenciler)
+    return render_template("ogrenci_login.html", hata=hata, next_url=next_url)
 
 
 @app.route("/ogrenci/cikis")
@@ -326,6 +358,14 @@ def ogrenci_ben():
         session.pop("ogrenci_id", None)
         return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_ben")))
     return render_template("ogrenci_ben.html", **ozet)
+
+
+@app.route("/oyunlar")
+@ogrenci_giris_zorunlu
+def oyunlar():
+    ogrenci_id = session.get("ogrenci_id")
+    ozet = _ogrenci_ozeti(int(ogrenci_id)) if ogrenci_id else None
+    return render_template("oyunlar.html", ozet=ozet)
 
 
 @app.route("/veli/giris", methods=["GET", "POST"])

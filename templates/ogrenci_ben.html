@@ -17,7 +17,10 @@
           <p class="text-sm text-slate-400">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}</p>
         </div>
       </div>
-      <a href="{{ url_for('ogrenci_gorunum') }}" class="text-xs font-bold bg-slate-800 px-3 py-2 rounded-xl">Genel Pano</a>
+      <div class="flex gap-2">
+        <a href="{{ url_for('oyunlar') }}" class="text-xs font-bold bg-indigo-700 hover:bg-indigo-600 px-3 py-2 rounded-xl">Oyunlar</a>
+        <a href="{{ url_for('ogrenci_gorunum') }}" class="text-xs font-bold bg-slate-800 px-3 py-2 rounded-xl">Genel Pano</a>
+      </div>
     </header>
 
     <section class="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -36,6 +39,83 @@
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
         <div class="text-xs text-slate-500">Lig puanı</div>
         <div class="text-3xl font-black">{{ sinif_tablo.puan if sinif_tablo else 0 }}</div>
+      </div>
+    </section>
+
+    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="font-black">Detaylı istatistikler</h2>
+          <p class="text-xs text-slate-500">Veli ve öğrenci için gelişim, risk ve ödev görünümü.</p>
+        </div>
+        <span class="text-xs rounded-full px-3 py-1 font-bold {{ 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' if istatistik.temiz_mi else 'bg-red-500/10 text-red-300 border border-red-500/30' }}">
+          {{ 'Temiz dönem' if istatistik.temiz_mi else 'Takip gerekiyor' }}
+        </span>
+      </div>
+      <div class="grid md:grid-cols-3 gap-3">
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-4">
+          <div class="flex justify-between text-xs font-bold text-slate-400 mb-2">
+            <span>Risk göstergesi</span><span>%{{ istatistik.risk_yuzde }}</span>
+          </div>
+          <div class="h-3 rounded-full bg-slate-800 overflow-hidden">
+            <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-red-500" style="width:{{ istatistik.risk_yuzde }}%"></div>
+          </div>
+          <div class="text-3xl font-black mt-3">{{ ogrenci.tik_sayisi }}</div>
+          <div class="text-xs text-slate-500">toplam tik</div>
+        </div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-4">
+          <div class="flex justify-between text-xs font-bold text-slate-400 mb-2">
+            <span>Ödev tamamlama</span><span>%{{ istatistik.odev_orani }}</span>
+          </div>
+          <div class="h-3 rounded-full bg-slate-800 overflow-hidden">
+            <div class="h-full rounded-full bg-blue-500" style="width:{{ istatistik.odev_orani }}%"></div>
+          </div>
+          <div class="text-3xl font-black mt-3">{{ istatistik.tamamlanan_odev }}/{{ istatistik.toplam_odev }}</div>
+          <div class="text-xs text-slate-500">tamamlanan ödev</div>
+        </div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-4">
+          <div class="text-xs font-bold text-slate-400">Rozet ve kayıt</div>
+          <div class="grid grid-cols-2 gap-2 mt-3">
+            <div class="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
+              <div class="text-2xl font-black text-amber-200">{{ istatistik.rozet_sayisi }}</div>
+              <div class="text-[10px] text-amber-300">rozet</div>
+            </div>
+            <div class="rounded-xl bg-red-500/10 border border-red-500/20 p-3">
+              <div class="text-2xl font-black text-red-200">{{ istatistik.gecmis_sayisi }}</div>
+              <div class="text-[10px] text-red-300">kayıt</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-3 mt-3">
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-4">
+          <h3 class="font-black text-sm mb-3">En sık görülen kayıtlar</h3>
+          <div class="space-y-2">
+            {% for k in istatistik.en_sik_kriterler %}
+            {% set oran = [100, k.sayi * 20]|min %}
+            <div>
+              <div class="flex justify-between text-xs"><span class="truncate">{{ k.kriter }}</span><span>{{ k.sayi }}</span></div>
+              <div class="h-2 rounded bg-slate-800 overflow-hidden mt-1"><div class="h-full bg-rose-400" style="width:{{ oran }}%"></div></div>
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-500">Kayıt yok.</p>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-4">
+          <h3 class="font-black text-sm mb-3">Günlük tik grafiği</h3>
+          <div class="h-36 flex items-end gap-2">
+            {% for g in istatistik.gunluk_tikler %}
+            {% set yukseklik = [100, g.tik * 22]|min %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t bg-cyan-400" style="height:{{ yukseklik }}%"></div>
+              <span class="text-[9px] text-slate-500">{{ g.gun[5:] }}</span>
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-500 self-center">Grafik için henüz veri yok.</p>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </section>
 
