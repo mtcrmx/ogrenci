@@ -362,9 +362,20 @@ def api_olumlu_gecmis(sinif_id):
 # ══════════════════════════════════════════════════════════════════════════
 
 @app.route("/yayin")
+@app.route("/yayin/<int:sinif_id>")
 @giris_zorunlu
-def yayin():
-    return render_template("yayin.html")
+def yayin(sinif_id=None):
+    sinif_id = sinif_id or request.args.get("sinif_id", type=int)
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+
+    if sinif_id is None and siniflar:
+        sinif_id = siniflar[0]["id"]
+
+    sinif_adi = next(
+        (s["sinif_adi"] for s in siniflar if s["id"] == sinif_id),
+        f"{sinif_id}" if sinif_id is not None else "Sinif",
+    )
+    return render_template("yayin.html", sinif_id=sinif_id or 0, sinif_adi=sinif_adi)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -424,6 +435,12 @@ def api_yayin_ogrenciler():
         o["durum"]  = d["kod"]
         o["etiket"] = d["etiket"]
     return jsonify(ogrenciler)
+
+
+@app.route("/api/yayin/<int:sinif_id>")
+@giris_zorunlu
+def api_yayin_sinif(sinif_id):
+    return jsonify(_ogrencilere_durum_ekle(sinif_ogrencileri(sinif_id)))
 
 
 @app.route("/api/yayin/lig")
