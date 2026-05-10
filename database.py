@@ -1753,10 +1753,43 @@ SANDIK_ODULLERI = [
 ]
 
 PAZAR_URUNLERI = [
-    {"kod": "cerceve_mavi", "ad": "Mavi Profil Cercevesi", "emoji": "💠", "fiyat": 40},
-    {"kod": "arka_uzay", "ad": "Uzay Arka Plani", "emoji": "🚀", "fiyat": 70},
-    {"kod": "lakap_yardimci", "ad": "Yardimci Kahraman Lakabi", "emoji": "🤝", "fiyat": 60},
-    {"kod": "tema_altin", "ad": "Altin Kart Temasi", "emoji": "🏆", "fiyat": 100},
+    {"kod": "cerceve_mavi", "ad": "Mavi Profil Cercevesi", "emoji": "💠", "fiyat": 30, "nadirlik": "Yaygin", "kategori": "Cerceve"},
+    {"kod": "cerceve_yesil", "ad": "Yesil Basari Cercevesi", "emoji": "✅", "fiyat": 35, "nadirlik": "Yaygin", "kategori": "Cerceve"},
+    {"kod": "cerceve_sari", "ad": "Sari Enerji Cercevesi", "emoji": "⭐", "fiyat": 35, "nadirlik": "Yaygin", "kategori": "Cerceve"},
+    {"kod": "lakap_duzenli", "ad": "Duzenli Ogrenci Lakabi", "emoji": "📚", "fiyat": 40, "nadirlik": "Yaygin", "kategori": "Lakap"},
+    {"kod": "lakap_yardimci", "ad": "Yardimci Kahraman Lakabi", "emoji": "🤝", "fiyat": 45, "nadirlik": "Yaygin", "kategori": "Lakap"},
+    {"kod": "arka_defter", "ad": "Defter Arka Plani", "emoji": "📓", "fiyat": 45, "nadirlik": "Yaygin", "kategori": "Arka Plan"},
+
+    {"kod": "cerceve_gumus", "ad": "Gumus Parilti Cercevesi", "emoji": "🥈", "fiyat": 70, "nadirlik": "Nadir", "kategori": "Cerceve"},
+    {"kod": "arka_orman", "ad": "Gizemli Orman Arka Plani", "emoji": "🌲", "fiyat": 75, "nadirlik": "Nadir", "kategori": "Arka Plan"},
+    {"kod": "arka_deniz", "ad": "Mavi Deniz Arka Plani", "emoji": "🌊", "fiyat": 75, "nadirlik": "Nadir", "kategori": "Arka Plan"},
+    {"kod": "tema_bilim", "ad": "Bilim Laboratuvari Temasi", "emoji": "🔬", "fiyat": 80, "nadirlik": "Nadir", "kategori": "Tema"},
+    {"kod": "lakap_zeka", "ad": "Zeka Ustasi Lakabi", "emoji": "🧠", "fiyat": 85, "nadirlik": "Nadir", "kategori": "Lakap"},
+    {"kod": "rozet_sessiz", "ad": "Sessiz Kahraman Rozeti", "emoji": "🤫", "fiyat": 90, "nadirlik": "Nadir", "kategori": "Rozet"},
+    {"kod": "rozet_odev", "ad": "Odev Canavari Rozeti", "emoji": "📝", "fiyat": 90, "nadirlik": "Nadir", "kategori": "Rozet"},
+    {"kod": "efekt_parilti", "ad": "Profil Parilti Efekti", "emoji": "✨", "fiyat": 95, "nadirlik": "Nadir", "kategori": "Efekt"},
+
+    {"kod": "cerceve_altin", "ad": "Altin Lider Cercevesi", "emoji": "🥇", "fiyat": 130, "nadirlik": "Epik", "kategori": "Cerceve"},
+    {"kod": "arka_uzay", "ad": "Uzay Yolculugu Arka Plani", "emoji": "🚀", "fiyat": 140, "nadirlik": "Epik", "kategori": "Arka Plan"},
+    {"kod": "arka_hazine", "ad": "Hazine Adasi Arka Plani", "emoji": "🏝️", "fiyat": 145, "nadirlik": "Epik", "kategori": "Arka Plan"},
+    {"kod": "tema_altin", "ad": "Altin Kart Temasi", "emoji": "🏆", "fiyat": 150, "nadirlik": "Epik", "kategori": "Tema"},
+    {"kod": "tema_galaksi", "ad": "Galaksi Kart Temasi", "emoji": "🌌", "fiyat": 155, "nadirlik": "Epik", "kategori": "Tema"},
+    {"kod": "lakap_lider", "ad": "Sinif Lideri Lakabi", "emoji": "🦁", "fiyat": 160, "nadirlik": "Epik", "kategori": "Lakap"},
+    {"kod": "rozet_takim", "ad": "Takim Ruhu Rozeti", "emoji": "🛡️", "fiyat": 165, "nadirlik": "Epik", "kategori": "Rozet"},
+    {"kod": "efekt_alev", "ad": "Alevli Seri Efekti", "emoji": "🔥", "fiyat": 175, "nadirlik": "Epik", "kategori": "Efekt"},
+
+    {"kod": "cerceve_elmas", "ad": "Elmas Efsane Cercevesi", "emoji": "💎", "fiyat": 240, "nadirlik": "Efsane", "kategori": "Cerceve"},
+    {"kod": "arka_krallik", "ad": "Krallik Salonu Arka Plani", "emoji": "🏰", "fiyat": 250, "nadirlik": "Efsane", "kategori": "Arka Plan"},
+    {"kod": "tema_ejderha", "ad": "Ejderha Kart Temasi", "emoji": "🐉", "fiyat": 270, "nadirlik": "Efsane", "kategori": "Tema"},
+    {"kod": "lakap_efsane", "ad": "Efsane Ogrenci Lakabi", "emoji": "👑", "fiyat": 280, "nadirlik": "Efsane", "kategori": "Lakap"},
+    {"kod": "rozet_zirve", "ad": "Zirve Rozeti", "emoji": "⛰️", "fiyat": 300, "nadirlik": "Efsane", "kategori": "Rozet"},
+    {"kod": "efekt_gokkusagi", "ad": "Gokkusagi Iz Efekti", "emoji": "🌈", "fiyat": 320, "nadirlik": "Efsane", "kategori": "Efekt"},
+
+    {"kod": "cerceve_mitik", "ad": "Mitik Aurora Cercevesi", "emoji": "🌠", "fiyat": 420, "nadirlik": "Mitik", "kategori": "Cerceve"},
+    {"kod": "arka_evren", "ad": "Evren Kapisi Arka Plani", "emoji": "🪐", "fiyat": 450, "nadirlik": "Mitik", "kategori": "Arka Plan"},
+    {"kod": "tema_kristal", "ad": "Kristal Saray Temasi", "emoji": "🔮", "fiyat": 480, "nadirlik": "Mitik", "kategori": "Tema"},
+    {"kod": "lakap_okul_efsanesi", "ad": "Okul Efsanesi Lakabi", "emoji": "🏅", "fiyat": 520, "nadirlik": "Mitik", "kategori": "Lakap"},
+    {"kod": "efekt_yildiz_yagmuru", "ad": "Yildiz Yagmuru Efekti", "emoji": "☄️", "fiyat": 560, "nadirlik": "Mitik", "kategori": "Efekt"},
 ]
 
 GOREV_SABLONLARI = [
@@ -2150,7 +2183,10 @@ def pazar_urunleri_ogrenci(ogrenci_id: int) -> list[dict]:
         "SELECT urun_kodu FROM avatar_envanter WHERE ogrenci_id=?", (ogrenci_id,)
     ).fetchall()}
     con.close()
-    return [{**u, "sahip": u["kod"] in sahip} for u in PAZAR_URUNLERI]
+    siralama = {"Yaygin": 1, "Nadir": 2, "Epik": 3, "Efsane": 4, "Mitik": 5}
+    urunler = [{**u, "sahip": u["kod"] in sahip, "nadirlik_sira": siralama.get(u.get("nadirlik"), 99)}
+               for u in PAZAR_URUNLERI]
+    return sorted(urunler, key=lambda u: (u["nadirlik_sira"], u["fiyat"], u["ad"]))
 
 
 def pazar_satin_al(ogrenci_id: int, urun_kodu: str) -> dict:

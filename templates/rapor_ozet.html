@@ -15,7 +15,15 @@
       <h1 class="text-2xl font-black text-slate-900">Detaylı Okul Raporu</h1>
       <p class="text-sm text-slate-500">Grafikler, durum dağılımı, sınıf karşılaştırması ve risk ısı haritası</p>
     </div>
-    <a href="{{ url_for('rapor_ozet_csv') }}" class="rounded-xl bg-teal-700 text-white px-4 py-2 text-sm font-bold">CSV İndir</a>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('rapor_excel_detayli') }}" class="rounded-xl bg-green-700 text-white px-4 py-2 text-sm font-bold">
+        Detaylı Excel İndir
+      </a>
+      <a href="{{ url_for('rapor_excel') }}" class="rounded-xl bg-emerald-600 text-white px-4 py-2 text-sm font-bold">
+        Excel Tablo
+      </a>
+      <a href="{{ url_for('rapor_ozet_csv') }}" class="rounded-xl bg-teal-700 text-white px-4 py-2 text-sm font-bold">CSV İndir</a>
+    </div>
   </header>
 
   <section class="grid grid-cols-2 md:grid-cols-4 gap-3">

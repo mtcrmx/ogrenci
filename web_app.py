@@ -871,9 +871,11 @@ def api_olumlu_gecmis(sinif_id):
 @giris_zorunlu
 def yayin(sinif_id=None):
     siniflar = _tum_siniflar()
+    yayin_veri = _yayin_verisi_hazirla()
     return render_template(
         "yayin.html",
         sinif_sayisi=len(siniflar),
+        yayin_veri=yayin_veri,
         liderler=lig_puan_tablosu()[:5],
         rozetler=son_rozetler(8),
         sezon=sezon_siralama()[:5],
@@ -931,6 +933,10 @@ def api_ogrenci_veri():
 @app.route("/api/yayin/ogrenciler")
 @giris_zorunlu
 def api_yayin_ogrenciler():
+    return jsonify(_yayin_verisi_hazirla())
+
+
+def _yayin_verisi_hazirla():
     ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
     for o in ogrenciler:
         o["risk_yuzde"] = min(100, o["tik_sayisi"] * 8)
@@ -942,9 +948,23 @@ def api_yayin_ogrenciler():
         s["tik"] += o["tik_sayisi"]
         s["temiz"] += 1 if o["tik_sayisi"] == 0 else 0
         s["idari"] += 1 if o["tik_sayisi"] >= 3 else 0
-    return jsonify({
+    maclar = []
+    for m in bugun_maclar():
+        maclar.append({
+            **m,
+            "kadro1": sinif_kadro_getir(m["sinif1_id"])[:8],
+            "kadro2": sinif_kadro_getir(m["sinif2_id"])[:8],
+        })
+    odevler = []
+    for s in _tum_siniflar():
+        for od in sinif_odevleri(s["id"], 6):
+            odevler.append({**od, "sinif_adi": s["sinif_adi"]})
+    odevler.sort(key=lambda od: (od.get("son_tarih", ""), od.get("id", 0)), reverse=True)
+    return {
         "ogrenciler": ogrenciler,
         "siniflar": sorted(siniflar.values(), key=lambda s: (-s["tik"], s["sinif_adi"])),
+        "maclar": maclar[:8],
+        "odevler": odevler[:16],
         "ozet": {
             "ogrenci": len(ogrenciler),
             "sinif": len(siniflar),
@@ -956,7 +976,7 @@ def api_yayin_ogrenciler():
             "tutanak": sum(1 for o in ogrenciler if 9 <= o["tik_sayisi"] <= 11),
             "disiplin": sum(1 for o in ogrenciler if o["tik_sayisi"] >= 12),
         }
-    })
+    }
 
 
 @app.route("/api/yayin/<int:sinif_id>")
@@ -995,6 +1015,73 @@ def rapor_excel():
     dosya_adi = f"DisiplinRaporu_{tarih}.xlsx"
 
     return send_file(tmp_path, as_attachment=True, download_name=dosya_adi,
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route("/rapor/excel-detayli")
+@giris_zorunlu
+def rapor_excel_detayli():
+    if not OPENPYXL_OK:
+        return "openpyxl kurulu degil", 500
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.chart import BarChart, Reference
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Okul Detay Raporu"
+    baslik = ["Sıra", "Sınıf", "No", "Ad Soyad", "Tik", "Durum", "Son Tik", "Ödev", "XP", "Risk"]
+    ws.append(baslik)
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="1A3A6B")
+        cell.alignment = Alignment(horizontal="center")
+
+    ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
+    ogrenciler.sort(key=lambda o: (-o["tik_sayisi"], o["sinif_adi"], o["ad_soyad"]))
+    for idx, o in enumerate(ogrenciler, 1):
+        odevler = ogrenci_odevleri(o["id"], 50)
+        tamam = sum(1 for od in odevler if od.get("tamamlandi"))
+        odev_orani = round(tamam * 100 / len(odevler)) if odevler else 0
+        gel = gelisim_ozeti(o["id"])
+        risk = min(100, o["tik_sayisi"] * 8 + (15 if odev_orani < 50 and odevler else 0))
+        gecmis = ogrenci_tik_gecmisi(o["id"])
+        ws.append([
+            idx, o["sinif_adi"], o["ogr_no"], o["ad_soyad"], o["tik_sayisi"],
+            o["etiket"] or "Temiz", gecmis[0]["tarih"] if gecmis else "-",
+            f"%{odev_orani}", gel["puan"]["xp"], risk,
+        ])
+
+    ws2 = wb.create_sheet("Sınıf Özeti")
+    ws2.append(["Sınıf", "Öğrenci", "Toplam Tik", "Temiz", "İdari"])
+    sinif_ozet = {}
+    for o in ogrenciler:
+        s = sinif_ozet.setdefault(o["sinif_adi"], {"ogrenci": 0, "tik": 0, "temiz": 0, "idari": 0})
+        s["ogrenci"] += 1
+        s["tik"] += o["tik_sayisi"]
+        s["temiz"] += 1 if o["tik_sayisi"] == 0 else 0
+        s["idari"] += 1 if o["tik_sayisi"] >= 3 else 0
+    for ad, s in sorted(sinif_ozet.items()):
+        ws2.append([ad, s["ogrenci"], s["tik"], s["temiz"], s["idari"]])
+    chart = BarChart()
+    chart.title = "Sınıf Bazlı Toplam Tik"
+    data = Reference(ws2, min_col=3, min_row=1, max_row=ws2.max_row)
+    cats = Reference(ws2, min_col=1, min_row=2, max_row=ws2.max_row)
+    chart.add_data(data, titles_from_data=True)
+    chart.set_categories(cats)
+    ws2.add_chart(chart, "G2")
+
+    for sheet in wb.worksheets:
+        for col in sheet.columns:
+            sheet.column_dimensions[col[0].column_letter].width = min(35, max(12, max(len(str(c.value or "")) for c in col) + 2))
+
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp_path = tmp.name
+    wb.save(tmp_path)
+    tarih = datetime.now().strftime("%Y%m%d_%H%M")
+    return send_file(tmp_path, as_attachment=True,
+                     download_name=f"DetayliOkulRaporu_{tarih}.xlsx",
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 

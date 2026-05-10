@@ -84,7 +84,7 @@
     </div>
   </section>
 
-  <main class="flex-1 min-h-0 grid xl:grid-cols-[1fr_420px] gap-4 px-4 py-4">
+  <main class="flex-1 min-h-0 grid xl:grid-cols-[1fr_460px] gap-4 px-4 py-4">
     <section class="min-h-0 rounded-3xl bg-white/5 border border-white/10 overflow-hidden">
       <div class="flex items-center justify-between px-5 py-3 border-b border-white/10">
         <div>
@@ -108,6 +108,14 @@
         <div id="sinifHarita" class="grid grid-cols-2 gap-2"></div>
       </section>
       <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
+        <h2 class="font-black mb-3">Bugünkü Maçlar ve Kadrolar</h2>
+        <div id="macPanel" class="space-y-3 max-h-[32vh] overflow-y-auto"></div>
+      </section>
+      <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
+        <h2 class="font-black mb-3">Verilen Ödevler</h2>
+        <div id="odevPanel" class="space-y-2 max-h-[24vh] overflow-y-auto"></div>
+      </section>
+      <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
         <h2 class="font-black mb-3">En Riskli İlk 5</h2>
         <div id="ilkBes" class="space-y-2"></div>
       </section>
@@ -122,6 +130,7 @@
 </div>
 
 <script>
+const ILK_VERI = {{ yayin_veri|tojson }};
 const REFRESH_S = 10;
 let countdown   = REFRESH_S;
 
@@ -136,12 +145,15 @@ async function yukle() {
   countdown = REFRESH_S;
   try {
     const res  = await fetch('/api/yayin/ogrenciler');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderPano(data);
     const now = new Date().toLocaleTimeString('tr-TR');
     document.getElementById('guncelleme').textContent = `Son güncelleme: ${now}`;
   } catch(e) {
     console.warn('Güncelleme hatası', e);
+    renderPano(ILK_VERI);
+    document.getElementById('guncelleme').textContent = 'Canlı veri alınamadı · ilk veri gösteriliyor';
   }
 }
 
@@ -156,6 +168,8 @@ function renderPano(payload) {
   renderListe(data);
   renderSiniflar(siniflar);
   renderIlkBes(data.slice(0, 5));
+  renderMaclar(payload.maclar || []);
+  renderOdevler(payload.odevler || []);
 }
 
 function renderListe(data) {
@@ -231,6 +245,62 @@ function renderIlkBes(data) {
   `).join('');
 }
 
+function renderMaclar(maclar) {
+  const el = document.getElementById('macPanel');
+  if (!maclar.length) {
+    el.innerHTML = '<p class="text-sm text-slate-500">Bugün maç yok.</p>';
+    return;
+  }
+  el.innerHTML = maclar.map((m, idx) => `
+    <article class="float-in rounded-2xl bg-slate-950/80 border border-cyan-500/20 p-3" style="animation-delay:${idx*60}ms">
+      <div class="flex justify-between gap-2">
+        <div class="font-black text-cyan-100">⚔️ ${m.sinif1_adi} - ${m.sinif2_adi}</div>
+        <div class="text-[10px] text-cyan-300">${m.seans || 'seans'} · ${m.durum || 'bekliyor'}</div>
+      </div>
+      <div class="text-xs text-slate-400 mt-1">${m.gorev || 'Görev bilgisi yok'}</div>
+      <div class="grid grid-cols-2 gap-2 mt-3">
+        ${kadroHTML(m.sinif1_adi, m.kadro1 || [])}
+        ${kadroHTML(m.sinif2_adi, m.kadro2 || [])}
+      </div>
+      ${(m.kartlar || []).length ? `<div class="mt-2 flex flex-wrap gap-1">${m.kartlar.map(k => `<span class="text-[10px] rounded-full ${k.kart_turu === 'kirmizi' ? 'bg-red-500/20 text-red-200' : 'bg-yellow-500/20 text-yellow-200'} px-2 py-0.5">${k.kart_turu} · ${k.ogrenci_adi}</span>`).join('')}</div>` : ''}
+    </article>
+  `).join('');
+}
+
+function kadroHTML(baslik, kadro) {
+  const oyuncular = kadro.slice(0, 6).map(o => `
+    <div class="rounded-lg bg-white/5 border border-white/10 px-2 py-1">
+      <div class="font-bold text-[11px] truncate">${o.emoji || '⭐'} ${o.ad_soyad}</div>
+      <div class="text-[9px] text-slate-500 truncate">${o.mevki || 'Oyuncu'} · No ${o.ogr_no}</div>
+    </div>
+  `).join('');
+  return `<div>
+    <div class="text-[10px] font-black text-slate-300 mb-1">${baslik} Kadrosu</div>
+    <div class="space-y-1">${oyuncular || '<div class="text-[10px] text-slate-500">Kadro yok</div>'}</div>
+  </div>`;
+}
+
+function renderOdevler(odevler) {
+  const el = document.getElementById('odevPanel');
+  if (!odevler.length) {
+    el.innerHTML = '<p class="text-sm text-slate-500">Yayınlanmış ödev yok.</p>';
+    return;
+  }
+  el.innerHTML = odevler.map((od, idx) => {
+    const toplam = od.toplam_ogrenci || 1;
+    const oran = Math.round((od.tamamlayan || 0) * 100 / toplam);
+    return `<div class="float-in rounded-2xl bg-slate-950/80 border border-emerald-500/20 p-3" style="animation-delay:${idx*45}ms">
+      <div class="flex justify-between gap-2">
+        <div class="font-black text-emerald-100 truncate">${od.baslik}</div>
+        <div class="text-xs font-black text-emerald-300">%${oran}</div>
+      </div>
+      <div class="text-[11px] text-slate-400 mt-1">${od.sinif_adi} · ${od.ders || 'Genel'} · Son: ${od.son_tarih}</div>
+      <div class="mt-2 h-2 rounded-full bg-slate-800 overflow-hidden"><div class="bar-fill h-full bg-emerald-400" style="width:${oran}%"></div></div>
+      <div class="text-[10px] text-slate-500 mt-1">${od.tamamlayan || 0}/${od.toplam_ogrenci || 0} tamamladı</div>
+    </div>`;
+  }).join('');
+}
+
 setInterval(() => {
   countdown--;
   if (countdown <= 0) yukle();
@@ -243,6 +313,7 @@ setInterval(() => {
   if (alt) alt.textContent = `${countdown > 0 ? countdown : REFRESH_S} saniye sonra otomatik yenileme`;
 }, 1000);
 
+renderPano(ILK_VERI);
 yukle();
 </script>
 </body>
