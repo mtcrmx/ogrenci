@@ -27,19 +27,19 @@
     ::-webkit-scrollbar-thumb { background:#334155; border-radius:999px; }
   </style>
 </head>
-<body class="min-h-screen text-slate-100 overflow-hidden">
-<div class="h-screen flex flex-col">
-  <header class="flex-shrink-0 border-b border-white/10 bg-slate-950/70 backdrop-blur px-5 py-4">
-    <div class="flex items-center justify-between gap-4">
-      <div>
+<body class="min-h-screen text-slate-100 overflow-x-hidden">
+<div class="min-h-screen flex flex-col">
+  <header class="flex-shrink-0 border-b border-white/10 bg-slate-950/70 backdrop-blur px-3 sm:px-5 py-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="min-w-0">
         <div class="text-blue-200 font-black text-xl sm:text-3xl tracking-tight">Erenler Cumhuriyet Ortaokulu</div>
         <div class="text-slate-400 text-sm mt-1">
           Okul Geneli Canlı Yayın Panosu · Tüm sınıflar ve öğrenciler tik sayısına göre sıralanır
         </div>
       </div>
-      <div class="text-right flex items-center gap-3">
-        <a href="{{ url_for('dashboard') }}" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-black text-white">Ana Menü</a>
-        <div>
+      <div class="text-left sm:text-right flex items-center justify-between sm:justify-end gap-3">
+        <a href="{{ url_for('dashboard') }}" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-black text-white whitespace-nowrap">Ana Menü</a>
+        <div class="shrink-0">
           <div id="saat" class="font-mono text-2xl sm:text-4xl font-black blink">--:--:--</div>
           <div id="guncelleme" class="text-xs text-slate-500 mt-1">Yükleniyor...</div>
         </div>
@@ -47,7 +47,7 @@
     </div>
   </header>
 
-  <section class="flex-shrink-0 border-b border-white/10 bg-slate-950/50 px-5 py-3">
+  <section class="flex-shrink-0 border-b border-white/10 bg-slate-950/50 px-3 sm:px-5 py-3">
     <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2" id="ozetKartlar">
       <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><div class="text-[10px] text-slate-400 font-black">ÖĞRENCİ</div><div id="oz-ogrenci" class="text-3xl font-black">0</div></div>
       <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><div class="text-[10px] text-slate-400 font-black">SINIF</div><div id="oz-sinif" class="text-3xl font-black">{{ sinif_sayisi }}</div></div>
@@ -84,26 +84,26 @@
     </div>
   </section>
 
-  <main class="flex-1 min-h-0 grid xl:grid-cols-[1fr_460px] gap-4 px-4 py-4">
-    <section class="min-h-0 rounded-3xl bg-white/5 border border-white/10 overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-3 border-b border-white/10">
-        <div>
+  <main class="flex-1 grid xl:grid-cols-[minmax(0,1fr)_460px] gap-4 px-3 sm:px-4 py-4 min-w-0">
+    <section class="rounded-3xl bg-white/5 border border-white/10 overflow-hidden min-w-0">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-3 border-b border-white/10">
+        <div class="min-w-0">
           <h2 class="font-black text-lg">Tik Sıralaması</h2>
           <p class="text-xs text-slate-400">En yüksek tik en üstte; tüm öğrenciler ve sınıflar birlikte gösterilir.</p>
         </div>
-        <div class="flex gap-2 text-[10px] font-black">
+        <div class="flex flex-wrap gap-2 text-[10px] font-black">
           <span class="text-emerald-300">✅ Temiz</span>
           <span class="text-amber-300">⚠️ Uyarı</span>
           <span class="text-red-300">🚨 Risk</span>
         </div>
       </div>
-      <div id="liste" class="max-h-[calc(100vh-285px)] overflow-y-auto p-3 grid lg:grid-cols-2 gap-3 auto-rows-max">
+      <div id="liste" class="xl:max-h-[calc(100vh-285px)] overflow-y-auto p-3 grid lg:grid-cols-2 gap-3 auto-rows-max">
         {% for o in yayin_veri.ogrenciler %}
         <article class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 min-h-[82px]">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <div class="text-lg font-black text-white truncate">{{ loop.index }}. {{ o.emoji }} {{ o.ad_soyad }}</div>
-              <div class="text-xs text-slate-400">{{ o.sinif_adi }} · {{ o.etiket or 'Temiz' }}</div>
+              <div class="text-base sm:text-lg font-black text-white break-words">{{ loop.index }}. {{ o.emoji }} {{ o.ad_soyad }}</div>
+              <div class="text-xs text-slate-400 break-words">{{ o.sinif_adi }} · {{ o.etiket or 'Temiz' }}</div>
             </div>
             <div class="text-right shrink-0">
               <div class="text-3xl font-black {{ 'text-emerald-300' if o.tik_sayisi == 0 else 'text-amber-300' if o.tik_sayisi <= 2 else 'text-red-300' }}">{{ o.tik_sayisi }}</div>
@@ -117,18 +117,18 @@
       </div>
     </section>
 
-    <aside class="min-h-0 space-y-4">
+    <aside class="space-y-4 min-w-0">
       <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
         <h2 class="font-black mb-3">Sınıf Isı Haritası</h2>
         <div id="sinifHarita" class="grid grid-cols-2 gap-2"></div>
       </section>
       <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
         <h2 class="font-black mb-3">Bugünkü Maçlar ve Kadrolar</h2>
-        <div id="macPanel" class="space-y-3 max-h-[32vh] overflow-y-auto"></div>
+        <div id="macPanel" class="space-y-3 xl:max-h-[32vh] overflow-y-auto"></div>
       </section>
       <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
         <h2 class="font-black mb-3">Verilen Ödevler</h2>
-        <div id="odevPanel" class="space-y-2 max-h-[24vh] overflow-y-auto"></div>
+        <div id="odevPanel" class="space-y-2 xl:max-h-[24vh] overflow-y-auto"></div>
       </section>
       <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
         <h2 class="font-black mb-3">En Riskli İlk 5</h2>
@@ -137,7 +137,7 @@
     </aside>
   </main>
 
-  <footer class="flex-shrink-0 border-t border-white/10 bg-slate-950/70 px-5 py-2 flex justify-between text-xs text-slate-500">
+  <footer class="flex-shrink-0 border-t border-white/10 bg-slate-950/70 px-3 sm:px-5 py-2 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
     <button onclick="window.close()" class="hover:text-slate-200">✕ Kapat</button>
     <span id="altBilgi">10 saniyede bir yenilenir</span>
     <button onclick="yukle()" class="hover:text-slate-200">🔄 Yenile</button>
@@ -216,11 +216,11 @@ function kartHTML(o, sira, barRef) {
   return `
   <article class="float-in ${bg} ${border} border rounded-2xl overflow-hidden min-h-[82px] shadow-lg shadow-black/20" style="animation-delay:${delay}ms">
     <div class="flex items-stretch min-h-[82px]">
-      <div class="w-16 flex items-center justify-center text-lg font-black border-r border-white/10 shrink-0" style="color:${textCls}">#${sira}</div>
+      <div class="w-12 sm:w-16 flex items-center justify-center text-base sm:text-lg font-black border-r border-white/10 shrink-0" style="color:${textCls}">#${sira}</div>
       <div class="flex-1 min-w-0 px-4 py-3">
         <div class="flex items-center justify-between gap-2">
           <div class="min-w-0">
-            <div class="font-black text-lg leading-tight truncate" style="color:${textCls}">${emoji} ${ad}</div>
+            <div class="font-black text-base sm:text-lg leading-tight break-words" style="color:${textCls}">${emoji} ${ad}</div>
             <div class="text-xs text-slate-300">${sinif} · ${durumText}</div>
           </div>
           <div class="text-right shrink-0">
@@ -243,7 +243,7 @@ function renderSiniflar(siniflar) {
     const pct = Math.min(100, s.tik * 100 / maxTik);
     const heat = Math.min(.55, pct / 160);
     return `<div class="float-in rounded-2xl border border-white/10 px-3 py-3" style="animation-delay:${idx*60}ms; background:linear-gradient(135deg, rgba(239,68,68,${heat}), rgba(59,130,246,.08))">
-      <div class="flex justify-between text-sm font-black"><span>${s.sinif_adi}</span><span>${s.tik}</span></div>
+      <div class="flex justify-between gap-2 text-sm font-black"><span class="min-w-0 break-words">${s.sinif_adi}</span><span class="shrink-0">${s.tik}</span></div>
       <div class="text-[10px] text-slate-400 mt-1">${s.ogrenci} öğrenci · ${s.temiz} temiz · ${s.idari} idari</div>
       <div class="mt-2 h-2 rounded-full bg-slate-950 overflow-hidden"><div class="bar-fill h-full bg-red-400" style="width:${pct}%"></div></div>
     </div>`;
@@ -255,7 +255,7 @@ function renderIlkBes(data) {
   el.innerHTML = data.map((o, idx) => `
     <div class="float-in flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 px-3 py-2" style="animation-delay:${idx*70}ms">
       <div class="min-w-0">
-        <div class="font-black text-sm truncate">${idx + 1}. ${o.ad_soyad}</div>
+        <div class="font-black text-sm break-words">${idx + 1}. ${o.ad_soyad}</div>
         <div class="text-[11px] text-slate-500">${o.sinif_adi} · ${o.etiket || 'Temiz'}</div>
       </div>
       <div class="text-2xl font-black text-red-300">${o.tik_sayisi}</div>
@@ -271,12 +271,12 @@ function renderMaclar(maclar) {
   }
   el.innerHTML = maclar.map((m, idx) => `
     <article class="float-in rounded-2xl bg-slate-950/80 border border-cyan-500/20 p-3" style="animation-delay:${idx*60}ms">
-      <div class="flex justify-between gap-2">
-        <div class="font-black text-cyan-100">⚔️ ${m.sinif1_adi} - ${m.sinif2_adi}</div>
-        <div class="text-[10px] text-cyan-300">${m.seans || 'seans'} · ${m.durum || 'bekliyor'}</div>
+      <div class="flex flex-col sm:flex-row sm:justify-between gap-2">
+        <div class="font-black text-cyan-100 break-words">⚔️ ${m.sinif1_adi} - ${m.sinif2_adi}</div>
+        <div class="text-[10px] text-cyan-300 shrink-0">${m.seans || 'seans'} · ${m.durum || 'bekliyor'}</div>
       </div>
       <div class="text-xs text-slate-400 mt-1">${m.gorev || 'Görev bilgisi yok'}</div>
-      <div class="grid grid-cols-2 gap-2 mt-3">
+      <div class="grid sm:grid-cols-2 gap-2 mt-3">
         ${kadroHTML(m.sinif1_adi, m.kadro1 || [])}
         ${kadroHTML(m.sinif2_adi, m.kadro2 || [])}
       </div>
@@ -288,8 +288,8 @@ function renderMaclar(maclar) {
 function kadroHTML(baslik, kadro) {
   const oyuncular = kadro.slice(0, 6).map(o => `
     <div class="rounded-lg bg-white/5 border border-white/10 px-2 py-1">
-      <div class="font-bold text-[11px] truncate">${o.emoji || '⭐'} ${o.ad_soyad}</div>
-      <div class="text-[9px] text-slate-500 truncate">${o.mevki || 'Oyuncu'} · No ${o.ogr_no}</div>
+      <div class="font-bold text-[11px] break-words">${o.emoji || '⭐'} ${o.ad_soyad}</div>
+      <div class="text-[9px] text-slate-500 break-words">${o.mevki || 'Oyuncu'} · No ${o.ogr_no}</div>
     </div>
   `).join('');
   return `<div>
@@ -309,7 +309,7 @@ function renderOdevler(odevler) {
     const oran = Math.round((od.tamamlayan || 0) * 100 / toplam);
     return `<div class="float-in rounded-2xl bg-slate-950/80 border border-emerald-500/20 p-3" style="animation-delay:${idx*45}ms">
       <div class="flex justify-between gap-2">
-        <div class="font-black text-emerald-100 truncate">${od.baslik}</div>
+        <div class="font-black text-emerald-100 min-w-0 break-words">${od.baslik}</div>
         <div class="text-xs font-black text-emerald-300">%${oran}</div>
       </div>
       <div class="text-[11px] text-slate-400 mt-1">${od.sinif_adi} · ${od.ders || 'Genel'} · Son: ${od.son_tarih}</div>

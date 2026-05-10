@@ -10,14 +10,14 @@
     .pop { animation: pop .35s ease both; }
   </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
+<body class="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
   <main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
-    <header class="flex items-center justify-between gap-3">
-      <div>
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="min-w-0">
         <h1 class="text-2xl font-black">Oyun Merkezi</h1>
         <p class="text-sm text-slate-400">Sorulu, bulmacalı ve hafıza oyunlarıyla günlük pratik.</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <a href="{{ url_for('index') }}" class="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold">Ana Menü</a>
         <a href="{{ url_for('ogrenci_ben') }}" class="rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold">Profilime dön</a>
       </div>
@@ -39,9 +39,9 @@
     </section>
 
     <section class="rounded-3xl bg-slate-900 border border-slate-800 p-5 min-h-[360px]">
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h2 id="baslik" class="font-black text-xl">Bir oyun seç</h2>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <div class="rounded-full bg-slate-950 border border-slate-800 px-4 py-1 text-sm font-black">
             Puan: <span id="puan">0</span>
           </div>
@@ -51,7 +51,7 @@
         </div>
       </div>
       <div id="sonuc" class="hidden mb-3 rounded-xl px-4 py-2 text-sm font-bold"></div>
-      <div id="alan" class="text-slate-400">Üstteki oyun kartlarından birini seçerek başla.</div>
+      <div id="alan" class="text-slate-400 break-words">Üstteki oyun kartlarından birini seçerek başla.</div>
     </section>
   </main>
 
@@ -137,7 +137,7 @@ function kelimeOyunu() {
   document.getElementById('alan').innerHTML = `
     <div class="pop space-y-4">
       <div class="text-sm text-slate-400">İpucu: ${sec.ip}</div>
-      <div class="text-4xl font-black tracking-widest text-emerald-300">${karisik}</div>
+      <div class="text-2xl sm:text-4xl font-black tracking-widest text-emerald-300 break-words">${karisik}</div>
       <input id="kelimeCevap" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-3 text-white" placeholder="Kelimeyi yaz">
       <button onclick="kelimeKontrol('${sec.k}')" class="rounded-xl bg-emerald-600 px-4 py-2 font-black">Kontrol Et</button>
     </div>`;
@@ -172,7 +172,7 @@ function sec(btn) {
 function hafiza() {
   document.getElementById('baslik').textContent = '🃏 Hafıza Kartları';
   const kartlar = karistir(['A','A','B','B','C','C','D','D']);
-  document.getElementById('alan').innerHTML = `<div class="pop grid grid-cols-4 gap-3">${kartlar.map((k,i)=>`<button data-v="${k}" onclick="kartCevir(this)" class="h-24 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-3xl font-black">?</button>`).join('')}</div>`;
+  document.getElementById('alan').innerHTML = `<div class="pop grid grid-cols-2 sm:grid-cols-4 gap-3">${kartlar.map((k,i)=>`<button data-v="${k}" onclick="kartCevir(this)" class="h-20 sm:h-24 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-3xl font-black">?</button>`).join('')}</div>`;
 }
 let acik = [];
 function kartCevir(btn) {

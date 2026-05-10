@@ -10,14 +10,14 @@
     .urun { animation: rise .35s ease both; }
   </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
+<body class="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
 <main class="max-w-7xl mx-auto px-4 py-5 space-y-5">
   <header class="flex flex-wrap justify-between gap-3">
-    <div>
+    <div class="min-w-0">
       <h1 class="text-2xl font-black">Rozet Pazarı / Avatar Odası</h1>
-      <p class="text-sm text-slate-400">{{ ogrenci.ad_soyad }} · {{ gelisim.puan.xp }} XP · {{ urunler|length }} ürün</p>
+      <p class="text-sm text-slate-400 break-words">{{ ogrenci.ad_soyad }} · {{ gelisim.puan.xp }} XP · {{ urunler|length }} ürün</p>
     </div>
-    <a href="{{ url_for('gelisim_merkezi') }}" class="rounded-xl bg-slate-800 px-4 py-2 text-xs font-black">Ana Menü</a>
+    <a href="{{ url_for('gelisim_merkezi') }}" class="rounded-xl bg-slate-800 px-4 py-2 text-xs font-black h-fit">Ana Menü</a>
   </header>
 
   <section class="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -41,7 +41,7 @@
   {% for nadirlik in ['Yaygin', 'Nadir', 'Epik', 'Efsane', 'Mitik'] %}
   {% set grup = urunler|selectattr('nadirlik','equalto',nadirlik)|list %}
   <section id="{{ nadirlik }}" class="space-y-3">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-2">
       <h2 class="text-xl font-black">{{ nadirlik }} Ürünler</h2>
       <span class="text-xs text-slate-500">{{ grup|length }} seçenek</span>
     </div>
@@ -56,10 +56,10 @@
           {{ u.nadirlik }}
         </div>
         <div class="text-6xl">{{ u.emoji }}</div>
-        <div class="font-black mt-3 pr-16">{{ u.ad }}</div>
+        <div class="font-black mt-3 pr-16 break-words">{{ u.ad }}</div>
         <div class="flex items-center justify-between mt-2">
-          <span class="text-xs text-slate-400">{{ u.kategori }}</span>
-          <span class="text-sm font-black {{ s[2] }}">{{ u.fiyat }} XP</span>
+          <span class="text-xs text-slate-400 min-w-0 break-words">{{ u.kategori }}</span>
+          <span class="text-sm font-black {{ s[2] }} shrink-0">{{ u.fiyat }} XP</span>
         </div>
         <button class="mt-4 w-full rounded-xl {{ 'bg-slate-700 text-slate-400' if u.sahip else s[3] ~ ' hover:brightness-110 text-white' }} px-3 py-2 text-sm font-black"
                 {{ 'disabled' if u.sahip else '' }}>

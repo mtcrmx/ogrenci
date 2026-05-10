@@ -2,7 +2,7 @@
 {% block title %}{{ aktif.sinif_adi if aktif else 'Panel' }}{% endblock %}
 
 {% block body %}
-<div class="flex h-[calc(100vh-56px)]">
+<div class="flex min-h-[calc(100vh-56px)]">
 
   <!-- ══════════════════════════════════════════════════════════════
        Sol Kenar Çubuğu – Sınıf Listesi
@@ -101,14 +101,14 @@
   <!-- ══════════════════════════════════════════════════════════════
        Sağ: Ana İçerik
   ══════════════════════════════════════════════════════════════ -->
-  <main class="flex-1 overflow-y-auto bg-slate-100 lg:ml-0">
+  <main class="flex-1 min-w-0 bg-slate-100 lg:ml-0">
 
     {% if aktif %}
     <!-- Üst başlık + araçlar -->
-    <div class="sticky top-0 bg-white border-b border-slate-200 z-10 px-4 py-3
-                flex flex-wrap items-center gap-2">
-      <div class="flex-1 min-w-0">
-        <h2 class="font-bold text-slate-800 text-sm sm:text-base truncate">
+    <div class="sticky top-0 bg-white border-b border-slate-200 z-10 px-3 sm:px-4 py-3
+                flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+      <div class="w-full sm:flex-1 min-w-0">
+        <h2 class="font-bold text-slate-800 text-sm sm:text-base break-words">
           📚 {{ aktif.sinif_adi }} Şubesi —
           <span class="font-normal text-slate-500">{{ ogrenciler|length }} öğrenci</span>
         </h2>
@@ -120,17 +120,17 @@
       <input type="text" id="ara" placeholder="🔍 Ara..."
              oninput="filtrele()"
              class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm
-                    w-36 sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
 
       <!-- Mobil araç butonları -->
-      <div class="flex gap-1.5 sm:hidden">
+      <div class="flex gap-1.5 sm:hidden w-full">
         <a href="{{ url_for('yayin') }}" target="_blank"
-           class="bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          📺
+           class="flex-1 text-center bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+          📺 Yayın
         </a>
         <a href="{{ url_for('rapor_excel', sinif_id=aktif.id) }}"
-           class="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          📊
+           class="flex-1 text-center bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+          📊 Excel
         </a>
       </div>
     </div>
@@ -363,13 +363,13 @@
   'uyari':   'bg-amber-100   text-amber-800',
   'tehlike': 'bg-red-100     text-red-800',
 } %}
-<div class="ogrenci-kart flex items-center gap-2 rounded-xl border px-3 py-2.5
+<div class="ogrenci-kart flex flex-wrap sm:flex-nowrap items-center gap-2 rounded-xl border px-3 py-2.5
             slide-in {{ durum_cls[o.durum] }}"
      data-ad="{{ o.ad_soyad }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}">
 
   <!-- Emoji + Ad -->
   <div class="flex-1 min-w-0">
-    <div class="font-bold text-slate-800 text-sm truncate">
+    <div class="font-bold text-slate-800 text-sm break-words">
       <span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}
     </div>
     <div class="text-xs text-slate-500">No: {{ o.ogr_no }}</div>
@@ -393,7 +393,7 @@
   </div>
 
   <!-- Butonlar -->
-  <div class="flex gap-1 flex-shrink-0">
+  <div class="flex gap-1 flex-shrink-0 ml-auto">
     <button onclick="tikModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
             class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800
                    text-white text-xs font-bold px-2.5 py-1.5 rounded-lg
@@ -582,11 +582,11 @@ function kartHTML(o, sinifId) {
   if (o.tik_sayisi > 3) noktalar += `+${o.tik_sayisi - 3}`;
 
   return `
-  <div class="ogrenci-kart flex items-center gap-2 rounded-xl border px-3 py-2.5
+  <div class="ogrenci-kart flex flex-wrap sm:flex-nowrap items-center gap-2 rounded-xl border px-3 py-2.5
               slide-in ${durumCls}"
        data-ad="${o.ad_soyad}" data-id="${o.id}" data-sinif="${sinifId}">
     <div class="flex-1 min-w-0">
-      <div class="font-bold text-slate-800 text-sm truncate">
+      <div class="font-bold text-slate-800 text-sm break-words">
         <span class="mr-1">${o.emoji}</span>${o.ad_soyad}
       </div>
       <div class="text-xs text-slate-500">No: ${o.ogr_no}</div>
@@ -597,7 +597,7 @@ function kartHTML(o, sinifId) {
       </span>
       <span class="text-xs hidden sm:block text-slate-400">${noktalar}</span>
     </div>
-    <div class="flex gap-1 flex-shrink-0">
+    <div class="flex gap-1 flex-shrink-0 ml-auto">
       <button onclick="tikModalAc(${o.id},'${o.ad_soyad.replace(/'/g,"\\'")}',${sinifId})"
               class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold
                      px-2.5 py-1.5 rounded-lg transition whitespace-nowrap">

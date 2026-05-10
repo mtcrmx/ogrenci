@@ -15,14 +15,14 @@
       <h1 class="text-2xl font-black text-slate-900">Detaylı Okul Raporu</h1>
       <p class="text-sm text-slate-500">Grafikler, durum dağılımı, sınıf karşılaştırması ve risk ısı haritası</p>
     </div>
-    <div class="flex flex-wrap gap-2">
-      <a href="{{ url_for('rapor_excel_detayli') }}" class="rounded-xl bg-green-700 text-white px-4 py-2 text-sm font-bold">
+    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+      <a href="{{ url_for('rapor_excel_detayli') }}" class="flex-1 sm:flex-none text-center rounded-xl bg-green-700 text-white px-4 py-2 text-sm font-bold">
         Detaylı Excel İndir
       </a>
-      <a href="{{ url_for('rapor_excel') }}" class="rounded-xl bg-emerald-600 text-white px-4 py-2 text-sm font-bold">
+      <a href="{{ url_for('rapor_excel') }}" class="flex-1 sm:flex-none text-center rounded-xl bg-emerald-600 text-white px-4 py-2 text-sm font-bold">
         Excel Tablo
       </a>
-      <a href="{{ url_for('rapor_ozet_csv') }}" class="rounded-xl bg-teal-700 text-white px-4 py-2 text-sm font-bold">CSV İndir</a>
+      <a href="{{ url_for('rapor_ozet_csv') }}" class="flex-1 sm:flex-none text-center rounded-xl bg-teal-700 text-white px-4 py-2 text-sm font-bold">CSV İndir</a>
     </div>
   </header>
 
@@ -53,14 +53,14 @@
         {% set max_tik = sinif_ozetleri|map(attribute='tik')|max or 1 %}
         {% set oran = (s.tik * 100 / max_tik)|round(0) %}
         <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
-          <div class="flex justify-between text-sm font-black">
-            <span>{{ s.sinif_adi }}</span>
+          <div class="flex flex-col sm:flex-row sm:justify-between gap-1 text-sm font-black">
+            <span class="break-words">{{ s.sinif_adi }}</span>
             <span>{{ s.tik }} tik · ort. {{ s.ortalama }}</span>
           </div>
           <div class="mt-2 h-2 rounded-full bg-slate-200 overflow-hidden">
             <div class="bar-fill h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width:{{ oran }}%"></div>
           </div>
-          <div class="grid grid-cols-5 gap-1 mt-3 text-[10px] font-bold text-center">
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-1 mt-3 text-[10px] font-bold text-center">
             <span class="rounded bg-emerald-100 text-emerald-800 py-1">Temiz {{ s.dagilim.temiz }}</span>
             <span class="rounded bg-amber-100 text-amber-800 py-1">Uyarı {{ s.dagilim.uyari }}</span>
             <span class="rounded bg-orange-100 text-orange-800 py-1">Veli {{ s.dagilim.veli }}</span>
@@ -85,7 +85,7 @@
       ] %}
       {% set oran = (sayi * 100 / toplam)|round(0) %}
       <div class="mb-3">
-        <div class="flex justify-between text-xs font-bold mb-1"><span>{{ ad }}</span><span>{{ sayi }} öğrenci</span></div>
+        <div class="flex justify-between gap-2 text-xs font-bold mb-1"><span>{{ ad }}</span><span class="shrink-0">{{ sayi }} öğrenci</span></div>
         <div class="h-3 bg-white/10 rounded-full overflow-hidden"><div class="bar-fill h-full {{ renk }}" style="width:{{ oran }}%"></div></div>
       </div>
       {% endfor %}
@@ -94,7 +94,7 @@
 
   <section class="anim-card rounded-3xl bg-white border border-slate-200 p-5 shadow-sm">
     <div class="flex items-center justify-between gap-3 mb-4">
-      <div>
+      <div class="min-w-0">
         <h2 class="font-black">Risk Isı Haritası</h2>
         <p class="text-xs text-slate-500">Tik yoğunluğu yüksek öğrenciler daha sıcak renkle görünür.</p>
       </div>
@@ -105,8 +105,8 @@
       <div class="heat-cell rounded-2xl border p-3"
            style="background:linear-gradient(135deg, rgba(239,68,68,{{ sicaklik / 140 }}), rgba(251,191,36,.10)); border-color:rgba(239,68,68,.22)">
         <div class="flex justify-between gap-2">
-          <span class="font-black text-sm text-slate-900">{{ h.ad }}</span>
-          <span class="font-black text-red-700">{{ h.tik }}</span>
+          <span class="font-black text-sm text-slate-900 min-w-0 break-words">{{ h.ad }}</span>
+          <span class="font-black text-red-700 shrink-0">{{ h.tik }}</span>
         </div>
         <div class="text-xs text-slate-600 mt-1">{{ h.sinif }} · {{ h.etiket }}</div>
       </div>
@@ -121,9 +121,9 @@
       <h2 class="font-black mb-3">Lig liderleri</h2>
       <div class="grid gap-2">
         {% for s in tablo[:5] %}
-        <div class="flex justify-between rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2 text-sm">
-          <span class="font-bold">{{ loop.index }}. {{ s.sinif_adi }}</span>
-          <span>{{ s.puan }} puan</span>
+        <div class="flex justify-between gap-2 rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2 text-sm">
+          <span class="font-bold min-w-0 break-words">{{ loop.index }}. {{ s.sinif_adi }}</span>
+          <span class="shrink-0">{{ s.puan }} puan</span>
         </div>
         {% endfor %}
       </div>

@@ -6,14 +6,14 @@
   <title>Gelişim Merkezi</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
+<body class="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
   <main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
-    <header class="flex items-center justify-between gap-3">
-      <div>
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="min-w-0">
         <h1 class="text-2xl font-black">Gelişim Merkezi</h1>
-        <p class="text-sm text-slate-400">{{ ogrenci.ad_soyad }} · olumlu davranış, görev, sandık ve avatar sistemi</p>
+        <p class="text-sm text-slate-400 break-words">{{ ogrenci.ad_soyad }} · olumlu davranış, görev, sandık ve avatar sistemi</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <a href="{{ url_for('index') }}" class="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold">Ana Menü</a>
         <a href="{{ url_for('pazar') }}" class="rounded-xl bg-amber-700 px-3 py-2 text-xs font-bold">Pazar</a>
         <a href="{{ url_for('ogrenci_karne') }}" class="rounded-xl bg-blue-700 px-3 py-2 text-xs font-bold">Karne</a>
@@ -35,10 +35,10 @@
       </div>
 
       <div class="rounded-3xl bg-slate-900 border border-slate-800 p-5">
-        <div class="flex justify-between gap-3">
-          <div>
+        <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
+          <div class="min-w-0">
             <h2 class="font-black text-xl">Günün kişisel görevi</h2>
-            <p class="text-sm text-slate-400">{{ gelisim.gorev.gorev }}</p>
+            <p class="text-sm text-slate-400 break-words">{{ gelisim.gorev.gorev }}</p>
           </div>
           <span class="rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-3 py-1 text-xs font-black h-fit">
             +{{ gelisim.gorev.xp }} XP
@@ -64,7 +64,7 @@
         <div class="mt-4 space-y-2">
           {% for s in gelisim.sandiklar %}
           <div class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-            <span class="font-bold">{{ s.sandik }}</span> · {{ s.odul }} · +{{ s.xp }} XP
+            <span class="font-bold">{{ s.sandik }}</span> · <span class="break-words">{{ s.odul }}</span> · +{{ s.xp }} XP
           </div>
           {% else %}
           <p class="text-sm text-slate-500">Henüz sandık açılmadı.</p>
@@ -129,12 +129,12 @@
     </section>
 
     <section class="rounded-3xl bg-slate-900 border border-slate-800 p-5">
-      <div class="flex items-center justify-between gap-3 mb-3">
-        <div>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+        <div class="min-w-0">
           <h2 class="font-black text-lg">Oyunlardan Gelen XP</h2>
           <p class="text-sm text-slate-400">Oyun merkezinde kazanılan puanlar günlük limit dahilinde XP'ye dönüşür.</p>
         </div>
-        <a href="{{ url_for('oyunlar') }}" class="rounded-xl bg-indigo-700 px-3 py-2 text-xs font-black">Oyunlara Git</a>
+        <a href="{{ url_for('oyunlar') }}" class="rounded-xl bg-indigo-700 px-3 py-2 text-xs font-black w-fit">Oyunlara Git</a>
       </div>
       <div class="grid md:grid-cols-4 gap-2">
         {% for o in gelisim.oyunlar %}
