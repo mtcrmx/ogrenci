@@ -1,0 +1,160 @@
+<div id="alan-tanitimi"
+     class="fixed bottom-4 right-4 z-[9998] hidden w-[calc(100%-2rem)] max-w-md">
+  <div class="overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+    <div class="relative bg-gradient-to-r from-blue-800 via-indigo-700 to-cyan-700 px-5 py-4 text-white">
+      <div class="absolute right-4 top-4 flex gap-1">
+        <span class="h-2 w-2 animate-pulse rounded-full bg-white/90"></span>
+        <span class="h-2 w-2 animate-pulse rounded-full bg-white/70 [animation-delay:120ms]"></span>
+        <span class="h-2 w-2 animate-pulse rounded-full bg-white/50 [animation-delay:240ms]"></span>
+      </div>
+      <div class="text-xs font-black uppercase tracking-wide text-cyan-100">Yardımcı</div>
+      <h2 class="mt-1 pr-14 text-lg font-black">{{ tanitim.baslik }}</h2>
+      <p class="mt-1 pr-8 text-sm text-blue-100">{{ tanitim.alt }}</p>
+    </div>
+
+    <div class="px-5 py-4">
+      <div class="mb-3 flex items-center gap-2" data-tanitim-noktalar></div>
+      <div class="transition-all duration-300" data-tanitim-icerik>
+        <div class="text-xs font-black uppercase tracking-wide text-blue-700" data-tanitim-sayi></div>
+        <h3 class="mt-1 text-xl font-black text-slate-900" data-tanitim-baslik></h3>
+        <p class="mt-2 min-h-16 text-sm leading-6 text-slate-600" data-tanitim-metin></p>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <button type="button"
+              data-tanitim-bir-daha
+              class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+        Bir daha gösterme
+      </button>
+      <div class="flex gap-2">
+        <button type="button"
+                data-tanitim-geri
+                class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+          Geri
+        </button>
+        <button type="button"
+                data-tanitim-ileri
+                class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800">
+          İleri
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="alan-tanitimi-ac"
+        type="button"
+        class="fixed bottom-4 right-4 z-[9997] hidden rounded-full bg-blue-700 px-4 py-3 text-sm font-black text-white shadow-xl ring-1 ring-white/30 hover:bg-blue-800">
+  Yardımcı
+</button>
+
+<style>
+  @keyframes alanTanitimGiris {
+    from { opacity: 0; transform: translateY(18px) scale(.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes alanTanitimParla {
+    0%, 100% { box-shadow: 0 18px 45px rgba(15, 23, 42, .22); }
+    50% { box-shadow: 0 22px 55px rgba(37, 99, 235, .35); }
+  }
+  #alan-tanitimi.aktif {
+    display: block;
+    animation: alanTanitimGiris .34s ease-out both, alanTanitimParla 2.2s ease-in-out infinite;
+  }
+  #alan-tanitimi-ac.aktif {
+    display: inline-flex;
+    animation: alanTanitimGiris .28s ease-out both;
+  }
+</style>
+
+<script>
+(function () {
+  const panel = document.getElementById("alan-tanitimi");
+  const opener = document.getElementById("alan-tanitimi-ac");
+  if (!panel || !opener) return;
+
+  const steps = {{ tanitim.adimlar|tojson }};
+  const key = "alan-tanitimi-okundu-{{ tanitim_hedef }}-v1";
+  const content = panel.querySelector("[data-tanitim-icerik]");
+  const countEl = panel.querySelector("[data-tanitim-sayi]");
+  const titleEl = panel.querySelector("[data-tanitim-baslik]");
+  const textEl = panel.querySelector("[data-tanitim-metin]");
+  const dotsEl = panel.querySelector("[data-tanitim-noktalar]");
+  const backBtn = panel.querySelector("[data-tanitim-geri]");
+  const nextBtn = panel.querySelector("[data-tanitim-ileri]");
+  const dismissBtn = panel.querySelector("[data-tanitim-bir-daha]");
+  let current = 0;
+
+  function renderDots() {
+    dotsEl.innerHTML = "";
+    steps.forEach(function (_, index) {
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "h-2 rounded-full transition-all " + (index === current ? "w-8 bg-blue-700" : "w-2 bg-slate-300");
+      dot.addEventListener("click", function () {
+        current = index;
+        render();
+      });
+      dotsEl.appendChild(dot);
+    });
+  }
+
+  function render() {
+    const step = steps[current];
+    content.style.opacity = "0";
+    content.style.transform = "translateY(8px)";
+    window.setTimeout(function () {
+      countEl.textContent = (current + 1) + " / " + steps.length;
+      titleEl.textContent = step.etiket;
+      textEl.textContent = step.metin;
+      backBtn.disabled = current === 0;
+      backBtn.classList.toggle("opacity-40", current === 0);
+      nextBtn.textContent = current === steps.length - 1 ? "Bitir" : "İleri";
+      renderDots();
+      content.style.opacity = "1";
+      content.style.transform = "translateY(0)";
+    }, 120);
+  }
+
+  function show() {
+    opener.classList.remove("aktif");
+    panel.classList.add("aktif");
+    render();
+  }
+
+  function hide(showOpener) {
+    panel.classList.remove("aktif");
+    if (showOpener) opener.classList.add("aktif");
+  }
+
+  backBtn.addEventListener("click", function () {
+    if (current > 0) {
+      current -= 1;
+      render();
+    }
+  });
+
+  nextBtn.addEventListener("click", function () {
+    if (current < steps.length - 1) {
+      current += 1;
+      render();
+      return;
+    }
+    hide(true);
+  });
+
+  dismissBtn.addEventListener("click", function () {
+    localStorage.setItem(key, "1");
+    hide(true);
+  });
+
+  opener.addEventListener("click", show);
+
+  if (localStorage.getItem(key)) {
+    opener.classList.add("aktif");
+  } else {
+    window.setTimeout(show, 650);
+  }
+})();
+</script>

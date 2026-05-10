@@ -130,6 +130,46 @@ def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
     return request.endpoint in ana_ekranlar.get(hedef, set())
 
 
+def _alan_tanitimi_verisi(hedef: str) -> dict | None:
+    veriler = {
+        "ogretmen": {
+            "baslik": "Öğretmen paneline hoş geldiniz",
+            "alt": "Okul takibi için ana alanları hızlıca tanıyalım.",
+            "adimlar": [
+                {"etiket": "Ana Menü", "metin": "Sınıflarınızı, öğrenci kartlarını ve günlük işlemleri buradan yönetirsiniz."},
+                {"etiket": "Tik ve olumlu puan", "metin": "Öğrenci kartlarından davranış kaydı, olumlu puan ve geçmiş takibi yapabilirsiniz."},
+                {"etiket": "Süper Lig", "metin": "Sınıf maçlarını, puan tablosunu, kartları ve maç sonuçlarını takip eder."},
+                {"etiket": "Yayın ekranı", "metin": "Akıllı tahta veya büyük ekranda sınıf durumunu canlı göstermek için kullanılır."},
+                {"etiket": "Raporlar", "metin": "Özet rapor ve Excel çıktılarıyla sınıf ve okul durumunu arşivleyebilirsiniz."},
+                {"etiket": "Bilgilendirme", "metin": "Yönetim duyuruları öğretmen, öğrenci ve velilere girişte pencere olarak ulaşır."},
+            ],
+        },
+        "ogrenci": {
+            "baslik": "Öğrenci alanına hoş geldin",
+            "alt": "Kendi durumunu ve gelişimini buradan takip edebilirsin.",
+            "adimlar": [
+                {"etiket": "Benim durumum", "metin": "Puanlarını, tik durumunu, rozetlerini ve sınıf içindeki yerini görürsün."},
+                {"etiket": "Görevler", "metin": "Gelişim görevlerini tamamlayarak puan ve ödül kazanabilirsin."},
+                {"etiket": "Maçlar", "metin": "Sınıf maçlarını, takım durumunu ve lig tablosunu takip edebilirsin."},
+                {"etiket": "İttifaklar", "metin": "Arkadaşlarınla görev oluşturup öğretmen onayıyla birlikte ilerleyebilirsin."},
+                {"etiket": "Pazar ve oyunlar", "metin": "Kazandığın puanları eğlenceli alanlarda kullanabilir, oyun puanlarını görebilirsin."},
+            ],
+        },
+        "veli": {
+            "baslik": "Veli ekranına hoş geldiniz",
+            "alt": "Öğrencinizin okul sürecini kısa ve anlaşılır şekilde takip edebilirsiniz.",
+            "adimlar": [
+                {"etiket": "Genel özet", "metin": "Öğrencinizin güncel durumunu, risk seviyesini ve gelişim bilgisini görürsünüz."},
+                {"etiket": "Davranış geçmişi", "metin": "Tik kayıtları, olumlu gelişmeler ve sık görülen durumlar bu alanda izlenir."},
+                {"etiket": "Ödevler", "metin": "Verilen ve tamamlanan ödevlerin durumunu kontrol edebilirsiniz."},
+                {"etiket": "Öğretmen notları", "metin": "Öğretmenin veliye açık bıraktığı notlar burada görünür."},
+                {"etiket": "Karne", "metin": "Akıllı karne ekranı öğrencinin güçlü yönlerini ve destek alanlarını özetler."},
+            ],
+        },
+    }
+    return veriler.get(hedef)
+
+
 @app.context_processor
 def _bilgilendirme_context():
     return {
@@ -149,15 +189,25 @@ def _bilgilendirme_modal_ekle(response):
             return response
         if not _bilgilendirme_ana_ekran_mi(hedef):
             return response
+        parcaciklar = []
         bilgi = son_bilgilendirme(hedef)
-        if not bilgi:
+        if bilgi:
+            parcaciklar.append(render_template(
+                "_bilgilendirme_modal.html",
+                aktif_bilgilendirme=bilgi,
+                bilgilendirme_hedef=hedef,
+            ))
+        tanitim = _alan_tanitimi_verisi(hedef)
+        if tanitim:
+            parcaciklar.append(render_template(
+                "_alan_tanitimi.html",
+                tanitim=tanitim,
+                tanitim_hedef=hedef,
+            ))
+        if not parcaciklar:
             return response
-        modal = render_template(
-            "_bilgilendirme_modal.html",
-            aktif_bilgilendirme=bilgi,
-            bilgilendirme_hedef=hedef,
-        )
         html = response.get_data(as_text=True)
+        modal = "\n".join(parcaciklar)
         if "</body>" in html:
             html = html.replace("</body>", modal + "\n</body>")
         else:
