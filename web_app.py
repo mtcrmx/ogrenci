@@ -1038,16 +1038,16 @@ def api_tik_dondur():
 # ══════════════════════════════════════════════════════════════════════════
 
 QUIZ_DERSLER = {
-    5: ["Turkce", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "Ingilizce", "Din Kulturu"],
-    6: ["Turkce", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "Ingilizce", "Din Kulturu"],
-    7: ["Turkce", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "Ingilizce", "Din Kulturu"],
-    8: ["Turkce", "Matematik", "Fen Bilimleri", "T.C. Inkilap Tarihi", "Ingilizce", "Din Kulturu"],
+    5: ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "İngilizce", "Din Kültürü"],
+    6: ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "İngilizce", "Din Kültürü"],
+    7: ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "İngilizce", "Din Kültürü"],
+    8: ["Türkçe", "Matematik", "Fen Bilimleri", "T.C. İnkılap Tarihi", "İngilizce", "Din Kültürü"],
 }
 
 DERS_EMOJI = {
-    "Turkce": "📚", "Matematik": "🔢", "Fen Bilimleri": "🔬",
-    "Sosyal Bilgiler": "🌍", "T.C. Inkilap Tarihi": "🏛️",
-    "Ingilizce": "🇬🇧", "Din Kulturu": "🕌",
+    "Türkçe": "📚", "Matematik": "🔢", "Fen Bilimleri": "🔬",
+    "Sosyal Bilgiler": "🌍", "T.C. İnkılap Tarihi": "🏛️",
+    "İngilizce": "🇬🇧", "Din Kültürü": "🕌",
 }
 
 
