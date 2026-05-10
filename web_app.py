@@ -3,7 +3,7 @@ web_app.py  —  Erenler Cumhuriyet Ortaokulu Ogrenci Takip
 (Flask rotalari <int:...> ile tam; GitHub/Render senkron)
 """
 
-import os, tempfile
+import os, tempfile, unicodedata
 from datetime import datetime
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -50,6 +50,7 @@ from database import (
     akilli_ogrenci_karnesi, ogretmen_bildirim_merkezi, gelisim_ligi,
     hikaye_modu, pazar_urunleri_ogrenci, pazar_satin_al, ogretmen_notu_ekle,
     oyun_puani_kaydet, GOREV_SABLONLARI,
+    bilgilendirme_ekle, bilgilendirme_listesi, son_bilgilendirme,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 
@@ -63,6 +64,10 @@ SIFIR_PAROLA = "1234"
 ADMIN_SIFRE  = "ECadmin"
 OGRENCI_SIFRE = os.environ.get("OGRENCI_SIFRE", "ogrenci")
 VELI_SIFRE = os.environ.get("VELI_SIFRE", "veli")
+BILGILENDIRME_YETKILILERI = os.environ.get(
+    "BILGILENDIRME_YETKILILERI",
+    "ADEM AKGÜL,YUSUF ERTÜRK",
+)
 
 initialize_db()
 
@@ -88,6 +93,80 @@ def ogrenci_giris_zorunlu(fn):
             return redirect(url_for("ogrenci_giris", next=request.path))
         return fn(*args, **kwargs)
     return wrapper
+
+
+def _ad_normalize(ad: str | None) -> str:
+    metin = unicodedata.normalize("NFKD", ad or "")
+    metin = "".join(ch for ch in metin if not unicodedata.combining(ch))
+    return metin.upper().strip()
+
+
+def bilgilendirme_yetkili_mi() -> bool:
+    ogretmen = _ad_normalize(session.get("ogretmen_adi"))
+    yetkililer = {
+        _ad_normalize(ad)
+        for ad in BILGILENDIRME_YETKILILERI.split(",")
+        if ad.strip()
+    }
+    return "*" in yetkililer or ogretmen in yetkililer
+
+
+def _bilgilendirme_hedefi() -> str | None:
+    if session.get("veli_ogrenci_id"):
+        return "veli"
+    if session.get("ogrenci_giris"):
+        return "ogrenci"
+    if session.get("ogretmen_id"):
+        return "ogretmen"
+    return None
+
+
+def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
+    ana_ekranlar = {
+        "ogretmen": {"dashboard"},
+        "ogrenci": {"ogrenci_gorunum", "ogrenci_ben"},
+        "veli": {"veli_panel"},
+    }
+    return request.endpoint in ana_ekranlar.get(hedef, set())
+
+
+@app.context_processor
+def _bilgilendirme_context():
+    return {
+        "bilgilendirme_yetkili": bilgilendirme_yetkili_mi(),
+    }
+
+
+@app.after_request
+def _bilgilendirme_modal_ekle(response):
+    try:
+        if response.direct_passthrough:
+            return response
+        if not (response.content_type or "").startswith("text/html"):
+            return response
+        hedef = _bilgilendirme_hedefi()
+        if not hedef:
+            return response
+        if not _bilgilendirme_ana_ekran_mi(hedef):
+            return response
+        bilgi = son_bilgilendirme(hedef)
+        if not bilgi:
+            return response
+        modal = render_template(
+            "_bilgilendirme_modal.html",
+            aktif_bilgilendirme=bilgi,
+            bilgilendirme_hedef=hedef,
+        )
+        html = response.get_data(as_text=True)
+        if "</body>" in html:
+            html = html.replace("</body>", modal + "\n</body>")
+        else:
+            html += modal
+        response.set_data(html)
+        response.headers["Content-Length"] = len(response.get_data())
+    except Exception:
+        pass
+    return response
 
 
 # Tik seviye sistemi: 3-Uyari / 6-Veli / 9-Tutanak / 12-Disiplin
@@ -557,6 +636,61 @@ def admin_sifreler():
 # ══════════════════════════════════════════════════════════════════════════
 # Ana Panel
 # ══════════════════════════════════════════════════════════════════════════
+
+@app.route("/bilgilendirme", methods=["GET", "POST"])
+@giris_zorunlu
+def bilgilendirme_yonetimi():
+    hedefler = [
+        ("herkes", "Herkes"),
+        ("ogretmen", "Öğretmenler"),
+        ("ogrenci", "Öğrenciler"),
+        ("veli", "Veliler"),
+    ]
+    hedef_adlari = dict(hedefler)
+    if not bilgilendirme_yetkili_mi():
+        return render_template(
+            "bilgilendirme.html",
+            yetki_yok=True,
+            hedefler=hedefler,
+            hedef_adlari=hedef_adlari,
+            duyurular=bilgilendirme_listesi(10),
+        ), 403
+
+    hata = None
+    basari = None
+    secili_hedef = request.form.get("hedef", "herkes")
+    baslik = request.form.get("baslik", "").strip()
+    metin = request.form.get("metin", "").strip()
+
+    if request.method == "POST":
+        if not baslik:
+            hata = "Başlık boş bırakılamaz."
+        elif not metin:
+            hata = "Bilgilendirme metni boş bırakılamaz."
+        else:
+            bilgilendirme_ekle(
+                baslik=baslik,
+                metin=metin,
+                hedef=secili_hedef,
+                yayinlayan=session.get("ogretmen_adi", "Yönetim"),
+            )
+            basari = "Bilgilendirme yayınlandı. Seçilen kişiler bir sonraki ana ekran açılışında görecek."
+            baslik = ""
+            metin = ""
+
+    return render_template(
+        "bilgilendirme.html",
+        yetki_yok=False,
+        hedefler=hedefler,
+        hedef_adlari=hedef_adlari,
+        secili_hedef=secili_hedef,
+        baslik=baslik,
+        metin=metin,
+        hata=hata,
+        basari=basari,
+        duyurular=bilgilendirme_listesi(20),
+    )
+
 
 @app.route("/dashboard")
 @giris_zorunlu

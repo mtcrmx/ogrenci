@@ -239,6 +239,71 @@ def initialize_db():
     con.close()
 
 
+def _bilgilendirme_init(con: sqlite3.Connection):
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS bilgilendirmeler (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            baslik      TEXT NOT NULL,
+            metin       TEXT NOT NULL,
+            hedef       TEXT NOT NULL DEFAULT 'herkes',
+            yayinlayan  TEXT NOT NULL,
+            tarih       TEXT NOT NULL,
+            aktif       INTEGER NOT NULL DEFAULT 1
+        )
+    """)
+    con.commit()
+
+
+def bilgilendirme_ekle(baslik: str, metin: str, hedef: str, yayinlayan: str) -> dict:
+    hedefler = {"herkes", "ogretmen", "ogrenci", "veli"}
+    hedef = hedef if hedef in hedefler else "herkes"
+    con = _conn()
+    _bilgilendirme_init(con)
+    tarih = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cur = con.execute("""
+        INSERT INTO bilgilendirmeler (baslik, metin, hedef, yayinlayan, tarih)
+        VALUES (?, ?, ?, ?, ?)
+    """, (baslik.strip(), metin.strip(), hedef, yayinlayan.strip(), tarih))
+    con.commit()
+    row = con.execute(
+        "SELECT * FROM bilgilendirmeler WHERE id = ?",
+        (cur.lastrowid,)
+    ).fetchone()
+    con.close()
+    return dict(row)
+
+
+def bilgilendirme_listesi(limit: int = 20) -> list[dict]:
+    con = _conn()
+    _bilgilendirme_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT *
+        FROM bilgilendirmeler
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,)).fetchall()]
+    con.close()
+    return rows
+
+
+def son_bilgilendirme(hedef: str | None) -> dict | None:
+    hedefler = {"ogretmen", "ogrenci", "veli"}
+    hedef = hedef if hedef in hedefler else None
+    if hedef is None:
+        return None
+    con = _conn()
+    _bilgilendirme_init(con)
+    row = con.execute("""
+        SELECT *
+        FROM bilgilendirmeler
+        WHERE aktif = 1 AND hedef IN ('herkes', ?)
+        ORDER BY id DESC
+        LIMIT 1
+    """, (hedef,)).fetchone()
+    con.close()
+    return dict(row) if row else None
+
+
 def _sifre_uret() -> dict[str, str]:
     """Alfabetik sırayla EC100'den başlayan şifre haritası döndürür."""
     sirali = sorted(_OGRETMEN_SINIF.keys())
