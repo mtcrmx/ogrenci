@@ -47,6 +47,9 @@ from database import (
     odev_tamamlandi_kaldir, ogrenci_odevleri,
     gelisim_ozeti, gelisim_gorev_tamamla, sandik_ac, telafi_gorevi_olustur,
     tebrik_gonder, haftalik_veli_ozeti,
+    akilli_ogrenci_karnesi, ogretmen_bildirim_merkezi, gelisim_ligi,
+    hikaye_modu, pazar_urunleri_ogrenci, pazar_satin_al, ogretmen_notu_ekle,
+    GOREV_SABLONLARI,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 
@@ -423,6 +426,67 @@ def gelisim_tebrik_route():
     if gonderen_id and alan_id:
         tebrik_gonder(int(gonderen_id), alan_id, mesaj)
     return redirect(url_for("gelisim_merkezi"))
+
+
+@app.route("/pazar")
+@ogrenci_giris_zorunlu
+def pazar():
+    ogrenci_id = session.get("ogrenci_id")
+    ozet = _ogrenci_ozeti(int(ogrenci_id)) if ogrenci_id else None
+    urunler = pazar_urunleri_ogrenci(int(ogrenci_id)) if ogrenci_id else []
+    return render_template("pazar.html", **ozet, urunler=urunler)
+
+
+@app.route("/pazar/satin-al", methods=["POST"])
+@ogrenci_giris_zorunlu
+def pazar_satin_al_route():
+    ogrenci_id = session.get("ogrenci_id")
+    urun = request.form.get("urun_kodu", "")
+    if ogrenci_id:
+        session["pazar_sonuc"] = pazar_satin_al(int(ogrenci_id), urun)
+    return redirect(url_for("pazar"))
+
+
+@app.route("/karne")
+@ogrenci_giris_zorunlu
+def ogrenci_karne():
+    ogrenci_id = session.get("ogrenci_id")
+    if not ogrenci_id:
+        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_karne")))
+    return render_template("karne.html", karne=akilli_ogrenci_karnesi(int(ogrenci_id)))
+
+
+@app.route("/veli/karne")
+def veli_karne():
+    ogrenci_id = session.get("veli_ogrenci_id")
+    if not ogrenci_id:
+        return redirect(url_for("veli_giris"))
+    return render_template("karne.html", karne=akilli_ogrenci_karnesi(int(ogrenci_id)), veli=True)
+
+
+@app.route("/ogretmen/merkez")
+@giris_zorunlu
+def ogretmen_merkez():
+    return render_template("ogretmen_merkez.html",
+                           merkez=ogretmen_bildirim_merkezi(),
+                           sablonlar=GOREV_SABLONLARI)
+
+
+@app.route("/ogretmen/not", methods=["POST"])
+@giris_zorunlu
+def ogretmen_not_route():
+    ogrenci_id = request.form.get("ogrenci_id", type=int)
+    not_metni = request.form.get("not_metni", "")
+    if ogrenci_id:
+        ogretmen_notu_ekle(ogrenci_id, session["ogretmen_id"], not_metni,
+                           request.form.get("veliye_acik") == "1")
+    return redirect(url_for("ogretmen_merkez"))
+
+
+@app.route("/gelisim-ligi")
+@giris_zorunlu
+def gelisim_ligi_sayfa():
+    return render_template("gelisim_ligi.html", lig=gelisim_ligi(), hikaye=hikaye_modu())
 
 
 @app.route("/veli/giris", methods=["GET", "POST"])

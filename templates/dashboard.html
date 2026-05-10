@@ -193,6 +193,20 @@
           <div class="font-black text-sm leading-tight">Rapor</div>
           <div class="text-[10px] text-teal-600 mt-0.5">Grafik ve CSV</div>
         </a>
+        <a href="{{ url_for('ogretmen_merkez') }}"
+           class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3
+                  text-emerald-900 hover:bg-emerald-100 transition">
+          <div class="text-lg">🧭</div>
+          <div class="font-black text-sm leading-tight">Merkez</div>
+          <div class="text-[10px] text-emerald-600 mt-0.5">Risk ve notlar</div>
+        </a>
+        <a href="{{ url_for('gelisim_ligi_sayfa') }}"
+           class="rounded-xl border border-orange-200 bg-orange-50 px-3 py-3
+                  text-orange-900 hover:bg-orange-100 transition">
+          <div class="text-lg">🌟</div>
+          <div class="font-black text-sm leading-tight">Gelişim Ligi</div>
+          <div class="text-[10px] text-orange-600 mt-0.5">Hikaye modu</div>
+        </a>
         <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
            class="rounded-xl border border-slate-200 bg-white px-3 py-3
                   text-slate-900 hover:bg-slate-50 transition">

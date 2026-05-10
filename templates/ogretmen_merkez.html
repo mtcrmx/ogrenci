@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Öğretmen Merkezi{% endblock %}
+{% block body %}
+<main class="max-w-7xl mx-auto px-4 py-5 space-y-5">
+  <header>
+    <h1 class="text-2xl font-black text-slate-900">Öğretmen Bildirim Merkezi</h1>
+    <p class="text-sm text-slate-500">Bugün ilgilenilecek öğrenciler, ödev eksikleri ve telafi önerileri.</p>
+  </header>
+  <section class="grid lg:grid-cols-3 gap-4">
+    <div class="rounded-3xl bg-white border p-4">
+      <h2 class="font-black mb-3">Risk yükselenler</h2>
+      {% for o in merkez.riskler %}
+      <div class="rounded-xl bg-red-50 border border-red-100 px-3 py-2 mb-2 text-sm">
+        <b>{{ o.ad_soyad }}</b> · {{ o.sinif_adi }} · Risk %{{ o.risk.skor }}
+        <div class="text-xs text-red-700">{{ o.risk.mesaj }}</div>
+      </div>
+      {% else %}<p class="text-sm text-slate-500">Riskli öğrenci yok.</p>{% endfor %}
+    </div>
+    <div class="rounded-3xl bg-white border p-4">
+      <h2 class="font-black mb-3">Ödev takibi</h2>
+      {% for o in merkez.odev_eksik %}
+      <div class="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 mb-2 text-sm">
+        <b>{{ o.ad_soyad }}</b> · Ödev oranı %{{ o.odev_orani }}
+      </div>
+      {% else %}<p class="text-sm text-slate-500">Ödev takibi gerektiren yok.</p>{% endfor %}
+    </div>
+    <div class="rounded-3xl bg-white border p-4">
+      <h2 class="font-black mb-3">Telafi önerileri</h2>
+      {% for o in merkez.telafi_oneri %}
+      <form method="POST" action="{{ url_for('ogretmen_not_route') }}" class="rounded-xl bg-blue-50 border border-blue-100 p-3 mb-2 text-sm">
+        <input type="hidden" name="ogrenci_id" value="{{ o.id }}">
+        <input type="hidden" name="veliye_acik" value="1">
+        <div class="font-bold">{{ o.ad_soyad }} · {{ o.sinif_adi }}</div>
+        <textarea name="not_metni" rows="2" class="mt-2 w-full rounded-lg border px-2 py-1 text-xs" placeholder="Veliye açık öğretmen notu"></textarea>
+        <button class="mt-2 rounded-lg bg-blue-700 text-white px-3 py-1 text-xs font-bold">Not Ekle</button>
+      </form>
+      {% else %}<p class="text-sm text-slate-500">Telafi önerisi yok.</p>{% endfor %}
+    </div>
+  </section>
+  <section class="rounded-3xl bg-white border p-4">
+    <h2 class="font-black mb-3">Görev şablonları</h2>
+    <div class="grid md:grid-cols-5 gap-2">
+      {% for s in sablonlar %}
+      <div class="rounded-2xl bg-slate-50 border p-3">
+        <div class="font-black text-sm">{{ s.baslik }}</div>
+        <div class="text-xs text-slate-500">{{ s.aciklama }}</div>
+        <div class="text-xs font-bold text-emerald-700 mt-2">+{{ s.xp }} XP</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+{% endblock %}

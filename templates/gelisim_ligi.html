@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Gelişim Ligi{% endblock %}
+{% block body %}
+<main class="max-w-7xl mx-auto px-4 py-5 space-y-5">
+  <header>
+    <h1 class="text-2xl font-black text-slate-900">Gelişim Ligi ve Hikaye Modu</h1>
+    <p class="text-sm text-slate-500">Ceza yerine gelişim, ödev, tebrik ve XP odaklı sınıf yarışı.</p>
+  </header>
+  <section class="grid lg:grid-cols-2 gap-4">
+    <div class="rounded-3xl bg-white border p-4">
+      <h2 class="font-black mb-3">Gelişim Ligi</h2>
+      {% for s in lig %}
+      <div class="rounded-2xl bg-slate-50 border p-3 mb-2">
+        <div class="flex justify-between font-black"><span>{{ loop.index }}. {{ s.sinif_adi }}</span><span>{{ s.xp }} XP</span></div>
+        <div class="text-xs text-slate-500">Görev {{ s.gorev }} · Tebrik {{ s.tebrik }} · Ödev {{ s.odev }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="rounded-3xl bg-slate-950 text-white border border-slate-800 p-4">
+      <h2 class="font-black mb-3">Sınıf Hikaye Haritası</h2>
+      {% for h in hikaye %}
+      <div class="rounded-2xl bg-white/5 border border-white/10 p-3 mb-2">
+        <div class="flex justify-between font-black"><span>{{ h.sinif_adi }} · {{ h.bolum }}</span><span>{{ h.hikaye_puan }}</span></div>
+        <p class="text-xs text-slate-400 mt-1">{{ h.aciklama }}</p>
+        <div class="mt-2 h-2 rounded-full bg-slate-800 overflow-hidden"><div class="h-full bg-cyan-400" style="width:{{ h.ilerleme }}%"></div></div>
+        <div class="text-[10px] text-slate-500 mt-1">Sonraki: {{ h.sonraki }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+{% endblock %}

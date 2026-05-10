@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rozet Pazarı</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+<main class="max-w-5xl mx-auto px-4 py-5 space-y-5">
+  <header class="flex justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black">Rozet Pazarı / Avatar Odası</h1>
+      <p class="text-sm text-slate-400">{{ ogrenci.ad_soyad }} · {{ gelisim.puan.xp }} XP</p>
+    </div>
+    <a href="{{ url_for('gelisim_merkezi') }}" class="rounded-xl bg-slate-800 px-4 py-2 text-xs font-black">Ana Menü</a>
+  </header>
+  <section class="grid md:grid-cols-4 gap-3">
+    {% for u in urunler %}
+    <form method="POST" action="{{ url_for('pazar_satin_al_route') }}" class="rounded-3xl bg-slate-900 border border-slate-800 p-4">
+      <input type="hidden" name="urun_kodu" value="{{ u.kod }}">
+      <div class="text-5xl">{{ u.emoji }}</div>
+      <div class="font-black mt-3">{{ u.ad }}</div>
+      <div class="text-sm text-slate-400">{{ u.fiyat }} XP</div>
+      <button class="mt-4 w-full rounded-xl {{ 'bg-slate-700' if u.sahip else 'bg-emerald-600 hover:bg-emerald-500' }} px-3 py-2 text-sm font-black" {{ 'disabled' if u.sahip else '' }}>
+        {{ 'Alındı' if u.sahip else 'Satın Al' }}
+      </button>
+    </form>
+    {% endfor %}
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akıllı Gelişim Karnesi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+<main class="max-w-5xl mx-auto px-4 py-5 space-y-5">
+  <header class="flex justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black">Akıllı Gelişim Karnesi</h1>
+      <p class="text-sm text-slate-500">{{ karne.ogrenci.ad_soyad }} · {{ karne.ogrenci.sinif_adi }}</p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="window.print()" class="rounded-xl bg-blue-700 text-white px-4 py-2 text-xs font-black">Yazdır / PDF</button>
+      <a href="{{ url_for('veli_panel') if veli else url_for('ogrenci_ben') }}" class="rounded-xl bg-slate-800 text-white px-4 py-2 text-xs font-black">Ana Menü</a>
+    </div>
+  </header>
+  <section class="grid md:grid-cols-4 gap-3">
+    <div class="rounded-3xl bg-white p-4 border"><div class="text-xs text-slate-500">Risk</div><div class="text-3xl font-black">{{ karne.risk.skor }}%</div><div class="text-xs">{{ karne.risk.seviye }}</div></div>
+    <div class="rounded-3xl bg-white p-4 border"><div class="text-xs text-slate-500">Ödev</div><div class="text-3xl font-black">{{ karne.odev_orani }}%</div></div>
+    <div class="rounded-3xl bg-white p-4 border"><div class="text-xs text-slate-500">XP</div><div class="text-3xl font-black">{{ karne.gelisim.puan.xp }}</div></div>
+    <div class="rounded-3xl bg-white p-4 border"><div class="text-xs text-slate-500">Avatar</div><div class="text-3xl font-black">{{ karne.gelisim.avatar.emoji }} {{ karne.gelisim.avatar.ad }}</div></div>
+  </section>
+  <section class="rounded-3xl bg-white border p-5">
+    <h2 class="font-black mb-2">Otomatik yorum</h2>
+    <p class="text-sm text-slate-700">{{ karne.risk.mesaj }}</p>
+  </section>
+  <section class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-3xl bg-white border p-5">
+      <h2 class="font-black mb-3">Güçlü yönler</h2>
+      <ul class="space-y-2 text-sm">{% for g in karne.guclu_yonler %}<li class="rounded-xl bg-emerald-50 text-emerald-800 px-3 py-2 font-bold">{{ g }}</li>{% endfor %}</ul>
+    </div>
+    <div class="rounded-3xl bg-white border p-5">
+      <h2 class="font-black mb-3">Destek önerileri</h2>
+      <ul class="space-y-2 text-sm">{% for d in karne.destek_onerileri %}<li class="rounded-xl bg-amber-50 text-amber-800 px-3 py-2 font-bold">{{ d }}</li>{% endfor %}</ul>
+    </div>
+  </section>
+  <section class="rounded-3xl bg-white border p-5">
+    <h2 class="font-black mb-3">Öğretmen notları</h2>
+    <div class="space-y-2">
+      {% for n in karne.notlar %}
+      <div class="rounded-xl bg-slate-50 border px-3 py-2 text-sm"><b>{{ n.ogretmen }}</b>: {{ n.not_metni }} <span class="text-slate-400">· {{ n.tarih }}</span></div>
+      {% else %}<p class="text-sm text-slate-500">Henüz veliye açık öğretmen notu yok.</p>{% endfor %}
+    </div>
+  </section>
+</main>
+</body>
+</html>

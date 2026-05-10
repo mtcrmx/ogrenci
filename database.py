@@ -1552,7 +1552,7 @@ _SIFIRLANACAK_TABLOLAR = [
     "alkis_kuponu", "sezon_puan", "ittifak_gorev", "sans_carki",
     "taktik_formasyonu", "quiz_sonuclari", "odev_tamamlayanlar", "odevler",
     "gelisim_puan", "gelisim_gorevleri", "sandik_kayitlari", "telafi_gorevleri",
-    "tebrik_kartlari",
+    "tebrik_kartlari", "avatar_envanter", "ogretmen_notlari", "hikaye_ilerleme",
 ]
 
 
@@ -1752,6 +1752,29 @@ SANDIK_ODULLERI = [
     ("Surpriz Sandik", 30, "Sans puani"),
 ]
 
+PAZAR_URUNLERI = [
+    {"kod": "cerceve_mavi", "ad": "Mavi Profil Cercevesi", "emoji": "💠", "fiyat": 40},
+    {"kod": "arka_uzay", "ad": "Uzay Arka Plani", "emoji": "🚀", "fiyat": 70},
+    {"kod": "lakap_yardimci", "ad": "Yardimci Kahraman Lakabi", "emoji": "🤝", "fiyat": 60},
+    {"kod": "tema_altin", "ad": "Altin Kart Temasi", "emoji": "🏆", "fiyat": 100},
+]
+
+GOREV_SABLONLARI = [
+    {"baslik": "Sessiz Ders Ustasi", "aciklama": "Ders boyunca soz kesmeden dinle", "xp": 10},
+    {"baslik": "Odev Kahramani", "aciklama": "Bugunku odevini eksiksiz tamamla", "xp": 12},
+    {"baslik": "Yardim Eli", "aciklama": "Bir arkadasina konu anlat", "xp": 10},
+    {"baslik": "Temizlik Lideri", "aciklama": "Sinif duzenine katkida bulun", "xp": 8},
+    {"baslik": "Hazirlikli Gel", "aciklama": "Kitap ve defterlerini eksiksiz getir", "xp": 8},
+]
+
+HIKAYE_BOLUMLERI = [
+    (0, "Baslangic Kampi", "Sinif kahramanlari yola cikiyor."),
+    (80, "Gizemli Orman", "Olumlu davranislarla yol aciliyor."),
+    (180, "Bilim Kulesi", "Odev ve yardimlasma gucu kuleyi aydinlatiyor."),
+    (320, "Hazine Adasi", "Temiz seri sinifi hazineye yaklastiriyor."),
+    (500, "Efsane Zirve", "Sinif gelisim efsanesine donusuyor."),
+]
+
 AVATAR_SEVIYELERI = [
     (0, "Yumurta", "🥚"),
     (50, "Civciv", "🐣"),
@@ -1807,6 +1830,32 @@ def _gelisim_init(con) -> None:
             alan_id INTEGER NOT NULL REFERENCES ogrenciler(id),
             mesaj TEXT NOT NULL,
             tarih TEXT NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS avatar_envanter (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            urun_kodu TEXT NOT NULL,
+            tarih TEXT NOT NULL,
+            UNIQUE(ogrenci_id, urun_kodu)
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS ogretmen_notlari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            not_metni TEXT NOT NULL,
+            veliye_acik INTEGER NOT NULL DEFAULT 1,
+            tarih TEXT NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS hikaye_ilerleme (
+            sinif_id INTEGER PRIMARY KEY REFERENCES siniflar(id),
+            puan INTEGER NOT NULL DEFAULT 0,
+            guncelleme TEXT NOT NULL
         )
     """)
     con.commit()
@@ -1972,6 +2021,170 @@ def haftalik_veli_ozeti(ogrenci_id: int) -> dict:
     """, (ogrenci_id, hafta_once)).fetchone()[0]
     con.close()
     return {"tik": tik, "odev": odev, "tebrik": tebrik, "gorev": gorev}
+
+
+def akilli_ogrenci_karnesi(ogrenci_id: int) -> dict:
+    odevler = ogrenci_odevleri(ogrenci_id, 50)
+    gelisim = gelisim_ozeti(ogrenci_id)
+    hafta = haftalik_veli_ozeti(ogrenci_id)
+    con = _conn()
+    _gelisim_init(con)
+    ogr = con.execute("""
+        SELECT o.*, s.sinif_adi FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE o.id=?
+    """, (ogrenci_id,)).fetchone()
+    tik_toplam = con.execute("SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id=?", (ogrenci_id,)).fetchone()[0]
+    notlar = [dict(r) for r in con.execute("""
+        SELECT n.*, og.ad_soyad AS ogretmen
+        FROM ogretmen_notlari n JOIN ogretmenler og ON og.id=n.ogretmen_id
+        WHERE n.ogrenci_id=? AND n.veliye_acik=1 ORDER BY n.id DESC LIMIT 8
+    """, (ogrenci_id,)).fetchall()]
+    con.close()
+    tamamlanan = sum(1 for o in odevler if o.get("tamamlandi"))
+    odev_orani = round(tamamlanan * 100 / len(odevler)) if odevler else 0
+    risk = davranis_tahmini(ogrenci_id, tik_toplam, odev_orani, hafta)
+    guclu = []
+    destek = []
+    if odev_orani >= 70: guclu.append("Odev sorumlulugu guclu")
+    else: destek.append("Odev takibi desteklenmeli")
+    if hafta["gorev"] > 0: guclu.append("Gelistirici gorevlere katiliyor")
+    if tik_toplam >= 6: destek.append("Davranis telafi gorevleri onerilir")
+    return {
+        "ogrenci": dict(ogr) if ogr else {},
+        "tik_toplam": tik_toplam,
+        "odev_orani": odev_orani,
+        "gelisim": gelisim,
+        "hafta": hafta,
+        "risk": risk,
+        "guclu_yonler": guclu or ["Takip edilebilir gelisim verisi olusuyor"],
+        "destek_onerileri": destek or ["Mevcut olumlu gidis korunmali"],
+        "notlar": notlar,
+    }
+
+
+def davranis_tahmini(ogrenci_id: int, tik_toplam: int = None,
+                     odev_orani: int = None, hafta: dict = None) -> dict:
+    hafta = hafta or haftalik_veli_ozeti(ogrenci_id)
+    if tik_toplam is None:
+        con = _conn()
+        tik_toplam = con.execute("SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id=?", (ogrenci_id,)).fetchone()[0]
+        con.close()
+    skor = 0
+    skor += min(50, hafta.get("tik", 0) * 12)
+    skor += min(25, tik_toplam * 3)
+    if odev_orani is not None and odev_orani < 50:
+        skor += 15
+    skor -= min(20, hafta.get("gorev", 0) * 5 + hafta.get("tebrik", 0) * 3)
+    skor = max(0, min(100, skor))
+    if skor >= 70:
+        seviye, mesaj = "yüksek", "Risk yukseliyor; telafi gorevi ve veli bilgilendirme onerilir."
+    elif skor >= 35:
+        seviye, mesaj = "orta", "Takip onerilir; olumlu gorevlerle desteklenebilir."
+    else:
+        seviye, mesaj = "düşük", "Gidis olumlu; mevcut motivasyon korunabilir."
+    return {"skor": skor, "seviye": seviye, "mesaj": mesaj}
+
+
+def ogretmen_bildirim_merkezi() -> dict:
+    ogrenciler = tum_okul_ogrencileri()
+    riskler = []
+    for o in ogrenciler:
+        hafta = haftalik_veli_ozeti(o["id"])
+        odevler = ogrenci_odevleri(o["id"], 20)
+        tamam = sum(1 for od in odevler if od.get("tamamlandi"))
+        oran = round(tamam * 100 / len(odevler)) if odevler else 100
+        risk = davranis_tahmini(o["id"], o["tik_sayisi"], oran, hafta)
+        if risk["skor"] >= 35:
+            riskler.append({**o, "risk": risk, "odev_orani": oran, "hafta": hafta})
+    riskler.sort(key=lambda x: -x["risk"]["skor"])
+    return {
+        "riskler": riskler[:20],
+        "odev_eksik": [r for r in riskler if r["odev_orani"] < 60][:20],
+        "telafi_oneri": [r for r in riskler if r["tik_sayisi"] >= 3][:20],
+    }
+
+
+def gelisim_ligi() -> list[dict]:
+    con = _conn()
+    _gelisim_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT s.id AS sinif_id, s.sinif_adi,
+               COALESCE(SUM(gp.xp),0) AS xp,
+               COUNT(DISTINCT gg.id) AS gorev,
+               COUNT(DISTINCT tk.id) AS tebrik,
+               COUNT(DISTINCT ot.id) AS odev
+        FROM siniflar s
+        LEFT JOIN ogrenciler o ON o.sinif_id=s.id
+        LEFT JOIN gelisim_puan gp ON gp.ogrenci_id=o.id
+        LEFT JOIN gelisim_gorevleri gg ON gg.ogrenci_id=o.id AND gg.tamamlandi=1
+        LEFT JOIN tebrik_kartlari tk ON tk.alan_id=o.id
+        LEFT JOIN odev_tamamlayanlar ot ON ot.ogrenci_id=o.id
+        GROUP BY s.id
+        ORDER BY xp DESC, gorev DESC, tebrik DESC
+    """).fetchall()]
+    con.close()
+    return rows
+
+
+def hikaye_modu() -> list[dict]:
+    lig = gelisim_ligi()
+    sonuc = []
+    for s in lig:
+        puan = int(s.get("xp", 0)) + int(s.get("gorev", 0)) * 5 + int(s.get("tebrik", 0)) * 3
+        bolum = HIKAYE_BOLUMLERI[0]
+        sonraki = None
+        for b in HIKAYE_BOLUMLERI:
+            if puan >= b[0]:
+                bolum = b
+            elif not sonraki:
+                sonraki = b
+        sonuc.append({**s, "hikaye_puan": puan, "bolum": bolum[1], "aciklama": bolum[2],
+                      "sonraki": sonraki[1] if sonraki else "Tamamlandi",
+                      "ilerleme": min(100, round(puan * 100 / (sonraki[0] if sonraki else max(puan,1))))})
+    return sonuc
+
+
+def pazar_urunleri_ogrenci(ogrenci_id: int) -> list[dict]:
+    con = _conn()
+    _gelisim_init(con)
+    sahip = {r["urun_kodu"] for r in con.execute(
+        "SELECT urun_kodu FROM avatar_envanter WHERE ogrenci_id=?", (ogrenci_id,)
+    ).fetchall()}
+    con.close()
+    return [{**u, "sahip": u["kod"] in sahip} for u in PAZAR_URUNLERI]
+
+
+def pazar_satin_al(ogrenci_id: int, urun_kodu: str) -> dict:
+    urun = next((u for u in PAZAR_URUNLERI if u["kod"] == urun_kodu), None)
+    if not urun:
+        return {"ok": False, "sebep": "Urun bulunamadi"}
+    con = _conn()
+    _gelisim_init(con)
+    puan = con.execute("SELECT xp FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone()
+    xp = puan["xp"] if puan else 0
+    if xp < urun["fiyat"]:
+        con.close()
+        return {"ok": False, "sebep": "XP yetersiz"}
+    con.execute("UPDATE gelisim_puan SET xp=xp-? WHERE ogrenci_id=?", (urun["fiyat"], ogrenci_id))
+    con.execute("""
+        INSERT OR IGNORE INTO avatar_envanter (ogrenci_id, urun_kodu, tarih)
+        VALUES (?,?,?)
+    """, (ogrenci_id, urun_kodu, datetime.now().strftime("%Y-%m-%d %H:%M")))
+    con.commit(); con.close()
+    return {"ok": True, "urun": urun}
+
+
+def ogretmen_notu_ekle(ogrenci_id: int, ogretmen_id: int, not_metni: str, veliye_acik: bool = True) -> dict:
+    not_metni = (not_metni or "").strip()
+    if not not_metni:
+        return {"ok": False, "sebep": "Not bos olamaz"}
+    con = _conn()
+    _gelisim_init(con)
+    con.execute("""
+        INSERT INTO ogretmen_notlari (ogrenci_id, ogretmen_id, not_metni, veliye_acik, tarih)
+        VALUES (?,?,?,?,?)
+    """, (ogrenci_id, ogretmen_id, not_metni, 1 if veliye_acik else 0, datetime.now().strftime("%Y-%m-%d %H:%M")))
+    con.commit(); con.close()
+    return {"ok": True}
 
 
 def _taktik_tablosu_olustur(con) -> None:
