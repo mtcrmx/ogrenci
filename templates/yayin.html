@@ -3,129 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📺 Yayın Modu — {{ sinif_adi }}</title>
+  <title>📺 Okul Geneli Yayın Panosu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background:#060c1a; font-family:'Segoe UI',system-ui,sans-serif; }
-
-    @keyframes pulse-danger {
-      0%,100% { background-color:#1f0606; border-color:#7f1d1d; }
-      50%      { background-color:#2d0a0a; border-color:#ef4444; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(59,130,246,.18), transparent 32rem),
+        radial-gradient(circle at top right, rgba(168,85,247,.16), transparent 30rem),
+        #030712;
+      font-family:'Segoe UI',system-ui,sans-serif;
     }
-    @keyframes slide-in {
-      from { opacity:0; transform:translateX(60px); }
-      to   { opacity:1; transform:translateX(0); }
-    }
-    @keyframes count-up {
-      from { transform:scale(0.5); opacity:0; }
-      to   { transform:scale(1);   opacity:1; }
-    }
-    @keyframes tick-clock {
-      0%,100% { opacity:1; }
-      50%      { opacity:.5; }
-    }
-
-    .card-danger  { animation: pulse-danger 1.4s ease-in-out infinite; }
-    .card-warning { background:#1a1200; border-color:#92400e; }
-    .card-clean   { background:#091a0e; border-color:#166534; }
-
-    .slide-in { animation: slide-in .4s ease forwards; opacity:0; }
-    .count-up { animation: count-up .3s ease forwards; }
-    .clock    { animation: tick-clock 1s step-end infinite; }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width:4px; }
-    ::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px; }
+    @keyframes float-in { from { opacity:0; transform:translateY(18px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes glow-danger { 0%,100% { box-shadow:0 0 0 rgba(239,68,68,0); } 50% { box-shadow:0 0 28px rgba(239,68,68,.24); } }
+    @keyframes ticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+    @keyframes fill { from { width:0; } }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.45; } }
+    .float-in { animation: float-in .55s ease both; }
+    .bar-fill { animation: fill .9s ease both; }
+    .danger-glow { animation: glow-danger 1.6s ease-in-out infinite; }
+    .ticker-track { animation: ticker 42s linear infinite; }
+    .blink { animation: blink 1s step-end infinite; }
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-thumb { background:#334155; border-radius:999px; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
-
-<!-- ── Üst Başlık ──────────────────────────────────────────────────────── -->
-<header style="background:#0a1228" class="flex-shrink-0 border-b border-slate-800">
-  <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-    <div>
-      <div class="text-blue-300 font-bold text-lg sm:text-xl">
-        Erenler Cumhuriyet Ortaokulu
+<body class="min-h-screen text-slate-100 overflow-hidden">
+<div class="h-screen flex flex-col">
+  <header class="flex-shrink-0 border-b border-white/10 bg-slate-950/70 backdrop-blur px-5 py-4">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="text-blue-200 font-black text-xl sm:text-3xl tracking-tight">Erenler Cumhuriyet Ortaokulu</div>
+        <div class="text-slate-400 text-sm mt-1">
+          Okul Geneli Canlı Yayın Panosu · Tüm sınıflar ve öğrenciler tik sayısına göre sıralanır
+        </div>
       </div>
-      <div class="text-slate-500 text-sm">
-        Canlı Disiplin Panosu &nbsp;·&nbsp;
-        <span class="text-blue-400 font-semibold">{{ sinif_adi }} Şubesi</span>
+      <div class="text-right">
+        <div id="saat" class="font-mono text-2xl sm:text-4xl font-black blink">--:--:--</div>
+        <div id="guncelleme" class="text-xs text-slate-500 mt-1">Yükleniyor...</div>
       </div>
     </div>
-    <div class="text-right">
-      <div id="saat" class="text-slate-300 font-mono text-xl sm:text-2xl clock">--:--:--</div>
-      <div class="text-slate-600 text-xs mt-0.5" id="guncelleme">Yükleniyor...</div>
-    </div>
-  </div>
-</header>
+  </header>
 
-<!-- ── Efsane ──────────────────────────────────────────────────────────── -->
-<div style="background:#080f20"
-     class="flex-shrink-0 flex justify-center gap-6 py-2 border-b border-slate-800/60">
-  <span class="text-xs text-emerald-400">✅ Temiz</span>
-  <span class="text-xs text-amber-400">⚠️ Uyarı (1–2 tik)</span>
-  <span class="text-xs text-red-400">🚨 İdari İşlem (3+ tik)</span>
+  <section class="flex-shrink-0 border-b border-white/10 bg-slate-950/50 px-5 py-3">
+    <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2" id="ozetKartlar">
+      <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><div class="text-[10px] text-slate-400 font-black">ÖĞRENCİ</div><div id="oz-ogrenci" class="text-3xl font-black">0</div></div>
+      <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><div class="text-[10px] text-slate-400 font-black">SINIF</div><div id="oz-sinif" class="text-3xl font-black">{{ sinif_sayisi }}</div></div>
+      <div class="rounded-2xl bg-red-500/10 border border-red-500/20 px-4 py-3"><div class="text-[10px] text-red-200 font-black">TOPLAM TİK</div><div id="oz-tik" class="text-3xl font-black text-red-200">0</div></div>
+      <div class="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3"><div class="text-[10px] text-emerald-200 font-black">TEMİZ</div><div id="oz-temiz" class="text-3xl font-black text-emerald-200">0</div></div>
+      <div class="rounded-2xl bg-amber-500/10 border border-amber-500/20 px-4 py-3"><div class="text-[10px] text-amber-200 font-black">UYARI</div><div id="oz-uyari" class="text-3xl font-black text-amber-200">0</div></div>
+      <div class="rounded-2xl bg-orange-500/10 border border-orange-500/20 px-4 py-3"><div class="text-[10px] text-orange-200 font-black">VELİ</div><div id="oz-veli" class="text-3xl font-black text-orange-200">0</div></div>
+      <div class="rounded-2xl bg-rose-500/10 border border-rose-500/20 px-4 py-3"><div class="text-[10px] text-rose-200 font-black">TUTANAK</div><div id="oz-tutanak" class="text-3xl font-black text-rose-200">0</div></div>
+      <div class="rounded-2xl bg-purple-500/10 border border-purple-500/20 px-4 py-3"><div class="text-[10px] text-purple-200 font-black">DİSİPLİN</div><div id="oz-disiplin" class="text-3xl font-black text-purple-200">0</div></div>
+    </div>
+  </section>
+
+  <section class="flex-shrink-0 overflow-hidden border-b border-white/10 bg-slate-950/70 py-2">
+    <div class="ticker-track whitespace-nowrap flex gap-3 w-max">
+      <div class="flex gap-3 px-3">
+        {% for l in liderler %}
+        <span class="rounded-full bg-indigo-500/15 border border-indigo-400/20 px-4 py-1 text-xs font-black text-indigo-100">🏆 {{ loop.index }}. {{ l.sinif_adi }} · {{ l.puan }} puan</span>
+        {% endfor %}
+        {% for r in rozetler %}
+        <span class="rounded-full bg-amber-500/15 border border-amber-400/20 px-4 py-1 text-xs font-black text-amber-100">{{ r.emoji }} {{ r.sahip }}</span>
+        {% endfor %}
+        {% for m in maclar %}
+        <span class="rounded-full bg-cyan-500/15 border border-cyan-400/20 px-4 py-1 text-xs font-black text-cyan-100">⚔️ {{ m.sinif1_adi }} - {{ m.sinif2_adi }}</span>
+        {% endfor %}
+      </div>
+      <div class="flex gap-3 px-3">
+        {% for l in liderler %}
+        <span class="rounded-full bg-indigo-500/15 border border-indigo-400/20 px-4 py-1 text-xs font-black text-indigo-100">🏆 {{ loop.index }}. {{ l.sinif_adi }} · {{ l.puan }} puan</span>
+        {% endfor %}
+        {% for r in rozetler %}
+        <span class="rounded-full bg-amber-500/15 border border-amber-400/20 px-4 py-1 text-xs font-black text-amber-100">{{ r.emoji }} {{ r.sahip }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <main class="flex-1 min-h-0 grid xl:grid-cols-[1fr_420px] gap-4 px-4 py-4">
+    <section class="min-h-0 rounded-3xl bg-white/5 border border-white/10 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-white/10">
+        <div>
+          <h2 class="font-black text-lg">Tik Sıralaması</h2>
+          <p class="text-xs text-slate-400">En yüksek tik en üstte; tüm öğrenciler ve sınıflar birlikte gösterilir.</p>
+        </div>
+        <div class="flex gap-2 text-[10px] font-black">
+          <span class="text-emerald-300">✅ Temiz</span>
+          <span class="text-amber-300">⚠️ Uyarı</span>
+          <span class="text-red-300">🚨 Risk</span>
+        </div>
+      </div>
+      <div id="liste" class="h-full max-h-[calc(100vh-285px)] overflow-y-auto p-3 grid lg:grid-cols-2 gap-2">
+        <div class="text-slate-500 text-center py-10 text-sm col-span-full">Yükleniyor...</div>
+      </div>
+    </section>
+
+    <aside class="min-h-0 space-y-4">
+      <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
+        <h2 class="font-black mb-3">Sınıf Isı Haritası</h2>
+        <div id="sinifHarita" class="grid grid-cols-2 gap-2"></div>
+      </section>
+      <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
+        <h2 class="font-black mb-3">En Riskli İlk 5</h2>
+        <div id="ilkBes" class="space-y-2"></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="flex-shrink-0 border-t border-white/10 bg-slate-950/70 px-5 py-2 flex justify-between text-xs text-slate-500">
+    <button onclick="window.close()" class="hover:text-slate-200">✕ Kapat</button>
+    <span id="altBilgi">10 saniyede bir yenilenir</span>
+    <button onclick="yukle()" class="hover:text-slate-200">🔄 Yenile</button>
+  </footer>
 </div>
 
-<section style="background:#050b16" class="border-b border-slate-800/60 px-4 py-3">
-  <div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-3">
-    <div class="rounded-xl border border-indigo-900/60 bg-indigo-950/30 px-4 py-3">
-      <div class="text-[10px] font-black text-indigo-300 mb-2">LİG LİDERLERİ</div>
-      <div class="flex flex-wrap gap-2">
-        {% for l in liderler %}
-        <span class="rounded-full bg-indigo-900/70 px-3 py-1 text-xs text-indigo-100 font-bold">
-          {{ loop.index }}. {{ l.sinif_adi }} · {{ l.puan }}
-        </span>
-        {% endfor %}
-      </div>
-    </div>
-    <div class="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3">
-      <div class="text-[10px] font-black text-amber-300 mb-2">SON ROZETLER</div>
-      <div class="flex flex-wrap gap-2">
-        {% for r in rozetler %}
-        <span class="rounded-full bg-amber-900/50 px-3 py-1 text-xs text-amber-100 font-bold">
-          {{ r.emoji }} {{ r.sahip }}
-        </span>
-        {% else %}
-        <span class="text-xs text-slate-500">Henüz rozet yok</span>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── Öğrenci Listesi ─────────────────────────────────────────────────── -->
-<main class="flex-1 overflow-y-auto px-3 py-4">
-  <div id="liste" class="max-w-4xl mx-auto space-y-2">
-    <div class="text-slate-600 text-center py-10 text-sm">Yükleniyor...</div>
-  </div>
-</main>
-
-<!-- ── Alt Çubuk ───────────────────────────────────────────────────────── -->
-<footer style="background:#080f20"
-        class="flex-shrink-0 border-t border-slate-800 px-6 py-2
-               flex items-center justify-between">
-  <button onclick="window.close()"
-          class="text-slate-500 hover:text-slate-300 text-xs transition">
-    ✕ Kapat
-  </button>
-  <div class="flex gap-3 text-xs">
-    <span id="stat-temiz" class="text-emerald-600">— temiz</span>
-    <span id="stat-uyari" class="text-amber-600">— uyarı</span>
-    <span id="stat-idari" class="text-red-600">— idari</span>
-  </div>
-  <button onclick="yukle()"
-          class="text-slate-500 hover:text-slate-300 text-xs transition">
-    🔄 Yenile
-  </button>
-</footer>
-
 <script>
-const SINIF_ID  = {{ sinif_id }};
 const REFRESH_S = 10;
 let countdown   = REFRESH_S;
 
-// ── Saat ─────────────────────────────────────────────────────────────────
 function saatGuncelle() {
   document.getElementById('saat').textContent =
     new Date().toLocaleTimeString('tr-TR');
@@ -133,13 +129,12 @@ function saatGuncelle() {
 setInterval(saatGuncelle, 1000);
 saatGuncelle();
 
-// ── Veri Yükleme ─────────────────────────────────────────────────────────
 async function yukle() {
   countdown = REFRESH_S;
   try {
-    const res  = await fetch(`/api/yayin/${SINIF_ID}`);
+    const res  = await fetch('/api/yayin/ogrenciler');
     const data = await res.json();
-    renderListe(data);
+    renderPano(data);
     const now = new Date().toLocaleTimeString('tr-TR');
     document.getElementById('guncelleme').textContent = `Son güncelleme: ${now}`;
   } catch(e) {
@@ -147,96 +142,104 @@ async function yukle() {
   }
 }
 
+function renderPano(payload) {
+  const data = payload.ogrenciler || [];
+  const ozet = payload.ozet || {};
+  const siniflar = payload.siniflar || [];
+  ['ogrenci','sinif','tik','temiz','uyari','veli','tutanak','disiplin'].forEach(k => {
+    const el = document.getElementById(`oz-${k}`);
+    if (el) el.textContent = ozet[k] ?? 0;
+  });
+  renderListe(data);
+  renderSiniflar(siniflar);
+  renderIlkBes(data.slice(0, 5));
+}
+
 function renderListe(data) {
   const konteyner = document.getElementById('liste');
-
   if (!data.length) {
-    konteyner.innerHTML = '<p class="text-slate-600 text-center py-10">Bu sınıfta öğrenci yok.</p>';
+    konteyner.innerHTML = '<p class="text-slate-600 text-center py-10 col-span-full">Öğrenci yok.</p>';
     return;
   }
-
-  // İstatistikler
-  const temiz = data.filter(o => o.tik_sayisi === 0).length;
-  const uyari = data.filter(o => o.tik_sayisi >= 1 && o.tik_sayisi <= 2).length;
-  const idari = data.filter(o => o.tik_sayisi >= 3).length;
-  document.getElementById('stat-temiz').textContent = `${temiz} temiz`;
-  document.getElementById('stat-uyari').textContent = `${uyari} uyarı`;
-  document.getElementById('stat-idari').textContent = `${idari} idari`;
-
   const maks   = Math.max(...data.map(o => o.tik_sayisi), 1);
-  const barRef = Math.max(maks, 5);
-
+  const barRef = Math.max(maks, 12);
   konteyner.innerHTML = data.map((o, idx) => kartHTML(o, idx + 1, barRef)).join('');
 }
 
 function kartHTML(o, sira, barRef) {
   const tik = o.tik_sayisi;
-
-  let cardCls, textCls, barCls, rankBg;
+  let border, textCls, barCls, bg, durumText;
   if (tik === 0) {
-    cardCls = 'card-clean border';
-    textCls = '#4ade80'; barCls = '#22c55e'; rankBg = '#166534';
+    border = 'border-emerald-500/25'; bg = 'bg-emerald-500/10'; textCls = '#86efac'; barCls = '#22c55e'; durumText = 'Temiz';
   } else if (tik <= 2) {
-    cardCls = 'card-warning border';
-    textCls = '#fbbf24'; barCls = '#f59e0b'; rankBg = '#92400e';
+    border = 'border-amber-500/30'; bg = 'bg-amber-500/10'; textCls = '#fcd34d'; barCls = '#f59e0b'; durumText = 'Uyarı';
   } else {
-    cardCls = 'card-danger border';
-    textCls = '#f87171'; barCls = '#ef4444'; rankBg = '#7f1d1d';
+    border = 'border-red-500/35'; bg = 'bg-red-500/10 danger-glow'; textCls = '#fca5a5'; barCls = '#ef4444'; durumText = o.etiket || 'Risk';
   }
-
   const barPct = Math.min(100, (tik / barRef) * 100).toFixed(1);
-  const delay  = (sira - 1) * 70;
-
+  const delay  = Math.min((sira - 1) * 28, 700);
   return `
-  <div class="${cardCls} rounded-xl overflow-hidden slide-in"
-       style="animation-delay:${delay}ms">
+  <article class="float-in ${bg} ${border} border rounded-2xl overflow-hidden" style="animation-delay:${delay}ms">
     <div class="flex items-stretch">
-
-      <!-- Sıra -->
-      <div class="flex-shrink-0 w-14 sm:w-16 flex items-center justify-center
-                  font-black text-lg sm:text-xl"
-           style="background:${rankBg}; color:${textCls}">
-        #${sira}
-      </div>
-
-      <!-- Orta: Emoji + Ad + Bar -->
-      <div class="flex-1 px-3 sm:px-4 py-2.5 min-w-0">
-        <div class="flex items-center gap-2">
-          <span class="text-xl sm:text-2xl">${o.emoji}</span>
-          <span class="font-bold text-sm sm:text-base truncate"
-                style="color:${textCls}">${o.ad_soyad}</span>
+      <div class="w-14 flex items-center justify-center text-lg font-black border-r border-white/10" style="color:${textCls}">#${sira}</div>
+      <div class="flex-1 min-w-0 px-3 py-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="font-black truncate" style="color:${textCls}">${o.emoji} ${o.ad_soyad}</div>
+            <div class="text-[11px] text-slate-400">${o.sinif_adi} · ${durumText}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-black leading-none" style="color:${textCls}">${tik}</div>
+            <div class="text-[10px] text-slate-500">tik</div>
+          </div>
         </div>
-        <!-- Progress bar -->
-        <div class="mt-1.5 h-2 rounded-full overflow-hidden" style="background:#0f172a">
-          <div class="h-full rounded-full transition-all duration-700"
-               style="width:${barPct}%; background:${barCls}"></div>
+        <div class="mt-2 h-2 rounded-full overflow-hidden bg-slate-950">
+          <div class="bar-fill h-full rounded-full" style="width:${barPct}%; background:${barCls}"></div>
         </div>
-      </div>
-
-      <!-- Tik Sayısı -->
-      <div class="flex-shrink-0 w-16 sm:w-20 flex flex-col items-center justify-center"
-           style="background:${rankBg}">
-        <span class="font-black text-2xl sm:text-3xl count-up"
-              style="color:${textCls}">${tik}</span>
-        <span class="text-[10px]" style="color:${textCls}; opacity:.7">tik</span>
       </div>
     </div>
-  </div>`;
+  </article>`;
 }
 
-// ── Geri Sayım ───────────────────────────────────────────────────────────
+function renderSiniflar(siniflar) {
+  const el = document.getElementById('sinifHarita');
+  const maxTik = Math.max(...siniflar.map(s => s.tik), 1);
+  el.innerHTML = siniflar.map((s, idx) => {
+    const pct = Math.min(100, s.tik * 100 / maxTik);
+    const heat = Math.min(.55, pct / 160);
+    return `<div class="float-in rounded-2xl border border-white/10 px-3 py-3" style="animation-delay:${idx*60}ms; background:linear-gradient(135deg, rgba(239,68,68,${heat}), rgba(59,130,246,.08))">
+      <div class="flex justify-between text-sm font-black"><span>${s.sinif_adi}</span><span>${s.tik}</span></div>
+      <div class="text-[10px] text-slate-400 mt-1">${s.ogrenci} öğrenci · ${s.temiz} temiz · ${s.idari} idari</div>
+      <div class="mt-2 h-2 rounded-full bg-slate-950 overflow-hidden"><div class="bar-fill h-full bg-red-400" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderIlkBes(data) {
+  const el = document.getElementById('ilkBes');
+  el.innerHTML = data.map((o, idx) => `
+    <div class="float-in flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 px-3 py-2" style="animation-delay:${idx*70}ms">
+      <div class="min-w-0">
+        <div class="font-black text-sm truncate">${idx + 1}. ${o.ad_soyad}</div>
+        <div class="text-[11px] text-slate-500">${o.sinif_adi} · ${o.etiket || 'Temiz'}</div>
+      </div>
+      <div class="text-2xl font-black text-red-300">${o.tik_sayisi}</div>
+    </div>
+  `).join('');
+}
+
 setInterval(() => {
   countdown--;
   if (countdown <= 0) yukle();
   const el = document.getElementById('guncelleme');
+  const alt = document.getElementById('altBilgi');
   if (el && countdown > 0 && countdown <= REFRESH_S) {
-    // Güncelleme satırındaki son kısmı değiştir
     const parts = el.textContent.split('·');
     el.textContent = (parts[0] || '') + `· ${countdown}s sonra güncellenir`;
   }
+  if (alt) alt.textContent = `${countdown > 0 ? countdown : REFRESH_S} saniye sonra otomatik yenileme`;
 }, 1000);
 
-// ── İlk Yükleme ──────────────────────────────────────────────────────────
 yukle();
 </script>
 </body>

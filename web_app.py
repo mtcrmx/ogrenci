@@ -711,22 +711,14 @@ def api_olumlu_gecmis(sinif_id):
 @app.route("/yayin/<int:sinif_id>")
 @giris_zorunlu
 def yayin(sinif_id=None):
-    sinif_id = sinif_id or request.args.get("sinif_id", type=int)
-    siniflar = ogretmen_siniflari(session["ogretmen_id"])
-
-    if sinif_id is None and siniflar:
-        sinif_id = siniflar[0]["id"]
-
-    sinif_adi = next(
-        (s["sinif_adi"] for s in siniflar if s["id"] == sinif_id),
-        f"{sinif_id}" if sinif_id is not None else "Sinif",
-    )
+    siniflar = _tum_siniflar()
     return render_template(
         "yayin.html",
-        sinif_id=sinif_id or 0,
-        sinif_adi=sinif_adi,
-        liderler=lig_puan_tablosu()[:3],
-        rozetler=son_rozetler(5),
+        sinif_sayisi=len(siniflar),
+        liderler=lig_puan_tablosu()[:5],
+        rozetler=son_rozetler(8),
+        sezon=sezon_siralama()[:5],
+        maclar=bugun_maclar()[:6],
     )
 
 
@@ -780,13 +772,32 @@ def api_ogrenci_veri():
 @app.route("/api/yayin/ogrenciler")
 @giris_zorunlu
 def api_yayin_ogrenciler():
-    ogrenciler = tum_okul_ogrencileri()
+    ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
     for o in ogrenciler:
-        d = _durum(o["tik_sayisi"])
-        o["emoji"]  = d["emoji"]
-        o["durum"]  = d["kod"]
-        o["etiket"] = d["etiket"]
-    return jsonify(ogrenciler)
+        o["risk_yuzde"] = min(100, o["tik_sayisi"] * 8)
+    ogrenciler.sort(key=lambda o: (-o["tik_sayisi"], o["sinif_adi"], o["ad_soyad"]))
+    siniflar = {}
+    for o in ogrenciler:
+        s = siniflar.setdefault(o["sinif_adi"], {"sinif_adi": o["sinif_adi"], "ogrenci": 0, "tik": 0, "temiz": 0, "idari": 0})
+        s["ogrenci"] += 1
+        s["tik"] += o["tik_sayisi"]
+        s["temiz"] += 1 if o["tik_sayisi"] == 0 else 0
+        s["idari"] += 1 if o["tik_sayisi"] >= 3 else 0
+    return jsonify({
+        "ogrenciler": ogrenciler,
+        "siniflar": sorted(siniflar.values(), key=lambda s: (-s["tik"], s["sinif_adi"])),
+        "ozet": {
+            "ogrenci": len(ogrenciler),
+            "sinif": len(siniflar),
+            "tik": sum(o["tik_sayisi"] for o in ogrenciler),
+            "temiz": sum(1 for o in ogrenciler if o["tik_sayisi"] == 0),
+            "uyari": sum(1 for o in ogrenciler if 1 <= o["tik_sayisi"] <= 2),
+            "idari": sum(1 for o in ogrenciler if o["tik_sayisi"] >= 3),
+            "veli": sum(1 for o in ogrenciler if 6 <= o["tik_sayisi"] <= 8),
+            "tutanak": sum(1 for o in ogrenciler if 9 <= o["tik_sayisi"] <= 11),
+            "disiplin": sum(1 for o in ogrenciler if o["tik_sayisi"] >= 12),
+        }
+    })
 
 
 @app.route("/api/yayin/<int:sinif_id>")
