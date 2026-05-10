@@ -41,16 +41,24 @@
     <section class="rounded-3xl bg-slate-900 border border-slate-800 p-5 min-h-[360px]">
       <div class="flex items-center justify-between mb-4">
         <h2 id="baslik" class="font-black text-xl">Bir oyun seç</h2>
-        <div class="rounded-full bg-slate-950 border border-slate-800 px-4 py-1 text-sm font-black">
-          Puan: <span id="puan">0</span>
+        <div class="flex items-center gap-2">
+          <div class="rounded-full bg-slate-950 border border-slate-800 px-4 py-1 text-sm font-black">
+            Puan: <span id="puan">0</span>
+          </div>
+          <div class="rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-4 py-1 text-sm font-black">
+            XP: <span id="xpKazanc">0</span>
+          </div>
         </div>
       </div>
+      <div id="sonuc" class="hidden mb-3 rounded-xl px-4 py-2 text-sm font-bold"></div>
       <div id="alan" class="text-slate-400">Üstteki oyun kartlarından birini seçerek başla.</div>
     </section>
   </main>
 
 <script>
 let puan = 0;
+let oyunPuanlari = {quiz:0, kelime:0, eslestir:0, hafiza:0};
+let aktifOyun = 'quiz';
 const sorular = [
   {s:'Türk alfabesinde kaç harf vardır?', a:['28','29','30','31'], d:'29'},
   {s:'Bir üçgenin iç açıları toplamı kaç derecedir?', a:['90','180','270','360'], d:'180'},
@@ -72,10 +80,35 @@ const esler = [
 
 function puanEkle(n) {
   puan += n;
+  puan = Math.max(0, puan);
+  oyunPuanlari[aktifOyun] = Math.max(0, (oyunPuanlari[aktifOyun] || 0) + n);
   document.getElementById('puan').textContent = puan;
+  if (n > 0) oyunPuaniKaydet(aktifOyun, n);
+}
+function oyunPuaniKaydet(oyun, oyunPuani) {
+  (async () => {
+    try {
+      const res = await fetch('{{ url_for("oyun_puan_api") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({oyun, puan: oyunPuani})
+      });
+      const data = await res.json();
+      const box = document.getElementById('sonuc');
+      if (!data.ok) throw new Error(data.sebep || 'Puan kaydedilemedi');
+      document.getElementById('xpKazanc').textContent = data.xp;
+      box.className = 'mb-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-4 py-2 text-sm font-bold';
+      box.textContent = data.xp > 0 ? `Oyun puanı kaydedildi: +${data.xp} XP` : 'Puan kaydedildi. Günlük oyun XP limiti doldu.';
+    } catch (e) {
+      const box = document.getElementById('sonuc');
+      box.className = 'mb-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-2 text-sm font-bold';
+      box.textContent = e.message;
+    }
+  })();
 }
 function karistir(arr) { return [...arr].sort(() => Math.random() - .5); }
 function oyunAc(tur) {
+  aktifOyun = tur;
   if (tur === 'quiz') hizliSoru();
   if (tur === 'kelime') kelimeOyunu();
   if (tur === 'eslestir') eslestirme();

@@ -49,7 +49,7 @@ from database import (
     tebrik_gonder, haftalik_veli_ozeti,
     akilli_ogrenci_karnesi, ogretmen_bildirim_merkezi, gelisim_ligi,
     hikaye_modu, pazar_urunleri_ogrenci, pazar_satin_al, ogretmen_notu_ekle,
-    GOREV_SABLONLARI,
+    oyun_puani_kaydet, GOREV_SABLONLARI,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 
@@ -373,6 +373,22 @@ def oyunlar():
     ogrenci_id = session.get("ogrenci_id")
     ozet = _ogrenci_ozeti(int(ogrenci_id)) if ogrenci_id else None
     return render_template("oyunlar.html", ozet=ozet)
+
+
+@app.route("/api/oyun/puan", methods=["POST"])
+@ogrenci_giris_zorunlu
+def oyun_puan_api():
+    ogrenci_id = session.get("ogrenci_id")
+    veri = request.get_json(silent=True) or request.form
+    oyun = veri.get("oyun", "Oyun")
+    puan = veri.get("puan", 0)
+    if not ogrenci_id:
+        return jsonify({"ok": False, "sebep": "Ogrenci girisi gerekli"}), 401
+    try:
+        sonuc = oyun_puani_kaydet(int(ogrenci_id), oyun, int(puan))
+    except Exception as exc:
+        return jsonify({"ok": False, "sebep": str(exc)}), 400
+    return jsonify(sonuc)
 
 
 @app.route("/gelisim")

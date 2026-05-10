@@ -1553,6 +1553,7 @@ _SIFIRLANACAK_TABLOLAR = [
     "taktik_formasyonu", "quiz_sonuclari", "odev_tamamlayanlar", "odevler",
     "gelisim_puan", "gelisim_gorevleri", "sandik_kayitlari", "telafi_gorevleri",
     "tebrik_kartlari", "avatar_envanter", "ogretmen_notlari", "hikaye_ilerleme",
+    "oyun_puanlari",
 ]
 
 
@@ -1674,6 +1675,7 @@ def odev_detay(odev_id: int) -> dict | None:
 def odev_tamamla(odev_id: int, ogrenci_id: int, ogretmen_id: int) -> dict:
     con = _conn()
     _odev_init(con)
+    _gelisim_init(con)
     row = con.execute("""
         SELECT od.baslik, od.sinif_id, o.ad_soyad
         FROM odevler od
@@ -1688,9 +1690,13 @@ def odev_tamamla(odev_id: int, ogrenci_id: int, ogretmen_id: int) -> dict:
         VALUES (?,?,?,?)
     """, (odev_id, ogrenci_id, ogretmen_id, datetime.now().strftime("%Y-%m-%d %H:%M")))
     yeni = con.total_changes > 0
+    xp = 0
+    if yeni:
+        xp = 8
+        _gelisim_puan_ekle(con, ogrenci_id, xp)
     con.commit()
     con.close()
-    return {"ok": True, "yeni": yeni}
+    return {"ok": True, "yeni": yeni, "xp": xp}
 
 
 def odev_tamamlandi_kaldir(odev_id: int, ogrenci_id: int) -> dict:
@@ -1891,6 +1897,16 @@ def _gelisim_init(con) -> None:
             guncelleme TEXT NOT NULL
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS oyun_puanlari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            oyun TEXT NOT NULL,
+            puan INTEGER NOT NULL DEFAULT 0,
+            xp INTEGER NOT NULL DEFAULT 0,
+            tarih TEXT NOT NULL
+        )
+    """)
     con.commit()
 
 
@@ -1903,11 +1919,40 @@ def _gelisim_puan_ekle(con, ogrenci_id: int, xp: int) -> dict:
     """, (ogrenci_id, now))
     con.execute("""
         UPDATE gelisim_puan
-        SET xp = xp + ?, sandik_hakki = sandik_hakki + CASE WHEN ((xp + ?) / 50) > (xp / 50) THEN 1 ELSE 0 END,
+        SET xp = xp + ?,
+            sandik_hakki = sandik_hakki + CASE
+                WHEN CAST((xp + ?) / 50 AS INTEGER) > CAST(xp / 50 AS INTEGER) THEN 1
+                ELSE 0
+            END,
             guncelleme = ?
         WHERE ogrenci_id = ?
     """, (xp, xp, now, ogrenci_id))
     return dict(con.execute("SELECT * FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone())
+
+
+def oyun_puani_kaydet(ogrenci_id: int, oyun: str, puan: int) -> dict:
+    oyun = (oyun or "Oyun").strip()[:40]
+    puan = max(0, int(puan or 0))
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    xp = min(20, puan // 5)
+    con = _conn()
+    _gelisim_init(con)
+    bugunku_xp = con.execute("""
+        SELECT COALESCE(SUM(xp),0) FROM oyun_puanlari
+        WHERE ogrenci_id=? AND substr(tarih,1,10)=?
+    """, (ogrenci_id, bugun)).fetchone()[0]
+    xp = max(0, min(xp, 40 - int(bugunku_xp or 0)))
+    con.execute("""
+        INSERT INTO oyun_puanlari (ogrenci_id, oyun, puan, xp, tarih)
+        VALUES (?,?,?,?,?)
+    """, (ogrenci_id, oyun, puan, xp, now))
+    if xp:
+        puan_kaydi = _gelisim_puan_ekle(con, ogrenci_id, xp)
+    else:
+        puan_kaydi = dict(con.execute("SELECT * FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone())
+    con.commit(); con.close()
+    return {"ok": True, "xp": xp, "gunluk_kalan": max(0, 40 - int(bugunku_xp or 0) - xp), "puan": puan_kaydi}
 
 
 def avatar_seviyesi(xp: int) -> dict:
@@ -1958,6 +2003,14 @@ def gelisim_ozeti(ogrenci_id: int) -> dict:
         FROM tebrik_kartlari tk JOIN ogrenciler o ON o.id = tk.gonderen_id
         WHERE tk.alan_id=? ORDER BY tk.id DESC LIMIT 8
     """, (ogrenci_id,)).fetchall()]
+    oyunlar = [dict(r) for r in con.execute("""
+        SELECT oyun, SUM(puan) AS puan, SUM(xp) AS xp, MAX(tarih) AS son_tarih
+        FROM oyun_puanlari
+        WHERE ogrenci_id=?
+        GROUP BY oyun
+        ORDER BY son_tarih DESC
+        LIMIT 8
+    """, (ogrenci_id,)).fetchall()]
     con.close()
     return {
         "puan": puan,
@@ -1966,6 +2019,7 @@ def gelisim_ozeti(ogrenci_id: int) -> dict:
         "sandiklar": sandiklar,
         "telafiler": telafiler,
         "tebrikler": tebrikler,
+        "oyunlar": oyunlar,
         "sandik_odulleri": SANDIK_ODULLERI,
     }
 
@@ -2195,6 +2249,12 @@ def pazar_satin_al(ogrenci_id: int, urun_kodu: str) -> dict:
         return {"ok": False, "sebep": "Urun bulunamadi"}
     con = _conn()
     _gelisim_init(con)
+    sahip = con.execute("""
+        SELECT id FROM avatar_envanter WHERE ogrenci_id=? AND urun_kodu=?
+    """, (ogrenci_id, urun_kodu)).fetchone()
+    if sahip:
+        con.close()
+        return {"ok": False, "sebep": "Bu urun zaten koleksiyonda"}
     puan = con.execute("SELECT xp FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone()
     xp = puan["xp"] if puan else 0
     if xp < urun["fiyat"]:

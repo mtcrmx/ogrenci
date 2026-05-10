@@ -127,6 +127,27 @@
         <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3"><div class="text-3xl">👑</div><div class="font-bold text-sm">Efsane</div><div class="text-xs text-slate-500">500 XP</div></div>
       </div>
     </section>
+
+    <section class="rounded-3xl bg-slate-900 border border-slate-800 p-5">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 class="font-black text-lg">Oyunlardan Gelen XP</h2>
+          <p class="text-sm text-slate-400">Oyun merkezinde kazanılan puanlar günlük limit dahilinde XP'ye dönüşür.</p>
+        </div>
+        <a href="{{ url_for('oyunlar') }}" class="rounded-xl bg-indigo-700 px-3 py-2 text-xs font-black">Oyunlara Git</a>
+      </div>
+      <div class="grid md:grid-cols-4 gap-2">
+        {% for o in gelisim.oyunlar %}
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3">
+          <div class="font-black">{{ o.oyun }}</div>
+          <div class="text-sm text-slate-400">{{ o.puan }} puan · {{ o.xp }} XP</div>
+          <div class="text-[10px] text-slate-500 mt-1">{{ o.son_tarih }}</div>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-500">Henüz oyun puanı yok.</p>
+        {% endfor %}
+      </div>
+    </section>
   </main>
 </body>
 </html>
