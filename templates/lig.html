@@ -10,16 +10,18 @@
         <h1 class="mt-1 text-3xl font-black tracking-normal text-white">Puan Durumu</h1>
         <p class="mt-2 text-sm text-slate-400">Sınıfların sezon puanları ve olumlu davranış katkıları.</p>
       </div>
-      <form action="{{ url_for('lig_sifirla_mac') }}" method="POST"
-            onsubmit="return confirm('Sezon puan tablosu sıfırlansın mı?')"
-            class="flex w-full gap-2 sm:w-auto">
-        <input type="password" name="parola" placeholder="Parola"
-               class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-sky-500 sm:w-32">
-        <button type="submit"
-                class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white transition hover:bg-red-700">
-          Sıfırla
-        </button>
-      </form>
+      {% if toplu_sifirlamaya_izin %}
+        <form action="{{ url_for('lig_sifirla_mac') }}" method="POST"
+              onsubmit="return confirm('Sezon puan tablosu sıfırlansın mı?')"
+              class="flex w-full gap-2 sm:w-auto">
+          <input type="password" name="parola" placeholder="Parola"
+                 class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-sky-500 sm:w-32">
+          <button type="submit"
+                  class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white transition hover:bg-red-700">
+            Sıfırla
+          </button>
+        </form>
+      {% endif %}
     </div>
 
     <div class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">

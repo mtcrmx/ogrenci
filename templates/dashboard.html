@@ -69,7 +69,7 @@
       <button onclick="sifirlaModalAc('sinif', {{ aktif.id }})"
               class="w-full text-xs font-semibold py-2 rounded-lg
                      bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
-        ↺ Sınıfı Sıfırla
+        ↺ Kendi Tiklerimi Sil
       </button>
       {% if toplu_sifirlamaya_izin %}
       <button onclick="sifirlaModalAc('hepsi', 0)"
@@ -424,7 +424,7 @@
     </button>
     <form action="{{ url_for('sifirla_ogrenci', ogrenci_id=o.id) }}"
           method="POST" class="inline"
-          onsubmit="return confirm('{{ o.ad_soyad }} tiklerini sıfırla?')">
+          onsubmit="return confirm('{{ o.ad_soyad }} için sadece sizin verdiğiniz tikler silinsin mi?')">
       <input type="hidden" name="sinif_id" value="{{ sinif_id }}">
       <button type="submit"
               class="bg-amber-500 hover:bg-amber-600 text-white
@@ -694,7 +694,7 @@ function sifirlaModalAc(tip, sinifId) {
 
   if (tip === 'sinif') {
     form.action = `/sifirla/sinif/${sinifId}`;
-    acik.textContent = 'Bu sınıfın tüm tikleri silinecek.';
+    acik.textContent = 'Bu sınıfta yalnızca sizin verdiğiniz tikler silinecek.';
     // Sinif_id'yi forma ekle
     let inp = form.querySelector('[name=sinif_id]');
     if (!inp) { inp = document.createElement('input'); inp.name='sinif_id'; inp.type='hidden'; form.appendChild(inp); }
@@ -792,7 +792,7 @@ function kartHTML(o, sinifId) {
               class="bg-slate-500 hover:bg-slate-600 text-white text-xs
                      px-2 py-1.5 rounded-lg transition hidden sm:block">📜</button>
       <form action="/sifirla/ogrenci/${o.id}" method="POST" class="inline"
-            onsubmit="return confirm(${JSON.stringify(adStr + ' tiklerini sıfırla?')})">
+            onsubmit="return confirm(${JSON.stringify(adStr + ' için sadece sizin verdiğiniz tikler silinsin mi?')})">
         <input type="hidden" name="sinif_id" value="${sinifId}">
         <button type="submit"
                 class="bg-amber-500 hover:bg-amber-600 text-white text-xs

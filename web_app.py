@@ -17,6 +17,7 @@ from database import (
     ogretmen_dogrula, ogretmen_id_bul, ogretmen_siniflari,
     sinif_ogrencileri, tum_okul_ogrencileri, ogrenci_tik_gecmisi,
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
+    ogretmenin_ogrenci_tiklerini_sifirla, ogretmenin_sinif_tiklerini_sifirla,
     olumlu_tik_ekle, olumlu_sinif_etkinlik_ekle,
     ogrenci_olumlu_tik_sayisi, ogrenci_olumlu_tik_sayilari,
     lig_siralama, lig_manuel_sifirla, sinif_olumlu_gecmis,
@@ -1251,22 +1252,24 @@ def gecmis(ogrenci_id):
 @app.route("/sifirla/ogrenci/<int:ogrenci_id>", methods=["POST"])
 @giris_zorunlu
 def sifirla_ogrenci(ogrenci_id):
-    if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
+    ogretmen_id = session["ogretmen_id"]
+    if not _ogretmen_ogrencisine_erisebilir(ogretmen_id, ogrenci_id):
         abort(403)
-    tek_ogrenci_sifirla(ogrenci_id)
+    silinen = ogretmenin_ogrenci_tiklerini_sifirla(ogrenci_id, ogretmen_id)
     sinif_id = request.form.get("sinif_id", "")
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify({"ok": True})
+        return jsonify({"ok": True, "silinen": silinen})
     return redirect(url_for("dashboard", sinif=sinif_id))
 
 
 @app.route("/sifirla/sinif/<int:sinif_id>", methods=["POST"])
 @giris_zorunlu
 def sifirla_sinif(sinif_id):
-    if not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
+    ogretmen_id = session["ogretmen_id"]
+    if not _ogretmen_sinifinda_mi(ogretmen_id, sinif_id):
         abort(403)
     if request.form.get("parola") == SIFIR_PAROLA:
-        sinif_sifirla(sinif_id)
+        ogretmenin_sinif_tiklerini_sifirla(sinif_id, ogretmen_id)
     return redirect(url_for("dashboard", sinif=sinif_id))
 
 
@@ -1699,6 +1702,7 @@ def lig():
         "lig.html",
         tablo=tablo,
         ogretmen_id=session["ogretmen_id"],
+        toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]),
     )
 
 
@@ -1749,6 +1753,8 @@ def lig_mac_oyla(mac_id):
 @app.route("/lig/sifirla", methods=["POST"])
 @giris_zorunlu
 def lig_sifirla_mac():
+    if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
+        abort(403)
     if request.form.get("parola") != SIFIR_PAROLA:
         flash("Yanlış parola.", "error")
         return redirect(url_for("lig"))

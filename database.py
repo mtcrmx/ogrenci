@@ -691,6 +691,19 @@ def tek_ogrenci_sifirla(ogrenci_id: int):
     con.close()
 
 
+def ogretmenin_ogrenci_tiklerini_sifirla(ogrenci_id: int, ogretmen_id: int) -> int:
+    """Bir öğrencide yalnızca ilgili öğretmenin verdiği olumsuz tikleri siler."""
+    con = _conn()
+    cur = con.execute(
+        "DELETE FROM tik_kayitlari WHERE ogrenci_id = ? AND ogretmen_id = ?",
+        (ogrenci_id, ogretmen_id),
+    )
+    con.commit()
+    silinen = cur.rowcount if cur.rowcount is not None else 0
+    con.close()
+    return int(silinen)
+
+
 def sinif_sifirla(sinif_id: int):
     """Bir sınıfın tüm tiklerini sıfırlar."""
     con = _conn()
@@ -700,6 +713,20 @@ def sinif_sifirla(sinif_id: int):
     """, (sinif_id,))
     con.commit()
     con.close()
+
+
+def ogretmenin_sinif_tiklerini_sifirla(sinif_id: int, ogretmen_id: int) -> int:
+    """Bir sınıfta yalnızca ilgili öğretmenin verdiği olumsuz tikleri siler."""
+    con = _conn()
+    cur = con.execute("""
+        DELETE FROM tik_kayitlari
+        WHERE ogretmen_id = ?
+          AND ogrenci_id IN (SELECT id FROM ogrenciler WHERE sinif_id = ?)
+    """, (ogretmen_id, sinif_id))
+    con.commit()
+    silinen = cur.rowcount if cur.rowcount is not None else 0
+    con.close()
+    return int(silinen)
 
 
 def tum_tikleri_sifirla():
