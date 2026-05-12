@@ -96,6 +96,12 @@
            title="Öğrenci ve veliye duyuru">
           Duyuru
         </a>
+        <a href="{{ url_for('analiz_merkezi') }}"
+           class="bg-rose-700 hover:bg-rose-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Analiz PDF, yedek ve sıfırlama">
+          Analiz
+        </a>
       </nav>
 
       <span class="hidden sm:block text-xs text-blue-200">👤 {{ session.ogretmen_adi }}</span>
@@ -107,11 +113,11 @@
          title="Tik listesi Excel">
         📊 Excel
       </a>
-      <a href="{{ url_for('rapor_analiz_pdf', sinif_id=aktif.id) }}"
+      <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}"
          class="bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold
                 px-3 py-1.5 rounded-lg transition hidden md:block"
-         title="Detaylı analiz PDF (arşive kaydedilir)">
-        📑 Analiz PDF
+         title="Analiz merkezi ve PDF">
+        📑 Analiz
       </a>
       {% endif %}
 
@@ -128,7 +134,7 @@
     <a href="{{ url_for('yayin') }}" class="shrink-0 rounded-lg bg-violet-700 px-2.5 py-1 text-[11px] font-bold">Yayın</a>
     <a href="{{ url_for('lig') }}" class="shrink-0 rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-bold">Lig</a>
     <a href="{{ url_for('bilgilendirme_yonetimi') }}" class="shrink-0 rounded-lg bg-sky-700 px-2.5 py-1 text-[11px] font-bold">Duyuru</a>
-    <a href="{{ url_for('rapor_arsiv_sayfa') }}" class="shrink-0 rounded-lg bg-rose-900 px-2.5 py-1 text-[11px] font-bold">Arşiv</a>
+    <a href="{{ url_for('analiz_merkezi') }}" class="shrink-0 rounded-lg bg-rose-900 px-2.5 py-1 text-[11px] font-bold">Analiz</a>
   </nav>
 </header>
 {% endif %}

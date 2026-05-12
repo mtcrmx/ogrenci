@@ -126,6 +126,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "rapor_ozet", "rapor_ozet_csv", "rapor_excel", "rapor_excel_detayli",
     "rapor_analiz_pdf", "rapor_arsiv_sayfa", "rapor_arsiv_sifirla",
     "rapor_arsiv_yedek_geri_yukle", "rapor_arsiv_indir",
+    "analiz_merkezi",
     "rapor_haftalik", "rapor_karsilastir", "rapor_anonim_sinif",
     "manifest", "service_worker",
 })
@@ -1568,6 +1569,27 @@ def rapor_analiz_pdf():
     )
 
 
+@app.route("/analiz")
+@giris_zorunlu
+def analiz_merkezi():
+    ogretmen_id = session["ogretmen_id"]
+    siniflar = ogretmen_siniflari(ogretmen_id)
+    secili_sinif_id = request.args.get("sinif_id", type=int)
+    if secili_sinif_id and secili_sinif_id not in {s["id"] for s in siniflar}:
+        secili_sinif_id = None
+    admin_mi = _toplu_sifirlamaya_izinli_mi(ogretmen_id)
+    return render_template(
+        "analiz_merkezi.html",
+        siniflar=siniflar,
+        secili_sinif_id=secili_sinif_id,
+        pdf_ok=PDF_OK,
+        arsiv=rapor_arsiv_listesi(ogretmen_id, 12),
+        sistem_yedekleri=sistem_yedek_listesi(10) if admin_mi else [],
+        admin_mi=admin_mi,
+        ogretmen_adi=session.get("ogretmen_adi", ""),
+    )
+
+
 @app.route("/rapor/arsiv")
 @giris_zorunlu
 def rapor_arsiv_sayfa():
@@ -2298,9 +2320,7 @@ SIFIRLAMA_SIFRESI = "ERENLER2024"
 def admin_sifirla_sayfa():
     if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
         abort(403)
-    return render_template("sifirla.html",
-        ogretmen_adi=session.get("ogretmen_adi",""),
-        sistem_yedekleri=sistem_yedek_listesi(8))
+    return redirect(url_for("analiz_merkezi"))
 
 @app.route("/api/admin/sifirla", methods=["POST"])
 @giris_zorunlu

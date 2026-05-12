@@ -16,6 +16,12 @@ from datetime import datetime, timedelta
 _DATA_DIR = "/data" if os.path.isdir("/data") else os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(_DATA_DIR, "ogrenci_takip.db")
 
+
+def _bu_hafta_pazartesi() -> str:
+    bugun = datetime.now().date()
+    pazartesi = bugun - timedelta(days=bugun.weekday())
+    return pazartesi.isoformat()
+
 # ── Disiplin kriterleri (22 adet) ──────────────────────────────────────────
 KRITERLER = [
     ("📚", "Eşya Eksikliği"),
@@ -2094,7 +2100,7 @@ _SIFIRLANACAK_TABLOLAR = [
     "taktik_formasyonu", "quiz_sonuclari", "odev_tamamlayanlar", "odevler",
     "gelisim_puan", "gelisim_gorevleri", "sandik_kayitlari", "telafi_gorevleri",
     "tebrik_kartlari", "avatar_envanter", "ogretmen_notlari", "hikaye_ilerleme",
-    "oyun_puanlari",
+    "oyun_puanlari", "bilgilendirmeler",
 ]
 
 
