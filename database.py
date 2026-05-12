@@ -543,39 +543,12 @@ def tum_tikleri_sifirla():
 
 def olumlu_puan_ekle(sinif_id: int, ogretmen_id: int, kriter: str) -> int:
     tarih = datetime.now().strftime("%Y-%m-%d %H:%M")
-    hafta = _bu_hafta_pazartesi()
     con = _conn()
     con.execute(
         "INSERT INTO olumlu_davranis (sinif_id, ogretmen_id, kriter, tarih) VALUES (?,?,?,?)",
         (sinif_id, ogretmen_id, kriter, tarih)
     )
-    mevcut = con.execute("SELECT puan, hafta_basi FROM lig WHERE sinif_id=?",
-                         (sinif_id,)).fetchone()
-    if not mevcut:
-        con.execute("INSERT INTO lig (sinif_id, puan, hafta_basi) VALUES (?,1,?)",
-                    (sinif_id, hafta))
-        puan = 1
-    elif mevcut["hafta_basi"] != hafta:
-        con.execute("UPDATE lig SET puan=1, hafta_basi=? WHERE sinif_id=?",
-                    (hafta, sinif_id))
-        puan = 1
-    else:
-        con.execute("UPDATE lig SET puan=puan+1 WHERE sinif_id=?", (sinif_id,))
-        puan = mevcut["puan"] + 1
-    tablo_var = con.execute(
-        "SELECT sinif_id FROM lig_mac_tablo WHERE sinif_id=?", (sinif_id,)
-    ).fetchone()
-    if tablo_var:
-        con.execute(
-            "UPDATE lig_mac_tablo SET puan = puan + 1, ag = ag + 1 WHERE sinif_id=?",
-            (sinif_id,)
-        )
-    else:
-        con.execute(
-            "INSERT INTO lig_mac_tablo (sinif_id, galibiyet, beraberlik, maglubiyet, puan, ag) "
-            "VALUES (?, 0, 0, 0, 1, 1)",
-            (sinif_id,)
-        )
+    puan = _lig_haftalik_puan_artir(con, sinif_id)
     con.commit()
     con.close()
     return puan
@@ -679,6 +652,66 @@ def _mac_tablosu_olustur(con):
         );
     """)
     con.commit()
+
+
+def _ensure_lig_tablolari(con) -> None:
+    """İlk kullanımda `lig` ve `lig_mac_tablo` yoksa oluşturur (commit gerektirmez)."""
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS lig (
+            sinif_id INTEGER PRIMARY KEY REFERENCES siniflar(id),
+            puan INTEGER NOT NULL DEFAULT 0,
+            hafta_basi TEXT NOT NULL DEFAULT ''
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS lig_mac_tablo (
+            sinif_id INTEGER PRIMARY KEY REFERENCES siniflar(id),
+            galibiyet INTEGER DEFAULT 0,
+            beraberlik INTEGER DEFAULT 0,
+            maglubiyet INTEGER DEFAULT 0,
+            puan INTEGER DEFAULT 0,
+            ag INTEGER DEFAULT 0
+        )
+    """)
+
+
+def _lig_haftalik_puan_artir(con, sinif_id: int) -> int:
+    """Haftalık Süper Lig (`lig`) ve yayın tablosu (`lig_mac_tablo`) puanını +1 artırır."""
+    _ensure_lig_tablolari(con)
+    hafta = _bu_hafta_pazartesi()
+    mevcut = con.execute(
+        "SELECT puan, hafta_basi FROM lig WHERE sinif_id=?", (sinif_id,)
+    ).fetchone()
+    if not mevcut:
+        con.execute(
+            "INSERT INTO lig (sinif_id, puan, hafta_basi) VALUES (?,1,?)",
+            (sinif_id, hafta),
+        )
+        puan = 1
+    elif mevcut["hafta_basi"] != hafta:
+        con.execute(
+            "UPDATE lig SET puan=1, hafta_basi=? WHERE sinif_id=?",
+            (hafta, sinif_id),
+        )
+        puan = 1
+    else:
+        con.execute("UPDATE lig SET puan=puan+1 WHERE sinif_id=?", (sinif_id,))
+        puan = mevcut["puan"] + 1
+    tablo_var = con.execute(
+        "SELECT sinif_id FROM lig_mac_tablo WHERE sinif_id=?", (sinif_id,)
+    ).fetchone()
+    if tablo_var:
+        con.execute(
+            "UPDATE lig_mac_tablo SET puan = puan + 1, ag = ag + 1 WHERE sinif_id=?",
+            (sinif_id,),
+        )
+    else:
+        con.execute(
+            "INSERT INTO lig_mac_tablo (sinif_id, galibiyet, beraberlik, maglubiyet, puan, ag) "
+            "VALUES (?, 0, 0, 0, 1, 1)",
+            (sinif_id,),
+        )
+    return puan
 
 
 def gunluk_mac_olustur() -> list[dict]:
@@ -2015,12 +2048,25 @@ def oyun_puani_kaydet(ogrenci_id: int, oyun: str, puan: int) -> dict:
         INSERT INTO oyun_puanlari (ogrenci_id, oyun, puan, xp, tarih)
         VALUES (?,?,?,?,?)
     """, (ogrenci_id, oyun, puan, xp, now))
+    sinifa_lig = False
     if xp:
         puan_kaydi = _gelisim_puan_ekle(con, ogrenci_id, xp)
+        ogr = con.execute(
+            "SELECT sinif_id FROM ogrenciler WHERE id=?", (ogrenci_id,)
+        ).fetchone()
+        if ogr:
+            _lig_haftalik_puan_artir(con, ogr["sinif_id"])
+            sinifa_lig = True
     else:
         puan_kaydi = dict(con.execute("SELECT * FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone())
     con.commit(); con.close()
-    return {"ok": True, "xp": xp, "gunluk_kalan": max(0, 40 - int(bugunku_xp or 0) - xp), "puan": puan_kaydi}
+    return {
+        "ok": True,
+        "xp": xp,
+        "gunluk_kalan": max(0, 40 - int(bugunku_xp or 0) - xp),
+        "puan": puan_kaydi,
+        "sinifa_lig_katkisi": sinifa_lig,
+    }
 
 
 def avatar_seviyesi(xp: int) -> dict:
@@ -2107,8 +2153,20 @@ def gelisim_gorev_tamamla(ogrenci_id: int) -> dict:
         return {"ok": False, "sebep": "Bugunku gorev zaten tamamlandi"}
     con.execute("UPDATE gelisim_gorevleri SET tamamlandi=1 WHERE id=?", (row["id"],))
     puan = _gelisim_puan_ekle(con, ogrenci_id, row["xp"])
+    ogr = con.execute(
+        "SELECT sinif_id FROM ogrenciler WHERE id=?", (ogrenci_id,)
+    ).fetchone()
+    sinifa_lig = False
+    if ogr:
+        _lig_haftalik_puan_artir(con, ogr["sinif_id"])
+        sinifa_lig = True
     con.commit(); con.close()
-    return {"ok": True, "xp": row["xp"], "puan": puan}
+    return {
+        "ok": True,
+        "xp": row["xp"],
+        "puan": puan,
+        "sinifa_lig_katkisi": sinifa_lig,
+    }
 
 
 def sandik_ac(ogrenci_id: int) -> dict:

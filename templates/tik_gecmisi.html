@@ -12,6 +12,9 @@
   <div class="max-w-2xl mx-auto px-4 py-3 flex flex-wrap items-center gap-2 justify-between">
     <div class="text-xs font-bold text-slate-400">🏫 Erenler Cumhuriyet Ortaokulu</div>
     <div class="flex flex-wrap gap-2">
+      {% if not veli_modu %}
+      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="text-xs font-black bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg">XP · Görev · Oyun</a>
+      {% endif %}
       {% if veli_modu %}
       <a href="{{ url_for('veli_cikis') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Çıkış</a>
       {% else %}

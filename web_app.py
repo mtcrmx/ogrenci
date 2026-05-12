@@ -98,7 +98,7 @@ def _bilgilendirme_hedefi() -> str | None:
 def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
     ana_ekranlar = {
         "ogretmen": {"dashboard"},
-        "ogrenci": {"ogrenci_gorunum"},
+        "ogrenci": {"ogrenci_gorunum", "ogrenci_gelisim_panel"},
         "veli": {"veli_panel"},
     }
     return request.endpoint in ana_ekranlar.get(hedef, set())
@@ -449,9 +449,9 @@ def logout():
 @app.route("/ogrenci/giris", methods=["GET", "POST"])
 def ogrenci_giris():
     hata = None
-    next_url = request.values.get("next") or url_for("ogrenci_gorunum")
+    next_url = request.values.get("next") or url_for("ogrenci_gelisim_panel")
     if not next_url.startswith("/"):
-        next_url = url_for("ogrenci_gorunum")
+        next_url = url_for("ogrenci_gelisim_panel")
 
     if session.get("ogrenci_giris"):
         return redirect(next_url)
@@ -485,37 +485,82 @@ def ogrenci_cikis():
 @app.route("/ogrenci/ben")
 @ogrenci_giris_zorunlu
 def ogrenci_ben():
-    return redirect(url_for("ogrenci_gorunum"))
+    return redirect(url_for("ogrenci_gelisim_panel"))
+
+
+@app.route("/ogrenci/gelisim")
+@ogrenci_giris_zorunlu
+def ogrenci_gelisim_panel():
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        session.pop("ogrenci_giris", None)
+        session.pop("ogrenci_id", None)
+        return redirect(url_for("ogrenci_giris"))
+    ozet = gelisim_ozeti(oid)
+    gl = gelisim_ligi()
+    sinif_satir = next((s for s in gl if s["sinif_id"] == o["sinif_id"]), None)
+    sinif_sira = next((i for i, s in enumerate(gl, 1) if s["sinif_id"] == o["sinif_id"]), None)
+    return render_template(
+        "ogrenci_xp_panel.html",
+        ogrenci=o,
+        ozet=ozet,
+        sinif_satir=sinif_satir,
+        sinif_sira=sinif_sira,
+        sinif_sayisi=len(gl),
+    )
 
 
 @app.route("/oyunlar")
 @ogrenci_giris_zorunlu
 def oyunlar():
-    return redirect(url_for("ogrenci_gorunum"))
+    return render_template("oyunlar.html")
 
 
 @app.route("/api/oyun/puan", methods=["POST"])
 @ogrenci_giris_zorunlu
 def oyun_puan_api():
-    return jsonify({"ok": False, "sebep": "Oyun modu kapali; yalnizca tik sistemi aktif."}), 410
+    veri = request.get_json(silent=True) or {}
+    oid = int(session["ogrenci_id"])
+    sonuc = oyun_puani_kaydet(
+        oid,
+        veri.get("oyun") or "Oyun",
+        int(veri.get("puan") or 0),
+    )
+    o = _ogrenci_bul(oid)
+    ek = {}
+    if o:
+        ek["sinif_adi"] = o.get("sinif_adi", "")
+    return jsonify({**sonuc, **ek})
+
+
+@app.route("/api/ogrenci/gorev-tamamla", methods=["POST"])
+@ogrenci_giris_zorunlu
+def api_ogrenci_gorev_tamamla():
+    return jsonify(gelisim_gorev_tamamla(int(session["ogrenci_id"])))
 
 
 @app.route("/gelisim")
 @ogrenci_giris_zorunlu
 def gelisim_merkezi():
-    return redirect(url_for("ogrenci_gorunum"))
+    return redirect(url_for("ogrenci_gelisim_panel"))
 
 
 @app.route("/patika")
 @ogrenci_giris_zorunlu
 def ogrenci_patika():
-    return redirect(url_for("ogrenci_gorunum"))
+    return redirect(url_for("ogrenci_gelisim_panel"))
 
 
 @app.route("/gelisim/gorev-tamamla", methods=["POST"])
 @ogrenci_giris_zorunlu
 def gelisim_gorev_tamamla_route():
-    return redirect(url_for("ogrenci_gorunum"))
+    sonuc = gelisim_gorev_tamamla(int(session["ogrenci_id"]))
+    if sonuc.get("ok"):
+        flash("Görev tamamlandı; XP ve sınıf lig katkın kaydedildi.", "success")
+    else:
+        flash(sonuc.get("sebep", "İşlem yapılamadı"), "error")
+    return redirect(url_for("ogrenci_gelisim_panel"))
 
 
 @app.route("/gelisim/sandik-ac", methods=["POST"])

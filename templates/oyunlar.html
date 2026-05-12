@@ -18,8 +18,8 @@
         <p class="text-sm text-slate-400">Sorulu, bulmacalı ve hafıza oyunlarıyla günlük pratik.</p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <a href="{{ url_for('index') }}" class="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold">Ana Menü</a>
-        <a href="{{ url_for('ogrenci_ben') }}" class="rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold">Profilime dön</a>
+        <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold">XP Panel</a>
+        <a href="{{ url_for('ogrenci_gorunum') }}" class="rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold">Tik geçmişi</a>
       </div>
     </header>
 
@@ -98,7 +98,9 @@ function oyunPuaniKaydet(oyun, oyunPuani) {
       if (!data.ok) throw new Error(data.sebep || 'Puan kaydedilemedi');
       document.getElementById('xpKazanc').textContent = data.xp;
       box.className = 'mb-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-4 py-2 text-sm font-bold';
-      box.textContent = data.xp > 0 ? `Oyun puanı kaydedildi: +${data.xp} XP` : 'Puan kaydedildi. Günlük oyun XP limiti doldu.';
+      let m = data.xp > 0 ? `+${data.xp} XP kaydedildi.` : 'Puan kaydedildi. Günlük oyun XP limiti doldu.';
+      if (data.xp > 0 && data.sinifa_lig_katkisi) m += ' Sınıfının Süper Lig puanına +1 katkı!';
+      box.textContent = m;
     } catch (e) {
       const box = document.getElementById('sonuc');
       box.className = 'mb-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-2 text-sm font-bold';
