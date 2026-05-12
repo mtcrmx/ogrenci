@@ -64,18 +64,15 @@
     <div class="ticker-track whitespace-nowrap flex gap-3 w-max">
       <div class="flex gap-3 px-3">
         {% for l in liderler %}
-        <span class="rounded-full bg-indigo-500/15 border border-indigo-400/20 px-4 py-1 text-xs font-black text-indigo-100">🏆 {{ loop.index }}. {{ l.sinif_adi }} · {{ l.puan }} puan</span>
+        <span class="rounded-full bg-indigo-500/15 border border-indigo-400/20 px-4 py-1 text-xs font-black text-indigo-100">🏆 {{ loop.index }}. {{ l.sinif_adi }} · {{ l.puan }} XP</span>
         {% endfor %}
         {% for r in rozetler %}
         <span class="rounded-full bg-amber-500/15 border border-amber-400/20 px-4 py-1 text-xs font-black text-amber-100">{{ r.emoji }} {{ r.sahip }}</span>
         {% endfor %}
-        {% for m in maclar %}
-        <span class="rounded-full bg-cyan-500/15 border border-cyan-400/20 px-4 py-1 text-xs font-black text-cyan-100">⚔️ {{ m.sinif1_adi }} - {{ m.sinif2_adi }}</span>
-        {% endfor %}
       </div>
       <div class="flex gap-3 px-3">
         {% for l in liderler %}
-        <span class="rounded-full bg-indigo-500/15 border border-indigo-400/20 px-4 py-1 text-xs font-black text-indigo-100">🏆 {{ loop.index }}. {{ l.sinif_adi }} · {{ l.puan }} puan</span>
+        <span class="rounded-full bg-indigo-500/15 border border-indigo-400/20 px-4 py-1 text-xs font-black text-indigo-100">🏆 {{ loop.index }}. {{ l.sinif_adi }} · {{ l.puan }} XP</span>
         {% endfor %}
         {% for r in rozetler %}
         <span class="rounded-full bg-amber-500/15 border border-amber-400/20 px-4 py-1 text-xs font-black text-amber-100">{{ r.emoji }} {{ r.sahip }}</span>
@@ -123,7 +120,7 @@
         <div id="sinifHarita" class="grid grid-cols-2 gap-2"></div>
       </section>
       <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
-        <h2 class="font-black mb-3">Bugünkü Maçlar ve Kadrolar</h2>
+        <h2 class="font-black mb-3">Maç / kadro (kapalı)</h2>
         <div id="macPanel" class="space-y-3 xl:max-h-[32vh] overflow-y-auto"></div>
       </section>
       <section class="rounded-3xl bg-white/5 border border-white/10 p-4">
@@ -266,7 +263,7 @@ function renderIlkBes(data) {
 function renderMaclar(maclar) {
   const el = document.getElementById('macPanel');
   if (!maclar.length) {
-    el.innerHTML = '<p class="text-sm text-slate-500">Bugün maç yok.</p>';
+    el.innerHTML = '<p class="text-sm text-slate-500">Maç ve kadro görünümü kapatıldı. Ödev ve gelişim panellerini kullanın.</p>';
     return;
   }
   el.innerHTML = maclar.map((m, idx) => `

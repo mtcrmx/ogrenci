@@ -113,7 +113,7 @@
           <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
             <li>Sınıflar olumlu davranış puanı kazandıkça <strong class="text-yellow-400">seviye atlar</strong>.</li>
             <li>5 seviye var: <strong>🥚 Yumurta → 🐣 Civciv → 🦅 Kartal → 🦁 Aslan → 👑 Efsane</strong></li>
-            <li>Seviye, <strong class="text-white">Yayın ekranında</strong> ve <strong class="text-white">Lig tablosunda</strong> görünür.</li>
+            <li>Seviye, <strong class="text-white">yayın ekranında</strong> ve <strong class="text-white">öğretmen panelinde</strong> görünür.</li>
             <li>Yüksek seviye sınıf özel <strong class="text-indigo-300">rozet</strong> ve <strong class="text-yellow-400">Sezon puanı</strong> kazanır.</li>
           </ul>
         </div>
@@ -168,7 +168,7 @@
           <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
             <li>Rozetler belirli başarılar karşılığında <strong class="text-indigo-300">otomatik</strong> verilir.</li>
             <li><strong>🧹 Tertemiz</strong>: 7 gün hiç tik almayan öğrenciye verilir.</li>
-            <li><strong>⚡ Seri Yıldız</strong>: Sınıf 3 maç üst üste kazanınca verilir.</li>
+            <li><strong>⚡ Seri Yıldız</strong>: Uzun süre üst üste olumlu davranış serisi gösteren sınıfa verilir.</li>
             <li><strong>🔥 Alevli Seri</strong>: 10 gün kesintisiz olumlu davranış serisi.</li>
             <li><strong>👏 Alkış Efsanesi</strong>: 5 alkış kuponu biriktiren öğrenci kazanır.</li>
             <li>Rozetler <strong class="text-white">Yayın → Ödüller</strong> ekranında duyurulur.</li>
@@ -274,7 +274,7 @@
           <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
             <li>Her gün sabah <strong class="text-indigo-300">farklı ve gizli bir görev</strong> belirlenir.</li>
             <li>Görev tüm sınıflara aynı anda duyurulur — hangisi önce tamamlarsa <strong class="text-indigo-300">+{{ gorev.puan }} puan</strong> kazanır.</li>
-            <li>Puan hem <strong class="text-white">Süper Lig</strong> tablosuna hem de <strong class="text-white">Dönem Şampiyonluğu</strong> sıralamasına işlenir.</li>
+            <li>Puan <strong class="text-white">olumlu davranış / sezon</strong> kaydına ve <strong class="text-white">Dönem Şampiyonluğu</strong> sıralamasına işlenir.</li>
             <li>Tamamlayan sınıf "Tamamladı" işaretlenir, diğerleri geç kalsa da işaretleyebilir.</li>
           </ul>
         </div>
@@ -289,7 +289,7 @@
           <div class="mt-2 inline-block bg-indigo-900/60 border border-indigo-600 rounded-full px-4 py-1">
             <span class="text-indigo-300 text-xs font-bold">🏆 Ödül: </span>
             <span class="text-yellow-400 font-black">+{{ gorev.puan }} puan</span>
-            <span class="text-slate-500 text-xs ml-1">(Lig + Sezon)</span>
+            <span class="text-slate-500 text-xs ml-1">(Sezon)</span>
           </div>
         </div>
         <div class="p-6">
@@ -413,7 +413,7 @@
           <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
             <li>İki sınıf arasında <strong class="text-teal-300">ortak bir görev</strong> belirlenir (sistem rastgele seçer).</li>
             <li>Örnek görevler: <em>"İki sınıf birlikte sessiz okuma yapar"</em>, <em>"Birbirlerine teşekkür notu yazar"</em>.</li>
-            <li>Görev tamamlanınca her iki sınıfa da <strong class="text-yellow-400">+3 puan (Lig) + Sezon puanı</strong> verilir.</li>
+            <li>Görev tamamlanınca her iki sınıfa da <strong class="text-yellow-400">sezon puanı</strong> yazılır (öğretmen onayıyla).</li>
             <li>Başarılı ittifaklar <strong class="text-white">🤝 Beraberlik Madalyası</strong> rozetini getirir.</li>
           </ul>
         </div>
@@ -521,8 +521,8 @@
         <div>
           <div class="text-white font-black text-sm mb-1">Dönem Şampiyonluğu</div>
           <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
-            <li>Dönem (sezon) boyunca <strong class="text-yellow-300">biriken toplam puan</strong> sıralamasıdır — Süper Lig her hafta sıfırlansa da sezon puanı birikmez devam eder.</li>
-            <li>Sezon puanı şu şekillerde artar: <strong class="text-white">İttifak görevi tamamlama</strong> ve <strong class="text-white">Şans çarkı ödülü</strong>.</li>
+            <li>Dönem (sezon) boyunca <strong class="text-yellow-300">biriken toplam puan</strong> sıralamasıdır; görev ve olumlu davranışlarla birikir.</li>
+            <li>Sezon puanı özellikle <strong class="text-white">ittifak görevi</strong>, günlük görev ve olumlu davranış kayıtlarıyla artar.</li>
             <li>Dönem sonunda birinci sınıf <strong class="text-yellow-400">🏆 Sezon Zirvesi</strong> rozetini ve özel bir ödül kazanır.</li>
           </ul>
         </div>
@@ -554,7 +554,7 @@
         </div>
       </div>
       <p class="text-slate-600 text-xs text-center">
-        Sezon puanı; ittifak görevi, şans çarkı ve özel ödüller ile birikir.
+        Sezon puanı; ittifak ve günlük görevler, olumlu davranışlar ve özel ödüllerle birikir.
       </p>
     </div>
 
@@ -627,13 +627,11 @@
         <div class="rounded-xl border border-yellow-700 px-4 py-3 mb-5 flex gap-3 items-start" style="background:#1a1200">
           <span class="text-2xl flex-shrink-0">💡</span>
           <div>
-            <div class="text-yellow-300 font-black text-sm mb-1">Çark Hakkı Nasıl Kazanılır?</div>
+            <div class="text-yellow-300 font-black text-sm mb-1">Şans çarkı (devre dışı)</div>
             <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
-              <li>Çark, <strong class="text-yellow-300">yalnızca Lig maçı kazanıldıktan sonra</strong> aktif olur.</li>
-              <li><strong class="text-white">Lig → Bugünkü Maçlar</strong> sayfasına gidin.</li>
-              <li>Maçın sonucunu girin — kazanan belirlendikten sonra <strong class="text-yellow-400">🎡 Şans Çarkı</strong> butonu görünür.</li>
-              <li>Kazanan sınıf adına butona basın, çark bir ödül veya ceza çeker.</li>
-              <li>Sonuç otomatik uygulanır (puan veya tik eklenir).</li>
+              <li>Maç/lig sistemine bağlı çark kapatıldı.</li>
+              <li>Ödüller ve puanlar <strong class="text-white">günlük görevler</strong>, <strong class="text-white">gelişim / XP</strong> ve <strong class="text-white">öğretmen ödülleri</strong> üzerinden işlenir.</li>
+              <li>Aşağıdaki tablo geçmiş çark seçenekleri için referans olarak duruyor.</li>
             </ul>
           </div>
         </div>
@@ -656,7 +654,7 @@
 
         <!-- Demo Çark -->
         <div class="text-center">
-          <div class="text-slate-500 text-xs mb-3">⬇ Demo çark — gerçek sonuç Lig sayfasından çevrilir</div>
+          <div class="text-slate-500 text-xs mb-3">⬇ Demo çark — canlı çark devre dışı</div>
           <div class="relative inline-block mb-6">
             <div class="cark-indicator">▼</div>
             <canvas id="cark-canvas" width="280" height="280"></canvas>

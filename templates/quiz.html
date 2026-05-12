@@ -156,9 +156,9 @@
 
     <!-- Puan değişimi -->
     <div class="rounded-2xl p-5 border border-slate-700 text-center" style="background:#0d1a30">
-      <div class="text-slate-500 text-xs mb-2">TAKIM LİG PUANI</div>
+      <div class="text-slate-500 text-xs mb-2">QUİZ NET PUANI</div>
       <div class="text-4xl font-black" id="puan-degisim-text"></div>
-      <div class="text-slate-500 text-xs mt-1">sınıf lig puanına eklendi</div>
+      <div class="text-slate-500 text-xs mt-1">sınıf quiz kaydına işlendi (doğru − yanlış)</div>
     </div>
 
     <!-- Detay -->
@@ -408,7 +408,7 @@ async function sonucGoster() {
   document.getElementById('sonuc-yanlis').textContent = yanlis;
 
   const pd = document.getElementById('puan-degisim-text');
-  pd.textContent = (puan >= 0 ? '+' : '') + puan + ' Puan';
+  pd.textContent = (puan >= 0 ? '+' : '') + puan + ' net';
   pd.className = puan >= 0 ? 'text-4xl font-black text-green-400' : 'text-4xl font-black text-red-400';
 
   // Detay listesi (sunucu dönen doğruları kullan)

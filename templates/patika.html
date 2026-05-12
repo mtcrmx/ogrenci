@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patika — Görev Zamanı</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: radial-gradient(ellipse at top, #1e1b4b 0%, #0f172a 45%, #020617 100%); min-height: 100vh; }
+    .step-done { border-color: rgba(34,197,94,.5); background: rgba(22,101,52,.25); }
+    .step-open { border-color: rgba(251,191,36,.45); background: rgba(120,53,15,.2); }
+    .step-lock { border-color: rgba(71,85,105,.5); opacity: .72; }
+    @keyframes pulse-ring { 0%,100%{ box-shadow:0 0 0 0 rgba(251,191,36,.35);} 50%{ box-shadow:0 0 0 8px rgba(251,191,36,0);} }
+    .pulse-ring { animation: pulse-ring 2s ease-in-out infinite; }
+  </style>
+</head>
+<body class="text-slate-100 font-sans">
+  <main class="max-w-lg mx-auto px-4 py-6 pb-24 space-y-6">
+    <header class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p class="text-xs font-black tracking-widest text-amber-500/90">OKUL PATİKASI</p>
+        <h1 class="text-2xl font-black mt-1">Merhaba, {{ ogrenci.ad_soyad }}</h1>
+        <p class="text-sm text-slate-400 mt-1">{{ ogrenci.sinif_adi }} · Tik: {{ ogrenci.tik_sayisi }}</p>
+      </div>
+      <div class="rounded-2xl bg-slate-900/80 border border-amber-500/30 px-4 py-3 text-right pulse-ring">
+        <div class="text-[10px] text-amber-200/80 font-bold">XP</div>
+        <div class="text-3xl font-black text-amber-300">{{ gelisim.puan.xp }}</div>
+        <div class="text-[10px] text-slate-500">{{ gelisim.avatar.emoji }} {{ gelisim.avatar.ad }}</div>
+      </div>
+    </header>
+
+    <p class="text-sm text-slate-400 leading-relaxed">
+      Bu ekran tek bir akış: üstten alta görevleri tamamla, ödüller ve seviye burada toplanır.
+      (Eski maç / lig / taktik modları kapatıldı.)
+    </p>
+
+    <section class="space-y-3">
+      <h2 class="text-xs font-black text-slate-500 tracking-widest">BUGÜNKÜ GÖREVLER</h2>
+
+      {% set g = gelisim.gorev %}
+      {% set g_done = g and g.tamamlandi %}
+      <article class="rounded-2xl border p-4 step-{{ 'done' if g_done else 'open' }}">
+        <div class="flex justify-between gap-2 items-start">
+          <div>
+            <div class="text-lg font-black">1 · Günlük kişisel görev</div>
+            <p class="text-sm text-slate-300 mt-1">{{ g.gorev if g else 'Görev yükleniyor…' }}</p>
+          </div>
+          <span class="text-xs font-black shrink-0 px-2 py-1 rounded-full {{ 'bg-emerald-500/20 text-emerald-300' if g_done else 'bg-amber-500/20 text-amber-200' }}">
+            {{ 'Tamam' if g_done else '+' ~ (g.xp if g else 0) ~ ' XP' }}
+          </span>
+        </div>
+        {% if g and not g_done %}
+        <form method="POST" action="{{ url_for('gelisim_gorev_tamamla_route') }}" class="mt-3">
+          <button type="submit" class="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 font-black text-sm">
+            Görevi tamamladım
+          </button>
+        </form>
+        {% endif %}
+      </article>
+
+      {% set tam_odev_s = odevler|selectattr('tamamlandi')|list|length %}
+      {% set bekleyen_odev = (odevler|length) - tam_odev_s %}
+      {% set odev_done = odevler|length > 0 and bekleyen_odev == 0 %}
+      <article class="rounded-2xl border p-4 step-{{ 'done' if odev_done else ('open' if odevler else 'lock') }}">
+        <div class="flex justify-between gap-2">
+          <div>
+            <div class="text-lg font-black">2 · Ödev durumu</div>
+            <p class="text-sm text-slate-400 mt-1">
+              {% if not odevler %}Henüz ödev kaydı yok.{% else %}{{ tam_odev_s }}/{{ odevler|length }} tamamlandı{% endif %}
+            </p>
+          </div>
+          <a href="{{ url_for('ogrenci_ben') }}#odev" class="text-xs font-black text-blue-300 underline shrink-0">Profile git</a>
+        </div>
+      </article>
+
+      <article class="rounded-2xl border p-4 step-open">
+        <div class="text-lg font-black">3 · Mini oyunlar</div>
+        <p class="text-sm text-slate-400 mt-1">Pratik yap, günlük XP kazan.</p>
+        <a href="{{ url_for('oyunlar') }}" class="mt-3 inline-flex rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-black">
+          Oyun merkezi
+        </a>
+      </article>
+
+      <article class="rounded-2xl border p-4 step-open">
+        <div class="text-lg font-black">4 · Sandık ve tebrik</div>
+        <p class="text-sm text-slate-400 mt-1">XP biriktikçe sandık hakkı ve arkadaşına tebrik.</p>
+        <a href="{{ url_for('gelisim_merkezi') }}" class="mt-3 inline-flex rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-2 text-sm font-black">
+          Gelişim merkezi
+        </a>
+      </article>
+
+      <article class="rounded-2xl border p-4 step-open">
+        <div class="text-lg font-black">5 · Pazar</div>
+        <p class="text-sm text-slate-400 mt-1">XP ile görünüm öğeleri.</p>
+        <a href="{{ url_for('pazar') }}" class="mt-3 inline-flex rounded-xl bg-amber-700 hover:bg-amber-600 px-4 py-2 text-sm font-black">
+          Pazara git
+        </a>
+      </article>
+
+      <article class="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+        <div class="text-lg font-black">6 · Karne ve özet</div>
+        <a href="{{ url_for('ogrenci_karne') }}" class="mt-2 inline-flex rounded-xl bg-slate-700 hover:bg-slate-600 px-4 py-2 text-sm font-black">
+          Akıllı karne
+        </a>
+      </article>
+    </section>
+
+    <nav class="fixed bottom-0 left-0 right-0 flex justify-center gap-2 border-t border-white/10 bg-slate-950/95 backdrop-blur py-3 px-4">
+      <a href="{{ url_for('ogrenci_ben') }}" class="flex-1 text-center rounded-xl bg-slate-800 py-2 text-xs font-black">Profil</a>
+      <a href="{{ url_for('ogrenci_gorunum') }}" class="flex-1 text-center rounded-xl bg-slate-800 py-2 text-xs font-black">Okul panosu</a>
+      <a href="{{ url_for('ogrenci_cikis') }}" class="flex-1 text-center rounded-xl bg-red-900/40 py-2 text-xs font-black">Çıkış</a>
+    </nav>
+  </main>
+</body>
+</html>

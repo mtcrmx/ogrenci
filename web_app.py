@@ -16,14 +16,6 @@ from database import (
     sinif_ogrencileri, tum_okul_ogrencileri, ogrenci_tik_gecmisi,
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
     olumlu_puan_ekle, lig_siralama, lig_manuel_sifirla, sinif_olumlu_gecmis,
-    # Mac sistemi
-    gunluk_mac_olustur, bugun_maclar, mac_detay,
-    mac_sonucu_gir, mac_oy_ver, lig_puan_tablosu, lig_mac_tablo_sifirla,
-    VAR_INCELEME_OGRETMENLER,
-    # Kadro sistemi
-    sinif_kadro_getir, sinif_kadro_olustur, MEVKILER,
-    # Kart sistemi
-    kart_ver, mac_kartlari, KART_NEDENLERI,
     # Gamification
     SEVIYELER, ROZET_TANIMI, SANS_CARKI_SEENEKLERI,
     MUFETTIS_YETKILILERI,
@@ -37,8 +29,6 @@ from database import (
     ittifak_olustur, aktif_ittifaklar, ittifak_tamamla,
     ittifak_ogrenci_talebi, ittifak_onayla, ittifak_reddet,
     bekleyen_ogrenci_talepleri,
-    sans_carki_cevir,
-    taktik_yukle, taktik_kaydet, taktik_kadro_guncelle,
     tum_verileri_sifirla,
     quiz_sorular_getir, quiz_sonuc_kaydet, quiz_gunluk_dersleri,
     quiz_sinif_istatistik, quiz_sorulari_yukle,
@@ -108,7 +98,7 @@ def _bilgilendirme_hedefi() -> str | None:
 def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
     ana_ekranlar = {
         "ogretmen": {"dashboard"},
-        "ogrenci": {"ogrenci_gorunum", "ogrenci_ben"},
+        "ogrenci": {"ogrenci_gorunum", "ogrenci_ben", "ogrenci_patika"},
         "veli": {"veli_panel"},
     }
     return request.endpoint in ana_ekranlar.get(hedef, set())
@@ -122,7 +112,7 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
             "adimlar": [
                 {"etiket": "Ana Menü", "metin": "Sınıflarınızı, öğrenci kartlarını ve günlük işlemleri buradan yönetirsiniz."},
                 {"etiket": "Tik ve olumlu puan", "metin": "Öğrenci kartlarından davranış kaydı, olumlu puan ve geçmiş takibi yapabilirsiniz."},
-                {"etiket": "Süper Lig", "metin": "Sınıf maçlarını, puan tablosunu, kartları ve maç sonuçlarını takip eder."},
+                {"etiket": "Patika / görevler", "metin": "Öğrenci tarafında sırayla günlük görev ve ödül sistemi tek akışta sunulur."},
                 {"etiket": "Yayın ekranı", "metin": "Akıllı tahta veya büyük ekranda sınıf durumunu canlı göstermek için kullanılır."},
                 {"etiket": "Raporlar", "metin": "Özet rapor ve Excel çıktılarıyla sınıf ve okul durumunu arşivleyebilirsiniz."},
                 {"etiket": "Bilgilendirme", "metin": "Yönetim duyuruları öğretmen, öğrenci ve velilere girişte pencere olarak ulaşır."},
@@ -342,7 +332,6 @@ def _ogrenci_ozeti(ogrenci_id: int) -> dict | None:
     sinif_liste = _ogrencilere_durum_ekle(sinif_ogrencileri(sinif_id))
     sirali = sorted(sinif_liste, key=lambda x: (x["tik_sayisi"], x["ad_soyad"]))
     disiplin_sira = next((i + 1 for i, o in enumerate(sirali) if o["id"] == ogrenci_id), None)
-    kadro = sinif_kadro_getir(sinif_id)
     gecmis = ogrenci_tik_gecmisi(ogrenci_id)
     odevler = ogrenci_odevleri(ogrenci_id)
     toplam_odev = len(odevler)
@@ -376,10 +365,9 @@ def _ogrenci_ozeti(ogrenci_id: int) -> dict | None:
         "avatar": _avatar(ogrenci),
         "gecmis": gecmis,
         "rozetler": _ogrenci_rozetleri(ogrenci_id),
-        "maclar": [m for m in bugun_maclar() if m.get("sinif1_id") == sinif_id or m.get("sinif2_id") == sinif_id],
-        "sinif_tablo": next((r for r in lig_puan_tablosu() if r.get("sinif_id") == sinif_id), None),
+        "maclar": [],
+        "sinif_tablo": None,
         "sezon": next((r for r in sezon_siralama() if r.get("sinif_id") == sinif_id), None),
-        "kadro": kadro,
         "disiplin_sira": disiplin_sira,
         "odevler": odevler,
         "istatistik": stats,
@@ -461,9 +449,9 @@ def logout():
 @app.route("/ogrenci/giris", methods=["GET", "POST"])
 def ogrenci_giris():
     hata = None
-    next_url = request.values.get("next") or url_for("ogrenci_gorunum")
+    next_url = request.values.get("next") or url_for("ogrenci_patika")
     if not next_url.startswith("/"):
-        next_url = url_for("ogrenci_gorunum")
+        next_url = url_for("ogrenci_patika")
 
     if session.get("ogrenci_giris"):
         return redirect(next_url)
@@ -483,7 +471,7 @@ def ogrenci_giris():
                 session["ogrenci_giris"] = True
                 session["ogrenci_id"] = ogrenci["id"]
                 if next_url == url_for("ogrenci_gorunum"):
-                    next_url = url_for("ogrenci_ben")
+                    next_url = url_for("ogrenci_patika")
                 return redirect(next_url)
 
     return render_template("ogrenci_login.html", hata=hata, next_url=next_url)
@@ -545,6 +533,20 @@ def gelisim_merkezi():
         if o["id"] != int(ogrenci_id)
     ] if ozet else []
     return render_template("gelisim.html", **ozet, sinif_arkadaslari=sinif_arkadaslari)
+
+
+@app.route("/patika")
+@ogrenci_giris_zorunlu
+def ogrenci_patika():
+    ogrenci_id = session.get("ogrenci_id")
+    if not ogrenci_id:
+        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_patika")))
+    ozet = _ogrenci_ozeti(int(ogrenci_id))
+    if not ozet:
+        session.pop("ogrenci_id", None)
+        session.pop("ogrenci_giris", None)
+        return redirect(url_for("ogrenci_giris"))
+    return render_template("patika.html", **ozet)
 
 
 @app.route("/gelisim/gorev-tamamla", methods=["POST"])
@@ -644,7 +646,7 @@ def ogretmen_not_route():
 @app.route("/gelisim-ligi")
 @giris_zorunlu
 def gelisim_ligi_sayfa():
-    return render_template("gelisim_ligi.html", lig=gelisim_ligi(), hikaye=hikaye_modu())
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/veli/giris", methods=["GET", "POST"])
@@ -878,7 +880,7 @@ def rapor_ozet():
         ortalama_tik=round(toplam_tik / len(okul), 2) if okul else 0,
         durum_dagilimi=durum_dagilimi,
         heatmap=heatmap,
-        tablo=lig_puan_tablosu(),
+        sinif_xp_siralama=gelisim_ligi(),
         sezon=sezon_siralama(),
         rozetler=son_rozetler(12),
     )
@@ -950,8 +952,6 @@ def odev_tamamla_route(odev_id, ogrenci_id):
     else:
         odev_tamamlandi_kaldir(odev_id, ogrenci_id)
     detay = odev_detay(odev_id)
-    if isaretli and detay:
-        tik_ekle(ogrenci_id, session["ogretmen_id"], f"Odev Tamamladi: {detay['baslik']}")
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True})
     sinif_id = detay["sinif_id"] if detay else request.form.get("sinif_id", "")
@@ -1085,14 +1085,16 @@ def api_olumlu_gecmis(sinif_id):
 def yayin(sinif_id=None):
     siniflar = _tum_siniflar()
     yayin_veri = _yayin_verisi_hazirla()
+    gl = gelisim_ligi()
+    ticker_lider = [{"sinif_adi": x["sinif_adi"], "puan": x.get("xp", 0)} for x in gl[:8]]
     return render_template(
         "yayin.html",
         sinif_sayisi=len(siniflar),
         yayin_veri=yayin_veri,
-        liderler=lig_puan_tablosu()[:5],
+        liderler=ticker_lider,
         rozetler=son_rozetler(8),
         sezon=sezon_siralama()[:5],
-        maclar=bugun_maclar()[:6],
+        maclar=[],
     )
 
 
@@ -1110,8 +1112,8 @@ def ogrenci_gorunum():
     return render_template(
         "ogrenci.html",
         ogrenciler   = ogrenciler,
-        tablo        = lig_puan_tablosu(),
-        maclar       = bugun_maclar(),
+        tablo        = [],
+        maclar       = [],
         sezon        = sezon_siralama(),
         seviyeleri   = tum_sinif_seviyeleri(),
         rozetler     = son_rozetler(20),
@@ -1132,8 +1134,8 @@ def api_ogrenci_veri():
         muf = {"sonuc": None, "gizli": True}
     return jsonify({
         "ogrenciler": ogrenciler,
-        "tablo":      lig_puan_tablosu(),
-        "maclar":     bugun_maclar(),
+        "tablo":      [],
+        "maclar":     [],
         "gorev":      bugun_gorev(),
         "alkislar":   son_alkislar(10),
         "mufettis":   muf,
@@ -1162,12 +1164,6 @@ def _yayin_verisi_hazirla():
         s["temiz"] += 1 if o["tik_sayisi"] == 0 else 0
         s["idari"] += 1 if o["tik_sayisi"] >= 3 else 0
     maclar = []
-    for m in bugun_maclar():
-        maclar.append({
-            **m,
-            "kadro1": sinif_kadro_getir(m["sinif1_id"])[:8],
-            "kadro2": sinif_kadro_getir(m["sinif2_id"])[:8],
-        })
     odevler = []
     for s in _tum_siniflar():
         for od in sinif_odevleri(s["id"], 6):
@@ -1201,7 +1197,7 @@ def api_yayin_sinif(sinif_id):
 @app.route("/api/yayin/lig")
 @giris_zorunlu
 def api_yayin_lig():
-    return jsonify(lig_siralama())
+    return jsonify(gelisim_ligi())
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1299,109 +1295,67 @@ def rapor_excel_detayli():
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# Super Lig Mac Sistemi
+# Eski Süper Lig / maç / kadro — kapatıldı (yönlendirme ve boş API)
 # ══════════════════════════════════════════════════════════════════════════
 
 @app.route("/lig")
 @giris_zorunlu
 def lig():
-    maclar = bugun_maclar()
-    tablo  = lig_puan_tablosu()
-    return render_template("lig.html", maclar=maclar, tablo=tablo,
-                           ogretmen_adi=session["ogretmen_adi"],
-                           ogretmen_id=session["ogretmen_id"],
-                           var_ogretmenler=VAR_INCELEME_OGRETMENLER,
-                           kart_nedenleri=KART_NEDENLERI)
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/lig/olustur", methods=["POST"])
 @giris_zorunlu
 def lig_olustur():
-    gunluk_mac_olustur()
-    return redirect(url_for("lig"))
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/api/lig/maclar")
 @giris_zorunlu
 def api_lig_maclar():
-    return jsonify(bugun_maclar())
+    return jsonify([])
 
 
 @app.route("/api/lig/tablo")
 @giris_zorunlu
 def api_lig_tablo():
-    return jsonify(lig_puan_tablosu())
+    return jsonify([])
 
 
 @app.route("/lig/mac/<int:mac_id>")
 @giris_zorunlu
 def lig_mac_detay(mac_id):
-    mac = mac_detay(mac_id)
-    if not mac:
-        return redirect(url_for("lig"))
-    return render_template("mac_detay.html", mac=mac,
-                           ogretmen_id=session["ogretmen_id"],
-                           var_ogretmenler=VAR_INCELEME_OGRETMENLER)
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/lig/mac/<int:mac_id>/sonuc", methods=["POST"])
 @giris_zorunlu
 def lig_mac_sonuc(mac_id):
-    try:
-        s1_tam  = int(request.form.get("s1_tamamlayan", 0))
-        s1_top  = int(request.form.get("s1_toplam", 1))
-        s2_tam  = int(request.form.get("s2_tamamlayan", 0))
-        s2_top  = int(request.form.get("s2_toplam", 1))
-    except (ValueError, ZeroDivisionError):
-        return redirect(url_for("lig_mac_detay", mac_id=mac_id))
-
-    sonuc = mac_sonucu_gir(mac_id, s1_tam, s1_top, s2_tam, s2_top)
-
-    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify(sonuc)
-    return redirect(url_for("lig_mac_detay", mac_id=mac_id))
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/lig/mac/<int:mac_id>/oyla", methods=["POST"])
 @giris_zorunlu
 def lig_mac_oyla(mac_id):
-    ogretmen_id  = session["ogretmen_id"]
-    secilen_id   = int(request.form.get("sinif_id", 0))
-
-    ogretmen_adi = session["ogretmen_adi"]
-    if ogretmen_adi not in VAR_INCELEME_OGRETMENLER:
-        return jsonify({"hata": "Bu islemi yapmaya yetkiniz yok"}), 403
-
-    sonuc = mac_oy_ver(mac_id, ogretmen_id, secilen_id)
-
-    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify(sonuc)
-    return redirect(url_for("lig_mac_detay", mac_id=mac_id))
+    return jsonify({"ok": False, "sebep": "Mac sistemi kaldirildi"}), 410
 
 
 @app.route("/lig/sifirla", methods=["POST"])
 @giris_zorunlu
 def lig_sifirla_mac():
-    if request.form.get("parola") == SIFIR_PAROLA:
-        lig_mac_tablo_sifirla()
-    return redirect(url_for("lig"))
+    return redirect(url_for("dashboard"))
 
-
-# ══════════════════════════════════════════════════════════════════════════
-# Kadro Sistemi
-# ══════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/kadro/<int:sinif_id>")
 @giris_zorunlu
 def api_kadro(sinif_id):
-    kadro = sinif_kadro_getir(sinif_id)
-    return jsonify(kadro)
+    return jsonify([])
 
 
 @app.route("/api/ogrenci/kadro/<int:sinif_id>")
 @ogrenci_giris_zorunlu
 def api_ogrenci_kadro(sinif_id):
-    return jsonify(sinif_kadro_getir(sinif_id))
+    return jsonify([])
 
 
 @app.route("/api/ogrenci/ittifaklar")
@@ -1413,8 +1367,7 @@ def api_ogrenci_ittifaklar():
 @app.route("/api/kadro/<int:sinif_id>/yenile", methods=["POST"])
 @giris_zorunlu
 def api_kadro_yenile(sinif_id):
-    kadro = sinif_kadro_olustur(sinif_id)
-    return jsonify({"ok": True, "kadro": kadro})
+    return jsonify({"ok": False, "sebep": "Kadro sistemi kaldirildi"})
 
 
 @app.route("/api/sinif/<int:sinif_id>/ogrenciler")
@@ -1426,46 +1379,19 @@ def api_sinif_ogrencileri_json(sinif_id):
 @app.route("/lig/mac/<int:mac_id>/kart", methods=["POST"])
 @giris_zorunlu
 def lig_mac_kart(mac_id):
-    try:
-        ogrenci_id  = int(request.form["ogrenci_id"])
-        sinif_id    = int(request.form["sinif_id"])
-        kart_turu   = request.form["kart_turu"]
-        neden       = request.form.get("neden", "Kural ihlali")
-        ogretmen_id = session["ogretmen_id"]
-        if kart_turu not in ("sari", "kirmizi"):
-            return jsonify({"ok": False, "hata": "Gecersiz kart turu"}), 400
-        sonuc = kart_ver(mac_id, ogrenci_id, sinif_id, ogretmen_id, kart_turu, neden)
-        return jsonify({"ok": True, **sonuc})
-    except Exception as e:
-        return jsonify({"ok": False, "hata": str(e)}), 500
+    return jsonify({"ok": False, "sebep": "Mac sistemi kaldirildi"}), 410
 
 
 @app.route("/api/lig/mac/<int:mac_id>/kartlar")
 @giris_zorunlu
 def api_mac_kartlari(mac_id):
-    return jsonify(mac_kartlari(mac_id))
+    return jsonify([])
 
 
 @app.route("/api/lig/maclar_ve_tablo")
 @giris_zorunlu
 def api_lig_maclar_ve_tablo():
-    maclar = bugun_maclar()
-    tablo  = lig_puan_tablosu()
-
-    sinif_id_seti = set()
-    for m in maclar:
-        sinif_id_seti.add(m["sinif1_id"])
-        sinif_id_seti.add(m["sinif2_id"])
-
-    kadrolar = {}
-    for sid in sinif_id_seti:
-        kadrolar[str(sid)] = sinif_kadro_getir(sid)
-
-    return jsonify({
-        "maclar": maclar,
-        "tablo":  tablo,
-        "kadrolar": kadrolar,
-    })
+    return jsonify({"maclar": [], "tablo": [], "kadrolar": {}})
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1589,9 +1515,7 @@ def api_mufettis_belirle():
 @app.route("/api/sans-carki/cevir", methods=["POST"])
 @giris_zorunlu
 def api_sans_carki():
-    mac_id   = int(request.form["mac_id"])
-    sinif_id = int(request.form["sinif_id"])
-    return jsonify(sans_carki_cevir(mac_id, sinif_id))
+    return jsonify({"ok": False, "sebep": "Sans carki mac sistemine bagliydi; maçlar kapalı."}), 410
 
 
 @app.route("/api/tik/dondur", methods=["POST"])
@@ -1689,65 +1613,21 @@ def api_quiz_istatistik(sinif_id):
 
 
 @app.route("/taktik/<int:sinif_id>")
+@giris_zorunlu
 def taktik(sinif_id):
-    kayit = taktik_yukle(sinif_id)
-    from database import _conn, _kadro_tablosu_olustur
-    con = _conn()
-    sinif_row = con.execute("SELECT sinif_adi FROM siniflar WHERE id=?",
-                            (sinif_id,)).fetchone()
-    sinif_adi = sinif_row["sinif_adi"] if sinif_row else f"Sinif {sinif_id}"
-
-    try:
-        _kadro_tablosu_olustur(con)
-        kadro = [dict(r) for r in con.execute("""
-            SELECT o.id, o.ad_soyad, o.ogr_no,
-                   COALESCE(k.mevki_no, 1) AS mevki_no
-            FROM ogrenciler o
-            LEFT JOIN kadro_ogrenci k
-                   ON k.ogrenci_id = o.id AND k.sinif_id = ?
-            WHERE o.sinif_id = ?
-            ORDER BY o.ad_soyad
-        """, (sinif_id, sinif_id)).fetchall()]
-    except Exception:
-        kadro = [dict(r) for r in con.execute(
-            "SELECT id, ad_soyad, ogr_no FROM ogrenciler WHERE sinif_id=? ORDER BY ad_soyad",
-            (sinif_id,)
-        ).fetchall()]
-
-    con.close()
-
-    mevki_map = {m[0]: m[2] for m in MEVKILER}
-    for o in kadro:
-        o["mevki"] = mevki_map.get(o.get("mevki_no", 1), "Santrafor (Golcu)")
-
-    mevkiler_json = [{"no": m[0], "emoji": m[1], "ad": m[2]} for m in MEVKILER]
-
-    return render_template("taktik.html",
-        sinif_id     = sinif_id,
-        sinif_adi    = sinif_adi,
-        kadro        = kadro,
-        kayit        = kayit,
-        mevkiler_json = mevkiler_json,
-    )
+    return redirect(url_for("dashboard", sinif=sinif_id))
 
 
 @app.route("/api/taktik/<int:sinif_id>")
+@giris_zorunlu
 def api_taktik_yukle(sinif_id):
-    return jsonify(taktik_yukle(sinif_id))
+    return jsonify({})
 
 
 @app.route("/api/taktik/<int:sinif_id>/kaydet", methods=["POST"])
+@giris_zorunlu
 def api_taktik_kaydet(sinif_id):
-    import json as _json
-    veri_str = request.get_data(as_text=True)
-    sonuc = taktik_kaydet(sinif_id, veri_str)
-    if sonuc.get("ok"):
-        try:
-            veri = _json.loads(veri_str)
-            taktik_kadro_guncelle(sinif_id, veri.get("oyuncular", {}))
-        except Exception:
-            pass
-    return jsonify(sonuc)
+    return jsonify({"ok": False, "sebep": "Taktik tahtasi kaldirildi"})
 
 
 # ══════════════════════════════════════════════════════════════════════════

@@ -67,7 +67,7 @@
        class="px-2.5 py-0.5 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
       Çıkış
     </a>
-    <a href="/quiz/{{ tablo[0].sinif_id if tablo else 1 }}"
+    <a href="/quiz/{{ seviyeleri[0].sinif_id if seviyeleri else 1 }}"
        class="px-2.5 py-0.5 rounded text-xs font-bold bg-purple-900 hover:bg-purple-800 text-purple-300 transition">
       🧠 Quiz
     </a>
@@ -92,12 +92,6 @@
   <div class="flex gap-1 px-3 pb-2 overflow-x-auto">
     <button onclick="tabAc('siralama')" id="tab-siralama" class="tab-btn aktif flex-shrink-0">
       🚨 Disiplin
-    </button>
-    <button onclick="tabAc('lig')" id="tab-lig" class="tab-btn pasif flex-shrink-0">
-      ⚽ Süper Lig
-    </button>
-    <button onclick="tabAc('maclar')" id="tab-maclar" class="tab-btn pasif flex-shrink-0">
-      🆚 Maçlar
     </button>
     <button onclick="tabAc('oduller')" id="tab-oduller" class="tab-btn pasif flex-shrink-0">
       🎮 Ödüller
@@ -173,182 +167,6 @@
       <p class="text-slate-600 text-center py-10">Kayıt bulunamadı.</p>
       {% endfor %}
     </div>
-  </div>
-
-  <!-- ══ SÜPER LİG ═══════════════════════════════════════════════════════ -->
-  <div id="panel-lig" class="hidden">
-    <h2 class="text-white font-black text-sm mb-1 text-center tracking-wide">
-      🏆 ERENLER CUMHURİYET SÜPER LİGİ
-    </h2>
-    <p class="text-slate-500 text-[11px] text-center mb-2">Sınıf adına tıklayarak kadroyu görebilirsin 👇</p>
-    <p class="text-green-500 text-[11px] text-center mb-3">
-      🟢 <strong>Taktik Tahtası</strong> için satıra tıkla ve formasyonu kendin düzenle!
-    </p>
-
-    <!-- Puan tablosu -->
-    <div class="rounded-2xl overflow-hidden border border-slate-700 mb-4" style="background:#080f20">
-      <table class="w-full text-xs">
-        <thead>
-          <tr class="border-b border-slate-700 text-slate-400" style="background:#0d1526">
-            <th class="py-2 px-2 text-left w-6">#</th>
-            <th class="py-2 px-2 text-left">Sınıf</th>
-            <th class="py-2 px-2 text-center w-8" title="Galibiyet">G</th>
-            <th class="py-2 px-2 text-center w-8" title="Beraberlik">B</th>
-            <th class="py-2 px-2 text-center w-8" title="Mağlubiyet">M</th>
-            <th class="py-2 px-2 text-center w-10" title="Olumlu Davranış Bonusu">O+</th>
-            <th class="py-2 px-3 text-center font-black text-white w-10">P</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in tablo %}
-          {% set renk = '#fbbf24' if loop.index==1 else '#94a3b8' if loop.index==2 else '#d97706' if loop.index==3 else '#475569' %}
-          {% set madalya = '🥇' if loop.index==1 else '🥈' if loop.index==2 else '🥉' if loop.index==3 else loop.index %}
-          <tr class="border-b border-slate-800 slide-up cursor-pointer hover:brightness-125 transition"
-              style="animation-delay:{{ loop.index0*40 }}ms{% if loop.index==1 %};background:#0d1000{% endif %}"
-              onclick="kadroGoster({{ s.sinif_id }}, '{{ s.sinif_adi }}')">
-            <td class="py-2 px-2 font-black text-sm" style="color:{{ renk }}">{{ madalya }}</td>
-            <td class="py-2 px-2 font-bold text-sm" style="color:{{ renk }}">
-              {{ s.sinif_adi }}
-              <span class="text-[9px] text-slate-600 font-normal ml-1">👤</span>
-              <a href="/taktik/{{ s.sinif_id }}"
-                 onclick="event.stopPropagation()"
-                 class="ml-1 text-[9px] text-green-500 font-bold hover:text-green-400 transition">🟢</a>
-            </td>
-            <td class="py-2 px-2 text-center text-green-400">{{ s.galibiyet }}</td>
-            <td class="py-2 px-2 text-center text-yellow-400">{{ s.beraberlik }}</td>
-            <td class="py-2 px-2 text-center text-red-400">{{ s.maglubiyet }}</td>
-            <td class="py-2 px-2 text-center text-blue-300">{{ s.ag }}</td>
-            <td class="py-2 px-3 text-center font-black text-base" style="color:{{ renk }}">{{ s.puan }}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="7" class="py-6 text-center text-slate-600">Lig tablosu henüz oluşmadı.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Seri bilgisi -->
-    {% if seri %}
-    <div class="rounded-2xl border border-slate-700 p-3 mb-3" style="background:#0d1526">
-      <div class="text-orange-400 font-black text-xs mb-2">🔥 Olumlu Davranış Serileri</div>
-      <div class="space-y-1.5">
-        {% for s in seri %}
-        <div class="flex items-center gap-2">
-          <span class="{% if s.guncel_seri > 0 %}streak-fire{% endif %} text-lg">
-            {{ '🔥' if s.guncel_seri > 0 else '❄️' }}
-          </span>
-          <span class="flex-1 text-white text-sm font-bold">{{ s.sinif_adi }}</span>
-          <span class="text-orange-400 font-black">{{ s.guncel_seri }}g</span>
-          <span class="text-slate-600 text-xs">En uzun: {{ s.en_uzun_seri }}g</span>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Sezon şampiyonluğu -->
-    {% if sezon %}
-    <div class="rounded-2xl border border-yellow-800 p-3" style="background:#0d1526">
-      <div class="text-yellow-400 font-black text-xs mb-2">🏆 Dönem Şampiyonluğu (Sezon Puanı)</div>
-      <div class="space-y-1.5">
-        {% for s in sezon %}
-        {% set renk = '#fbbf24' if loop.index==1 else '#94a3b8' if loop.index==2 else '#d97706' if loop.index==3 else '#475569' %}
-        <div class="flex items-center gap-2 rounded-lg px-3 py-1.5" style="background:#080f20">
-          <span class="font-black text-sm w-5 text-center" style="color:{{ renk }}">
-            {{ '🥇' if loop.index==1 else '🥈' if loop.index==2 else '🥉' if loop.index==3 else loop.index }}
-          </span>
-          <span class="flex-1 font-bold text-sm" style="color:{{ renk }}">{{ s.sinif_adi }}</span>
-          <span class="font-black" style="color:{{ renk }}">{{ s.sezon_puan }}p</span>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-  </div>
-
-  <!-- ══ BUGÜNKÜ MAÇLAR ══════════════════════════════════════════════════ -->
-  <div id="panel-maclar" class="hidden">
-    <div class="text-slate-500 text-xs text-center mb-3">
-      Bugünkü maçlar ve sonuçları — canlı güncellenir
-    </div>
-    {% if maclar %}
-    <div class="space-y-3">
-      {% for m in maclar %}
-      {% set tamam = m.durum == 'tamamlandi' %}
-      {% set var_inc = m.durum == 'var_incelemesi' %}
-      <div class="rounded-2xl border overflow-hidden slide-up"
-           style="background:{% if tamam %}#071a0e{% elif var_inc %}#1a0a2e{% else %}#0c1526{% endif %};
-                  border-color:{% if tamam %}#166534{% elif var_inc %}#7e22ce{% else %}#1e3a5f{% endif %};
-                  animation-delay:{{ loop.index0 * 60 }}ms">
-        <div class="px-4 py-3">
-          <!-- Seans + tarih -->
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-xs font-bold {{ 'text-yellow-400' if m.seans == 'sabah' else 'text-blue-400' }}">
-              {{ '🌅 Sabah' if m.seans == 'sabah' else '🌆 Öğleden Sonra' }}
-            </span>
-            <span class="text-[10px] text-slate-600">{{ m.tarih[:10] if m.tarih else '' }}</span>
-          </div>
-
-          <!-- Takımlar -->
-          <div class="flex items-center justify-between gap-2">
-            <div class="text-center flex-1">
-              <div class="text-white font-black text-base">{{ m.sinif1_adi }}</div>
-              {% if m.s1_tamamlayan is not none %}
-              <div class="font-black text-sm {{ 'text-green-400' if m.kazanan_id == m.sinif1_id else 'text-red-400' }}">
-                {{ m.s1_tamamlayan }}/{{ m.s1_toplam }}
-              </div>
-              {% endif %}
-            </div>
-            <div class="vs-text font-black text-xl flex-shrink-0 px-2">VS</div>
-            <div class="text-center flex-1">
-              <div class="text-white font-black text-base">{{ m.sinif2_adi }}</div>
-              {% if m.s2_tamamlayan is not none %}
-              <div class="font-black text-sm {{ 'text-green-400' if m.kazanan_id == m.sinif2_id else 'text-red-400' }}">
-                {{ m.s2_tamamlayan }}/{{ m.s2_toplam }}
-              </div>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Görev -->
-          <div class="text-slate-400 text-xs text-center mt-1.5 italic">📋 {{ m.gorev }}</div>
-
-          <!-- Sonuç -->
-          <div class="mt-2 text-center">
-            {% if tamam and m.kazanan_id %}
-            <span class="text-green-400 text-sm font-black">
-              🏆 {{ m.sinif1_adi if m.kazanan_id == m.sinif1_id else m.sinif2_adi }} Kazandı!
-            </span>
-            {% elif tamam %}
-            <span class="text-slate-400 text-sm">🤝 Berabere</span>
-            {% elif var_inc %}
-            <span class="text-purple-400 text-sm mac-blink">📺 VAR İncelemesinde</span>
-            {% else %}
-            <span class="text-slate-600 text-sm mac-blink">⏳ Sonuç Bekleniyor</span>
-            {% endif %}
-          </div>
-
-          <!-- Kart uyarıları (varsa) -->
-          {% if m.kartlar %}
-          <div class="flex flex-wrap gap-1 mt-2">
-            {% for k in m.kartlar %}
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full
-                         {{ 'bg-yellow-900 text-yellow-400' if k.kart_turu == 'sari' else 'bg-red-900 text-red-400' }}">
-              {{ '🟨' if k.kart_turu == 'sari' else '🟥' }} {{ k.ogrenci_adi }}
-            </span>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="text-center py-16">
-      <div class="text-5xl mb-3 float">⚽</div>
-      <p class="text-slate-400">Bugün için maç planlanmamış.</p>
-    </div>
-    {% endif %}
   </div>
 
   <!-- ══ ÖDÜLLER ══════════════════════════════════════════════════════════ -->
@@ -517,7 +335,7 @@
       <div>
         <div class="text-teal-300 font-black text-sm mb-1">İttifak Nedir?</div>
         <ul class="text-slate-400 text-xs space-y-1 list-disc list-inside">
-          <li>İki sınıf birlikte ortak bir görev üstlenir, başarıyla tamamlarsa her iki sınıfa da <strong class="text-yellow-400">+5 Lig puanı</strong> verilir.</li>
+          <li>İki sınıf birlikte ortak bir görev üstlenir; tamamlanınca öğretmen onayıyla her iki sınıfa da <strong class="text-yellow-400">+5 sezon puanı</strong> yazılır.</li>
           <li>Günde <strong class="text-teal-300">iki slot</strong> var: <strong>🌅 Sabah</strong> ve <strong>🌆 Öğleden Sonra</strong>.</li>
           <li>Talebiniz öğretmene gider — öğretmen onayladıktan sonra ittifak aktif olur.</li>
           <li>Tamamlanması öğretmen tarafından işaretlenir.</li>
@@ -587,34 +405,6 @@
 
   </div>
 
-<!-- ══ KADRO MODALİ ═══════════════════════════════════════════════════════ -->
-<div id="kadro-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4"
-     style="background:rgba(0,0,0,0.85)" onclick="kadroKapat(event)">
-  <div class="w-full max-w-md rounded-2xl overflow-hidden border-2 border-green-700"
-       style="background:linear-gradient(180deg,#071a0e,#04120a);max-height:90vh;display:flex;flex-direction:column"
-       onclick="event.stopPropagation()">
-
-    <!-- Başlık -->
-    <div class="flex items-center justify-between px-4 py-3 flex-shrink-0"
-         style="background:linear-gradient(90deg,#052e10,#073d14)">
-      <div>
-        <div class="text-[9px] text-green-500 font-bold tracking-widest">ERENLER SÜPER LİGİ — KADRO</div>
-        <div id="kadro-sinif-adi" class="text-green-300 font-black text-lg leading-tight">—</div>
-      </div>
-      <button onclick="kadroKapat()"
-              class="w-8 h-8 rounded-full bg-green-900/60 hover:bg-red-900/60 text-white font-black text-lg
-                     flex items-center justify-center transition">
-        ✕
-      </button>
-    </div>
-
-    <!-- Yükleniyor / İçerik -->
-    <div id="kadro-icerik" class="flex-1 overflow-y-auto p-3">
-      <div class="text-center text-slate-500 py-8">Yükleniyor...</div>
-    </div>
-  </div>
-</div>
-
 <!-- ── Otomatik güncelleme bilgisi ──────────────────────────────────────── -->
 <div class="fixed bottom-0 left-0 right-0 flex items-center justify-center py-2
             border-t border-slate-800 text-xs text-slate-600"
@@ -635,7 +425,7 @@ setInterval(saatGuncelle, 1000);
 saatGuncelle();
 
 // ── Tab ───────────────────────────────────────────────────────────────────
-const TABS = ['siralama', 'lig', 'maclar', 'oduller', 'rozet', 'ittifak'];
+const TABS = ['siralama', 'oduller', 'rozet', 'ittifak'];
 function tabAc(id) {
   TABS.forEach(t => {
     document.getElementById('panel-' + t).classList.toggle('hidden', t !== id);
@@ -810,79 +600,6 @@ async function ittifakListesiYukle() {
   } catch(e) {}
 }
 
-// ── Kadro Modalı ──────────────────────────────────────────────────────────
-const MEVKI_EMOJILERI = {
-  'Takım Kaptanı':        '🦁', 'Kaptan Yardımcısı':   '🦊',
-  'Kaleci':               '🥅', 'Libero (Süpürücü)':   '🧹',
-  'Sağ Bek':              '➡️',  'Sol Bek':             '⬅️',
-  'Stoper':               '🛡️', 'Sigorta Oyuncusu':    '🔒',
-  'Ön Libero':            '⚙️',  'Oyun Kurucu (10 Numara)': '🎮',
-  'Sağ Kanat':            '↗️',  'Sol Kanat':           '↖️',
-  'Dinamo İstasyon Oyuncusu': '⚡', 'Santrafor (Golcü)': '⚽',
-  'Gizli Forvet':         '🥷',  'Fırsatçı Golcü':     '🎯',
-  'Kanat Forvet':         '🌪️',  'Kondisyoner':        '🏃',
-  'Analiz Uzmanı':        '📊',  'Basın Sözcüsü':      '🎙️',
-  'Malzemeci':            '🎒',  'Fair-Play Elçisi':    '🕊️',
-};
-
-async function kadroGoster(sinifId, sinifAdi) {
-  const modal = document.getElementById('kadro-modal');
-  const icerik = document.getElementById('kadro-icerik');
-  document.getElementById('kadro-sinif-adi').textContent = sinifAdi + ' Sınıfı';
-  icerik.innerHTML = '<div class="text-center text-slate-500 py-8">⏳ Yükleniyor...</div>';
-  modal.classList.remove('hidden');
-  modal.style.display = 'flex';
-
-  try {
-    const res  = await fetch(`/api/ogrenci/kadro/${sinifId}`);
-    const data = await res.json();
-
-    if (!data || !data.length) {
-      icerik.innerHTML = '<div class="text-center text-slate-500 py-8">Bu sınıfın kadrosu henüz oluşturulmamış.</div>';
-      return;
-    }
-
-    // Kaptan öne çıkar
-    const kaptan = data.find(o => o.mevki === 'Takım Kaptanı');
-    const diger  = data.filter(o => o.mevki !== 'Takım Kaptanı');
-
-    let html = '';
-
-    if (kaptan) {
-      html += `
-      <div class="mb-3 rounded-xl p-3 border-2 border-yellow-600 text-center"
-           style="background:linear-gradient(135deg,#1a1200,#211700)">
-        <div class="text-3xl mb-1">🦁</div>
-        <div class="text-[10px] text-yellow-500 font-bold tracking-widest">TAKIM KAPTANI</div>
-        <div class="text-yellow-300 font-black text-lg">${kaptan.ad_soyad}</div>
-      </div>`;
-    }
-
-    html += '<div class="grid grid-cols-2 gap-2">';
-    diger.forEach((o, i) => {
-      const emoji = MEVKI_EMOJILERI[o.mevki] || '⚽';
-      html += `
-      <div class="rounded-xl p-2.5 border border-green-900/50 text-center slide-up"
-           style="background:rgba(3,18,8,0.9);animation-delay:${i*30}ms">
-        <div class="text-xl mb-0.5">${emoji}</div>
-        <div class="text-green-400 text-[9px] font-bold leading-tight">${o.mevki}</div>
-        <div class="text-white text-xs font-black leading-tight mt-0.5">${o.ad_soyad}</div>
-      </div>`;
-    });
-    html += '</div>';
-
-    icerik.innerHTML = html;
-  } catch(e) {
-    icerik.innerHTML = '<div class="text-center text-red-400 py-8">Kadro yüklenemedi.</div>';
-  }
-}
-
-function kadroKapat(event) {
-  if (event && event.target !== document.getElementById('kadro-modal')) return;
-  const modal = document.getElementById('kadro-modal');
-  modal.classList.add('hidden');
-  modal.style.display = '';
-}
 </script>
 </body>
 </html>

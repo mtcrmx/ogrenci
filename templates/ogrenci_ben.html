@@ -19,6 +19,7 @@
       </div>
       <div class="flex flex-wrap gap-2 w-full sm:w-auto">
         <a href="{{ url_for('index') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-xl">Ana Menü</a>
+        <a href="{{ url_for('ogrenci_patika') }}" class="text-xs font-bold bg-amber-700 hover:bg-amber-600 px-3 py-2 rounded-xl">Patika</a>
         <a href="{{ url_for('gelisim_merkezi') }}" class="text-xs font-bold bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-xl">Gelişim</a>
         <a href="{{ url_for('ogrenci_karne') }}" class="text-xs font-bold bg-blue-700 hover:bg-blue-600 px-3 py-2 rounded-xl">Karne</a>
         <a href="{{ url_for('veli_karne') }}" class="text-xs font-bold bg-cyan-700 hover:bg-cyan-600 px-3 py-2 rounded-xl">Veli Karne</a>
@@ -42,8 +43,8 @@
         <div class="text-3xl font-black">{{ disiplin_sira or '-' }}</div>
       </div>
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
-        <div class="text-xs text-slate-500">Lig puanı</div>
-        <div class="text-3xl font-black">{{ sinif_tablo.puan if sinif_tablo else 0 }}</div>
+        <div class="text-xs text-slate-500">Gelişim XP</div>
+        <div class="text-3xl font-black">{{ gelisim.puan.xp }}</div>
       </div>
     </section>
 
@@ -162,19 +163,7 @@
       </div>
     </section>
 
-    <section class="grid md:grid-cols-2 gap-3">
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
-        <h2 class="font-black mb-3">Bugünkü maçlar</h2>
-        <div class="space-y-2">
-          {% for m in maclar %}
-          <div class="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-            {{ m.sinif1_adi }} - {{ m.sinif2_adi }} · {{ m.gorev }}
-          </div>
-          {% else %}
-          <p class="text-sm text-slate-500">Bugün sınıfına ait maç yok.</p>
-          {% endfor %}
-        </div>
-      </div>
+    <section class="grid md:grid-cols-1 gap-3">
       <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
         <h2 class="font-black mb-3">Rozet vitrini</h2>
         <div class="flex flex-wrap gap-2">
@@ -189,7 +178,7 @@
       </div>
     </section>
 
-    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+    <section id="odev" class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
         <h2 class="font-black">Ödev durumu</h2>
         {% set tamamlanan_odev = odevler|selectattr('tamamlandi')|list|length %}

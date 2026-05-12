@@ -118,13 +118,15 @@
 
   <section class="grid lg:grid-cols-2 gap-4">
     <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm">
-      <h2 class="font-black mb-3">Lig liderleri</h2>
+      <h2 class="font-black mb-3">Sınıf gelişim XP (özet)</h2>
       <div class="grid gap-2">
-        {% for s in tablo[:5] %}
+        {% for s in sinif_xp_siralama[:5] %}
         <div class="flex justify-between gap-2 rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2 text-sm">
           <span class="font-bold min-w-0 break-words">{{ loop.index }}. {{ s.sinif_adi }}</span>
-          <span class="shrink-0">{{ s.puan }} puan</span>
+          <span class="shrink-0">{{ s.xp }} XP</span>
         </div>
+        {% else %}
+        <p class="text-sm text-slate-500">Henüz XP verisi yok.</p>
         {% endfor %}
       </div>
     </div>
