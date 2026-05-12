@@ -33,6 +33,14 @@
       </a>
       <a href="{{ url_for('rapor_ozet_csv') }}" class="flex-1 sm:flex-none text-center rounded-xl bg-teal-700 text-white px-4 py-2 text-sm font-bold">CSV İndir</a>
     </div>
+    <div class="flex flex-wrap gap-2 w-full text-xs font-bold">
+      <a href="{{ url_for('rapor_haftalik') }}" class="rounded-lg bg-slate-700 text-white px-3 py-1.5">Haftalık özet</a>
+      <a href="{{ url_for('rapor_karsilastir') }}" class="rounded-lg bg-slate-700 text-white px-3 py-1.5">Dönem karşılaştır</a>
+      <a href="{{ url_for('ogretmen_denetim') }}" class="rounded-lg bg-slate-900 text-white px-3 py-1.5">Denetim günlüğü</a>
+      {% for ss in benim_siniflar %}
+      <a href="{{ url_for('rapor_anonim_sinif', sinif_id=ss.id) }}" class="rounded-lg bg-white border border-slate-300 text-slate-800 px-3 py-1.5">Anonim · {{ ss.sinif_adi }}</a>
+      {% endfor %}
+    </div>
   </header>
 
   <section class="grid grid-cols-2 md:grid-cols-4 gap-3">

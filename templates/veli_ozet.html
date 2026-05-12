@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veli özeti</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <header class="border-b border-slate-800 bg-slate-900 px-4 py-4">
+    <div class="max-w-xl mx-auto flex flex-wrap justify-between gap-2 items-center">
+      <h1 class="font-black text-lg">Veli özeti · {{ ogrenci.ad_soyad }}</h1>
+      <div class="flex gap-2">
+        <a href="{{ url_for('veli_panel') }}" class="text-xs font-bold bg-slate-700 px-3 py-1.5 rounded-lg">Tik geçmişi</a>
+        <a href="{{ url_for('veli_cikis') }}" class="text-xs font-bold bg-red-900 px-3 py-1.5 rounded-lg">Çıkış</a>
+      </div>
+    </div>
+  </header>
+  <main class="max-w-xl mx-auto px-4 py-6 space-y-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="rounded-xl px-3 py-2 text-sm {% if cat=='success' %}bg-emerald-900/50 border border-emerald-600{% else %}bg-amber-900/40{% endif %}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <h2 class="text-sm font-black text-emerald-400 mb-3">Son {{ metrics.gun }} gün</h2>
+      <p class="text-3xl font-black">{{ metrics.tik_son_gun }} <span class="text-sm font-normal text-slate-400">tik kaydı</span></p>
+      <p class="text-xs text-slate-500 mt-2">Öğretmen paylaştığı sürece güncellenir.</p>
+    </section>
+
+    {% if metrics.notlar %}
+    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <h2 class="text-sm font-black text-sky-400 mb-3">Öğretmen notları (size açık)</h2>
+      <ul class="space-y-3 text-sm">
+        {% for n in metrics.notlar %}
+        <li class="border-l-2 border-sky-600 pl-3">
+          <div class="text-slate-300">{{ n.not_metni }}</div>
+          <div class="text-[10px] text-slate-500 mt-1">{{ n.ogretmen }} · {{ n.tarih[:16] }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <h2 class="text-sm font-black mb-3">Rehberlik / görüşme talebi</h2>
+      <form method="POST" action="{{ url_for('veli_randevu_kaydet') }}" class="space-y-2">
+        <textarea name="mesaj" rows="3" placeholder="Kısaca konuyu yazın (isteğe bağlı)"
+                  class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-sm"></textarea>
+        <button type="submit" class="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 font-black py-2.5 text-sm">
+          Talep gönder
+        </button>
+      </form>
+    </section>
+
+    <section>
+      <h2 class="text-sm font-black text-slate-400 mb-2">Son tik kayıtları</h2>
+      <ul class="space-y-2 text-sm">
+        {% for g in gecmis_kisa %}
+        <li class="rounded-xl bg-slate-900/80 border border-slate-800 px-3 py-2">
+          <span class="text-slate-400">{{ g.tarih[:16] }}</span>
+          <span class="block text-slate-200">{{ g.kriter }}</span>
+          <span class="text-[10px] text-slate-500">{{ g.ogretmen }}</span>
+        </li>
+        {% else %}
+        <li class="text-slate-500 text-sm">Kayıt yok.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

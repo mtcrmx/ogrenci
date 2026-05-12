@@ -47,6 +47,14 @@ from database import (
     rapor_arsiv_kaydet, rapor_arsiv_listesi, rapor_arsiv_pdf_oku,
     rapor_arsiv_tumunu_yedekle_ve_sil, rapor_arsiv_yedek_gruplari, rapor_arsiv_grubu_geri_yukle,
     tik_kayitlari_siniflarda,
+    ogretmen_yetki_al, ogretmen_yetki_guncelle,
+    randevu_talep_ekle, randevu_listesi_siniflar, randevu_durum_guncelle,
+    gunluk_yansima_ekle, gunluk_yansima_bekleyen_siniflar, gunluk_yansima_degerlendir,
+    gunluk_yansima_ogrenci_gecmis,
+    davranis_hedefi_ekle, davranis_hedefi_liste_sinif, davranis_hedefi_pasif_et,
+    haftalik_sinif_ozeti, tik_sayisi_sinif_aralik, olumlu_sayisi_sinif_aralik,
+    veli_ozet_metrikleri, anonim_sinif_dagilimi,
+    denetim_listesi, admin_meta_get, admin_meta_set,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes
@@ -71,6 +79,16 @@ VELI_SIFRE = os.environ.get("VELI_SIFRE", "veli")
 
 initialize_db()
 
+# Yalnızca rapor/analiz görebilen öğretmenler (`yetki=rapor`) bu endpoint’lere girebilir;
+# tik/ödev vb. diğerleri rapor_ozet’e yönlendirilir.
+_RAPOR_SADECE_ROTALAR = frozenset({
+    "rapor_ozet", "rapor_ozet_csv", "rapor_excel", "rapor_excel_detayli",
+    "rapor_analiz_pdf", "rapor_arsiv_sayfa", "rapor_arsiv_sifirla",
+    "rapor_arsiv_yedek_geri_yukle", "rapor_arsiv_indir",
+    "rapor_haftalik", "rapor_karsilastir", "rapor_anonim_sinif",
+    "manifest", "service_worker",
+})
+
 
 # ── Yardimcilar ──────────────────────────────────────────────────────────────
 def giris_zorunlu(fn):
@@ -79,6 +97,16 @@ def giris_zorunlu(fn):
     def wrapper(*args, **kwargs):
         if "ogretmen_id" not in session:
             return redirect(url_for("login"))
+        if session.get("ogretmen_id") and session.get("ogretmen_yetki") is None:
+            session["ogretmen_yetki"] = ogretmen_yetki_al(session["ogretmen_id"])
+        if session.get("ogretmen_yetki") == "rapor":
+            ep = request.endpoint
+            if ep and ep not in _RAPOR_SADECE_ROTALAR:
+                flash(
+                    "Bu bölüm için tam öğretmen yetkisi gerekir. Size yalnızca raporlar açık.",
+                    "warning",
+                )
+                return redirect(url_for("rapor_ozet"))
         return fn(*args, **kwargs)
     return wrapper
 
@@ -447,8 +475,12 @@ def login():
         elif not ogretmen_dogrula(ad, sifre):
             hata = "Hatali sifre! Sifreniz icin okul yonetimine basvurun."
         else:
-            session["ogretmen_id"]  = ogretmen_id_bul(ad)
+            oid = ogretmen_id_bul(ad)
+            session["ogretmen_id"] = oid
             session["ogretmen_adi"] = ad
+            session["ogretmen_yetki"] = ogretmen_yetki_al(oid)
+            if session.get("ogretmen_yetki") == "rapor":
+                return redirect(url_for("rapor_ozet"))
             return redirect(url_for("dashboard"))
 
     return render_template("login.html", ogretmenler=ogretmenler, hata=hata, secili=secili)
@@ -715,7 +747,13 @@ def admin_sifreler():
             liste = tum_sifre_listesi()
         else:
             hata = "Yonetici sifresi hatali."
-    return render_template("admin_sifreler.html", liste=liste, hata=hata)
+    son_yedek = admin_meta_get("son_yedek_hatirlatma", "")
+    return render_template(
+        "admin_sifreler.html",
+        liste=liste,
+        hata=hata,
+        son_yedek=son_yedek,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -788,6 +826,8 @@ def dashboard():
         return render_template("dashboard.html", siniflar=[], aktif=None,
                                ogrenciler=[], kriterler=KRITERLER,
                                olumlu_kriterler=OLUMLU_KRITERLER,
+                               olumlu_satirlari=[],
+                               davranis_hedefleri=[],
                                yetkili_popup=False,
                                bugunki_mufettis=None,
                                bekleyen_talepler=[],
@@ -823,11 +863,16 @@ def dashboard():
                     "sinif_id": s["id"],
                 })
 
+    olumlu_satirlari = sinif_olumlu_gecmis(aktif["id"])
+    davranis_hedefleri = davranis_hedefi_liste_sinif(aktif["id"])
+
     return render_template("dashboard.html",
                            siniflar=siniflar, aktif=aktif,
                            ogrenciler=ogrenciler,
                            kriterler=KRITERLER,
                            olumlu_kriterler=OLUMLU_KRITERLER,
+                           olumlu_satirlari=olumlu_satirlari,
+                           davranis_hedefleri=davranis_hedefleri,
                            yetkili_popup=yetkili,
                            bugunki_mufettis=bugunki_muf,
                            bekleyen_talepler=bek_talepler,
@@ -964,6 +1009,7 @@ def rapor_ozet():
         sinif_xp_siralama=gelisim_ligi(),
         sezon=sezon_siralama(),
         rozetler=son_rozetler(12),
+        benim_siniflar=ogretmen_siniflari(session["ogretmen_id"]),
     )
 
 
@@ -1815,6 +1861,239 @@ def api_taktik_yukle(sinif_id):
 @giris_zorunlu
 def api_taktik_kaydet(sinif_id):
     return jsonify({"ok": False, "sebep": "Taktik tahtasi kaldirildi"})
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Veli özeti, randevu, günlük yansıma, davranış hedefi, ek raporlar, denetim
+# ══════════════════════════════════════════════════════════════════════════
+
+
+@app.route("/veli/ozet")
+def veli_ozet_sayfa():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    o = _ogrenci_bul(int(oid))
+    if not o:
+        session.pop("veli_ogrenci_id", None)
+        return redirect(url_for("veli_giris"))
+    metrics = veli_ozet_metrikleri(int(oid), 30)
+    gecmis_kisa = ogrenci_tik_gecmisi(int(oid))[:20]
+    return render_template(
+        "veli_ozet.html",
+        ogrenci=o,
+        metrics=metrics,
+        gecmis_kisa=gecmis_kisa,
+    )
+
+
+@app.route("/veli/randevu", methods=["POST"])
+def veli_randevu_kaydet():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    o = _ogrenci_bul(int(oid))
+    if not o:
+        return redirect(url_for("veli_giris"))
+    mesaj = request.form.get("mesaj", "")
+    randevu_talep_ekle(int(oid), int(o["sinif_id"]), mesaj)
+    flash("Görüşme talebiniz kaydedildi. Öğretmeniniz en kısa sürede değerlendirecek.", "success")
+    return redirect(url_for("veli_ozet_sayfa"))
+
+
+@app.route("/ogretmen/randevular")
+@giris_zorunlu
+def ogretmen_randevular():
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    ids = [s["id"] for s in siniflar]
+    talepler = randevu_listesi_siniflar(ids)
+    return render_template(
+        "ogretmen_randevular.html",
+        talepler=talepler,
+        siniflar=siniflar,
+    )
+
+
+@app.route("/ogretmen/randevu/<int:talep_id>/durum", methods=["POST"])
+@giris_zorunlu
+def ogretmen_randevu_durum(talep_id: int):
+    durum = request.form.get("durum", "gorusuldu")
+    randevu_durum_guncelle(talep_id, durum)
+    flash("Randevu durumu güncellendi.", "success")
+    return redirect(url_for("ogretmen_randevular"))
+
+
+@app.route("/ogrenci/yansima", methods=["GET", "POST"])
+@ogrenci_giris_zorunlu
+def ogrenci_yansima():
+    oid = int(session["ogrenci_id"])
+    if request.method == "POST":
+        sonuc = gunluk_yansima_ekle(oid, request.form.get("metin", ""))
+        if sonuc.get("ok"):
+            flash("Bugünün yansıması gönderildi.", "success")
+        else:
+            flash(sonuc.get("sebep", "Kaydedilemedi"), "error")
+        return redirect(url_for("ogrenci_yansima"))
+    gecmis = gunluk_yansima_ogrenci_gecmis(oid, 14)
+    return render_template("ogrenci_yansima.html", gecmis=gecmis)
+
+
+@app.route("/ogretmen/yansimalar", methods=["GET"])
+@giris_zorunlu
+def ogretmen_yansimalar():
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    ids = [s["id"] for s in siniflar]
+    bekleyen = gunluk_yansima_bekleyen_siniflar(ids)
+    return render_template("ogretmen_yansimalar.html", bekleyen=bekleyen)
+
+
+@app.route("/ogretmen/yansima/<int:yid>/degerlendir", methods=["POST"])
+@giris_zorunlu
+def ogretmen_yansima_degerlendir_route(yid: int):
+    durum = request.form.get("durum", "onaylandi")
+    notu = request.form.get("not", "")
+    gunluk_yansima_degerlendir(yid, session["ogretmen_id"], durum, notu)
+    flash("Yansıma değerlendirildi.", "success")
+    return redirect(url_for("ogretmen_yansimalar"))
+
+
+@app.route("/davranis-hedef", methods=["POST"])
+@giris_zorunlu
+def davranis_hedef_route():
+    sinif_id = request.form.get("sinif_id", type=int)
+    ogid = request.form.get("ogrenci_id", type=int)
+    max_tik = request.form.get("max_tik", type=int) or 3
+    bas = request.form.get("baslangic", "").strip()
+    bit = request.form.get("bitis", "").strip()
+    aciklama = request.form.get("aciklama", "")
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    if not sinif_id or sinif_id not in [s["id"] for s in siniflar]:
+        flash("Geçersiz sınıf.", "error")
+        return redirect(url_for("dashboard"))
+    davranis_hedefi_ekle(
+        sinif_id,
+        session["ogretmen_id"],
+        ogid if ogid else None,
+        max_tik,
+        bas or datetime.now().strftime("%Y-%m-%d"),
+        bit or datetime.now().strftime("%Y-%m-%d"),
+        aciklama,
+    )
+    flash("Davranış hedefi kaydedildi.", "success")
+    return redirect(url_for("dashboard", sinif=sinif_id))
+
+
+@app.route("/api/pozitif-rozet/<int:ogrenci_id>", methods=["POST"])
+@giris_zorunlu
+def api_pozitif_rozet(ogrenci_id: int):
+    og = _ogrenci_bul(ogrenci_id)
+    if not og:
+        return jsonify({"ok": False}), 404
+    sid_list = [s["id"] for s in ogretmen_siniflari(session["ogretmen_id"])]
+    if og["sinif_id"] not in sid_list:
+        return jsonify({"ok": False, "sebep": "Yetki"}), 403
+    rozet_ver_ogrenci(ogrenci_id, og["sinif_id"], "pozitif_yildiz")
+    return jsonify({"ok": True})
+
+
+@app.route("/rapor/haftalik")
+@giris_zorunlu
+def rapor_haftalik():
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    sid = request.args.get("sinif_id", type=int)
+    if siniflar:
+        ids = [s["id"] for s in siniflar]
+        if sid not in ids:
+            sid = siniflar[0]["id"]
+    else:
+        sid = None
+    ozet = haftalik_sinif_ozeti(sid, 7) if sid else {}
+    metin_satirlari = []
+    if sid and ozet:
+        metin_satirlari = [
+            f"Haftalık özet ({ozet['baslangic']} — {ozet['bitis']})",
+            f"Tik kayıtları: {ozet['tik']}",
+            f"Olumlu davranış kayıtları: {ozet['olumlu']}",
+        ]
+    return render_template(
+        "rapor_haftalik.html",
+        siniflar=siniflar,
+        sinif_id=sid,
+        ozet=ozet,
+        metin_satirlari=metin_satirlari,
+    )
+
+
+@app.route("/rapor/karsilastir")
+@giris_zorunlu
+def rapor_karsilastir():
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    sid = request.args.get("sinif_id", type=int)
+    if siniflar:
+        if sid not in [s["id"] for s in siniflar]:
+            sid = siniflar[0]["id"]
+    else:
+        sid = None
+    a1 = request.args.get("a1", "").strip()
+    a2 = request.args.get("a2", "").strip()
+    b1 = request.args.get("b1", "").strip()
+    b2 = request.args.get("b2", "").strip()
+    sonuc = None
+    if sid and a1 and a2 and b1 and b2:
+        sonuc = {
+            "donem_a_tik": tik_sayisi_sinif_aralik(sid, a1, a2),
+            "donem_a_olumlu": olumlu_sayisi_sinif_aralik(sid, a1, a2),
+            "donem_b_tik": tik_sayisi_sinif_aralik(sid, b1, b2),
+            "donem_b_olumlu": olumlu_sayisi_sinif_aralik(sid, b1, b2),
+            "a_etiket": f"{a1} — {a2}",
+            "b_etiket": f"{b1} — {b2}",
+        }
+    return render_template(
+        "rapor_karsilastir.html",
+        siniflar=siniflar,
+        sinif_id=sid,
+        a1=a1,
+        a2=a2,
+        b1=b1,
+        b2=b2,
+        sonuc=sonuc,
+    )
+
+
+@app.route("/rapor/sinif/<int:sinif_id>/anonim")
+@giris_zorunlu
+def rapor_anonim_sinif(sinif_id: int):
+    sid_list = [s["id"] for s in ogretmen_siniflari(session["ogretmen_id"])]
+    if sinif_id not in sid_list:
+        abort(403)
+    oz = anonim_sinif_dagilimi(sinif_id)
+    sinif_adi = next((s["sinif_adi"] for s in ogretmen_siniflari(session["ogretmen_id"]) if s["id"] == sinif_id), "")
+    return render_template(
+        "rapor_anonim_sinif.html",
+        sinif_id=sinif_id,
+        sinif_adi=sinif_adi,
+        oz=oz,
+    )
+
+
+@app.route("/ogretmen/denetim")
+@giris_zorunlu
+def ogretmen_denetim():
+    satirlar = denetim_listesi(500)
+    return render_template("ogretmen_denetim.html", satirlar=satirlar)
+
+
+@app.route("/admin/yedek-onay", methods=["POST"])
+def admin_yedek_onay():
+    if request.form.get("admin_sifre") != ADMIN_SIFRE:
+        flash("Yönetici şifresi hatalı.", "error")
+        return redirect(url_for("admin_sifreler"))
+    admin_meta_set(
+        "son_yedek_hatirlatma",
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    )
+    flash("Yedek aldığınız kaydedildi; bir sonraki hatırlatma için tarih sıfırlandı.", "success")
+    return redirect(url_for("admin_sifreler"))
 
 
 # ══════════════════════════════════════════════════════════════════════════

@@ -8,7 +8,7 @@ Tablolar: ogretmenler, siniflar, ogretmen_sinif, ogrenciler, tik_kayitlari
 import sqlite3
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Render.com gibi bulut ortamlarında /data klasörü kalıcıdır;
 # yoksa uygulama klasörü kullanılır.
@@ -216,6 +216,13 @@ def initialize_db():
             kriter      TEXT    NOT NULL,
             tarih       TEXT    NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS olumlu_davranis (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            sinif_id    INTEGER NOT NULL REFERENCES siniflar(id),
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            kriter      TEXT    NOT NULL,
+            tarih       TEXT    NOT NULL
+        );
     """)
     con.commit()
 
@@ -224,6 +231,13 @@ def initialize_db():
         "PRAGMA table_info(ogretmenler)").fetchall()]
     if "sifre" not in sutunlar:
         con.execute("ALTER TABLE ogretmenler ADD COLUMN sifre TEXT NOT NULL DEFAULT ''")
+        con.commit()
+
+    sutunlar2 = [r[1] for r in con.execute("PRAGMA table_info(ogretmenler)").fetchall()]
+    if "yetki" not in sutunlar2:
+        con.execute(
+            "ALTER TABLE ogretmenler ADD COLUMN yetki TEXT NOT NULL DEFAULT 'tam'"
+        )
         con.commit()
 
     # Sadece ilk çalıştırmada seed et
@@ -237,8 +251,64 @@ def initialize_db():
         if bos > 0:
             _sifreleri_ata(con)
 
+    _yardimci_tablolar_init(con)
     _rapor_arsiv_init(con)
     con.close()
+
+
+def _yardimci_tablolar_init(con: sqlite3.Connection) -> None:
+    """Davranış hedefi, veli randevusu, günlük yansıma, denetim günlüğü, admin_meta."""
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS davranis_hedefi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            ogrenci_id INTEGER REFERENCES ogrenciler(id),
+            hedef_tik_max INTEGER NOT NULL DEFAULT 3,
+            baslangic TEXT NOT NULL,
+            bitis TEXT NOT NULL,
+            aciklama TEXT,
+            aktif INTEGER NOT NULL DEFAULT 1
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS randevu_talebi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            mesaj TEXT,
+            talep_tarihi TEXT NOT NULL,
+            durum TEXT NOT NULL DEFAULT 'bekliyor'
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS gunluk_yansima (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            metin TEXT NOT NULL,
+            tarih TEXT NOT NULL,
+            durum TEXT NOT NULL DEFAULT 'bekliyor',
+            ogretmen_notu TEXT,
+            degerlendiren_id INTEGER REFERENCES ogretmenler(id)
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS denetim_gunlugu (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            zaman TEXT NOT NULL,
+            ogretmen_id INTEGER REFERENCES ogretmenler(id),
+            islem TEXT NOT NULL,
+            detay TEXT,
+            ogrenci_id INTEGER
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS admin_meta (
+            anahtar TEXT PRIMARY KEY,
+            deger TEXT NOT NULL
+        )
+    """)
+    con.commit()
 
 
 def _rapor_arsiv_yedek_init(con: sqlite3.Connection) -> None:
@@ -411,9 +481,11 @@ def _seed(con: sqlite3.Connection):
 def tum_ogretmenler() -> list[dict]:
     """Tüm öğretmenleri alfabetik sırayla döndürür."""
     con = _conn()
-    rows = [dict(r) for r in con.execute(
-        "SELECT id, ad_soyad, sifre FROM ogretmenler ORDER BY ad_soyad"
-    ).fetchall()]
+    _yardimci_tablolar_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT id, ad_soyad, sifre, COALESCE(yetki, 'tam') AS yetki
+        FROM ogretmenler ORDER BY ad_soyad
+    """).fetchall()]
     con.close()
     return rows
 
@@ -446,6 +518,27 @@ def ogretmen_id_bul(ad_soyad: str):
     ).fetchone()
     con.close()
     return row["id"] if row else None
+
+
+def ogretmen_yetki_al(ogretmen_id: int) -> str:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    row = con.execute(
+        "SELECT COALESCE(yetki, 'tam') AS y FROM ogretmenler WHERE id = ?",
+        (ogretmen_id,),
+    ).fetchone()
+    con.close()
+    return str(row["y"]) if row else "tam"
+
+
+def ogretmen_yetki_guncelle(ogretmen_id: int, yetki: str) -> None:
+    if yetki not in ("tam", "rapor"):
+        yetki = "tam"
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    con.execute("UPDATE ogretmenler SET yetki = ? WHERE id = ?", (yetki, ogretmen_id))
+    con.commit()
+    con.close()
 
 
 def ogretmen_siniflari(ogretmen_id: int) -> list[dict]:
@@ -550,6 +643,15 @@ def tik_ekle(ogrenci_id: int, ogretmen_id: int, kriter: str) -> int:
         "SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id = ?", (ogrenci_id,)
     ).fetchone()[0]
     con.close()
+    try:
+        denetim_kaydet(
+            "tik_ekle",
+            (kriter or "")[:300],
+            ogretmen_id=ogretmen_id,
+            ogrenci_id=ogrenci_id,
+        )
+    except Exception:
+        pass
     return sayi
 
 
@@ -1169,6 +1271,7 @@ SEVIYELER = [
 MUFETTIS_YETKILILERI = ["Adem Akgul", "Yusuf Erturk"]
 
 ROZET_TANIMI = {
+    "pozitif_yildiz": ("💚", "Pozitif Yıldız",     "Olumlu davranış veya öğretmen onayı ile"),
     "temizlik_7":     ("🧹", "Tertemiz",          "7 gun hic tik almadi"),
     "sinif_yildizi":  ("⭐", "Sinif Yildizi",      "Haftanin en cok olumlu puanli ogrencisi"),
     "seri_yildiz":    ("⚡", "Seri Yildiz",        "3 mac ust uste kazanildi"),
@@ -1678,7 +1781,52 @@ def tik_dondur(ogrenci_id: int, ogretmen_id: int) -> dict:
                           (ogrenci_id,)).fetchone()
     con.execute("DELETE FROM tik_kayitlari WHERE id=?", (son_tik["id"],))
     con.commit(); con.close()
+    try:
+        denetim_kaydet(
+            "tik_dondur",
+            "Son tik silindi",
+            ogretmen_id=ogretmen_id,
+            ogrenci_id=ogrenci_id,
+        )
+    except Exception:
+        pass
     return {"ok": True, "silinen_tik": 1}
+
+
+def denetim_kaydet(
+    islem: str,
+    detay: str = "",
+    ogretmen_id: int | None = None,
+    ogrenci_id: int | None = None,
+) -> None:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    z = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    con.execute(
+        """
+        INSERT INTO denetim_gunlugu (zaman, ogretmen_id, islem, detay, ogrenci_id)
+        VALUES (?,?,?,?,?)
+        """,
+        (z, ogretmen_id, islem[:80], (detay or "")[:2000], ogrenci_id),
+    )
+    con.commit()
+    con.close()
+
+
+def denetim_listesi(limit: int = 300) -> list[dict]:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT d.*, og.ad_soyad AS ogretmen_adi,
+               o.ad_soyad AS ogrenci_ad
+        FROM denetim_gunlugu d
+        LEFT JOIN ogretmenler og ON og.id = d.ogretmen_id
+        LEFT JOIN ogrenciler o ON o.id = d.ogrenci_id
+        ORDER BY d.id DESC
+        LIMIT ?
+    """, (limit,)).fetchall()]
+    con.close()
+    return rows
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1686,7 +1834,8 @@ def tik_dondur(ogrenci_id: int, ogretmen_id: int) -> dict:
 # ══════════════════════════════════════════════════════════════════════════
 
 _SIFIRLANACAK_TABLOLAR = [
-    "tik_kayitlari", "olumlu_davranis", "lig", "lig_maclar", "lig_oylari",
+    "tik_kayitlari", "olumlu_davranis", "davranis_hedefi", "randevu_talebi",
+    "gunluk_yansima", "lig", "lig_maclar", "lig_oylari",
     "lig_mac_tablo", "kadro_ogrenci", "kart_kayitlari", "rozet_kayitlari",
     "sinif_rozet", "sinif_seri", "gunluk_gorev", "gizli_mufettis",
     "alkis_kuponu", "sezon_puan", "ittifak_gorev", "sans_carki",
@@ -2682,6 +2831,316 @@ def quiz_sinif_istatistik(sinif_id: int) -> list[dict]:
     """, (sinif_id,)).fetchall()
     con.close()
     return [dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Ek özellikler: admin_meta, randevu, yansıma, hedef, rapor yardımcıları
+# ══════════════════════════════════════════════════════════════════════════
+
+
+def admin_meta_get(anahtar: str, varsayilan: str = "") -> str:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    row = con.execute("SELECT deger FROM admin_meta WHERE anahtar = ?", (anahtar,)).fetchone()
+    con.close()
+    return str(row["deger"]) if row else varsayilan
+
+
+def admin_meta_set(anahtar: str, deger: str) -> None:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    con.execute(
+        "INSERT INTO admin_meta (anahtar, deger) VALUES (?, ?) ON CONFLICT(anahtar) DO UPDATE SET deger = excluded.deger",
+        (anahtar, deger),
+    )
+    con.commit()
+    con.close()
+
+
+def randevu_talep_ekle(ogrenci_id: int, sinif_id: int, mesaj: str) -> dict:
+    z = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    cur = con.execute(
+        """
+        INSERT INTO randevu_talebi (ogrenci_id, sinif_id, mesaj, talep_tarihi, durum)
+        VALUES (?,?,?,?, 'bekliyor')
+        """,
+        (ogrenci_id, sinif_id, (mesaj or "").strip()[:500], z),
+    )
+    rid = cur.lastrowid
+    con.commit()
+    con.close()
+    return {"ok": True, "id": rid}
+
+
+def randevu_listesi_siniflar(sinif_ids: list[int]) -> list[dict]:
+    if not sinif_ids:
+        return []
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    q = ",".join("?" * len(sinif_ids))
+    rows = [dict(r) for r in con.execute(f"""
+        SELECT r.*, o.ad_soyad AS ogrenci_ad, o.ogr_no, s.sinif_adi
+        FROM randevu_talebi r
+        JOIN ogrenciler o ON o.id = r.ogrenci_id
+        JOIN siniflar s ON s.id = r.sinif_id
+        WHERE r.sinif_id IN ({q})
+        ORDER BY r.id DESC
+    """, sinif_ids).fetchall()]
+    con.close()
+    return rows
+
+
+def randevu_durum_guncelle(talep_id: int, durum: str) -> dict:
+    if durum not in ("bekliyor", "gorusuldu", "iptal"):
+        durum = "bekliyor"
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    con.execute("UPDATE randevu_talebi SET durum = ? WHERE id = ?", (durum, talep_id))
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def gunluk_yansima_ekle(ogrenci_id: int, metin: str) -> dict:
+    metin = (metin or "").strip()
+    if len(metin) < 3:
+        return {"ok": False, "sebep": "Metin cok kisa"}
+    if len(metin) > 800:
+        metin = metin[:800]
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    var = con.execute(
+        "SELECT id FROM gunluk_yansima WHERE ogrenci_id=? AND substr(tarih,1,10)=?",
+        (ogrenci_id, bugun),
+    ).fetchone()
+    if var:
+        con.close()
+        return {"ok": False, "sebep": "Bugun icin zaten kayit var"}
+    z = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    con.execute(
+        """
+        INSERT INTO gunluk_yansima (ogrenci_id, metin, tarih, durum)
+        VALUES (?,?,?, 'bekliyor')
+        """,
+        (ogrenci_id, metin, z),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def gunluk_yansima_bekleyen_siniflar(sinif_ids: list[int]) -> list[dict]:
+    if not sinif_ids:
+        return []
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    q = ",".join("?" * len(sinif_ids))
+    rows = [dict(r) for r in con.execute(f"""
+        SELECT g.*, o.ad_soyad AS ogrenci_ad, o.ogr_no, s.sinif_adi
+        FROM gunluk_yansima g
+        JOIN ogrenciler o ON o.id = g.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        WHERE o.sinif_id IN ({q}) AND g.durum = 'bekliyor'
+        ORDER BY g.id DESC
+    """, sinif_ids).fetchall()]
+    con.close()
+    return rows
+
+
+def gunluk_yansima_ogrenci_gecmis(ogrenci_id: int, limit: int = 20) -> list[dict]:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT * FROM gunluk_yansima WHERE ogrenci_id = ?
+        ORDER BY id DESC LIMIT ?
+    """, (ogrenci_id, limit)).fetchall()]
+    con.close()
+    return rows
+
+
+def gunluk_yansima_degerlendir(
+    yansima_id: int,
+    ogretmen_id: int,
+    durum: str,
+    ogretmen_notu: str,
+) -> dict:
+    if durum not in ("onaylandi", "reddedildi"):
+        durum = "onaylandi"
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    con.execute(
+        """
+        UPDATE gunluk_yansima SET durum=?, ogretmen_notu=?, degerlendiren_id=?
+        WHERE id=?
+        """,
+        (durum, (ogretmen_notu or "")[:500], ogretmen_id, yansima_id),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def davranis_hedefi_ekle(
+    sinif_id: int,
+    ogretmen_id: int,
+    ogrenci_id: int | None,
+    hedef_tik_max: int,
+    baslangic: str,
+    bitis: str,
+    aciklama: str,
+) -> dict:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    con.execute(
+        """
+        INSERT INTO davranis_hedefi
+        (sinif_id, ogretmen_id, ogrenci_id, hedef_tik_max, baslangic, bitis, aciklama, aktif)
+        VALUES (?,?,?,?,?,?,?,1)
+        """,
+        (
+            sinif_id,
+            ogretmen_id,
+            ogrenci_id,
+            max(1, min(50, int(hedef_tik_max))),
+            baslangic,
+            bitis,
+            (aciklama or "")[:200],
+        ),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def davranis_hedefi_liste_sinif(sinif_id: int) -> list[dict]:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT d.*, o.ad_soyad AS ogrenci_ad
+        FROM davranis_hedefi d
+        LEFT JOIN ogrenciler o ON o.id = d.ogrenci_id
+        WHERE d.sinif_id = ? AND d.aktif = 1
+        ORDER BY d.id DESC
+    """, (sinif_id,)).fetchall()]
+    con.close()
+    return rows
+
+
+def davranis_hedefi_pasif_et(hedef_id: int) -> None:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    con.execute("UPDATE davranis_hedefi SET aktif = 0 WHERE id = ?", (hedef_id,))
+    con.commit()
+    con.close()
+
+
+def tik_sayisi_sinif_aralik(sinif_id: int, baslangic: str, bitis: str) -> int:
+    con = _conn()
+    n = con.execute("""
+        SELECT COUNT(*) FROM tik_kayitlari t
+        JOIN ogrenciler o ON o.id = t.ogrenci_id
+        WHERE o.sinif_id = ?
+          AND substr(t.tarih, 1, 10) >= ?
+          AND substr(t.tarih, 1, 10) <= ?
+    """, (sinif_id, baslangic, bitis)).fetchone()[0]
+    con.close()
+    return int(n)
+
+
+def olumlu_sayisi_sinif_aralik(sinif_id: int, baslangic: str, bitis: str) -> int:
+    con = _conn()
+    n = con.execute("""
+        SELECT COUNT(*) FROM olumlu_davranis
+        WHERE sinif_id = ?
+          AND substr(tarih, 1, 10) >= ?
+          AND substr(tarih, 1, 10) <= ?
+    """, (sinif_id, baslangic, bitis)).fetchone()[0]
+    con.close()
+    return int(n)
+
+
+def haftalik_sinif_ozeti(sinif_id: int, gun: int = 7) -> dict:
+    """Son N gunun tik ve olumlu sayisi."""
+    bit = datetime.now().date()
+    bas = bit - timedelta(days=gun - 1)
+    bs, bt = bas.isoformat(), bit.isoformat()
+    return {
+        "baslangic": bs,
+        "bitis": bt,
+        "tik": tik_sayisi_sinif_aralik(sinif_id, bs, bt),
+        "olumlu": olumlu_sayisi_sinif_aralik(sinif_id, bs, bt),
+    }
+
+
+def ogretmen_notlari_veli_ozeti(ogrenci_id: int, limit: int = 25) -> list[dict]:
+    con = _conn()
+    _gelisim_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT ono.not_metni, ono.tarih, og.ad_soyad AS ogretmen
+        FROM ogretmen_notlari ono
+        JOIN ogretmenler og ON og.id = ono.ogretmen_id
+        WHERE ono.ogrenci_id = ? AND ono.veliye_acik = 1
+        ORDER BY ono.tarih DESC
+        LIMIT ?
+    """, (ogrenci_id, limit)).fetchall()]
+    con.close()
+    return rows
+
+
+def veli_ozet_metrikleri(ogrenci_id: int, gun: int = 30) -> dict:
+    """Son gun tik sayisi ve veliye acik son notlar ozeti."""
+    bit = datetime.now().date()
+    bas = bit - timedelta(days=gun - 1)
+    bs, bt = bas.isoformat(), bit.isoformat()
+    con = _conn()
+    tik_n = con.execute("""
+        SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id = ?
+          AND substr(tarih, 1, 10) >= ?
+          AND substr(tarih, 1, 10) <= ?
+    """, (ogrenci_id, bs, bt)).fetchone()[0]
+    con.close()
+    notlar = ogretmen_notlari_veli_ozeti(ogrenci_id, 5)
+    return {"tik_son_gun": int(tik_n), "gun": gun, "notlar": notlar}
+
+
+def anonim_sinif_dagilimi(sinif_id: int) -> dict:
+    """Isimsiz durum bantlari + ortalama tik (sunum icin)."""
+    con = _conn()
+    rows = [dict(r) for r in con.execute("""
+        SELECT o.id,
+               COUNT(t.id) AS tik_sayisi
+        FROM ogrenciler o
+        LEFT JOIN tik_kayitlari t ON t.ogrenci_id = o.id
+        WHERE o.sinif_id = ?
+        GROUP BY o.id
+    """, (sinif_id,)).fetchall()]
+    con.close()
+    n = len(rows) or 1
+    toplam = sum(int(r["tik_sayisi"] or 0) for r in rows)
+    dd = {"temiz": 0, "uyari": 0, "idari": 0, "veli": 0, "tutanak": 0, "disiplin": 0}
+    for r in rows:
+        t = int(r["tik_sayisi"] or 0)
+        if t == 0:
+            dd["temiz"] += 1
+        elif t <= 2:
+            dd["uyari"] += 1
+        elif t <= 5:
+            dd["idari"] += 1
+        elif t <= 8:
+            dd["veli"] += 1
+        elif t <= 11:
+            dd["tutanak"] += 1
+        else:
+            dd["disiplin"] += 1
+    return {
+        "ogrenci_sayisi": len(rows),
+        "ortalama_tik": round(toplam / n, 2),
+        "toplam_tik": toplam,
+        "dagilim": dd,
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Dönem karşılaştırması{% endblock %}
+{% block body %}
+<main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+  <h1 class="text-2xl font-black text-slate-900">İki dönem karşılaştırması</h1>
+  <form method="get" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+    <label>Sınıf
+      <select name="sinif_id" class="block w-full rounded-lg border mt-1 px-2 py-1">
+        {% for s in siniflar %}
+        <option value="{{ s.id }}" {% if sinif_id == s.id %}selected{% endif %}>{{ s.sinif_adi }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Dönem A başlangıç <input type="date" name="a1" value="{{ a1 }}" class="block w-full rounded-lg border mt-1 px-2 py-1"></label>
+    <label>Dönem A bitiş <input type="date" name="a2" value="{{ a2 }}" class="block w-full rounded-lg border mt-1 px-2 py-1"></label>
+    <label>Dönem B başlangıç <input type="date" name="b1" value="{{ b1 }}" class="block w-full rounded-lg border mt-1 px-2 py-1"></label>
+    <label>Dönem B bitiş <input type="date" name="b2" value="{{ b2 }}" class="block w-full rounded-lg border mt-1 px-2 py-1"></label>
+    <div class="flex items-end">
+      <button type="submit" class="rounded-xl bg-indigo-700 text-white font-black px-6 py-2 w-full">Karşılaştır</button>
+    </div>
+  </form>
+
+  {% if sonuc %}
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
+      <h3 class="font-black text-slate-800 mb-2">{{ sonuc.a_etiket }}</h3>
+      <p>Tik: <strong>{{ sonuc.donem_a_tik }}</strong></p>
+      <p>Olumlu: <strong>{{ sonuc.donem_a_olumlu }}</strong></p>
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
+      <h3 class="font-black text-slate-800 mb-2">{{ sonuc.b_etiket }}</h3>
+      <p>Tik: <strong>{{ sonuc.donem_b_tik }}</strong></p>
+      <p>Olumlu: <strong>{{ sonuc.donem_b_olumlu }}</strong></p>
+    </div>
+  </div>
+  {% endif %}
+
+  <a href="{{ url_for('rapor_ozet') }}" class="text-sm font-bold text-blue-700">← Özet rapor</a>
+</main>
+{% endblock %}

@@ -14,8 +14,10 @@
     <div class="flex flex-wrap gap-2">
       {% if not veli_modu %}
       <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="text-xs font-black bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg">XP · Görev · Oyun</a>
+      <a href="{{ url_for('ogrenci_yansima') }}" class="text-xs font-bold bg-cyan-700 hover:bg-cyan-600 px-3 py-1.5 rounded-lg">Günlük yansıma</a>
       {% endif %}
       {% if veli_modu %}
+      <a href="{{ url_for('veli_ozet_sayfa') }}" class="text-xs font-black bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg">30 günlük özet</a>
       <a href="{{ url_for('veli_cikis') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Çıkış</a>
       {% else %}
       <a href="{{ url_for('ogrenci_cikis') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Çıkış</a>
