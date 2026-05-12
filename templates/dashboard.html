@@ -101,10 +101,14 @@
              class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm
                     w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
 
-      <div class="flex gap-1.5 sm:hidden w-full">
+      <div class="flex gap-1.5 sm:hidden w-full flex-wrap">
         <a href="{{ url_for('rapor_excel', sinif_id=aktif.id) }}"
-           class="flex-1 text-center bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          📊 Excel (tik listesi)
+           class="flex-1 min-w-[40%] text-center bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+          📊 Excel
+        </a>
+        <a href="{{ url_for('rapor_analiz_pdf', sinif_id=aktif.id) }}"
+           class="flex-1 min-w-[40%] text-center bg-rose-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+          📑 Analiz PDF
         </a>
       </div>
     </div>

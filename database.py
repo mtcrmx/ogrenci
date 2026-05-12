@@ -236,7 +236,25 @@ def initialize_db():
         if bos > 0:
             _sifreleri_ata(con)
 
+    _rapor_arsiv_init(con)
     con.close()
+
+
+def _rapor_arsiv_init(con: sqlite3.Connection) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS rapor_arsiv (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            olusturma TEXT NOT NULL,
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            ogretmen_adi TEXT NOT NULL,
+            kapsam TEXT NOT NULL,
+            sinif_id INTEGER,
+            json_snapshot TEXT NOT NULL,
+            pdf_blob BLOB NOT NULL,
+            dosya_adi TEXT NOT NULL
+        )
+    """)
+    con.commit()
 
 
 def _bilgilendirme_init(con: sqlite3.Connection):
@@ -2639,3 +2657,81 @@ def quiz_sinif_istatistik(sinif_id: int) -> list[dict]:
     """, (sinif_id,)).fetchall()
     con.close()
     return [dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Rapor arşivi (PDF anlık görüntü + JSON; silinen tiklerden sonra da saklanır)
+# ══════════════════════════════════════════════════════════════════════════
+
+def tik_kayitlari_siniflarda(sinif_ids: list[int]) -> list[dict]:
+    """Belirtilen sınıflardaki tüm tik satırları (rapor / arşiv anlık görüntüsü)."""
+    if not sinif_ids:
+        return []
+    con = _conn()
+    q = ",".join("?" * len(sinif_ids))
+    rows = [dict(r) for r in con.execute(f"""
+        SELECT t.id AS tik_id, t.kriter, t.tarih,
+               o.id AS ogrenci_id, o.ad_soyad, o.ogr_no, s.sinif_adi,
+               og.ad_soyad AS ogretmen
+        FROM tik_kayitlari t
+        JOIN ogrenciler o ON o.id = t.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        JOIN ogretmenler og ON og.id = t.ogretmen_id
+        WHERE o.sinif_id IN ({q})
+        ORDER BY t.tarih DESC
+    """, sinif_ids).fetchall()]
+    con.close()
+    return rows
+
+
+def rapor_arsiv_kaydet(
+    ogretmen_id: int,
+    ogretmen_adi: str,
+    kapsam: str,
+    sinif_id: int | None,
+    json_snapshot: str,
+    pdf_blob: bytes,
+    dosya_adi: str,
+) -> int:
+    con = _conn()
+    _rapor_arsiv_init(con)
+    olusturma = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    con.execute("""
+        INSERT INTO rapor_arsiv (olusturma, ogretmen_id, ogretmen_adi, kapsam, sinif_id,
+                                 json_snapshot, pdf_blob, dosya_adi)
+        VALUES (?,?,?,?,?,?,?,?)
+    """, (
+        olusturma, ogretmen_id, ogretmen_adi.strip(), kapsam.strip(),
+        sinif_id, json_snapshot, pdf_blob, dosya_adi.strip(),
+    ))
+    con.commit()
+    rid = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+    con.close()
+    return int(rid)
+
+
+def rapor_arsiv_listesi(ogretmen_id: int, limit: int = 50) -> list[dict]:
+    con = _conn()
+    _rapor_arsiv_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT id, olusturma, kapsam, sinif_id, dosya_adi,
+               LENGTH(pdf_blob) AS pdf_boyutu
+        FROM rapor_arsiv
+        WHERE ogretmen_id = ?
+        ORDER BY id DESC
+        LIMIT ?
+    """, (ogretmen_id, limit)).fetchall()]
+    con.close()
+    return rows
+
+
+def rapor_arsiv_pdf_oku(arsiv_id: int, ogretmen_id: int) -> dict | None:
+    con = _conn()
+    _rapor_arsiv_init(con)
+    row = con.execute("""
+        SELECT id, dosya_adi, pdf_blob, json_snapshot, olusturma, kapsam
+        FROM rapor_arsiv
+        WHERE id = ? AND ogretmen_id = ?
+    """, (arsiv_id, ogretmen_id)).fetchone()
+    con.close()
+    return dict(row) if row else None

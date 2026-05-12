@@ -3,11 +3,13 @@ web_app.py  —  Erenler Cumhuriyet Ortaokulu Ogrenci Takip
 (Flask rotalari <int:...> ile tam; GitHub/Render senkron)
 """
 
+import json
 import os, tempfile
 from datetime import datetime
+from io import BytesIO
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    session, jsonify, send_file, make_response, flash,
+    session, jsonify, send_file, make_response, flash, abort,
 )
 from database import (
     initialize_db, KRITERLER, OLUMLU_KRITERLER,
@@ -42,8 +44,10 @@ from database import (
     ogrenci_rozetleri_yayin_map, rozet_emojileri_ve_metin,
     oyun_puani_kaydet, GOREV_SABLONLARI,
     bilgilendirme_ekle, bilgilendirme_listesi, son_bilgilendirme,
+    rapor_arsiv_kaydet, rapor_arsiv_listesi, rapor_arsiv_pdf_oku,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
+from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__,
@@ -1245,6 +1249,67 @@ def rapor_excel():
 
     return send_file(tmp_path, as_attachment=True, download_name=dosya_adi,
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route("/rapor/analiz-pdf")
+@giris_zorunlu
+def rapor_analiz_pdf():
+    if not PDF_OK:
+        return (
+            "PDF icin reportlab gerekli: pip install reportlab",
+            500,
+        )
+    ogretmen_id = session["ogretmen_id"]
+    ogretmen_adi = session.get("ogretmen_adi", "")
+    siniflar = ogretmen_siniflari(ogretmen_id)
+    sinif_id_str = request.args.get("sinif_id")
+    yalnizca_id = int(sinif_id_str) if sinif_id_str else None
+
+    snapshot = derle_analiz_snapshot(siniflar, yalnizca_id)
+    try:
+        pdf_bytes = pdf_analiz_uret_bytes(snapshot, ogretmen_adi)
+    except ImportError as e:
+        return str(e), 500
+    json_txt = json.dumps(snapshot, ensure_ascii=False)
+    kapsam = (snapshot.get("meta") or {}).get("kapsam_metin", "")[:500]
+    tarih = datetime.now().strftime("%Y%m%d_%H%M")
+    dosya_adi = f"DisiplinAnaliz_{tarih}.pdf"
+    rapor_arsiv_kaydet(
+        ogretmen_id,
+        ogretmen_adi,
+        kapsam or "Analiz",
+        yalnizca_id,
+        json_txt,
+        pdf_bytes,
+        dosya_adi,
+    )
+    return send_file(
+        BytesIO(pdf_bytes),
+        as_attachment=True,
+        download_name=dosya_adi,
+        mimetype="application/pdf",
+    )
+
+
+@app.route("/rapor/arsiv")
+@giris_zorunlu
+def rapor_arsiv_sayfa():
+    kayitlar = rapor_arsiv_listesi(session["ogretmen_id"], 60)
+    return render_template("rapor_arsiv.html", kayitlar=kayitlar)
+
+
+@app.route("/rapor/arsiv/<int:arsiv_id>/indir")
+@giris_zorunlu
+def rapor_arsiv_indir(arsiv_id: int):
+    row = rapor_arsiv_pdf_oku(arsiv_id, session["ogretmen_id"])
+    if not row or not row.get("pdf_blob"):
+        abort(404)
+    return send_file(
+        BytesIO(row["pdf_blob"]),
+        as_attachment=True,
+        download_name=row.get("dosya_adi") or f"rapor_{arsiv_id}.pdf",
+        mimetype="application/pdf",
+    )
 
 
 @app.route("/rapor/excel-detayli")

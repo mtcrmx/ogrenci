@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapor arşivi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <header class="bg-okul-800 text-white px-4 py-4 shadow">
+    <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h1 class="text-xl font-black">Kayıtlı analiz raporları</h1>
+        <p class="text-xs text-blue-200 mt-1">Üretildiği andaki verinin PDF ve JSON anlık görüntüsü; tik silinse bile burada kalır.</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="{{ url_for('dashboard') }}" class="rounded-lg bg-white/15 px-3 py-2 text-xs font-bold hover:bg-white/25">Panele dön</a>
+        <a href="{{ url_for('rapor_ozet') }}" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black hover:bg-emerald-500">Rapor özeti</a>
+      </div>
+    </div>
+  </header>
+  <main class="max-w-3xl mx-auto px-4 py-6">
+    {% if kayitlar %}
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-800 text-white text-left">
+          <tr>
+            <th class="px-4 py-3 font-bold">Tarih</th>
+            <th class="px-4 py-3 font-bold">Kapsam</th>
+            <th class="px-4 py-3 font-bold text-right">Boyut</th>
+            <th class="px-4 py-3 font-bold text-right">İndir</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for k in kayitlar %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ k.olusturma }}</td>
+            <td class="px-4 py-3 text-slate-600 break-words max-w-[200px]">{{ k.kapsam }}</td>
+            <td class="px-4 py-3 text-right text-slate-500">
+              {% if k.pdf_boyutu %}{{ (k.pdf_boyutu / 1024)|round(1) }} KB{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <a href="{{ url_for('rapor_arsiv_indir', arsiv_id=k.id) }}"
+                 class="inline-block rounded-lg bg-blue-600 text-white text-xs font-black px-3 py-1.5 hover:bg-blue-700">PDF</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-center text-slate-500 py-16 rounded-2xl border border-dashed border-slate-300 bg-white">
+      Henüz kayıtlı rapor yok. «Detaylı analiz PDF» ile ilk raporu oluşturun.
+    </p>
+    {% endif %}
+  </main>
+</body>
+</html>
