@@ -39,6 +39,7 @@ from database import (
     tebrik_gonder, haftalik_veli_ozeti,
     akilli_ogrenci_karnesi, ogretmen_bildirim_merkezi, gelisim_ligi,
     hikaye_modu, pazar_urunleri_ogrenci, pazar_satin_al, ogretmen_notu_ekle,
+    ogrenci_rozetleri_yayin_map, rozet_emojileri_ve_metin,
     oyun_puani_kaydet, GOREV_SABLONLARI,
     bilgilendirme_ekle, bilgilendirme_listesi, son_bilgilendirme,
 )
@@ -300,7 +301,7 @@ def _ogrenci_rozetleri(ogrenci_id: int) -> list[dict]:
         ORDER BY tarih DESC
     """, (ogrenci_id,)).fetchall():
         d = dict(r)
-        emoji, ad = ROZET_TANIMI.get(d["rozet_kodu"], ("🏅", d["rozet_kodu"]))
+        emoji, ad = rozet_emojileri_ve_metin(d["rozet_kodu"])
         d["emoji"] = emoji
         d["rozet_adi"] = ad
         rows.append(d)
@@ -584,13 +585,30 @@ def gelisim_tebrik_route():
 @app.route("/pazar")
 @ogrenci_giris_zorunlu
 def pazar():
-    return redirect(url_for("ogrenci_gorunum"))
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        session.pop("ogrenci_giris", None)
+        session.pop("ogrenci_id", None)
+        return redirect(url_for("ogrenci_giris"))
+    return render_template(
+        "pazar.html",
+        ogrenci=o,
+        urunler=pazar_urunleri_ogrenci(oid),
+        gelisim=gelisim_ozeti(oid),
+    )
 
 
 @app.route("/pazar/satin-al", methods=["POST"])
 @ogrenci_giris_zorunlu
 def pazar_satin_al_route():
-    return redirect(url_for("ogrenci_gorunum"))
+    kod = request.form.get("urun_kodu", "").strip()
+    sonuc = pazar_satin_al(int(session["ogrenci_id"]), kod)
+    if sonuc.get("ok"):
+        flash(f"Satın alındı: {sonuc['urun']['ad']}", "success")
+    else:
+        flash(sonuc.get("sebep", "İşlem yapılamadı"), "error")
+    return redirect(url_for("pazar"))
 
 
 @app.route("/karne")
@@ -1093,7 +1111,6 @@ def yayin(sinif_id=None):
         liderler=ticker_lider,
         rozetler=son_rozetler(8),
         sezon=sezon_siralama()[:5],
-        maclar=[],
     )
 
 
@@ -1155,8 +1172,11 @@ def api_yayin_ogrenciler():
 
 def _yayin_verisi_hazirla():
     ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
+    ids = [o["id"] for o in ogrenciler]
+    rozet_haritasi = ogrenci_rozetleri_yayin_map(ids, limit=8)
     for o in ogrenciler:
         o["risk_yuzde"] = min(100, o["tik_sayisi"] * 8)
+        o["rozetler"] = rozet_haritasi.get(o["id"], [])
     ogrenciler.sort(key=lambda o: (-o["tik_sayisi"], o["sinif_adi"], o["ad_soyad"]))
     siniflar = {}
     for o in ogrenciler:
@@ -1165,7 +1185,6 @@ def _yayin_verisi_hazirla():
         s["tik"] += o["tik_sayisi"]
         s["temiz"] += 1 if o["tik_sayisi"] == 0 else 0
         s["idari"] += 1 if o["tik_sayisi"] >= 3 else 0
-    maclar = []
     odevler = []
     for s in _tum_siniflar():
         for od in sinif_odevleri(s["id"], 6):
@@ -1174,7 +1193,6 @@ def _yayin_verisi_hazirla():
     return {
         "ogrenciler": ogrenciler,
         "siniflar": sorted(siniflar.values(), key=lambda s: (-s["tik"], s["sinif_adi"])),
-        "maclar": maclar[:8],
         "odevler": odevler[:16],
         "ozet": {
             "ogrenci": len(ogrenciler),

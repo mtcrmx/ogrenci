@@ -16,9 +16,26 @@
     <div class="min-w-0">
       <h1 class="text-2xl font-black">Rozet Pazarı / Avatar Odası</h1>
       <p class="text-sm text-slate-400 break-words">{{ ogrenci.ad_soyad }} · {{ gelisim.puan.xp }} XP · {{ urunler|length }} ürün</p>
+      <p class="text-xs text-amber-200/80 mt-1">Rozetleri XP ile aldığında isminin yanında yayın panosunda görünür.</p>
     </div>
-    <a href="{{ url_for('gelisim_merkezi') }}" class="rounded-xl bg-slate-800 px-4 py-2 text-xs font-black h-fit">Ana Menü</a>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="rounded-xl bg-indigo-700 px-4 py-2 text-xs font-black h-fit">XP Panel</a>
+      <a href="{{ url_for('oyunlar') }}" class="rounded-xl bg-emerald-800 px-4 py-2 text-xs font-black h-fit">Oyunlar</a>
+    </div>
   </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+      {% for cat, msg in messages %}
+      <div class="rounded-xl border px-4 py-2 text-sm font-bold
+        {% if cat == 'success' %}border-emerald-500/40 bg-emerald-500/10 text-emerald-200{% else %}border-red-500/40 bg-red-500/10 text-red-200{% endif %}">
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
 
   <section class="grid grid-cols-2 md:grid-cols-5 gap-2">
     {% for ad, renk in [('Yaygin','slate'),('Nadir','emerald'),('Epik','purple'),('Efsane','amber'),('Mitik','cyan')] %}

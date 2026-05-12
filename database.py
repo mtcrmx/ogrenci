@@ -1298,10 +1298,9 @@ def son_rozetler(limit: int = 30) -> list[dict]:
         ORDER BY rk.tarih DESC LIMIT ?
     """, (limit,)).fetchall():
         d = dict(r)
-        kod = d["rozet_kodu"]
-        if kod in ROZET_TANIMI:
-            d["emoji"] = ROZET_TANIMI[kod][0]
-            d["rozet_adi"] = ROZET_TANIMI[kod][1]
+        em, ra = rozet_emojileri_ve_metin(d["rozet_kodu"])
+        d["emoji"] = em
+        d["rozet_adi"] = ra
         rows.append(d)
     for r in con.execute("""
         SELECT sr.rozet_kodu, sr.tarih, s.sinif_adi AS sahip, s.sinif_adi, 'sinif' AS tip
@@ -1310,10 +1309,9 @@ def son_rozetler(limit: int = 30) -> list[dict]:
         ORDER BY sr.tarih DESC LIMIT ?
     """, (limit,)).fetchall():
         d = dict(r)
-        kod = d["rozet_kodu"]
-        if kod in ROZET_TANIMI:
-            d["emoji"] = ROZET_TANIMI[kod][0]
-            d["rozet_adi"] = ROZET_TANIMI[kod][1]
+        em, ra = rozet_emojileri_ve_metin(d["rozet_kodu"])
+        d["emoji"] = em
+        d["rozet_adi"] = ra
         rows.append(d)
     con.close()
     rows.sort(key=lambda x: x["tarih"], reverse=True)
@@ -1899,6 +1897,45 @@ PAZAR_URUNLERI = [
     {"kod": "efekt_yildiz_yagmuru", "ad": "Yildiz Yagmuru Efekti", "emoji": "☄️", "fiyat": 560, "nadirlik": "Mitik", "kategori": "Efekt"},
 ]
 
+
+def rozet_emojileri_ve_metin(rozet_kodu: str) -> tuple[str, str]:
+    """Rozet kodu için emoji ve görünen ad (okul / pazar)."""
+    if rozet_kodu in ROZET_TANIMI:
+        t = ROZET_TANIMI[rozet_kodu]
+        return t[0], t[1]
+    for u in PAZAR_URUNLERI:
+        if u["kod"] == rozet_kodu:
+            return u["emoji"], u["ad"]
+    return "🏅", rozet_kodu
+
+
+def ogrenci_rozetleri_yayin_map(ogrenci_ids: list[int], limit: int = 8) -> dict[int, list[dict]]:
+    """Yayın listesi için öğrenci başına rozet özetleri."""
+    if not ogrenci_ids:
+        return {}
+    from collections import defaultdict
+    con = _conn()
+    _gami_init(con)
+    q = ",".join("?" * len(ogrenci_ids))
+    rows = [dict(r) for r in con.execute(
+        f"SELECT ogrenci_id, rozet_kodu, tarih FROM rozet_kayitlari WHERE ogrenci_id IN ({q})",
+        ogrenci_ids,
+    ).fetchall()]
+    con.close()
+    buckets: dict[int, list[dict]] = defaultdict(list)
+    for r in rows:
+        buckets[r["ogrenci_id"]].append(r)
+    out: dict[int, list[dict]] = {}
+    for oid, items in buckets.items():
+        items.sort(key=lambda x: x.get("tarih") or "", reverse=True)
+        rozetler = []
+        for r in items[:limit]:
+            em, ad = rozet_emojileri_ve_metin(r["rozet_kodu"])
+            rozetler.append({"emoji": em, "ad": ad, "kod": r["rozet_kodu"]})
+        out[oid] = rozetler
+    return out
+
+
 GOREV_SABLONLARI = [
     {"baslik": "Sessiz Ders Ustasi", "aciklama": "Ders boyunca soz kesmeden dinle", "xp": 10},
     {"baslik": "Odev Kahramani", "aciklama": "Bugunku odevini eksiksiz tamamla", "xp": 12},
@@ -2359,13 +2396,20 @@ def hikaye_modu() -> list[dict]:
 def pazar_urunleri_ogrenci(ogrenci_id: int) -> list[dict]:
     con = _conn()
     _gelisim_init(con)
+    _gami_init(con)
     sahip = {r["urun_kodu"] for r in con.execute(
         "SELECT urun_kodu FROM avatar_envanter WHERE ogrenci_id=?", (ogrenci_id,)
     ).fetchall()}
+    rozet_sahip = {r["rozet_kodu"] for r in con.execute(
+        "SELECT rozet_kodu FROM rozet_kayitlari WHERE ogrenci_id=?", (ogrenci_id,)
+    ).fetchall()}
     con.close()
     siralama = {"Yaygin": 1, "Nadir": 2, "Epik": 3, "Efsane": 4, "Mitik": 5}
-    urunler = [{**u, "sahip": u["kod"] in sahip, "nadirlik_sira": siralama.get(u.get("nadirlik"), 99)}
-               for u in PAZAR_URUNLERI]
+    urunler = []
+    for u in PAZAR_URUNLERI:
+        kod = u["kod"]
+        sahip_mi = (kod in sahip) or (u.get("kategori") == "Rozet" and kod in rozet_sahip)
+        urunler.append({**u, "sahip": sahip_mi, "nadirlik_sira": siralama.get(u.get("nadirlik"), 99)})
     return sorted(urunler, key=lambda u: (u["nadirlik_sira"], u["fiyat"], u["ad"]))
 
 
@@ -2391,7 +2435,12 @@ def pazar_satin_al(ogrenci_id: int, urun_kodu: str) -> dict:
         INSERT OR IGNORE INTO avatar_envanter (ogrenci_id, urun_kodu, tarih)
         VALUES (?,?,?)
     """, (ogrenci_id, urun_kodu, datetime.now().strftime("%Y-%m-%d %H:%M")))
-    con.commit(); con.close()
+    ogr = con.execute("SELECT sinif_id FROM ogrenciler WHERE id=?", (ogrenci_id,)).fetchone()
+    sinif_id = ogr["sinif_id"] if ogr else None
+    con.commit()
+    con.close()
+    if urun.get("kategori") == "Rozet" and sinif_id is not None:
+        rozet_ver_ogrenci(ogrenci_id, sinif_id, urun_kodu)
     return {"ok": True, "urun": urun}
 
 
