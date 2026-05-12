@@ -69,7 +69,7 @@
       <button onclick="sifirlaModalAc('sinif', {{ aktif.id }})"
               class="w-full text-xs font-semibold py-2 rounded-lg
                      bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
-        ↺ Kendi Tiklerimi Sil
+        ↺ Sınıfı Sıfırla
       </button>
       {% if toplu_sifirlamaya_izin %}
       <button onclick="sifirlaModalAc('hepsi', 0)"
@@ -410,8 +410,7 @@
             class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">
       + Olumlu
     </button>
-    <button type="button"
-            onclick="tikOtomatikVer({{ o.id }}, {{ sinif_id }}, this)"
+    <button onclick="tikModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
             class="bg-red-600 hover:bg-red-700 active:bg-red-800
                    text-white text-xs font-bold px-2.5 py-1.5 rounded-lg
                    transition whitespace-nowrap">
@@ -419,12 +418,12 @@
     </button>
     <button onclick="gecmisGoster({{ o.id }}, '{{ o.ad_soyad|e }}')"
             class="bg-slate-500 hover:bg-slate-600 text-white
-                   text-xs px-2 py-1.5 rounded-lg transition hidden sm:block">
+                   text-xs px-2 py-1.5 rounded-lg transition">
       📜
     </button>
     <form action="{{ url_for('sifirla_ogrenci', ogrenci_id=o.id) }}"
           method="POST" class="inline"
-          onsubmit="return confirm('{{ o.ad_soyad }} için sadece sizin verdiğiniz olumlu ve olumsuz tikler silinsin mi?')">
+          onsubmit="return confirm('{{ o.ad_soyad }} için sizin verdiğiniz olumlu ve olumsuz tikler silinsin mi?')">
       <input type="hidden" name="sinif_id" value="{{ sinif_id }}">
       <button type="submit"
               class="bg-amber-500 hover:bg-amber-600 text-white
@@ -453,7 +452,6 @@ function olumluModalAc(id, ad, sinifId) {
   document.getElementById('olumlu-ogrenci-adi').textContent = ad;
   document.getElementById('olumlu-ogrenci-id').value = id;
   document.getElementById('olumlu-sinif-id').value = sinifId;
-  olumluFormKilit(false);
   document.getElementById('olumlu-modal').classList.remove('hidden');
 }
 
@@ -525,7 +523,7 @@ function filtrele() {
 
 // ── Tik Modalı ───────────────────────────────────────────────────────────
 function tikModalAc(ogrId, ogrAd, sinifId) {
-  document.getElementById('modal-ogrenci-adi').textContent = ogrAd || '';
+  document.getElementById('modal-ogrenci-adi').textContent = ogrAd;
   document.getElementById('tik-form').action = `/tik/${ogrId}`;
   document.getElementById('tik-modal').classList.remove('hidden');
 }
@@ -584,87 +582,51 @@ document.getElementById('tik-form').addEventListener('click', async function(e) 
   yenile();
 });
 
-async function tikOtomatikVer(ogrId, sinifId, btn) {
-  if (!ogrId || !sinifId) return;
-  const eskiMetin = btn ? btn.textContent : '';
-  if (btn) {
-    btn.disabled = true;
-    btn.classList.add('opacity-60', 'cursor-wait');
-    btn.textContent = '...';
-  }
-  const fd = new FormData();
-  fd.append('kriter', 'Kırmızı tik');
-  fd.append('sinif_id', sinifId);
-  try {
-    const res = await fetch(`/tik/${ogrId}`, {
-      method: 'POST',
-      body: fd,
-      headers: { 'X-Requested-With': 'XMLHttpRequest' },
-    });
-    if (!res.ok) console.warn('Tik kaydedilemedi', res.status, await res.text());
-  } catch (err) {
-    console.error('Tik isteği gönderilemedi', err);
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.classList.remove('opacity-60', 'cursor-wait');
-      btn.textContent = eskiMetin || '+ Tik';
-    }
-    yenile();
-  }
-}
-
-let olumluIslemde = false;
-function olumluFormKilit(kilitli) {
-  document.querySelectorAll('#olumlu-form .olumlu-kriter-btn').forEach(b => {
-    b.disabled = kilitli;
-    b.classList.toggle('opacity-60', kilitli);
-    b.classList.toggle('cursor-wait', kilitli);
-  });
-}
-
 document.getElementById('olumlu-form').addEventListener('click', async function(e) {
   const btn = e.target.closest('.olumlu-kriter-btn');
   if (!btn) return;
-  if (olumluIslemde) return;
   const kriter = btn.getAttribute('data-kriter');
   const oid = document.getElementById('olumlu-ogrenci-id').value;
   let sinifId = document.getElementById('olumlu-sinif-id').value;
   if (!kriter || !oid || !sinifId) {
-    console.warn('Eksik bilgi: öğrenci veya sınıf seçili değil.');
+    alert('Eksik bilgi: öğrenci veya sınıf seçili değil.');
     return;
   }
-  olumluIslemde = true;
-  olumluFormKilit(true);
   const fd = new FormData();
   fd.append('kriter', kriter);
   fd.append('ogrenci_id', oid);
   fd.append('sinif_id', sinifId);
-  let res = null;
-  let data = null;
+  let res;
   try {
     res = await fetch('/olumlu/' + sinifId, {
       method: 'POST',
       body: fd,
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
-    const raw = await res.text();
-    try {
-      data = raw ? JSON.parse(raw) : null;
-    } catch (err) {
-      console.warn('JSON parse', err, raw.slice(0, 200));
-    }
-    if (!res.ok || !data || !data.ok) {
-      console.warn((data && data.sebep) || ('Olumlu tik işlenemedi (' + res.status + ')'));
-    }
   } catch (err) {
-    console.error('Olumlu tik isteği gönderilemedi', err);
-  } finally {
-    document.getElementById('olumlu-modal').classList.add('hidden');
-    olumluIslemde = false;
-    olumluFormKilit(false);
-    yenile();
+    console.error(err);
+    alert('Ağ hatası: istek gönderilemedi.');
+    return;
   }
+  let data = null;
+  const raw = await res.text();
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.warn('JSON parse', err, raw.slice(0, 200));
+  }
+  document.getElementById('olumlu-modal').classList.add('hidden');
+  if (!res.ok) {
+    alert(data && data.sebep ? data.sebep : ('İstek başarısız (' + res.status + '). Oturum veya yetkiyi kontrol edin.'));
+    yenile();
+    return;
+  }
+  if (data && data.ok) {
+    let msg = 'Olumlu tik kaydedildi. XP: ' + (data.xp ?? '—') + '.';
+      if (data.olumsuz_silindi) msg += ' 1 olumsuz tik kaldırıldı.';
+      alert(msg);
+  } else alert((data && data.sebep) || 'İşlem yapılamadı');
+  yenile();
 });
 
 // ── Geçmiş Modalı ────────────────────────────────────────────────────────
@@ -673,8 +635,32 @@ async function gecmisGoster(ogrId, ogrAd) {
   document.getElementById('gecmis-icerik').textContent = 'Yükleniyor...';
   document.getElementById('gecmis-modal').classList.remove('hidden');
 
-  const res  = await fetch(`/gecmis/${ogrId}`);
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(`/gecmis/${ogrId}`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+  } catch (e) {
+    document.getElementById('gecmis-icerik').innerHTML =
+      '<p class="text-red-600 text-center py-4">Geçmiş alınamadı: ağ hatası.</p>';
+    return;
+  }
+
+  let data = null;
+  const raw = await res.text();
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    document.getElementById('gecmis-icerik').innerHTML =
+      '<p class="text-red-600 text-center py-4">Geçmiş alınamadı: oturum veya sunucu yanıtı geçersiz.</p>';
+    return;
+  }
+
+  if (!res.ok || !Array.isArray(data)) {
+    document.getElementById('gecmis-icerik').innerHTML =
+      `<p class="text-red-600 text-center py-4">${(data && data.sebep) || 'Geçmiş alınamadı.'}</p>`;
+    return;
+  }
 
   if (!data.length) {
     document.getElementById('gecmis-icerik').innerHTML =
@@ -701,14 +687,14 @@ function sifirlaModalAc(tip, sinifId) {
 
   if (tip === 'sinif') {
     form.action = `/sifirla/sinif/${sinifId}`;
-    acik.textContent = 'Bu sınıfta yalnızca sizin verdiğiniz olumlu ve olumsuz tikler silinecek.';
+    acik.textContent = 'Bu sınıfta sizin verdiğiniz olumlu ve olumsuz tikler silinecek.';
     // Sinif_id'yi forma ekle
     let inp = form.querySelector('[name=sinif_id]');
     if (!inp) { inp = document.createElement('input'); inp.name='sinif_id'; inp.type='hidden'; form.appendChild(inp); }
     inp.value = sinifId;
   } else {
     form.action = `/sifirla/hepsi`;
-    acik.textContent = 'TÜM sınıfların tüm tikleri silinecek!';
+    acik.textContent = 'TÜM sınıflardaki olumlu ve olumsuz tik kayıtları silinecek!';
   }
   modal.classList.remove('hidden');
 }
@@ -790,16 +776,16 @@ function kartHTML(o, sinifId) {
               class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition">💚</button>
       <button type="button" onclick="olumluModalAc(${o.id}, ${adJs}, ${sinifId})"
               class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">+ Olumlu</button>
-      <button type="button" onclick="tikOtomatikVer(${o.id}, ${sinifId}, this)"
+      <button type="button" onclick="tikModalAc(${o.id}, ${adJs}, ${sinifId})"
               class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold
                      px-2.5 py-1.5 rounded-lg transition whitespace-nowrap">
         + Tik
       </button>
       <button type="button" onclick="gecmisGoster(${o.id}, ${adJs})"
               class="bg-slate-500 hover:bg-slate-600 text-white text-xs
-                     px-2 py-1.5 rounded-lg transition hidden sm:block">📜</button>
+                     px-2 py-1.5 rounded-lg transition">📜</button>
       <form action="/sifirla/ogrenci/${o.id}" method="POST" class="inline"
-            onsubmit="return confirm(${JSON.stringify(adStr + ' için sadece sizin verdiğiniz olumlu ve olumsuz tikler silinsin mi?')})">
+            onsubmit="return confirm(${JSON.stringify(adStr + ' için sizin verdiğiniz olumlu ve olumsuz tikler silinsin mi?')})">
         <input type="hidden" name="sinif_id" value="${sinifId}">
         <button type="submit"
                 class="bg-amber-500 hover:bg-amber-600 text-white text-xs

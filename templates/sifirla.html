@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🗑 Veri Sıfırlama</title>
+  <title>Sistem Yedekleme ve Sıfırlama</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4" style="background:#030710">
 
-<div class="w-full max-w-3xl">
+<div class="w-full max-w-md">
   <div class="mb-4">
     <a href="{{ url_for('dashboard') }}" class="inline-block rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 text-xs font-black">
       Ana Menü
@@ -18,8 +18,8 @@
   <!-- Başlık -->
   <div class="text-center mb-6">
     <div class="text-6xl mb-3">⚠️</div>
-    <h1 class="text-white font-black text-2xl">Tüm Sistemi Yedekle ve Sıfırla</h1>
-    <p class="text-red-400 text-sm mt-1">Önce yedek alınır, sonra kullanıcı verileri temizlenir.</p>
+    <h1 class="text-white font-black text-2xl">Sistem Yedekleme ve Sıfırlama</h1>
+    <p class="text-red-400 text-sm mt-1">Önce sistem yedeği alınır, sonra kullanıcı verileri temizlenir.</p>
   </div>
 
   <!-- Kart -->
@@ -27,17 +27,15 @@
 
     <!-- Uyarı -->
     <div class="px-5 py-4 border-b border-red-900/30" style="background:#1a0a0a">
-      <div class="text-red-300 font-bold text-sm mb-2">🗑 Silinecek veriler:</div>
+      <div class="text-red-300 font-bold text-sm mb-2">Temizlenecek kullanıcı verileri:</div>
       <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-400">
         <div>• Olumsuz tikler</div>
-        <div>• Olumlu tikler</div>
+        <div>• Olumlu davranışlar</div>
+        <div>• Maç sonuçları</div>
         <div>• Lig puanları</div>
-        <div>• Ödevler ve tamamlanmalar</div>
-        <div>• Duyurular</div>
-        <div>• Randevu ve yansımalar</div>
         <div>• Gamifikasyon verileri</div>
         <div>• Rozetler & seriler</div>
-        <div>• Günün gizli kahramanı</div>
+        <div>• Gizli müfettiş</div>
         <div>• İttifak görevleri</div>
         <div>• Quiz sonuçları</div>
         <div>• Taktik formasyonları</div>
@@ -53,8 +51,8 @@
         <div>• Sınıf listesi</div>
         <div>• Öğrenci listesi</div>
         <div>• Soru bankası (quiz)</div>
-        <div class="col-span-2 text-emerald-300/90">• PDF analiz arşivi (indirilen analiz raporları)</div>
-        <div class="col-span-2 text-emerald-300/90">• Sistem yedekleri (bu sayfada oluşan yedekler)</div>
+        <div class="col-span-2 text-emerald-300/90">• PDF analiz arşivi (analiz raporları silinmez)</div>
+        <div class="col-span-2 text-emerald-300/90">• Sistem yedekleri (sıfırlama öncesi otomatik alınır)</div>
       </div>
     </div>
 
@@ -77,8 +75,9 @@
       <!-- Onay butonu -->
       <button id="btn-sifirla" onclick="sifirla()" disabled
               class="w-full py-3.5 rounded-xl font-black text-base transition
-                     bg-slate-700 text-slate-500 cursor-not-allowed">
-        🧰 Yedekle ve Tüm Sistemi Sıfırla
+                     bg-slate-700 text-slate-500 cursor-not-allowed"
+              id="btn-sifirla">
+        Yedekle ve Tüm Sistemi Sıfırla
       </button>
 
       <a href="/dashboard"
@@ -89,34 +88,19 @@
     </div>
   </div>
 
-  <div class="mt-5 rounded-2xl border border-slate-800 overflow-hidden" style="background:#0d1a30">
-    <div class="px-5 py-4 border-b border-slate-800">
-      <h2 class="text-white font-black text-sm">Son sistem yedekleri</h2>
-      <p class="text-slate-500 text-xs mt-1">Tam sıfırlama öncesinde kullanıcı verileri otomatik JSON yedeğine alınır.</p>
-    </div>
+  <div class="mt-4 rounded-2xl border border-slate-800 p-4" style="background:#0a1525">
+    <h2 class="text-white font-black text-sm mb-3">Son sistem yedekleri</h2>
     {% if sistem_yedekleri %}
-    <div class="overflow-x-auto">
-      <table class="w-full text-xs">
-        <thead class="text-slate-400 bg-slate-950/40 text-left">
-          <tr>
-            <th class="px-4 py-3">Tarih</th>
-            <th class="px-4 py-3">İşlem</th>
-            <th class="px-4 py-3 text-right">Kayıt</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800">
-          {% for y in sistem_yedekleri %}
-          <tr>
-            <td class="px-4 py-3 text-slate-300 whitespace-nowrap">{{ y.tarih }}</td>
-            <td class="px-4 py-3 text-slate-400">{{ y.kapsam }}</td>
-            <td class="px-4 py-3 text-right text-emerald-300 font-black">{{ y.toplam }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+      <div class="space-y-2">
+        {% for y in sistem_yedekleri %}
+        <div class="rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 text-xs text-slate-400">
+          <div class="font-bold text-slate-200">#{{ y.yedek_id }} · {{ y.olusturma }}</div>
+          <div>{{ y.kayit_sayisi }} kayıt · {{ y.tablo_sayisi }} tablo · {{ (y.boyut / 1024)|round(1) }} KB</div>
+        </div>
+        {% endfor %}
+      </div>
     {% else %}
-    <div class="px-5 py-5 text-xs text-slate-500">Henüz sistem yedeği yok.</div>
+      <p class="text-xs text-slate-500">Henüz sistem yedeği yok.</p>
     {% endif %}
   </div>
 
@@ -180,12 +164,12 @@ async function sifirla() {
 
     if (data.ok) {
       document.getElementById('sonuc-emoji').textContent = '✅';
-      document.getElementById('sonuc-baslik').textContent = 'Tüm veriler sıfırlandı!';
+      document.getElementById('sonuc-baslik').textContent = 'Yedek alındı ve sistem sıfırlandı!';
       const toplam = Object.values(data.silinen || {})
                            .filter(v => typeof v === 'number')
                            .reduce((a,b) => a+b, 0);
       document.getElementById('sonuc-aciklama').textContent =
-        `${toplam} kayıt silindi. Yedek #${data.yedek?.yedek_id || '—'} oluşturuldu; PDF analiz arşivi korundu.`;
+        `${toplam} kayıt temizlendi. Yedek #${data.yedek?.yedek_id || '—'} oluşturuldu; analiz PDF arşivi korundu.`;
     } else {
       document.getElementById('sonuc-emoji').textContent = '❌';
       document.getElementById('sonuc-baslik').textContent = 'Hata!';
@@ -194,7 +178,7 @@ async function sifirla() {
   } catch (e) {
     alert('Bağlantı hatası: ' + e.message);
     btn.disabled = false;
-    btn.textContent = '🧰 Yedekle ve Tüm Sistemi Sıfırla';
+    btn.textContent = 'Yedekle ve Tüm Sistemi Sıfırla';
   }
 }
 </script>

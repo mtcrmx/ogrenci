@@ -1252,10 +1252,9 @@ def gecmis(ogrenci_id):
 @app.route("/sifirla/ogrenci/<int:ogrenci_id>", methods=["POST"])
 @giris_zorunlu
 def sifirla_ogrenci(ogrenci_id):
-    ogretmen_id = session["ogretmen_id"]
-    if not _ogretmen_ogrencisine_erisebilir(ogretmen_id, ogrenci_id):
+    if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
         abort(403)
-    silinen = ogretmenin_ogrenci_tiklerini_sifirla(ogrenci_id, ogretmen_id)
+    silinen = ogretmenin_ogrenci_tiklerini_sifirla(ogrenci_id, session["ogretmen_id"])
     sinif_id = request.form.get("sinif_id", "")
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True, "silinen": silinen})
@@ -1265,11 +1264,10 @@ def sifirla_ogrenci(ogrenci_id):
 @app.route("/sifirla/sinif/<int:sinif_id>", methods=["POST"])
 @giris_zorunlu
 def sifirla_sinif(sinif_id):
-    ogretmen_id = session["ogretmen_id"]
-    if not _ogretmen_sinifinda_mi(ogretmen_id, sinif_id):
+    if not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
         abort(403)
     if request.form.get("parola") == SIFIR_PAROLA:
-        ogretmenin_sinif_tiklerini_sifirla(sinif_id, ogretmen_id)
+        ogretmenin_sinif_tiklerini_sifirla(sinif_id, session["ogretmen_id"])
     return redirect(url_for("dashboard", sinif=sinif_id))
 
 
@@ -1586,7 +1584,15 @@ def rapor_arsiv_sayfa():
 @app.route("/rapor/arsiv/sifirla", methods=["POST"])
 @giris_zorunlu
 def rapor_arsiv_sifirla():
-    flash("PDF analiz arşivi artık bu ekrandan silinmiyor; raporlar sistem sıfırlansa bile korunur.", "info")
+    sonuc = rapor_arsiv_tumunu_yedekle_ve_sil(session["ogretmen_id"])
+    if sonuc.get("tasinan", 0) == 0:
+        flash("Aktif PDF arşivinde silinecek kayıt yok.", "info")
+    else:
+        flash(
+            f"{sonuc['tasinan']} analiz raporu güvenli yedeğe alındı; liste temizlendi. "
+            "Aşağıdan «Geri yükle» ile istediğiniz silme anına dönebilirsiniz.",
+            "success",
+        )
     return redirect(url_for("rapor_arsiv_sayfa"))
 
 
@@ -1689,26 +1695,29 @@ def rapor_excel_detayli():
 @app.route("/lig")
 @giris_zorunlu
 def lig():
+    maclar = bugun_maclar()
     tablo = lig_puan_tablosu()
     return render_template(
         "lig.html",
+        maclar=maclar,
         tablo=tablo,
         ogretmen_id=session["ogretmen_id"],
-        toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]),
+        var_ogretmenler=_var_hakem_idleri(),
+        kart_nedenleri=LIG_KART_NEDENLERI,
     )
 
 
 @app.route("/lig/olustur", methods=["POST"])
 @giris_zorunlu
 def lig_olustur():
-    flash("Mac sistemi kapali. Lig bolumunde sadece puan tablosu gosteriliyor.", "info")
+    gunluk_mac_olustur()
     return redirect(url_for("lig"))
 
 
 @app.route("/api/lig/maclar")
 @giris_zorunlu
 def api_lig_maclar():
-    return jsonify([])
+    return jsonify(bugun_maclar())
 
 
 @app.route("/api/lig/tablo")
@@ -1726,32 +1735,40 @@ def lig_mac_detay(mac_id):
 @app.route("/lig/mac/<int:mac_id>/sonuc", methods=["POST"])
 @giris_zorunlu
 def lig_mac_sonuc(mac_id):
-    sonuc = {"durum": "kapali", "sebep": "Mac sistemi kapali. Lig bolumunde sadece puan tablosu var."}
+    s1t = request.form.get("s1_tamamlayan", type=int)
+    s2t = request.form.get("s2_tamamlayan", type=int)
+    s1top = request.form.get("s1_toplam", type=int)
+    s2top = request.form.get("s2_toplam", type=int)
+    sonuc = mac_sonucu_gir(
+        mac_id,
+        s1t if s1t is not None else 0,
+        max(1, s1top or 1),
+        s2t if s2t is not None else 0,
+        max(1, s2top or 1),
+    )
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify(sonuc), 410
-    flash(sonuc["sebep"], "info")
+        return jsonify(sonuc)
     return redirect(url_for("lig"))
 
 
 @app.route("/lig/mac/<int:mac_id>/oyla", methods=["POST"])
 @giris_zorunlu
 def lig_mac_oyla(mac_id):
-    return jsonify({
-        "durum": "kapali",
-        "sebep": "Mac sistemi kapali. Lig bolumunde sadece puan tablosu var.",
-    }), 410
+    sid = request.form.get("sinif_id", type=int)
+    if not sid:
+        return jsonify({"durum": "hata", "sebep": "sinif_yok"}), 400
+    sonuc = mac_oy_ver(mac_id, session["ogretmen_id"], sid)
+    return jsonify(sonuc)
 
 
 @app.route("/lig/sifirla", methods=["POST"])
 @giris_zorunlu
 def lig_sifirla_mac():
-    if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
-        abort(403)
     if request.form.get("parola") != SIFIR_PAROLA:
         flash("Yanlış parola.", "error")
         return redirect(url_for("lig"))
     lig_mac_tablo_sifirla()
-    flash("Sezon puan tablosu sıfırlandı.", "success")
+    flash("Sezon maç ve tablo sıfırlandı.", "success")
     return redirect(url_for("lig"))
 
 
@@ -1788,23 +1805,29 @@ def api_sinif_ogrencileri_json(sinif_id):
 @app.route("/lig/mac/<int:mac_id>/kart", methods=["POST"])
 @giris_zorunlu
 def lig_mac_kart(mac_id):
-    return jsonify({
-        "ok": False,
-        "hata": "Mac sistemi kapali. Lig bolumunde sadece puan tablosu var.",
-    }), 410
+    ogrenci_id = request.form.get("ogrenci_id", type=int)
+    sinif_id = request.form.get("sinif_id", type=int)
+    kart_turu = (request.form.get("kart_turu") or "").strip()
+    neden = (request.form.get("neden") or "Kural ihlali").strip()[:120]
+    if not ogrenci_id or not sinif_id or kart_turu not in ("sari", "kirmizi"):
+        return jsonify({"ok": False, "hata": "Eksik veya geçersiz veri"}), 400
+    if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
+        return jsonify({"ok": False, "hata": "Yetkisiz"}), 403
+    sonuc = kart_ver(mac_id, ogrenci_id, sinif_id, session["ogretmen_id"], kart_turu, neden)
+    return jsonify({"ok": True, **sonuc})
 
 
 @app.route("/api/lig/mac/<int:mac_id>/kartlar")
 @giris_zorunlu
 def api_mac_kartlari(mac_id):
-    return jsonify([])
+    return jsonify(mac_kartlari(mac_id))
 
 
 @app.route("/api/lig/maclar_ve_tablo")
 @giris_zorunlu
 def api_lig_maclar_ve_tablo():
     return jsonify({
-        "maclar": [],
+        "maclar": bugun_maclar(),
         "tablo": lig_puan_tablosu(),
         "kadrolar": {},
     })
