@@ -34,6 +34,26 @@
     </div>
 
     {% if aktif %}
+    <div class="px-2 pb-3 mt-2 border-t border-slate-200 pt-3 space-y-1.5">
+      <p class="text-[10px] font-bold text-slate-400 tracking-widest px-1 mb-2">
+        ÖDEV VE YAYIN
+      </p>
+      <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
+         class="block w-full text-center text-xs font-bold py-2 rounded-lg
+                bg-emerald-600 text-white hover:bg-emerald-700 transition">
+        Ödev ver
+      </a>
+      <a href="{{ url_for('yayin') }}"
+         class="block w-full text-center text-xs font-bold py-2 rounded-lg
+                bg-violet-600 text-white hover:bg-violet-700 transition">
+        Canlı yayın
+      </a>
+      <a href="{{ url_for('bilgilendirme_yonetimi') }}"
+         class="block w-full text-center text-xs font-semibold py-2 rounded-lg
+                bg-sky-100 text-sky-900 hover:bg-sky-200 transition">
+        Duyuru yayınla
+      </a>
+    </div>
     <div class="px-2 pb-4 mt-2 border-t border-slate-200 pt-3 space-y-1.5">
       <p class="text-[10px] font-bold text-slate-400 tracking-widest px-1 mb-2">
         TİK SIFIRLAMA

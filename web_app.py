@@ -7,7 +7,7 @@ import os, tempfile
 from datetime import datetime
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    session, jsonify, send_file, make_response,
+    session, jsonify, send_file, make_response, flash,
 )
 from database import (
     initialize_db, KRITERLER, OLUMLU_KRITERLER,
@@ -147,7 +147,10 @@ def _odev_bildirimi_verisi(hedef: str) -> dict | None:
     odevler = ogrenci_odevleri(int(ogrenci_id), 30)
     if not odevler:
         return None
-    son_odev = max(odevler, key=lambda o: int(o.get("id") or 0))
+    bekleyen = [o for o in odevler if not o.get("tamamlandi")]
+    if not bekleyen:
+        return None
+    son_odev = max(bekleyen, key=lambda o: int(o.get("id") or 0))
     return {
         "hedef": hedef_adi,
         "odev": son_odev,
@@ -611,12 +614,14 @@ def veli_panel():
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
     gecmis = ogrenci_tik_gecmisi(int(ogrenci_id))
+    odevler = ogrenci_odevleri(int(ogrenci_id), 40)
     return render_template(
         "tik_gecmisi.html",
         ogrenci=o,
         gecmis=gecmis,
         avatar=_avatar(o),
         veli_modu=True,
+        odevler=odevler,
     )
 
 
@@ -879,6 +884,10 @@ def odev_olustur():
     )
     if not sonuc.get("ok"):
         return redirect(url_for("yoklama", sinif=sinif_id))
+    flash(
+        "Ödev yayınlandı. Öğrenci ve veli giriş yaptığında bildirim penceresinde görecek.",
+        "success",
+    )
     return redirect(url_for("yoklama", sinif=sinif_id, odev=sonuc["odev_id"]))
 
 
@@ -1059,12 +1068,14 @@ def ogrenci_gorunum():
         session.pop("ogrenci_giris", None)
         return redirect(url_for("ogrenci_giris"))
     gecmis = ogrenci_tik_gecmisi(int(ogrenci_id))
+    odevler = ogrenci_odevleri(int(ogrenci_id), 40)
     return render_template(
         "tik_gecmisi.html",
         ogrenci=o,
         gecmis=gecmis,
         avatar=_avatar(o),
         veli_modu=False,
+        odevler=odevler,
     )
 
 
@@ -1080,6 +1091,7 @@ def api_kendi_tik_gecmisi():
         "ok": True,
         "ogrenci": o,
         "gecmis": ogrenci_tik_gecmisi(int(oid)),
+        "odevler": ogrenci_odevleri(int(oid), 40),
     })
 
 

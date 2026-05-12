@@ -66,11 +66,29 @@
     </div>
 
     <div class="flex items-center gap-2 sm:gap-3 min-w-0">
-      <nav class="hidden md:flex items-center gap-1.5">
+      <nav class="hidden md:flex items-center gap-1.5 flex-wrap justify-end">
         <a href="{{ url_for('dashboard') }}"
            class="bg-okul-700 hover:bg-okul-900 text-white text-xs font-bold
                   px-3 py-1.5 rounded-lg transition whitespace-nowrap">
           Ana Menü
+        </a>
+        <a href="{{ url_for('yoklama') }}"
+           class="bg-emerald-700 hover:bg-emerald-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Sınıfa ödev ver">
+          Ödev
+        </a>
+        <a href="{{ url_for('yayin') }}"
+           class="bg-violet-700 hover:bg-violet-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Okul geneli canlı yayın panosu">
+          Yayın
+        </a>
+        <a href="{{ url_for('bilgilendirme_yonetimi') }}"
+           class="bg-sky-700 hover:bg-sky-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Öğrenci ve veliye duyuru">
+          Duyuru
         </a>
       </nav>
 
@@ -92,6 +110,12 @@
       </a>
     </div>
   </div>
+  <nav class="md:hidden flex gap-1.5 px-3 pb-2 max-w-screen-xl mx-auto overflow-x-auto scrollbar-thin">
+    <a href="{{ url_for('dashboard') }}" class="shrink-0 rounded-lg bg-okul-700 px-2.5 py-1 text-[11px] font-bold">Menü</a>
+    <a href="{{ url_for('yoklama') }}" class="shrink-0 rounded-lg bg-emerald-700 px-2.5 py-1 text-[11px] font-bold">Ödev</a>
+    <a href="{{ url_for('yayin') }}" class="shrink-0 rounded-lg bg-violet-700 px-2.5 py-1 text-[11px] font-bold">Yayın</a>
+    <a href="{{ url_for('bilgilendirme_yonetimi') }}" class="shrink-0 rounded-lg bg-sky-700 px-2.5 py-1 text-[11px] font-bold">Duyuru</a>
+  </nav>
 </header>
 {% endif %}
 

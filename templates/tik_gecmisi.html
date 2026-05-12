@@ -50,6 +50,35 @@
     </div>
   </div>
 
+  <section id="odev-panel" class="rounded-2xl bg-slate-900 border border-amber-500/30 overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-800 bg-amber-500/10">
+      <h2 class="font-black text-sm text-amber-100">Ödevler</h2>
+      <p class="text-[10px] text-slate-500 mt-1">
+        Öğretmenin sınıfa verdiği ödevler burada listelenir; yeni ödev ana ekranda bildirim kutusu olarak da açılır.
+      </p>
+    </div>
+    <div id="odev-liste" class="divide-y divide-slate-800">
+      {% for od in odevler|default([]) %}
+      <div class="px-4 py-3 space-y-1 odev-satir">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <span class="font-bold text-white text-sm break-words">{{ od.baslik }}</span>
+          <span class="shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-lg
+            {% if od.tamamlandi %}bg-emerald-500/20 text-emerald-300{% else %}bg-amber-500/20 text-amber-200{% endif %}">
+            {{ 'Tamamlandı' if od.tamamlandi else 'Bekliyor' }}
+          </span>
+        </div>
+        <div class="text-xs text-slate-400">{{ od.ders }} · Son teslim: {{ od.son_tarih }}</div>
+        {% if od.aciklama %}
+        <p class="text-xs text-slate-300 whitespace-pre-line">{{ od.aciklama }}</p>
+        {% endif %}
+        <div class="text-[10px] text-slate-500">{{ od.ogretmen }}{% if od.tamamlanma_tarihi %} · İşaret: {{ od.tamamlanma_tarihi }}{% endif %}</div>
+      </div>
+      {% else %}
+      <p class="px-4 py-8 text-center text-sm text-slate-500 odev-bos">Henüz öğretmen tarafından ödev girilmedi.</p>
+      {% endfor %}
+    </div>
+  </section>
+
   <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
     <h2 class="font-black text-sm mb-1">Tik eşikleri</h2>
     <p class="text-[11px] text-slate-500 mb-3">Aynı öğrenciye biriken tik sayısına göre okul içi uyarı basamakları.</p>
@@ -117,6 +146,37 @@ function escapeHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function odevSatirHtml(od) {
+  const tam = od.tamamlandi ? 'Tamamlandı' : 'Bekliyor';
+  const cls = od.tamamlandi
+    ? 'bg-emerald-500/20 text-emerald-300'
+    : 'bg-amber-500/20 text-amber-200';
+  const ac = od.aciklama
+    ? `<p class="text-xs text-slate-300 whitespace-pre-line">${escapeHtml(od.aciklama)}</p>`
+    : '';
+  const isaret = od.tamamlanma_tarihi
+    ? ' · İşaret: ' + escapeHtml(od.tamamlanma_tarihi)
+    : '';
+  return `<div class="px-4 py-3 space-y-1 odev-satir">
+    <div class="flex flex-wrap items-start justify-between gap-2">
+      <span class="font-bold text-white text-sm break-words">${escapeHtml(od.baslik)}</span>
+      <span class="shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-lg ${cls}">${tam}</span>
+    </div>
+    <div class="text-xs text-slate-400">${escapeHtml(od.ders)} · Son teslim: ${escapeHtml(od.son_tarih)}</div>
+    ${ac}
+    <div class="text-[10px] text-slate-500">${escapeHtml(od.ogretmen || '')}${isaret}</div>
+  </div>`;
+}
+
+function odevListesiniGuncelle(odevler) {
+  const el = document.getElementById('odev-liste');
+  if (!el) return;
+  const arr = odevler || [];
+  el.innerHTML = arr.length
+    ? arr.map(odevSatirHtml).join('')
+    : '<p class="px-4 py-8 text-center text-sm text-slate-500 odev-bos">Henüz öğretmen tarafından ödev girilmedi.</p>';
+}
+
 async function yenile() {
   try {
     const res = await fetch(API);
@@ -131,6 +191,7 @@ async function yenile() {
     tbody.innerHTML = liste.length
       ? liste.map((g, i) => satirHtml(i, g)).join('')
       : '<tr><td colspan="4" class="px-4 py-10 text-center text-slate-500 text-sm">Henüz tik kaydı yok.</td></tr>';
+    if (d.odevler) odevListesiniGuncelle(d.odevler);
     document.getElementById('guncelleme-bilgi').textContent =
       'Güncellendi: ' + new Date().toLocaleTimeString('tr-TR');
   } catch (e) { /* sessiz */ }

@@ -8,7 +8,6 @@ Gerekli: pip install openpyxl
 
 from __future__ import annotations
 import re
-from collections import Counter
 
 from database import KRITERLER, sinif_ogrencileri, ogrenci_tik_gecmisi
 
@@ -64,19 +63,15 @@ def _kriter_saf_metin(kriter: str) -> str:
 
 
 def _ihlal_ozeti_yazisi(gecmis: list[dict]) -> str:
-    """Her ihlal türü için temiz metin + tekrar sayısı; emoji yok."""
-    say = Counter()
+    """Benzersiz ihlal türleri, virgülle; sayı/parantez yok, emoji yok."""
+    turler: set[str] = set()
     for k in gecmis:
         temiz = _kriter_saf_metin(k.get("kriter") or "")
         if temiz:
-            say[temiz] += 1
-    if not say:
+            turler.add(temiz)
+    if not turler:
         return "İhlal kaydı yok"
-    parcalar = [
-        f"{ad} ({n})"
-        for ad, n in sorted(say.items(), key=lambda x: (-x[1], x[0]))
-    ]
-    return ", ".join(parcalar)
+    return ", ".join(sorted(turler))
 
 
 def excel_raporu_olustur(
