@@ -716,16 +716,38 @@ def tum_tikleri_sifirla():
 OLUMLU_TIK_XP = 5
 
 
+def _bu_hafta_pazartesi() -> str:
+    bugun = datetime.now().date()
+    pazartesi = bugun - timedelta(days=bugun.weekday())
+    return pazartesi.isoformat()
+
+
 def _olumlu_davranis_migrate(con: sqlite3.Connection) -> None:
-    cols = {r[1] for r in con.execute("PRAGMA table_info(olumlu_davranis)").fetchall()}
+    """Eski veritabanlarında tablo/sütun yoksa oluşturur (500 hatalarını önler)."""
+    con.execute(
+        """
+        CREATE TABLE IF NOT EXISTS olumlu_davranis (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            sinif_id    INTEGER NOT NULL REFERENCES siniflar(id),
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            kriter      TEXT NOT NULL,
+            tarih       TEXT NOT NULL,
+            ogrenci_id  INTEGER REFERENCES ogrenciler(id)
+        )
+        """
+    )
+    try:
+        cols = {r[1] for r in con.execute("PRAGMA table_info(olumlu_davranis)").fetchall()}
+    except Exception:
+        cols = set()
     if "ogrenci_id" not in cols:
         try:
             con.execute(
                 "ALTER TABLE olumlu_davranis ADD COLUMN ogrenci_id INTEGER REFERENCES ogrenciler(id)"
             )
-            con.commit()
         except Exception:
             pass
+    con.commit()
 
 
 def olumlu_sinif_etkinlik_ekle(sinif_id: int, ogretmen_id: int, kriter: str) -> int:
@@ -831,6 +853,7 @@ def ogrenci_olumlu_tik_sayilari(ogrenci_ids: list[int]) -> dict[int, int]:
 def lig_siralama() -> list[dict]:
     hafta = _bu_hafta_pazartesi()
     con = _conn()
+    _ensure_lig_tablolari(con)
     con.execute("UPDATE lig SET puan=0, hafta_basi=? WHERE hafta_basi != ?",
                 (hafta, hafta))
     con.commit()
@@ -849,6 +872,7 @@ def lig_siralama() -> list[dict]:
 def lig_manuel_sifirla():
     hafta = _bu_hafta_pazartesi()
     con = _conn()
+    _ensure_lig_tablolari(con)
     con.execute("UPDATE lig SET puan=0, hafta_basi=?", (hafta,))
     con.commit()
     con.close()
@@ -931,6 +955,39 @@ def _mac_tablosu_olustur(con):
     con.commit()
 
 
+def _lig_mac_tablo_eksik_sutunlar(con: sqlite3.Connection) -> None:
+    """Eski DB'lerde lig / lig_mac_tablo sütun eksikse ALTER (ör. `ag` yokken 500)."""
+    try:
+        lig_cols = {r[1] for r in con.execute("PRAGMA table_info(lig)").fetchall()}
+    except Exception:
+        lig_cols = set()
+    if lig_cols and "hafta_basi" not in lig_cols:
+        try:
+            con.execute("ALTER TABLE lig ADD COLUMN hafta_basi TEXT NOT NULL DEFAULT ''")
+        except Exception:
+            pass
+    try:
+        mt_cols = {r[1] for r in con.execute("PRAGMA table_info(lig_mac_tablo)").fetchall()}
+    except Exception:
+        mt_cols = set()
+    if not mt_cols:
+        return
+    eksik = [
+        ("galibiyet", "INTEGER NOT NULL DEFAULT 0"),
+        ("beraberlik", "INTEGER NOT NULL DEFAULT 0"),
+        ("maglubiyet", "INTEGER NOT NULL DEFAULT 0"),
+        ("puan", "INTEGER NOT NULL DEFAULT 0"),
+        ("ag", "INTEGER NOT NULL DEFAULT 0"),
+    ]
+    for ad, decl in eksik:
+        if ad not in mt_cols:
+            try:
+                con.execute(f"ALTER TABLE lig_mac_tablo ADD COLUMN {ad} {decl}")
+            except Exception:
+                pass
+            mt_cols.add(ad)
+
+
 def _ensure_lig_tablolari(con) -> None:
     """İlk kullanımda `lig` ve `lig_mac_tablo` yoksa oluşturur (commit gerektirmez)."""
     con.execute("""
@@ -950,6 +1007,7 @@ def _ensure_lig_tablolari(con) -> None:
             ag INTEGER DEFAULT 0
         )
     """)
+    _lig_mac_tablo_eksik_sutunlar(con)
 
 
 def _lig_haftalik_puan_artir(con, sinif_id: int) -> int:
