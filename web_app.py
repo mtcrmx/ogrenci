@@ -1694,29 +1694,25 @@ def rapor_excel_detayli():
 @app.route("/lig")
 @giris_zorunlu
 def lig():
-    maclar = bugun_maclar()
     tablo = lig_puan_tablosu()
     return render_template(
         "lig.html",
-        maclar=maclar,
         tablo=tablo,
         ogretmen_id=session["ogretmen_id"],
-        var_ogretmenler=_var_hakem_idleri(),
-        kart_nedenleri=LIG_KART_NEDENLERI,
     )
 
 
 @app.route("/lig/olustur", methods=["POST"])
 @giris_zorunlu
 def lig_olustur():
-    gunluk_mac_olustur()
+    flash("Mac sistemi kapali. Lig bolumunde sadece puan tablosu gosteriliyor.", "info")
     return redirect(url_for("lig"))
 
 
 @app.route("/api/lig/maclar")
 @giris_zorunlu
 def api_lig_maclar():
-    return jsonify(bugun_maclar())
+    return jsonify([])
 
 
 @app.route("/api/lig/tablo")
@@ -1734,30 +1730,20 @@ def lig_mac_detay(mac_id):
 @app.route("/lig/mac/<int:mac_id>/sonuc", methods=["POST"])
 @giris_zorunlu
 def lig_mac_sonuc(mac_id):
-    s1t = request.form.get("s1_tamamlayan", type=int)
-    s2t = request.form.get("s2_tamamlayan", type=int)
-    s1top = request.form.get("s1_toplam", type=int)
-    s2top = request.form.get("s2_toplam", type=int)
-    sonuc = mac_sonucu_gir(
-        mac_id,
-        s1t if s1t is not None else 0,
-        max(1, s1top or 1),
-        s2t if s2t is not None else 0,
-        max(1, s2top or 1),
-    )
+    sonuc = {"durum": "kapali", "sebep": "Mac sistemi kapali. Lig bolumunde sadece puan tablosu var."}
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify(sonuc)
+        return jsonify(sonuc), 410
+    flash(sonuc["sebep"], "info")
     return redirect(url_for("lig"))
 
 
 @app.route("/lig/mac/<int:mac_id>/oyla", methods=["POST"])
 @giris_zorunlu
 def lig_mac_oyla(mac_id):
-    sid = request.form.get("sinif_id", type=int)
-    if not sid:
-        return jsonify({"durum": "hata", "sebep": "sinif_yok"}), 400
-    sonuc = mac_oy_ver(mac_id, session["ogretmen_id"], sid)
-    return jsonify(sonuc)
+    return jsonify({
+        "durum": "kapali",
+        "sebep": "Mac sistemi kapali. Lig bolumunde sadece puan tablosu var.",
+    }), 410
 
 
 @app.route("/lig/sifirla", methods=["POST"])
@@ -1767,7 +1753,7 @@ def lig_sifirla_mac():
         flash("Yanlış parola.", "error")
         return redirect(url_for("lig"))
     lig_mac_tablo_sifirla()
-    flash("Sezon maç ve tablo sıfırlandı.", "success")
+    flash("Sezon puan tablosu sıfırlandı.", "success")
     return redirect(url_for("lig"))
 
 
@@ -1804,29 +1790,23 @@ def api_sinif_ogrencileri_json(sinif_id):
 @app.route("/lig/mac/<int:mac_id>/kart", methods=["POST"])
 @giris_zorunlu
 def lig_mac_kart(mac_id):
-    ogrenci_id = request.form.get("ogrenci_id", type=int)
-    sinif_id = request.form.get("sinif_id", type=int)
-    kart_turu = (request.form.get("kart_turu") or "").strip()
-    neden = (request.form.get("neden") or "Kural ihlali").strip()[:120]
-    if not ogrenci_id or not sinif_id or kart_turu not in ("sari", "kirmizi"):
-        return jsonify({"ok": False, "hata": "Eksik veya geçersiz veri"}), 400
-    if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
-        return jsonify({"ok": False, "hata": "Yetkisiz"}), 403
-    sonuc = kart_ver(mac_id, ogrenci_id, sinif_id, session["ogretmen_id"], kart_turu, neden)
-    return jsonify({"ok": True, **sonuc})
+    return jsonify({
+        "ok": False,
+        "hata": "Mac sistemi kapali. Lig bolumunde sadece puan tablosu var.",
+    }), 410
 
 
 @app.route("/api/lig/mac/<int:mac_id>/kartlar")
 @giris_zorunlu
 def api_mac_kartlari(mac_id):
-    return jsonify(mac_kartlari(mac_id))
+    return jsonify([])
 
 
 @app.route("/api/lig/maclar_ve_tablo")
 @giris_zorunlu
 def api_lig_maclar_ve_tablo():
     return jsonify({
-        "maclar": bugun_maclar(),
+        "maclar": [],
         "tablo": lig_puan_tablosu(),
         "kadrolar": {},
     })
