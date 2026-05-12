@@ -33,42 +33,11 @@
       {% endfor %}
     </div>
 
-    <!-- Sınıf sıfırla & tümünü sıfırla -->
     {% if aktif %}
     <div class="px-2 pb-4 mt-2 border-t border-slate-200 pt-3 space-y-1.5">
       <p class="text-[10px] font-bold text-slate-400 tracking-widest px-1 mb-2">
-        YENİ ÖZELLİKLER
+        TİK SIFIRLAMA
       </p>
-      <a href="{{ url_for('oduller') }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200 transition">
-        Ödüller
-      </a>
-      <a href="{{ url_for('quiz', sinif_id=aktif.id) }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-purple-100 text-purple-800 hover:bg-purple-200 transition">
-        Quiz
-      </a>
-      <a href="{{ url_for('ogrenci_gorunum') }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-cyan-100 text-cyan-800 hover:bg-cyan-200 transition">
-        Öğrenci
-      </a>
-      <a href="{{ url_for('bildirimler') }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
-        Bildirim
-      </a>
-      <a href="{{ url_for('rapor_ozet') }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-teal-100 text-teal-800 hover:bg-teal-200 transition">
-        Rapor
-      </a>
-      <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-slate-200 text-slate-800 hover:bg-slate-300 transition">
-        Ödev
-      </a>
       <button onclick="sifirlaModalAc('sinif', {{ aktif.id }})"
               class="w-full text-xs font-semibold py-2 rounded-lg
                      bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
@@ -103,7 +72,7 @@
           <span class="font-normal text-slate-500">{{ ogrenciler|length }} öğrenci</span>
         </h2>
         <p class="text-xs text-slate-400" id="guncelleme-info">
-          ⏱ Otomatik güncelleme: 10 saniyede bir
+          Tik kaydı · liste 10 saniyede bir yenilenir
         </p>
       </div>
 
@@ -112,76 +81,10 @@
              class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm
                     w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
 
-      <!-- Mobil araç butonları -->
       <div class="flex gap-1.5 sm:hidden w-full">
-        <a href="{{ url_for('yayin') }}" target="_blank"
-           class="flex-1 text-center bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          📺 Yayın
-        </a>
         <a href="{{ url_for('rapor_excel', sinif_id=aktif.id) }}"
            class="flex-1 text-center bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          📊 Excel
-        </a>
-      </div>
-    </div>
-
-    <div class="px-3 pt-3">
-      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
-        <a href="{{ url_for('oduller') }}"
-           class="rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-3 py-3
-                  text-fuchsia-900 hover:bg-fuchsia-100 transition">
-          <div class="text-lg">🎮</div>
-          <div class="font-black text-sm leading-tight">Ödüller</div>
-          <div class="text-[10px] text-fuchsia-500 mt-0.5">Rozet, görev, alkış</div>
-        </a>
-        <a href="{{ url_for('quiz', sinif_id=aktif.id) }}"
-           class="rounded-xl border border-purple-200 bg-purple-50 px-3 py-3
-                  text-purple-900 hover:bg-purple-100 transition">
-          <div class="text-lg">🧠</div>
-          <div class="font-black text-sm leading-tight">Quiz</div>
-          <div class="text-[10px] text-purple-500 mt-0.5">Bilgi yarışması</div>
-        </a>
-        <a href="{{ url_for('ogrenci_gorunum') }}"
-           class="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3
-                  text-cyan-900 hover:bg-cyan-100 transition">
-          <div class="text-lg">👁</div>
-          <div class="font-black text-sm leading-tight">Öğrenci</div>
-          <div class="text-[10px] text-cyan-600 mt-0.5">İzleme paneli</div>
-        </a>
-        <a href="{{ url_for('admin_sifirla_sayfa') }}"
-           class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3
-                  text-rose-900 hover:bg-rose-100 transition">
-          <div class="text-lg">🧹</div>
-          <div class="font-black text-sm leading-tight">Genel Sıfırla</div>
-          <div class="text-[10px] text-rose-500 mt-0.5">Yönetici</div>
-        </a>
-        <a href="{{ url_for('bildirimler') }}"
-           class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3
-                  text-amber-900 hover:bg-amber-100 transition">
-          <div class="text-lg">🔔</div>
-          <div class="font-black text-sm leading-tight">Bildirim</div>
-          <div class="text-[10px] text-amber-600 mt-0.5">Talep ve uyarı</div>
-        </a>
-        <a href="{{ url_for('rapor_ozet') }}"
-           class="rounded-xl border border-teal-200 bg-teal-50 px-3 py-3
-                  text-teal-900 hover:bg-teal-100 transition">
-          <div class="text-lg">📈</div>
-          <div class="font-black text-sm leading-tight">Rapor</div>
-          <div class="text-[10px] text-teal-600 mt-0.5">Grafik ve CSV</div>
-        </a>
-        <a href="{{ url_for('ogretmen_merkez') }}"
-           class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3
-                  text-emerald-900 hover:bg-emerald-100 transition">
-          <div class="text-lg">🧭</div>
-          <div class="font-black text-sm leading-tight">Merkez</div>
-          <div class="text-[10px] text-emerald-600 mt-0.5">Risk ve notlar</div>
-        </a>
-        <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
-           class="rounded-xl border border-slate-200 bg-white px-3 py-3
-                  text-slate-900 hover:bg-slate-50 transition">
-          <div class="text-lg">✅</div>
-          <div class="font-black text-sm leading-tight">Ödev</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Gelen-gelmeyen</div>
+          📊 Excel (tik listesi)
         </a>
       </div>
     </div>

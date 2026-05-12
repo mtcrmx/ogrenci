@@ -98,7 +98,7 @@ def _bilgilendirme_hedefi() -> str | None:
 def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
     ana_ekranlar = {
         "ogretmen": {"dashboard"},
-        "ogrenci": {"ogrenci_gorunum", "ogrenci_ben", "ogrenci_patika"},
+        "ogrenci": {"ogrenci_gorunum"},
         "veli": {"veli_panel"},
     }
     return request.endpoint in ana_ekranlar.get(hedef, set())
@@ -108,25 +108,18 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
     veriler = {
         "ogretmen": {
             "baslik": "Öğretmen paneline hoş geldiniz",
-            "alt": "Okul takibi için ana alanları hızlıca tanıyalım.",
+            "alt": "Bu sürümde yalnızca davranış tik kaydı kullanılır.",
             "adimlar": [
-                {"etiket": "Ana Menü", "metin": "Sınıflarınızı, öğrenci kartlarını ve günlük işlemleri buradan yönetirsiniz."},
-                {"etiket": "Tik ve olumlu puan", "metin": "Öğrenci kartlarından davranış kaydı, olumlu puan ve geçmiş takibi yapabilirsiniz."},
-                {"etiket": "Patika / görevler", "metin": "Öğrenci tarafında sırayla günlük görev ve ödül sistemi tek akışta sunulur."},
-                {"etiket": "Yayın ekranı", "metin": "Akıllı tahta veya büyük ekranda sınıf durumunu canlı göstermek için kullanılır."},
-                {"etiket": "Raporlar", "metin": "Özet rapor ve Excel çıktılarıyla sınıf ve okul durumunu arşivleyebilirsiniz."},
-                {"etiket": "Bilgilendirme", "metin": "Yönetim duyuruları öğretmen, öğrenci ve velilere girişte pencere olarak ulaşır."},
+                {"etiket": "Ana Menü", "metin": "Sol listeden sınıf seçin; öğrenci kartından tik atın veya geçmişe bakın."},
+                {"etiket": "Tik geçmişi", "metin": "Karttaki 📜 ile öğrencinin tik kayıtlarını görürsünüz."},
+                {"etiket": "Excel", "metin": "Üst menüden sınıf listesini tik durumuyla dışa aktarabilirsiniz."},
             ],
         },
         "ogrenci": {
             "baslik": "Öğrenci alanına hoş geldin",
-            "alt": "Kendi durumunu ve gelişimini buradan takip edebilirsin.",
+            "alt": "Bu ekran salt okunur: okuldaki tik sıralamasını gösterir.",
             "adimlar": [
-                {"etiket": "Benim durumum", "metin": "Puanlarını, tik durumunu, rozetlerini ve sınıf içindeki yerini görürsün."},
-                {"etiket": "Görevler", "metin": "Gelişim görevlerini tamamlayarak puan ve ödül kazanabilirsin."},
-                {"etiket": "Maçlar", "metin": "Sınıf maçlarını, takım durumunu ve lig tablosunu takip edebilirsin."},
-                {"etiket": "İttifaklar", "metin": "Arkadaşlarınla görev oluşturup öğretmen onayıyla birlikte ilerleyebilirsin."},
-                {"etiket": "Pazar ve oyunlar", "metin": "Kazandığın puanları eğlenceli alanlarda kullanabilir, oyun puanlarını görebilirsin."},
+                {"etiket": "Disiplin sırası", "metin": "Tüm öğrenciler tik sayısına göre listelenir; veri girişi yapılamaz."},
             ],
         },
         "veli": {
@@ -449,9 +442,9 @@ def logout():
 @app.route("/ogrenci/giris", methods=["GET", "POST"])
 def ogrenci_giris():
     hata = None
-    next_url = request.values.get("next") or url_for("ogrenci_patika")
+    next_url = request.values.get("next") or url_for("ogrenci_gorunum")
     if not next_url.startswith("/"):
-        next_url = url_for("ogrenci_patika")
+        next_url = url_for("ogrenci_gorunum")
 
     if session.get("ogrenci_giris"):
         return redirect(next_url)
@@ -470,8 +463,6 @@ def ogrenci_giris():
             else:
                 session["ogrenci_giris"] = True
                 session["ogrenci_id"] = ogrenci["id"]
-                if next_url == url_for("ogrenci_gorunum"):
-                    next_url = url_for("ogrenci_patika")
                 return redirect(next_url)
 
     return render_template("ogrenci_login.html", hata=hata, next_url=next_url)
@@ -487,133 +478,73 @@ def ogrenci_cikis():
 @app.route("/ogrenci/ben")
 @ogrenci_giris_zorunlu
 def ogrenci_ben():
-    ogrenci_id = session.get("ogrenci_id")
-    if not ogrenci_id:
-        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_ben")))
-    ozet = _ogrenci_ozeti(int(ogrenci_id))
-    if not ozet:
-        session.pop("ogrenci_id", None)
-        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_ben")))
-    return render_template("ogrenci_ben.html", **ozet)
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/oyunlar")
 @ogrenci_giris_zorunlu
 def oyunlar():
-    ogrenci_id = session.get("ogrenci_id")
-    ozet = _ogrenci_ozeti(int(ogrenci_id)) if ogrenci_id else None
-    return render_template("oyunlar.html", ozet=ozet)
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/api/oyun/puan", methods=["POST"])
 @ogrenci_giris_zorunlu
 def oyun_puan_api():
-    ogrenci_id = session.get("ogrenci_id")
-    veri = request.get_json(silent=True) or request.form
-    oyun = veri.get("oyun", "Oyun")
-    puan = veri.get("puan", 0)
-    if not ogrenci_id:
-        return jsonify({"ok": False, "sebep": "Ogrenci girisi gerekli"}), 401
-    try:
-        sonuc = oyun_puani_kaydet(int(ogrenci_id), oyun, int(puan))
-    except Exception as exc:
-        return jsonify({"ok": False, "sebep": str(exc)}), 400
-    return jsonify(sonuc)
+    return jsonify({"ok": False, "sebep": "Oyun modu kapali; yalnizca tik sistemi aktif."}), 410
 
 
 @app.route("/gelisim")
 @ogrenci_giris_zorunlu
 def gelisim_merkezi():
-    ogrenci_id = session.get("ogrenci_id")
-    if not ogrenci_id:
-        return redirect(url_for("ogrenci_giris", next=url_for("gelisim_merkezi")))
-    ozet = _ogrenci_ozeti(int(ogrenci_id))
-    sinif_arkadaslari = [
-        o for o in sinif_ogrencileri(ozet["ogrenci"]["sinif_id"])
-        if o["id"] != int(ogrenci_id)
-    ] if ozet else []
-    return render_template("gelisim.html", **ozet, sinif_arkadaslari=sinif_arkadaslari)
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/patika")
 @ogrenci_giris_zorunlu
 def ogrenci_patika():
-    ogrenci_id = session.get("ogrenci_id")
-    if not ogrenci_id:
-        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_patika")))
-    ozet = _ogrenci_ozeti(int(ogrenci_id))
-    if not ozet:
-        session.pop("ogrenci_id", None)
-        session.pop("ogrenci_giris", None)
-        return redirect(url_for("ogrenci_giris"))
-    return render_template("patika.html", **ozet)
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/gelisim/gorev-tamamla", methods=["POST"])
 @ogrenci_giris_zorunlu
 def gelisim_gorev_tamamla_route():
-    ogrenci_id = session.get("ogrenci_id")
-    if ogrenci_id:
-        gelisim_gorev_tamamla(int(ogrenci_id))
-    return redirect(url_for("gelisim_merkezi"))
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/gelisim/sandik-ac", methods=["POST"])
 @ogrenci_giris_zorunlu
 def gelisim_sandik_ac_route():
-    ogrenci_id = session.get("ogrenci_id")
-    if ogrenci_id:
-        sonuc = sandik_ac(int(ogrenci_id))
-        session["son_sandik"] = sonuc
-    return redirect(url_for("gelisim_merkezi"))
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/gelisim/telafi", methods=["POST"])
 @ogrenci_giris_zorunlu
 def gelisim_telafi_route():
-    ogrenci_id = session.get("ogrenci_id")
-    if ogrenci_id:
-        telafi_gorevi_olustur(int(ogrenci_id))
-    return redirect(url_for("gelisim_merkezi"))
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/gelisim/tebrik", methods=["POST"])
 @ogrenci_giris_zorunlu
 def gelisim_tebrik_route():
-    gonderen_id = session.get("ogrenci_id")
-    alan_id = request.form.get("alan_id", type=int)
-    mesaj = request.form.get("mesaj", "")
-    if gonderen_id and alan_id:
-        tebrik_gonder(int(gonderen_id), alan_id, mesaj)
-    return redirect(url_for("gelisim_merkezi"))
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/pazar")
 @ogrenci_giris_zorunlu
 def pazar():
-    ogrenci_id = session.get("ogrenci_id")
-    ozet = _ogrenci_ozeti(int(ogrenci_id)) if ogrenci_id else None
-    urunler = pazar_urunleri_ogrenci(int(ogrenci_id)) if ogrenci_id else []
-    return render_template("pazar.html", **ozet, urunler=urunler)
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/pazar/satin-al", methods=["POST"])
 @ogrenci_giris_zorunlu
 def pazar_satin_al_route():
-    ogrenci_id = session.get("ogrenci_id")
-    urun = request.form.get("urun_kodu", "")
-    if ogrenci_id:
-        session["pazar_sonuc"] = pazar_satin_al(int(ogrenci_id), urun)
-    return redirect(url_for("pazar"))
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/karne")
 @ogrenci_giris_zorunlu
 def ogrenci_karne():
-    ogrenci_id = session.get("ogrenci_id")
-    if not ogrenci_id:
-        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_karne")))
-    return render_template("karne.html", karne=akilli_ogrenci_karnesi(int(ogrenci_id)))
+    return redirect(url_for("ogrenci_gorunum"))
 
 
 @app.route("/veli/karne")

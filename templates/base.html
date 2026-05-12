@@ -61,7 +61,7 @@
           <span class="sm:hidden">🏫 ECO</span>
           <span class="hidden sm:inline">🏫 Erenler Cumhuriyet Ortaokulu</span>
         </div>
-        <div class="text-xs text-blue-300 hidden sm:block">Öğrenci Takip Paneli</div>
+        <div class="text-xs text-blue-300 hidden sm:block">Davranış tik kaydı</div>
       </div>
     </div>
 
@@ -72,57 +72,15 @@
                   px-3 py-1.5 rounded-lg transition whitespace-nowrap">
           Ana Menü
         </a>
-        <a href="{{ url_for('oduller') }}"
-           class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Ödüller
-        </a>
-        <a href="{{ url_for('bildirimler') }}"
-           class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Bildirim
-        </a>
-        <a href="{{ url_for('bilgilendirme_yonetimi') }}"
-           class="bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Duyuru
-        </a>
-        <a href="{{ url_for('rapor_ozet') }}"
-           class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Rapor
-        </a>
-        <a href="{{ url_for('ogretmen_merkez') }}"
-           class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Merkez
-        </a>
-        <a href="{{ url_for('ogrenci_gorunum') }}"
-           class="bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Öğrenci
-        </a>
-        <a href="{{ url_for('admin_sifirla_sayfa') }}"
-           class="bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Genel Sıfırla
-        </a>
       </nav>
 
       <span class="hidden sm:block text-xs text-blue-200">👤 {{ session.ogretmen_adi }}</span>
 
       {% if aktif %}
-      <!-- Yayın Modu -->
-      <a href="{{ url_for('yayin') }}"
-         target="_blank"
-         class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold
-                px-3 py-1.5 rounded-lg transition hidden sm:block">
-        📺 Yayın
-      </a>
-      <!-- Excel -->
       <a href="{{ url_for('rapor_excel', sinif_id=aktif.id) }}"
          class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold
-                px-3 py-1.5 rounded-lg transition hidden sm:block">
+                px-3 py-1.5 rounded-lg transition hidden sm:block"
+         title="Tik listesi Excel">
         📊 Excel
       </a>
       {% endif %}
