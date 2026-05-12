@@ -410,7 +410,8 @@
             class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">
       + Olumlu
     </button>
-    <button onclick="tikModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
+    <button type="button"
+            onclick="tikOtomatikVer({{ o.id }}, {{ sinif_id }}, this)"
             class="bg-red-600 hover:bg-red-700 active:bg-red-800
                    text-white text-xs font-bold px-2.5 py-1.5 rounded-lg
                    transition whitespace-nowrap">
@@ -523,7 +524,7 @@ function filtrele() {
 
 // ── Tik Modalı ───────────────────────────────────────────────────────────
 function tikModalAc(ogrId, ogrAd, sinifId) {
-  document.getElementById('modal-ogrenci-adi').textContent = ogrAd;
+  document.getElementById('modal-ogrenci-adi').textContent = ogrAd || '';
   document.getElementById('tik-form').action = `/tik/${ogrId}`;
   document.getElementById('tik-modal').classList.remove('hidden');
 }
@@ -582,6 +583,36 @@ document.getElementById('tik-form').addEventListener('click', async function(e) 
   yenile();
 });
 
+async function tikOtomatikVer(ogrId, sinifId, btn) {
+  if (!ogrId || !sinifId) return;
+  const eskiMetin = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('opacity-60', 'cursor-wait');
+    btn.textContent = '...';
+  }
+  const fd = new FormData();
+  fd.append('kriter', 'Kırmızı tik');
+  fd.append('sinif_id', sinifId);
+  try {
+    const res = await fetch(`/tik/${ogrId}`, {
+      method: 'POST',
+      body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!res.ok) console.warn('Tik kaydedilemedi', res.status, await res.text());
+  } catch (err) {
+    console.error('Tik isteği gönderilemedi', err);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('opacity-60', 'cursor-wait');
+      btn.textContent = eskiMetin || '+ Tik';
+    }
+    yenile();
+  }
+}
+
 document.getElementById('olumlu-form').addEventListener('click', async function(e) {
   const btn = e.target.closest('.olumlu-kriter-btn');
   if (!btn) return;
@@ -622,10 +653,10 @@ document.getElementById('olumlu-form').addEventListener('click', async function(
     return;
   }
   if (data && data.ok) {
-    let msg = 'Olumlu tik kaydedildi. XP: ' + (data.xp ?? '—') + '.';
-      if (data.olumsuz_silindi) msg += ' 1 olumsuz tik kaldırıldı.';
-      alert(msg);
-  } else alert((data && data.sebep) || 'İşlem yapılamadı');
+    // Mesaj göstermeden listeyi yenile.
+  } else {
+    console.warn((data && data.sebep) || 'Olumlu tik işlenemedi');
+  }
   yenile();
 });
 
@@ -752,7 +783,7 @@ function kartHTML(o, sinifId) {
               class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition">💚</button>
       <button type="button" onclick="olumluModalAc(${o.id}, ${adJs}, ${sinifId})"
               class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">+ Olumlu</button>
-      <button type="button" onclick="tikModalAc(${o.id}, ${adJs}, ${sinifId})"
+      <button type="button" onclick="tikOtomatikVer(${o.id}, ${sinifId}, this)"
               class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold
                      px-2.5 py-1.5 rounded-lg transition whitespace-nowrap">
         + Tik
