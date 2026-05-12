@@ -34,7 +34,7 @@
       <div class="min-w-0">
         <div class="text-blue-200 font-black text-xl sm:text-3xl tracking-tight">Erenler Cumhuriyet Ortaokulu</div>
         <div class="text-slate-400 text-sm mt-1">
-          Okul Geneli Canlı Yayın Panosu · Tüm sınıflar ve öğrenciler tik sayısına göre sıralanır
+          Okul Geneli Canlı Yayın Panosu · Olumsuz tik ve olumlu davranış tikleri ayrı sıralamalarla gösterilir
         </div>
       </div>
       <div class="text-left sm:text-right flex items-center justify-between sm:justify-end gap-3">
@@ -85,41 +85,82 @@
     <section class="rounded-3xl bg-white/5 border border-white/10 overflow-hidden min-w-0">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-3 border-b border-white/10">
         <div class="min-w-0">
-          <h2 class="font-black text-lg">Tik Sıralaması</h2>
-          <p class="text-xs text-slate-400">En yüksek tik en üstte; tüm öğrenciler ve sınıflar birlikte gösterilir.</p>
+          <h2 class="font-black text-lg">Öğrenci sıralamaları</h2>
+          <p class="text-xs text-slate-400">Sol: en çok olumsuz (disiplin) tik · Sağ: en çok olumlu davranış tik.</p>
         </div>
         <div class="flex flex-wrap gap-2 text-[10px] font-black">
-          <span class="text-emerald-300">✅ Temiz</span>
+          <span class="text-red-300">Olumsuz tik</span>
+          <span class="text-emerald-300">Olumlu tik</span>
           <span class="text-amber-300">⚠️ Uyarı</span>
-          <span class="text-red-300">🚨 Risk</span>
         </div>
       </div>
-      <div id="liste" class="xl:max-h-[calc(100vh-285px)] overflow-y-auto p-3 grid lg:grid-cols-2 gap-3 auto-rows-max">
-        {% for o in yayin_veri.ogrenciler %}
-        <article class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 min-h-[82px]">
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0">
-              <div class="text-base sm:text-lg font-black text-white break-words flex flex-wrap items-center gap-x-1 gap-y-0">
-                <span>{{ loop.index }}. {{ o.emoji }} {{ o.ad_soyad }}</span>
-                {% if o.rozetler %}
-                <span class="inline-flex flex-wrap gap-0.5 ml-1">
-                  {% for rz in o.rozetler %}
-                  <span class="text-lg leading-none" title="{{ rz.ad }}">{{ rz.emoji }}</span>
-                  {% endfor %}
-                </span>
-                {% endif %}
-              </div>
-              <div class="text-xs text-slate-400 break-words">{{ o.sinif_adi }} · {{ o.etiket or 'Temiz' }}</div>
-            </div>
-            <div class="text-right shrink-0">
-              <div class="text-3xl font-black {{ 'text-emerald-300' if o.tik_sayisi == 0 else 'text-amber-300' if o.tik_sayisi <= 2 else 'text-red-300' }}">{{ o.tik_sayisi }}</div>
-              <div class="text-[10px] text-slate-500">tik</div>
-            </div>
+      <div class="grid lg:grid-cols-2 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-white/10 min-h-0">
+        <div class="min-w-0 flex flex-col">
+          <div class="px-4 sm:px-5 py-2.5 border-b border-white/10 bg-red-950/20">
+            <h3 class="font-black text-sm text-red-200">En çok olumsuz tik alanlar</h3>
+            <p class="text-[11px] text-slate-500">Disiplin tik sayısı yüksekten düşüğe.</p>
           </div>
-        </article>
-        {% else %}
-        <div class="text-slate-500 text-center py-10 text-sm col-span-full">Öğrenci yok.</div>
-        {% endfor %}
+          <div id="listeOlumsuz" class="xl:max-h-[calc(100vh-320px)] overflow-y-auto p-3 grid sm:grid-cols-1 gap-3 auto-rows-max">
+            {% for o in yayin_veri.en_cok_olumsuz %}
+            <article class="rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 min-h-[82px]">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-base sm:text-lg font-black text-white break-words flex flex-wrap items-center gap-x-1 gap-y-0">
+                    <span>{{ loop.index }}. {{ o.emoji }} {{ o.ad_soyad }}</span>
+                    {% if o.rozetler %}
+                    <span class="inline-flex flex-wrap gap-0.5 ml-1">
+                      {% for rz in o.rozetler %}
+                      <span class="text-lg leading-none" title="{{ rz.ad }}">{{ rz.emoji }}</span>
+                      {% endfor %}
+                    </span>
+                    {% endif %}
+                  </div>
+                  <div class="text-xs text-slate-400 break-words">{{ o.sinif_adi }} · {{ o.etiket or 'Temiz' }}</div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-3xl font-black {{ 'text-emerald-300' if o.tik_sayisi == 0 else 'text-amber-300' if o.tik_sayisi <= 2 else 'text-red-300' }}">{{ o.tik_sayisi }}</div>
+                  <div class="text-[10px] text-slate-500">tik</div>
+                </div>
+              </div>
+            </article>
+            {% else %}
+            <div class="text-slate-500 text-center py-10 text-sm col-span-full">Öğrenci yok.</div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="min-w-0 flex flex-col">
+          <div class="px-4 sm:px-5 py-2.5 border-b border-white/10 bg-emerald-950/20">
+            <h3 class="font-black text-sm text-emerald-200">En çok olumlu tik alanlar</h3>
+            <p class="text-[11px] text-slate-500">Olumlu davranış tik sayısı yüksekten düşüğe.</p>
+          </div>
+          <div id="listeOlumlu" class="xl:max-h-[calc(100vh-320px)] overflow-y-auto p-3 grid sm:grid-cols-1 gap-3 auto-rows-max">
+            {% for o in yayin_veri.en_cok_olumlu %}
+            <article class="rounded-2xl border border-emerald-500/20 bg-emerald-950/30 px-4 py-3 min-h-[82px]">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-base sm:text-lg font-black text-emerald-100 break-words flex flex-wrap items-center gap-x-1 gap-y-0">
+                    <span>{{ loop.index }}. {{ o.emoji }} {{ o.ad_soyad }}</span>
+                    {% if o.rozetler %}
+                    <span class="inline-flex flex-wrap gap-0.5 ml-1">
+                      {% for rz in o.rozetler %}
+                      <span class="text-lg leading-none" title="{{ rz.ad }}">{{ rz.emoji }}</span>
+                      {% endfor %}
+                    </span>
+                    {% endif %}
+                  </div>
+                  <div class="text-xs text-emerald-200/70 break-words">{{ o.sinif_adi }}</div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-3xl font-black {{ 'text-slate-500' if (o.olumlu_tik or 0) == 0 else 'text-emerald-300' }}">{{ o.olumlu_tik or 0 }}</div>
+                  <div class="text-[10px] text-slate-500">olumlu</div>
+                </div>
+              </div>
+            </article>
+            {% else %}
+            <div class="text-slate-500 text-center py-10 text-sm col-span-full">Öğrenci yok.</div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </section>
 
@@ -175,28 +216,37 @@ async function yukle() {
 }
 
 function renderPano(payload) {
-  const data = payload.ogrenciler || [];
+  const olumsuz = payload.en_cok_olumsuz || payload.ogrenciler || [];
+  const olumlu = payload.en_cok_olumlu || [];
   const ozet = payload.ozet || {};
   const siniflar = payload.siniflar || [];
   ['ogrenci','sinif','tik','temiz','uyari','veli','tutanak','disiplin'].forEach(k => {
     const el = document.getElementById(`oz-${k}`);
     if (el) el.textContent = ozet[k] ?? 0;
   });
-  renderListe(data);
+  renderListe(olumsuz, olumlu);
   renderSiniflar(siniflar);
-  renderIlkBes(data.slice(0, 5));
+  renderIlkBes(olumsuz.slice(0, 5));
   renderOdevler(payload.odevler || []);
 }
 
-function renderListe(data) {
-  const konteyner = document.getElementById('liste');
-  if (!data.length) {
-    konteyner.innerHTML = '<p class="text-slate-600 text-center py-10 col-span-full">Öğrenci yok.</p>';
-    return;
+function renderListe(olumsuz, olumlu) {
+  const kOlumsuz = document.getElementById('listeOlumsuz');
+  const kOlumlu = document.getElementById('listeOlumlu');
+  if (!olumsuz.length) {
+    kOlumsuz.innerHTML = '<p class="text-slate-500 text-center py-10 text-sm col-span-full">Öğrenci yok.</p>';
+  } else {
+    const maksTik = Math.max(...olumsuz.map(o => Number(o.tik_sayisi || 0)), 1);
+    const barRefOlumsuz = Math.max(maksTik, 12);
+    kOlumsuz.innerHTML = olumsuz.map((o, idx) => kartHTML(o, idx + 1, barRefOlumsuz)).join('');
   }
-  const maks   = Math.max(...data.map(o => o.tik_sayisi), 1);
-  const barRef = Math.max(maks, 12);
-  konteyner.innerHTML = data.map((o, idx) => kartHTML(o, idx + 1, barRef)).join('');
+  if (!olumlu.length) {
+    kOlumlu.innerHTML = '<p class="text-slate-500 text-center py-10 text-sm col-span-full">Öğrenci yok.</p>';
+  } else {
+    const maksOlumlu = Math.max(...olumlu.map(o => Number(o.olumlu_tik || 0)), 1);
+    const barRefOlumlu = Math.max(maksOlumlu, 4);
+    kOlumlu.innerHTML = olumlu.map((o, idx) => kartHTMLOlumlu(o, idx + 1, barRefOlumlu)).join('');
+  }
 }
 
 function escapeHtml(s) {
@@ -234,6 +284,44 @@ function kartHTML(o, sira, barRef) {
           <div class="text-right shrink-0">
             <div class="text-3xl font-black leading-none" style="color:${textCls}">${tik}</div>
             <div class="text-[10px] text-slate-500">tik</div>
+          </div>
+        </div>
+        <div class="mt-2 h-2 rounded-full overflow-hidden bg-slate-950">
+          <div class="bar-fill h-full rounded-full" style="width:${barPct}%; background:${barCls}"></div>
+        </div>
+      </div>
+    </div>
+  </article>`;
+}
+
+function kartHTMLOlumlu(o, sira, barRef) {
+  const n = Number(o.olumlu_tik || 0);
+  const ad = o.ad_soyad || o.ad || o.isim || 'İsimsiz öğrenci';
+  const sinif = o.sinif_adi || o.sinif || '-';
+  const emoji = o.emoji || '✨';
+  const roz = (o.rozetler || []).map(r =>
+    `<span class="inline-block text-base leading-none" title="${escapeHtml(r.ad)}">${r.emoji}</span>`
+  ).join('');
+  const muted = n === 0;
+  const border = muted ? 'border-white/10' : 'border-emerald-500/35';
+  const bg = muted ? 'bg-slate-950/60' : 'bg-emerald-500/10';
+  const textCls = muted ? '#94a3b8' : '#6ee7b7';
+  const barCls = muted ? '#475569' : '#34d399';
+  const barPct = Math.min(100, (n / barRef) * 100).toFixed(1);
+  const delay  = Math.min((sira - 1) * 28, 700);
+  return `
+  <article class="float-in ${bg} ${border} border rounded-2xl overflow-hidden min-h-[82px] shadow-lg shadow-black/20" style="animation-delay:${delay}ms">
+    <div class="flex items-stretch min-h-[82px]">
+      <div class="w-12 sm:w-16 flex items-center justify-center text-base sm:text-lg font-black border-r border-white/10 shrink-0" style="color:${textCls}">#${sira}</div>
+      <div class="flex-1 min-w-0 px-4 py-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="font-black text-base sm:text-lg leading-tight break-words flex flex-wrap items-center gap-x-1" style="color:${textCls}"><span>${emoji} ${ad}</span>${roz ? `<span class="inline-flex flex-wrap gap-0.5 ml-0.5">${roz}</span>` : ''}</div>
+            <div class="text-xs text-slate-400">${sinif}</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-3xl font-black leading-none" style="color:${textCls}">${n}</div>
+            <div class="text-[10px] text-slate-500">olumlu tik</div>
           </div>
         </div>
         <div class="mt-2 h-2 rounded-full overflow-hidden bg-slate-950">

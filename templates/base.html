@@ -84,6 +84,12 @@
            title="Okul geneli canlı yayın panosu">
           Yayın
         </a>
+        <a href="{{ url_for('lig') }}"
+           class="bg-amber-700 hover:bg-amber-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Süper Lig maçları ve puan tablosu">
+          Lig
+        </a>
         <a href="{{ url_for('bilgilendirme_yonetimi') }}"
            class="bg-sky-700 hover:bg-sky-900 text-white text-xs font-bold
                   px-3 py-1.5 rounded-lg transition whitespace-nowrap"
@@ -120,6 +126,7 @@
     <a href="{{ url_for('dashboard') }}" class="shrink-0 rounded-lg bg-okul-700 px-2.5 py-1 text-[11px] font-bold">Menü</a>
     <a href="{{ url_for('yoklama') }}" class="shrink-0 rounded-lg bg-emerald-700 px-2.5 py-1 text-[11px] font-bold">Ödev</a>
     <a href="{{ url_for('yayin') }}" class="shrink-0 rounded-lg bg-violet-700 px-2.5 py-1 text-[11px] font-bold">Yayın</a>
+    <a href="{{ url_for('lig') }}" class="shrink-0 rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-bold">Lig</a>
     <a href="{{ url_for('bilgilendirme_yonetimi') }}" class="shrink-0 rounded-lg bg-sky-700 px-2.5 py-1 text-[11px] font-bold">Duyuru</a>
     <a href="{{ url_for('rapor_arsiv_sayfa') }}" class="shrink-0 rounded-lg bg-rose-900 px-2.5 py-1 text-[11px] font-bold">Arşiv</a>
   </nav>

@@ -390,11 +390,40 @@ def bilgilendirme_listesi(limit: int = 20) -> list[dict]:
     rows = [dict(r) for r in con.execute("""
         SELECT *
         FROM bilgilendirmeler
+        WHERE aktif = 1
         ORDER BY id DESC
         LIMIT ?
     """, (limit,)).fetchall()]
     con.close()
     return rows
+
+
+def bilgilendirme_yayinlayan_icin_sil(bilgi_id: int, yayinlayan: str) -> dict:
+    """Yalnızca yayınlayan adı eşleşen kaydı pasifleştirir (aktif=0)."""
+    yayinlayan = (yayinlayan or "").strip()
+    con = _conn()
+    _bilgilendirme_init(con)
+    row = con.execute(
+        "SELECT id, yayinlayan, aktif FROM bilgilendirmeler WHERE id = ?",
+        (bilgi_id,),
+    ).fetchone()
+    if not row:
+        con.close()
+        return {"ok": False, "sebep": "bulunamadi"}
+    r = dict(row)
+    if r["yayinlayan"] != yayinlayan:
+        con.close()
+        return {"ok": False, "sebep": "yetkisiz"}
+    if int(r.get("aktif") or 0) != 1:
+        con.close()
+        return {"ok": False, "sebep": "zaten_kaldirilmis"}
+    con.execute(
+        "UPDATE bilgilendirmeler SET aktif = 0 WHERE id = ? AND yayinlayan = ?",
+        (bilgi_id, yayinlayan),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True}
 
 
 def son_bilgilendirme(hedef: str | None) -> dict | None:
@@ -684,17 +713,98 @@ def tum_tikleri_sifirla():
 # Olumlu Davranis + Super Lig
 # ══════════════════════════════════════════════════════════════════════════
 
-def olumlu_puan_ekle(sinif_id: int, ogretmen_id: int, kriter: str) -> int:
+OLUMLU_TIK_XP = 5
+
+
+def _olumlu_davranis_migrate(con: sqlite3.Connection) -> None:
+    cols = {r[1] for r in con.execute("PRAGMA table_info(olumlu_davranis)").fetchall()}
+    if "ogrenci_id" not in cols:
+        try:
+            con.execute(
+                "ALTER TABLE olumlu_davranis ADD COLUMN ogrenci_id INTEGER REFERENCES ogrenciler(id)"
+            )
+            con.commit()
+        except Exception:
+            pass
+
+
+def olumlu_sinif_etkinlik_ekle(sinif_id: int, ogretmen_id: int, kriter: str) -> int:
+    """Sınıf düzeyi olumlu (öğrenci yok): haftalık lig +1, XP yok."""
     tarih = datetime.now().strftime("%Y-%m-%d %H:%M")
     con = _conn()
+    _olumlu_davranis_migrate(con)
     con.execute(
-        "INSERT INTO olumlu_davranis (sinif_id, ogretmen_id, kriter, tarih) VALUES (?,?,?,?)",
-        (sinif_id, ogretmen_id, kriter, tarih)
+        """
+        INSERT INTO olumlu_davranis (sinif_id, ogretmen_id, kriter, tarih, ogrenci_id)
+        VALUES (?,?,?,?,NULL)
+        """,
+        (sinif_id, ogretmen_id, kriter.strip(), tarih),
     )
     puan = _lig_haftalik_puan_artir(con, sinif_id)
     con.commit()
     con.close()
     return puan
+
+
+def olumlu_tik_ekle(ogrenci_id: int, sinif_id: int, ogretmen_id: int, kriter: str) -> dict:
+    """Öğrenciye olumlu tik: XP + sınıf ligine katkı; her 3. olumlu tikte 1 olumsuz tik silinir."""
+    tarih = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con = _conn()
+    _olumlu_davranis_migrate(con)
+    _gelisim_init(con)
+    con.execute(
+        """
+        INSERT INTO olumlu_davranis (sinif_id, ogretmen_id, kriter, tarih, ogrenci_id)
+        VALUES (?,?,?,?,?)
+        """,
+        (sinif_id, ogretmen_id, kriter.strip(), tarih, ogrenci_id),
+    )
+    gp = _gelisim_puan_ekle(con, ogrenci_id, OLUMLU_TIK_XP)
+    lig_puan = _lig_haftalik_puan_artir(con, sinif_id)
+    n = int(
+        con.execute(
+            "SELECT COUNT(*) FROM olumlu_davranis WHERE ogrenci_id=?",
+            (ogrenci_id,),
+        ).fetchone()[0]
+    )
+    olumsuz_silindi = False
+    if n > 0 and n % 3 == 0:
+        eski = con.execute(
+            """
+            SELECT id FROM tik_kayitlari
+            WHERE ogrenci_id=? ORDER BY tarih ASC LIMIT 1
+            """,
+            (ogrenci_id,),
+        ).fetchone()
+        if eski:
+            con.execute("DELETE FROM tik_kayitlari WHERE id=?", (eski["id"],))
+            olumsuz_silindi = True
+    con.commit()
+    tik_sayisi = int(
+        con.execute(
+            "SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id=?",
+            (ogrenci_id,),
+        ).fetchone()[0]
+    )
+    con.close()
+    return {
+        "lig_puan": lig_puan,
+        "xp": int(gp["xp"]),
+        "olumsuz_silindi": olumsuz_silindi,
+        "tik_sayisi": tik_sayisi,
+        "olumlu_sira": n,
+    }
+
+
+def ogrenci_olumlu_tik_sayisi(ogrenci_id: int) -> int:
+    con = _conn()
+    _olumlu_davranis_migrate(con)
+    n = con.execute(
+        "SELECT COUNT(*) FROM olumlu_davranis WHERE ogrenci_id=?",
+        (ogrenci_id,),
+    ).fetchone()[0]
+    con.close()
+    return int(n)
 
 
 def lig_siralama() -> list[dict]:
@@ -725,10 +835,13 @@ def lig_manuel_sifirla():
 
 def sinif_olumlu_gecmis(sinif_id: int) -> list[dict]:
     con = _conn()
+    _olumlu_davranis_migrate(con)
     rows = [dict(r) for r in con.execute("""
-        SELECT od.kriter, od.tarih, og.ad_soyad AS ogretmen
+        SELECT od.kriter, od.tarih, og.ad_soyad AS ogretmen,
+               o.ad_soyad AS ogrenci
         FROM olumlu_davranis od
         JOIN ogretmenler og ON og.id = od.ogretmen_id
+        LEFT JOIN ogrenciler o ON o.id = od.ogrenci_id
         WHERE od.sinif_id = ?
         ORDER BY od.tarih DESC
         LIMIT 30
@@ -760,7 +873,7 @@ LIG_GOREVLER = [
     "Gunun Ozeti Duzgun Yazilmasi",
 ]
 
-VAR_INCELEME_OGRETMENLER = ["ADEM AKGUL", "YUSUF ERTURK"]
+VAR_INCELEME_OGRETMENLER = ["ADEM AKGÜL", "YUSUF ERTÜRK"]
 
 
 def _mac_tablosu_olustur(con):
@@ -1525,7 +1638,7 @@ def gorev_tamamla(gorev_id: int, sinif_id: int) -> dict:
     con.execute("UPDATE gunluk_gorev SET tamamlayan_ids=? WHERE id=?",
                 (json.dumps(ids), gorev_id))
     con.commit(); con.close()
-    olumlu_puan_ekle(sinif_id, 1, f"Gunluk Gorev: {row['gorev']}")
+    olumlu_sinif_etkinlik_ekle(sinif_id, 1, f"Gunluk Gorev: {row['gorev']}")
     return {"ok": True, "puan": row["puan"]}
 
 
@@ -1581,7 +1694,10 @@ def mufettis_degerlendir(mufettis_id: int, sonuc: str) -> dict:
     con.execute("UPDATE gizli_mufettis SET sonuc=? WHERE id=?", (sonuc, mufettis_id))
     con.commit(); con.close()
     if sonuc == "iyi":
-        olumlu_puan_ekle(row["sinif_id"], 1, "Gizli Mufettis: Mukemmel davranis")
+        olumlu_tik_ekle(
+            row["ogrenci_id"], row["sinif_id"], 1,
+            "Gizli Mufettis: Mukemmel davranis",
+        )
         rozet_ver_ogrenci(row["ogrenci_id"], row["sinif_id"], "mufettis_iyisi")
     return {"ok": True}
 
@@ -1672,8 +1788,8 @@ def ittifak_tamamla(ittifak_id: int) -> dict:
         con.close(); return {"ok": False}
     con.execute("UPDATE ittifak_gorev SET durum='tamamlandi' WHERE id=?", (ittifak_id,))
     con.commit(); con.close()
-    olumlu_puan_ekle(row["sinif1_id"], 1, "Ittifak Gorevi Tamamlandi")
-    olumlu_puan_ekle(row["sinif2_id"], 1, "Ittifak Gorevi Tamamlandi")
+    olumlu_sinif_etkinlik_ekle(row["sinif1_id"], 1, "Ittifak Gorevi Tamamlandi")
+    olumlu_sinif_etkinlik_ekle(row["sinif2_id"], 1, "Ittifak Gorevi Tamamlandi")
     sezon_puan_ekle(row["sinif1_id"], row["puan"])
     sezon_puan_ekle(row["sinif2_id"], row["puan"])
     return {"ok": True}

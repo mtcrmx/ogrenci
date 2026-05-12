@@ -11,6 +11,7 @@ import io
 import os
 import platform
 from datetime import datetime
+from html import escape as html_escape
 from typing import Any
 
 try:
@@ -48,6 +49,14 @@ from rapor_analiz import (
 
 _FONT_NAME = "RaporFont"
 _FONT_READY = False
+
+
+def _pdf_paragraph(metin: str, st: ParagraphStyle) -> Paragraph:
+    """Tablo hücreleri için güvenli satır kaydırmalı metin (ReportLab mini-HTML)."""
+    t = html_escape(str(metin or "").strip())
+    if not t:
+        t = "—"
+    return Paragraph(t.replace("\n", "<br/>"), st)
 
 
 def _durum_etiket(tik: int) -> str:
@@ -223,12 +232,15 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
     if not REPORTLAB_OK:
         raise ImportError("reportlab kurulu degil (pip install reportlab)")
     fn = _register_font()
+    margin_x = 1.5 * cm
+    usable_w = A4[0] - 2 * margin_x
+
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf,
         pagesize=A4,
-        rightMargin=1.5 * cm,
-        leftMargin=1.5 * cm,
+        rightMargin=margin_x,
+        leftMargin=margin_x,
         topMargin=1.5 * cm,
         bottomMargin=1.5 * cm,
         title="Disiplin Analiz Raporu",
@@ -251,6 +263,38 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
     body = ParagraphStyle(name="Bd", parent=styles["Normal"], fontName=fn, fontSize=9)
     small = ParagraphStyle(name="Sm", parent=styles["Normal"], fontName=fn, fontSize=7)
 
+    # Tablo hücreleri: sabit leading ile çok satır düzgün görünsün
+    td8 = ParagraphStyle(
+        "td8", parent=styles["Normal"], fontName=fn, fontSize=8, leading=10,
+        spaceBefore=0, spaceAfter=0,
+    )
+    td7 = ParagraphStyle(
+        "td7", parent=styles["Normal"], fontName=fn, fontSize=7, leading=9,
+        spaceBefore=0, spaceAfter=0,
+    )
+    td65 = ParagraphStyle(
+        "td65", parent=styles["Normal"], fontName=fn, fontSize=6.5, leading=8,
+        spaceBefore=0, spaceAfter=0,
+    )
+    th_w = ParagraphStyle(
+        "thw", parent=td8, textColor=colors.whitesmoke,
+    )
+    th_w7 = ParagraphStyle(
+        "thw7", parent=td7, textColor=colors.whitesmoke,
+    )
+    th_w65 = ParagraphStyle(
+        "thw65", parent=td65, textColor=colors.whitesmoke,
+    )
+
+    def tbl_pad():
+        return [
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]
+
     story: list = []
     meta = snapshot.get("meta") or {}
     ozet = snapshot.get("ozet") or {}
@@ -259,9 +303,9 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
     story.append(Paragraph("Disiplin — Detaylı Analiz Raporu", title_style))
     story.append(
         Paragraph(
-            f"Öğretmen: {ogretmen_adi}<br/>"
-            f"Tarih: {meta.get('olusturma', '-')}"
-            f"<br/>Kapsam: {meta.get('kapsam_metin', '-')}",
+            f"Öğretmen: {html_escape(str(ogretmen_adi))}<br/>"
+            f"Tarih: {html_escape(str(meta.get('olusturma', '-')))}<br/>"
+            f"Kapsam: {html_escape(str(meta.get('kapsam_metin', '-')))}",
             body,
         )
     )
@@ -277,13 +321,18 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
     oner = snapshot.get("oneriler") or {}
     if oner.get("ozet_cumle"):
         story.append(Spacer(1, 0.2 * cm))
-        story.append(Paragraph(str(oner["ozet_cumle"]), body))
+        story.append(Paragraph(html_escape(str(oner["ozet_cumle"])), body))
     story.append(Spacer(1, 0.5 * cm))
 
     dd = snapshot.get("durum_dagilimi") or {}
     if dd:
         story.append(Paragraph("Öğrenci durum bantları (tik sayısına göre)", h2))
-        ddt = [["Bant", "Öğrenci"]]
+        ddt = [
+            [
+                _pdf_paragraph("Bant", th_w),
+                _pdf_paragraph("Öğrenci", th_w),
+            ]
+        ]
         for label, key in [
             ("Temiz (0 tik)", "temiz"),
             ("Uyarı (1–2)", "uyari"),
@@ -292,17 +341,19 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
             ("Tutanak (9–11)", "tutanak"),
             ("Disiplin (12+)", "disiplin"),
         ]:
-            ddt.append([label, str(dd.get(key, 0))])
-        tdd = Table(ddt, colWidths=[11 * cm, 3 * cm])
+            ddt.append([
+                _pdf_paragraph(label, td8),
+                _pdf_paragraph(str(dd.get(key, 0)), td8),
+            ])
+        w1, w2 = usable_w * 0.72, usable_w * 0.28
+        tdd = Table(ddt, colWidths=[w1, w2])
         tdd.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("FONTNAME", (0, 0), (-1, -1), fn),
-                    ("FONTSIZE", (0, 0), (-1, -1), 8),
                     ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
                 ]
+                + tbl_pad()
             )
         )
         story.append(tdd)
@@ -311,19 +362,23 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
     trend = snapshot.get("aylik_trend") or []
     if trend:
         story.append(Paragraph("Aylık tik kayıt sayısı (trend)", h2))
-        tr = [["Ay (Yıl.Ay)", "Kayıt adedi"]]
+        tr = [
+            [_pdf_paragraph("Ay (Yıl.Ay)", th_w), _pdf_paragraph("Kayıt adedi", th_w)],
+        ]
         for row in trend[-18:]:
-            tr.append([str(row.get("ay", "")), str(row.get("adet", 0))])
-        ttrend = Table(tr, colWidths=[6 * cm, 4 * cm])
+            tr.append([
+                _pdf_paragraph(str(row.get("ay", "")), td8),
+                _pdf_paragraph(str(row.get("adet", 0)), td8),
+            ])
+        wt = usable_w * 0.55, usable_w * 0.45
+        ttrend = Table(tr, colWidths=list(wt))
         ttrend.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#475569")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("FONTNAME", (0, 0), (-1, -1), fn),
-                    ("FONTSIZE", (0, 0), (-1, -1), 8),
                     ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
                 ]
+                + tbl_pad()
             )
         )
         story.append(ttrend)
@@ -334,131 +389,159 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
         if oner.get("veli"):
             story.append(Paragraph("<b>Veli için öneriler</b>", body))
             for line in oner["veli"]:
-                story.append(Paragraph(f"• {line}", body))
+                story.append(Paragraph(f"• {html_escape(str(line))}", body))
             story.append(Spacer(1, 0.15 * cm))
         if oner.get("ogrenci"):
             story.append(Paragraph("<b>Öğrenci için öneriler</b>", body))
             for line in oner["ogrenci"]:
-                story.append(Paragraph(f"• {line}", body))
+                story.append(Paragraph(f"• {html_escape(str(line))}", body))
             story.append(Spacer(1, 0.15 * cm))
         if oner.get("ogretmen"):
             story.append(Paragraph("<b>Öğretmen için öneriler</b>", body))
             for line in oner["ogretmen"]:
-                story.append(Paragraph(f"• {line}", body))
+                story.append(Paragraph(f"• {html_escape(str(line))}", body))
         story.append(Spacer(1, 0.45 * cm))
 
     ro = snapshot.get("risk_ozet") or []
     if ro:
         story.append(Paragraph("Risk özeti (okul genelinde en yüksek tik)", h2))
-        rt = [["Sınıf", "Öğrenci", "Tik", "Durum"]]
+        rt = [
+            [
+                _pdf_paragraph("Sınıf", th_w7),
+                _pdf_paragraph("Öğrenci", th_w7),
+                _pdf_paragraph("Tik", th_w7),
+                _pdf_paragraph("Durum", th_w7),
+            ]
+        ]
         for r in ro[:22]:
-            rt.append(
-                [
-                    str(r.get("sinif_adi", ""))[:14],
-                    str(r.get("ad_soyad", ""))[:26],
-                    str(r.get("tik", 0)),
-                    str(r.get("durum", ""))[:16],
-                ]
-            )
-        trisk = Table(rt, colWidths=[2.8 * cm, 5 * cm, 1.2 * cm, 3 * cm])
+            rt.append([
+                _pdf_paragraph(str(r.get("sinif_adi", "")), td7),
+                _pdf_paragraph(str(r.get("ad_soyad", "")), td7),
+                _pdf_paragraph(str(r.get("tik", 0)), td7),
+                _pdf_paragraph(str(r.get("durum", "")), td7),
+            ])
+        wr = usable_w * 0.22, usable_w * 0.40, usable_w * 0.12, usable_w * 0.26
+        trisk = Table(rt, colWidths=list(wr))
         trisk.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#991b1b")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("FONTNAME", (0, 0), (-1, -1), fn),
-                    ("FONTSIZE", (0, 0), (-1, -1), 7),
                     ("GRID", (0, 0), (-1, -1), 0.2, colors.grey),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ]
+                + tbl_pad()
             )
         )
         story.append(trisk)
         story.append(Spacer(1, 0.45 * cm))
 
     story.append(Paragraph("Sınıf özeti", h2))
-    so = [["Sınıf", "Öğr.", "Σ Tik", "Temiz", "Uyarı", "İdari"]]
+    so = [
+        [
+            _pdf_paragraph("Sınıf", th_w),
+            _pdf_paragraph("Öğr.", th_w),
+            _pdf_paragraph("Σ Tik", th_w),
+            _pdf_paragraph("Temiz", th_w),
+            _pdf_paragraph("Uyarı", th_w),
+            _pdf_paragraph("İdari", th_w),
+        ]
+    ]
     for s in snapshot.get("sinif_ozet") or []:
-        so.append(
-            [
-                str(s.get("sinif_adi", "")),
-                str(s.get("ogrenci", 0)),
-                str(s.get("toplam_tik", 0)),
-                str(s.get("temiz", 0)),
-                str(s.get("uyari", 0)),
-                str(s.get("idari", 0)),
-            ]
-        )
-    t1 = Table(so, colWidths=[4 * cm, 1.3 * cm, 1.5 * cm, 1.5 * cm, 1.5 * cm, 1.5 * cm])
+        so.append([
+            _pdf_paragraph(str(s.get("sinif_adi", "")), td8),
+            _pdf_paragraph(str(s.get("ogrenci", 0)), td8),
+            _pdf_paragraph(str(s.get("toplam_tik", 0)), td8),
+            _pdf_paragraph(str(s.get("temiz", 0)), td8),
+            _pdf_paragraph(str(s.get("uyari", 0)), td8),
+            _pdf_paragraph(str(s.get("idari", 0)), td8),
+        ])
+    ws = [
+        usable_w * 0.30,
+        usable_w * 0.12,
+        usable_w * 0.14,
+        usable_w * 0.14,
+        usable_w * 0.14,
+        usable_w * 0.16,
+    ]
+    t1 = Table(so, colWidths=ws)
     t1.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e3a8a")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("FONTNAME", (0, 0), (-1, -1), fn),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f1f5f9")]),
             ]
+            + tbl_pad()
         )
     )
     story.append(t1)
     story.append(PageBreak())
 
     story.append(Paragraph("Öğrenci bazlı özet", h2))
-    og_t = [["No", "Ad Soyad", "Sınıf", "Tik", "Durum", "Özet ihlaller", "Ödev%", "XP"]]
+    og_t = [
+        [
+            _pdf_paragraph("No", th_w7),
+            _pdf_paragraph("Ad Soyad", th_w7),
+            _pdf_paragraph("Sınıf", th_w7),
+            _pdf_paragraph("Tik", th_w7),
+            _pdf_paragraph("Durum", th_w7),
+            _pdf_paragraph("Özet ihlaller", th_w7),
+            _pdf_paragraph("Ödev%", th_w7),
+            _pdf_paragraph("XP", th_w7),
+        ]
+    ]
     for r in snapshot.get("ogrenciler") or []:
-        oz = (r.get("ihlal_ozet") or "")[:55]
-        if len((r.get("ihlal_ozet") or "")) > 55:
-            oz += "…"
-        og_t.append(
-            [
-                str(r.get("ogr_no", "")),
-                str(r.get("ad_soyad", ""))[:28],
-                str(r.get("sinif_adi", ""))[:10],
-                str(r.get("tik_sayisi", 0)),
-                str(r.get("durum", ""))[:14],
-                oz,
-                str(r.get("odev_oran", 0)),
-                str(r.get("gelisim_xp", 0)),
-            ]
-        )
-    ot = Table(
-        og_t,
-        colWidths=[1 * cm, 3.6 * cm, 1.8 * cm, 1 * cm, 2 * cm, 4.2 * cm, 1 * cm, 1 * cm],
-        repeatRows=1,
-    )
+        oz_full = r.get("ihlal_ozet") or ""
+        og_t.append([
+            _pdf_paragraph(str(r.get("ogr_no", "")), td7),
+            _pdf_paragraph(str(r.get("ad_soyad", "")), td7),
+            _pdf_paragraph(str(r.get("sinif_adi", "")), td7),
+            _pdf_paragraph(str(r.get("tik_sayisi", 0)), td7),
+            _pdf_paragraph(str(r.get("durum", "")), td7),
+            _pdf_paragraph(str(oz_full), td7),
+            _pdf_paragraph(str(r.get("odev_oran", 0)), td7),
+            _pdf_paragraph(str(r.get("gelisim_xp", 0)), td7),
+        ])
+    wo = [
+        usable_w * 0.055,
+        usable_w * 0.195,
+        usable_w * 0.125,
+        usable_w * 0.055,
+        usable_w * 0.115,
+        usable_w * 0.285,
+        usable_w * 0.085,
+        usable_w * 0.085,
+    ]
+    ot = Table(og_t, colWidths=wo, repeatRows=1)
     ot.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e40af")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("FONTNAME", (0, 0), (-1, -1), fn),
-                ("FONTSIZE", (0, 0), (-1, -1), 7),
                 ("GRID", (0, 0), (-1, -1), 0.2, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ]
+            + tbl_pad()
         )
     )
     story.append(ot)
     story.append(PageBreak())
 
     story.append(Paragraph("İhlal türü dağılımı (temiz metin)", h2))
-    kd = [["İhlal türü", "Adet"]]
+    kd = [[_pdf_paragraph("İhlal türü", th_w), _pdf_paragraph("Adet", th_w)]]
     for k, v in (snapshot.get("kriter_dagilim") or {}).items():
-        kd.append([str(k)[:70], str(v)])
+        kd.append([
+            _pdf_paragraph(str(k), td8),
+            _pdf_paragraph(str(v), td8),
+        ])
     if len(kd) == 1:
-        kd.append(["Kayıt yok", "0"])
-    tk = Table(kd, colWidths=[12 * cm, 3 * cm])
+        kd.append([_pdf_paragraph("Kayıt yok", td8), _pdf_paragraph("0", td8)])
+    wk = usable_w * 0.78, usable_w * 0.22
+    tk = Table(kd, colWidths=list(wk))
     tk.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("FONTNAME", (0, 0), (-1, -1), fn),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
             ]
+            + tbl_pad()
         )
     )
     story.append(tk)
@@ -474,36 +557,52 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
     )
     story.append(Spacer(1, 0.3 * cm))
 
-    det = [["Tarih", "Sınıf", "No", "Öğrenci", "İhlal", "Öğretmen"]]
+    det = [
+        [
+            _pdf_paragraph("Tarih", th_w65),
+            _pdf_paragraph("Sınıf", th_w65),
+            _pdf_paragraph("No", th_w65),
+            _pdf_paragraph("Öğrenci", th_w65),
+            _pdf_paragraph("İhlal", th_w65),
+            _pdf_paragraph("Öğretmen", th_w65),
+        ]
+    ]
     rows = snapshot.get("tik_satirlari") or []
     for r in rows:
-        det.append(
-            [
-                str(r.get("tarih", ""))[:16],
-                str(r.get("sinif_adi", ""))[:10],
-                str(r.get("ogr_no", "")),
-                str(r.get("ad_soyad", ""))[:22],
-                str(r.get("kriter_temiz", ""))[:35],
-                str(r.get("ogretmen", ""))[:18],
-            ]
-        )
+        det.append([
+            _pdf_paragraph(str(r.get("tarih", "")), td65),
+            _pdf_paragraph(str(r.get("sinif_adi", "")), td65),
+            _pdf_paragraph(str(r.get("ogr_no", "")), td65),
+            _pdf_paragraph(str(r.get("ad_soyad", "")), td65),
+            _pdf_paragraph(str(r.get("kriter_temiz", "") or r.get("kriter", "")), td65),
+            _pdf_paragraph(str(r.get("ogretmen", "")), td65),
+        ])
     if len(det) == 1:
-        det.append(["-", "-", "-", "-", "Kayıt yok", "-"])
+        det.append([
+            _pdf_paragraph("-", td65),
+            _pdf_paragraph("-", td65),
+            _pdf_paragraph("-", td65),
+            _pdf_paragraph("-", td65),
+            _pdf_paragraph("Kayıt yok", td65),
+            _pdf_paragraph("-", td65),
+        ])
 
-    dt = Table(
-        det,
-        colWidths=[3 * cm, 2 * cm, 1 * cm, 3 * cm, 4.5 * cm, 2.8 * cm],
-        repeatRows=1,
-    )
+    wd = [
+        usable_w * 0.13,
+        usable_w * 0.11,
+        usable_w * 0.065,
+        usable_w * 0.185,
+        usable_w * 0.335,
+        usable_w * 0.175,
+    ]
+    dt = Table(det, colWidths=wd, repeatRows=1)
     dt.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("FONTNAME", (0, 0), (-1, -1), fn),
-                ("FONTSIZE", (0, 0), (-1, -1), 6.5),
                 ("GRID", (0, 0), (-1, -1), 0.15, colors.lightgrey),
             ]
+            + tbl_pad()
         )
     )
     story.append(dt)
