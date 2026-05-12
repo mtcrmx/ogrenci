@@ -453,6 +453,7 @@ function olumluModalAc(id, ad, sinifId) {
   document.getElementById('olumlu-ogrenci-adi').textContent = ad;
   document.getElementById('olumlu-ogrenci-id').value = id;
   document.getElementById('olumlu-sinif-id').value = sinifId;
+  olumluFormKilit(false);
   document.getElementById('olumlu-modal').classList.remove('hidden');
 }
 
@@ -613,51 +614,57 @@ async function tikOtomatikVer(ogrId, sinifId, btn) {
   }
 }
 
+let olumluIslemde = false;
+function olumluFormKilit(kilitli) {
+  document.querySelectorAll('#olumlu-form .olumlu-kriter-btn').forEach(b => {
+    b.disabled = kilitli;
+    b.classList.toggle('opacity-60', kilitli);
+    b.classList.toggle('cursor-wait', kilitli);
+  });
+}
+
 document.getElementById('olumlu-form').addEventListener('click', async function(e) {
   const btn = e.target.closest('.olumlu-kriter-btn');
   if (!btn) return;
+  if (olumluIslemde) return;
   const kriter = btn.getAttribute('data-kriter');
   const oid = document.getElementById('olumlu-ogrenci-id').value;
   let sinifId = document.getElementById('olumlu-sinif-id').value;
   if (!kriter || !oid || !sinifId) {
-    alert('Eksik bilgi: öğrenci veya sınıf seçili değil.');
+    console.warn('Eksik bilgi: öğrenci veya sınıf seçili değil.');
     return;
   }
+  olumluIslemde = true;
+  olumluFormKilit(true);
   const fd = new FormData();
   fd.append('kriter', kriter);
   fd.append('ogrenci_id', oid);
   fd.append('sinif_id', sinifId);
-  let res;
+  let res = null;
+  let data = null;
   try {
     res = await fetch('/olumlu/' + sinifId, {
       method: 'POST',
       body: fd,
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
+    const raw = await res.text();
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch (err) {
+      console.warn('JSON parse', err, raw.slice(0, 200));
+    }
+    if (!res.ok || !data || !data.ok) {
+      console.warn((data && data.sebep) || ('Olumlu tik işlenemedi (' + res.status + ')'));
+    }
   } catch (err) {
-    console.error(err);
-    alert('Ağ hatası: istek gönderilemedi.');
-    return;
-  }
-  let data = null;
-  const raw = await res.text();
-  try {
-    data = raw ? JSON.parse(raw) : null;
-  } catch (err) {
-    console.warn('JSON parse', err, raw.slice(0, 200));
-  }
-  document.getElementById('olumlu-modal').classList.add('hidden');
-  if (!res.ok) {
-    alert(data && data.sebep ? data.sebep : ('İstek başarısız (' + res.status + '). Oturum veya yetkiyi kontrol edin.'));
+    console.error('Olumlu tik isteği gönderilemedi', err);
+  } finally {
+    document.getElementById('olumlu-modal').classList.add('hidden');
+    olumluIslemde = false;
+    olumluFormKilit(false);
     yenile();
-    return;
   }
-  if (data && data.ok) {
-    // Mesaj göstermeden listeyi yenile.
-  } else {
-    console.warn((data && data.sebep) || 'Olumlu tik işlenemedi');
-  }
-  yenile();
 });
 
 // ── Geçmiş Modalı ────────────────────────────────────────────────────────
