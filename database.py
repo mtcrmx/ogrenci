@@ -62,7 +62,7 @@ OLUMLU_KRITERLER = [
 
 # ── PDF'lerden alınan öğretmen–sınıf eşleşmeleri ──────────────────────────
 _OGRETMEN_SINIF: dict[str, list[str]] = {
-    "ADEM AKGÜL":       ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B"],
+    "ADEM AKGÜL":       ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"],
     "AYTAÇ ATMACA":     ["6/A", "6/B", "8/A", "8/B"],
     "CANTEKİN KURTOĞLU":["5/A", "5/B", "8/A", "8/B"],
     "CEMİL KUYUMCU":    ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"],
@@ -257,6 +257,7 @@ def initialize_db():
         ).fetchone()[0]
         if bos > 0:
             _sifreleri_ata(con)
+        _ogretmen_sinif_eslesmelerini_tamamla(con)
 
     _yardimci_tablolar_init(con)
     _rapor_arsiv_init(con)
@@ -507,6 +508,29 @@ def _seed(con: sqlite3.Connection):
                 (ad_soyad, sid, ogr_no)
             )
 
+    con.commit()
+
+
+def _ogretmen_sinif_eslesmelerini_tamamla(con: sqlite3.Connection) -> None:
+    """Kodda güncellenen öğretmen-sınıf eşleşmelerini mevcut DB'ye ekler."""
+    for ogretmen_adi, siniflar in _OGRETMEN_SINIF.items():
+        og = con.execute(
+            "SELECT id FROM ogretmenler WHERE ad_soyad = ?",
+            (ogretmen_adi,),
+        ).fetchone()
+        if not og:
+            continue
+        for sinif_adi in siniflar:
+            sinif = con.execute(
+                "SELECT id FROM siniflar WHERE sinif_adi = ?",
+                (sinif_adi,),
+            ).fetchone()
+            if not sinif:
+                continue
+            con.execute(
+                "INSERT OR IGNORE INTO ogretmen_sinif (ogretmen_id, sinif_id) VALUES (?, ?)",
+                (og["id"], sinif["id"]),
+            )
     con.commit()
 
 
@@ -1302,17 +1326,19 @@ def _puan_guncelle(con, kazanan_id, kaybeden_id):
 
 def lig_puan_tablosu() -> list[dict]:
     con  = _conn()
-    _mac_tablosu_olustur(con)
+    _ensure_lig_tablolari(con)
+    _gelisim_init(con)
     rows = [dict(r) for r in con.execute("""
         SELECT s.id AS sinif_id, s.sinif_adi,
-               COALESCE(t.galibiyet,0) AS galibiyet,
-               COALESCE(t.beraberlik,0) AS beraberlik,
-               COALESCE(t.maglubiyet,0) AS maglubiyet,
-               COALESCE(t.puan,0) AS puan,
-               COALESCE(t.ag,0) AS ag
+               COALESCE(l.puan,0) AS puan,
+               COALESCE(SUM(gp.xp),0) AS toplam_xp,
+               COALESCE(l.puan,0) + COALESCE(SUM(gp.xp),0) AS genel_puan
         FROM siniflar s
-        LEFT JOIN lig_mac_tablo t ON t.sinif_id = s.id
-        ORDER BY COALESCE(t.puan,0) DESC, COALESCE(t.ag,0) DESC, s.sinif_adi
+        LEFT JOIN lig l ON l.sinif_id = s.id
+        LEFT JOIN ogrenciler o ON o.sinif_id = s.id
+        LEFT JOIN gelisim_puan gp ON gp.ogrenci_id = o.id
+        GROUP BY s.id, s.sinif_adi, l.puan
+        ORDER BY genel_puan DESC, toplam_xp DESC, puan DESC, s.sinif_adi
     """).fetchall()]
     con.close()
     return rows
@@ -1321,9 +1347,11 @@ def lig_puan_tablosu() -> list[dict]:
 def lig_mac_tablo_sifirla():
     con = _conn()
     _mac_tablosu_olustur(con)
+    _ensure_lig_tablolari(con)
     con.execute("DELETE FROM lig_oylari")
     con.execute("DELETE FROM lig_maclar")
     con.execute("DELETE FROM lig_mac_tablo")
+    con.execute("UPDATE lig SET puan = 0, hafta_basi = ?", (_bu_hafta_pazartesi(),))
     con.commit()
     con.close()
 

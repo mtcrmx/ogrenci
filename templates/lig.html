@@ -8,7 +8,7 @@
       <div>
         <p class="text-xs font-black uppercase tracking-widest text-sky-300">Erenler Cumhuriyet Süper Ligi</p>
         <h1 class="mt-1 text-3xl font-black tracking-normal text-white">Puan Durumu</h1>
-        <p class="mt-2 text-sm text-slate-400">Sınıfların sezon puanları ve olumlu davranış katkıları.</p>
+        <p class="mt-2 text-sm text-slate-400">Sınıfların toplam XP ve normal puan sıralaması.</p>
       </div>
       {% if toplu_sifirlamaya_izin %}
         <form action="{{ url_for('lig_sifirla_mac') }}" method="POST"
@@ -29,7 +29,7 @@
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-black text-white">Sezon Tablosu</h2>
-            <p class="text-xs text-slate-500">G: galibiyet, B: beraberlik, M: mağlubiyet, O+: olumlu davranış bonusu</p>
+            <p class="text-xs text-slate-500">Sıralama toplam değer, XP ve normal puana göre yapılır.</p>
           </div>
           <span class="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-black text-sky-300">
             {{ tablo|length }} sınıf
@@ -38,27 +38,25 @@
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[720px] text-sm">
+        <table class="w-full min-w-[640px] text-sm">
           <thead class="bg-slate-950/70 text-xs uppercase tracking-wide text-slate-400">
             <tr>
               <th class="px-4 py-3 text-left">Sıra</th>
               <th class="px-4 py-3 text-left">Sınıf</th>
-              <th class="px-3 py-3 text-center">G</th>
-              <th class="px-3 py-3 text-center">B</th>
-              <th class="px-3 py-3 text-center">M</th>
-              <th class="px-3 py-3 text-center">O+</th>
-              <th class="px-4 py-3 text-center">Puan</th>
+              <th class="px-4 py-3 text-center">Toplam XP</th>
+              <th class="px-4 py-3 text-center">Normal Puan</th>
+              <th class="px-4 py-3 text-center">Toplam</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800">
             {% for s in tablo %}
-            <tr class="transition hover:bg-slate-800/60 {% if loop.index == 1 and s.puan > 0 %}bg-amber-500/10{% endif %}">
+            <tr class="transition hover:bg-slate-800/60 {% if loop.index == 1 and s.genel_puan > 0 %}bg-amber-500/10{% endif %}">
               <td class="px-4 py-4">
-                {% if loop.index == 1 and s.puan > 0 %}
+                {% if loop.index == 1 and s.genel_puan > 0 %}
                   <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-sm font-black text-slate-950">1</span>
-                {% elif loop.index == 2 and s.puan > 0 %}
+                {% elif loop.index == 2 and s.genel_puan > 0 %}
                   <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-300 text-sm font-black text-slate-950">2</span>
-                {% elif loop.index == 3 and s.puan > 0 %}
+                {% elif loop.index == 3 and s.genel_puan > 0 %}
                   <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-sm font-black text-white">3</span>
                 {% else %}
                   <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-sm font-bold text-slate-300">{{ loop.index }}</span>
@@ -68,19 +66,25 @@
                 <div class="font-black text-white">{{ s.sinif_adi }}</div>
                 <div class="text-xs text-slate-500">Şubesi</div>
               </td>
-              <td class="px-3 py-4 text-center font-bold text-emerald-400">{{ s.galibiyet }}</td>
-              <td class="px-3 py-4 text-center font-bold text-yellow-400">{{ s.beraberlik }}</td>
-              <td class="px-3 py-4 text-center font-bold text-red-400">{{ s.maglubiyet }}</td>
-              <td class="px-3 py-4 text-center font-bold text-sky-400">{{ s.ag }}</td>
+              <td class="px-4 py-4 text-center">
+                <span class="inline-flex min-w-16 justify-center rounded-xl bg-sky-500/10 px-3 py-1.5 text-lg font-black text-sky-300">
+                  {{ s.toplam_xp }}
+                </span>
+              </td>
               <td class="px-4 py-4 text-center">
                 <span class="inline-flex min-w-14 justify-center rounded-xl {% if s.puan > 0 %}bg-amber-400 text-slate-950{% else %}bg-slate-800 text-slate-400{% endif %} px-3 py-1.5 text-lg font-black">
                   {{ s.puan }}
                 </span>
               </td>
+              <td class="px-4 py-4 text-center">
+                <span class="inline-flex min-w-16 justify-center rounded-xl {% if s.genel_puan > 0 %}bg-emerald-400 text-slate-950{% else %}bg-slate-800 text-slate-400{% endif %} px-3 py-1.5 text-lg font-black">
+                  {{ s.genel_puan }}
+                </span>
+              </td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="7" class="px-4 py-12 text-center text-slate-500">
+              <td colspan="5" class="px-4 py-12 text-center text-slate-500">
                 Puan tablosu için henüz kayıt yok.
               </td>
             </tr>
