@@ -781,14 +781,14 @@ function kartHTML(o, sinifId) {
     <div class="flex gap-1 flex-shrink-0 ml-auto flex-wrap justify-end">
       <button type="button" title="Pozitif rozet" onclick="pozitifRozet(${o.id})"
               class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition">💚</button>
-      <button type="button" onclick="olumluModalAc(${o.id}, ${adJs}, ${sinifId})"
+      <button type="button" onclick='olumluModalAc(${o.id}, ${adJs}, ${sinifId})'
               class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">+ Olumlu</button>
-      <button type="button" onclick="tikModalAc(${o.id}, ${adJs}, ${sinifId})"
+      <button type="button" onclick='tikModalAc(${o.id}, ${adJs}, ${sinifId})'
               class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold
                      px-2.5 py-1.5 rounded-lg transition whitespace-nowrap">
         + Tik
       </button>
-      <button type="button" onclick="gecmisGoster(${o.id}, ${adJs})"
+      <button type="button" onclick='gecmisGoster(${o.id}, ${adJs})'
               class="bg-slate-500 hover:bg-slate-600 text-white text-xs
                      px-2 py-1.5 rounded-lg transition">📜</button>
       <form action="/sifirla/ogrenci/${o.id}" method="POST" class="inline"
