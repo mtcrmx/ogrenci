@@ -71,11 +71,13 @@
                      bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
         ↺ Sınıfı Sıfırla
       </button>
+      {% if toplu_sifirlamaya_izin %}
       <button onclick="sifirlaModalAc('hepsi', 0)"
               class="w-full text-xs font-semibold py-2 rounded-lg
                      bg-red-100 text-red-700 hover:bg-red-200 transition">
         🗑 Tümünü Sıfırla
       </button>
+      {% endif %}
     </div>
     {% endif %}
   </aside>
@@ -376,8 +378,10 @@
 async function pozitifRozet(ogrenciId) {
   const r = await fetch('/api/pozitif-rozet/' + ogrenciId, {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}});
   const j = await r.json();
-  if (j.ok) alert('Pozitif Yıldız rozeti verildi.');
-  else alert(j.sebep || 'İşlem yapılamadı');
+  if (j.ok) {
+    if (j.yeni) alert('Pozitif Yıldız rozeti verildi.');
+    else alert('Bu rozet bu öğrenciye daha önce verilmiş (benzersiz kayıt).');
+  } else alert(j.sebep || 'İşlem yapılamadı');
 }
 // ── Sidebar ──────────────────────────────────────────────────────────────
 function toggleSidebar() {

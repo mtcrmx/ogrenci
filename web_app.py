@@ -48,8 +48,9 @@ from database import (
     rapor_arsiv_tumunu_yedekle_ve_sil, rapor_arsiv_yedek_gruplari, rapor_arsiv_grubu_geri_yukle,
     tik_kayitlari_siniflarda,
     ogretmen_yetki_al, ogretmen_yetki_guncelle,
-    randevu_talep_ekle, randevu_listesi_siniflar, randevu_durum_guncelle,
-    gunluk_yansima_ekle, gunluk_yansima_bekleyen_siniflar, gunluk_yansima_degerlendir,
+    randevu_talep_ekle, randevu_talep_by_id, randevu_listesi_siniflar, randevu_durum_guncelle,
+    gunluk_yansima_ekle, gunluk_yansima_by_id, gunluk_yansima_bekleyen_siniflar,
+    gunluk_yansima_degerlendir,
     gunluk_yansima_ogrenci_gecmis,
     davranis_hedefi_ekle, davranis_hedefi_liste_sinif, davranis_hedefi_pasif_et,
     haftalik_sinif_ozeti, tik_sayisi_sinif_aralik, olumlu_sayisi_sinif_aralik,
@@ -78,6 +79,41 @@ OGRENCI_SIFRE = os.environ.get("OGRENCI_SIFRE", "ogrenci")
 VELI_SIFRE = os.environ.get("VELI_SIFRE", "veli")
 
 initialize_db()
+
+
+def _tarih_araligi_duzelt(bas: str, bit: str) -> tuple[str, str]:
+    """ISO yyyy-mm-dd aralığında başlangıç > bitiş ise tarihleri yer değiştirir."""
+    if not bas or not bit:
+        return bas, bit
+    try:
+        da = datetime.strptime(bas.strip()[:10], "%Y-%m-%d").date()
+        db = datetime.strptime(bit.strip()[:10], "%Y-%m-%d").date()
+        if da > db:
+            return db.isoformat(), da.isoformat()
+        return da.isoformat(), db.isoformat()
+    except ValueError:
+        return bas, bit
+
+
+def _ogretmen_sinifinda_mi(ogretmen_id: int, sinif_id: int) -> bool:
+    return sinif_id in {s["id"] for s in ogretmen_siniflari(ogretmen_id)}
+
+
+def _ogretmen_ogrencisine_erisebilir(ogretmen_id: int, ogrenci_id: int) -> bool:
+    og = _ogrenci_bul(ogrenci_id)
+    if not og:
+        return False
+    return _ogretmen_sinifinda_mi(ogretmen_id, int(og["sinif_id"]))
+
+
+# Okul geneli sıfırlama (tüm tikler, lig sezonu, tam veri silme) — yalnızca bu öğretmen.
+_TOPLU_SIFIRLAMA_AD_SOYAD = "ADEM AKGÜL"
+
+
+def _toplu_sifirlamaya_izinli_mi(ogretmen_id: int) -> bool:
+    beklenen = ogretmen_id_bul(_TOPLU_SIFIRLAMA_AD_SOYAD)
+    return beklenen is not None and beklenen == ogretmen_id
+
 
 # Yalnızca rapor/analiz görebilen öğretmenler (`yetki=rapor`) bu endpoint’lere girebilir;
 # tik/ödev vb. diğerleri rapor_ozet’e yönlendirilir.
@@ -831,7 +867,8 @@ def dashboard():
                                yetkili_popup=False,
                                bugunki_mufettis=None,
                                bekleyen_talepler=[],
-                               tum_sinif_ogrencileri_popup=[])
+                               tum_sinif_ogrencileri_popup=[],
+                               toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id))
 
     try:
         aktif_id = int(request.args.get("sinif", siniflar[0]["id"]))
@@ -876,12 +913,15 @@ def dashboard():
                            yetkili_popup=yetkili,
                            bugunki_mufettis=bugunki_muf,
                            bekleyen_talepler=bek_talepler,
-                           tum_sinif_ogrencileri_popup=popup_ogrenciler)
+                           tum_sinif_ogrencileri_popup=popup_ogrenciler,
+                           toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id))
 
 
 @app.route("/api/sinif/<int:sinif_id>")
 @giris_zorunlu
 def api_sinif(sinif_id):
+    if not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
+        return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
     return jsonify(_ogrencilere_durum_ekle(sinif_ogrencileri(sinif_id)))
 
 
@@ -1108,11 +1148,13 @@ def service_worker():
 @app.route("/tik/<int:ogrenci_id>", methods=["POST"])
 @giris_zorunlu
 def tik_at(ogrenci_id):
+    oid = session["ogretmen_id"]
+    if not _ogretmen_ogrencisine_erisebilir(oid, ogrenci_id):
+        abort(403)
     kriter   = request.form.get("kriter", "Diger")
     sinif_id = request.form.get("sinif_id", "")
-    ogr_id   = session["ogretmen_id"]
 
-    yeni  = tik_ekle(ogrenci_id, ogr_id, kriter)
+    yeni  = tik_ekle(ogrenci_id, oid, kriter)
     d     = _durum(yeni)
 
     onceki = yeni - 1
@@ -1136,6 +1178,8 @@ def tik_at(ogrenci_id):
 @app.route("/gecmis/<int:ogrenci_id>")
 def gecmis(ogrenci_id):
     if "ogretmen_id" in session:
+        if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
+            return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
         return jsonify(ogrenci_tik_gecmisi(ogrenci_id))
     oid = _kendi_ogrenci_id_veli_veya_ogrenci()
     if oid == ogrenci_id:
@@ -1152,6 +1196,8 @@ def gecmis(ogrenci_id):
 @app.route("/sifirla/ogrenci/<int:ogrenci_id>", methods=["POST"])
 @giris_zorunlu
 def sifirla_ogrenci(ogrenci_id):
+    if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
+        abort(403)
     tek_ogrenci_sifirla(ogrenci_id)
     sinif_id = request.form.get("sinif_id", "")
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -1162,6 +1208,8 @@ def sifirla_ogrenci(ogrenci_id):
 @app.route("/sifirla/sinif/<int:sinif_id>", methods=["POST"])
 @giris_zorunlu
 def sifirla_sinif(sinif_id):
+    if not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
+        abort(403)
     if request.form.get("parola") == SIFIR_PAROLA:
         sinif_sifirla(sinif_id)
     return redirect(url_for("dashboard", sinif=sinif_id))
@@ -1170,6 +1218,8 @@ def sifirla_sinif(sinif_id):
 @app.route("/sifirla/hepsi", methods=["POST"])
 @giris_zorunlu
 def sifirla_hepsi():
+    if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
+        abort(403)
     if request.form.get("parola") == SIFIR_PAROLA:
         tum_tikleri_sifirla()
     return redirect(url_for("dashboard"))
@@ -1200,6 +1250,8 @@ def api_lig():
 @app.route("/api/lig/sifirla", methods=["POST"])
 @giris_zorunlu
 def api_lig_sifirla():
+    if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
+        return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
     if request.form.get("parola") == SIFIR_PAROLA:
         lig_manuel_sifirla()
         return jsonify({"ok": True})
@@ -1756,6 +1808,8 @@ def api_sans_carki():
 def api_tik_dondur():
     ogrenci_id  = int(request.form["ogrenci_id"])
     ogretmen_id = session["ogretmen_id"]
+    if not _ogretmen_ogrencisine_erisebilir(ogretmen_id, ogrenci_id):
+        return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
     return jsonify(tik_dondur(ogrenci_id, ogretmen_id))
 
 
@@ -1917,6 +1971,10 @@ def ogretmen_randevular():
 @app.route("/ogretmen/randevu/<int:talep_id>/durum", methods=["POST"])
 @giris_zorunlu
 def ogretmen_randevu_durum(talep_id: int):
+    ids = [s["id"] for s in ogretmen_siniflari(session["ogretmen_id"])]
+    talep = randevu_talep_by_id(talep_id)
+    if not talep or talep.get("sinif_id") not in ids:
+        abort(403)
     durum = request.form.get("durum", "gorusuldu")
     randevu_durum_guncelle(talep_id, durum)
     flash("Randevu durumu güncellendi.", "success")
@@ -1950,6 +2008,10 @@ def ogretmen_yansimalar():
 @app.route("/ogretmen/yansima/<int:yid>/degerlendir", methods=["POST"])
 @giris_zorunlu
 def ogretmen_yansima_degerlendir_route(yid: int):
+    ids = [s["id"] for s in ogretmen_siniflari(session["ogretmen_id"])]
+    kayit = gunluk_yansima_by_id(yid)
+    if not kayit or kayit.get("ogrenci_sinif_id") not in ids:
+        abort(403)
     durum = request.form.get("durum", "onaylandi")
     notu = request.form.get("not", "")
     gunluk_yansima_degerlendir(yid, session["ogretmen_id"], durum, notu)
@@ -1970,15 +2032,27 @@ def davranis_hedef_route():
     if not sinif_id or sinif_id not in [s["id"] for s in siniflar]:
         flash("Geçersiz sınıf.", "error")
         return redirect(url_for("dashboard"))
-    davranis_hedefi_ekle(
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    bas = bas or bugun
+    bit = bit or bugun
+    bas, bit = _tarih_araligi_duzelt(bas, bit)
+    if ogid:
+        ogr = _ogrenci_bul(ogid)
+        if not ogr or int(ogr["sinif_id"]) != int(sinif_id):
+            flash("Seçilen öğrenci bu sınıfa ait değil.", "error")
+            return redirect(url_for("dashboard", sinif=sinif_id))
+    sonuc = davranis_hedefi_ekle(
         sinif_id,
         session["ogretmen_id"],
         ogid if ogid else None,
         max_tik,
-        bas or datetime.now().strftime("%Y-%m-%d"),
-        bit or datetime.now().strftime("%Y-%m-%d"),
+        bas,
+        bit,
         aciklama,
     )
+    if not sonuc.get("ok"):
+        flash("Öğrenci bu sınıfa kayıtlı olmalıdır.", "error")
+        return redirect(url_for("dashboard", sinif=sinif_id))
     flash("Davranış hedefi kaydedildi.", "success")
     return redirect(url_for("dashboard", sinif=sinif_id))
 
@@ -1986,14 +2060,13 @@ def davranis_hedef_route():
 @app.route("/api/pozitif-rozet/<int:ogrenci_id>", methods=["POST"])
 @giris_zorunlu
 def api_pozitif_rozet(ogrenci_id: int):
+    if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
+        return jsonify({"ok": False, "sebep": "Yetki"}), 403
     og = _ogrenci_bul(ogrenci_id)
     if not og:
         return jsonify({"ok": False}), 404
-    sid_list = [s["id"] for s in ogretmen_siniflari(session["ogretmen_id"])]
-    if og["sinif_id"] not in sid_list:
-        return jsonify({"ok": False, "sebep": "Yetki"}), 403
-    rozet_ver_ogrenci(ogrenci_id, og["sinif_id"], "pozitif_yildiz")
-    return jsonify({"ok": True})
+    yeni = rozet_ver_ogrenci(ogrenci_id, og["sinif_id"], "pozitif_yildiz")
+    return jsonify({"ok": True, "yeni": bool(yeni)})
 
 
 @app.route("/rapor/haftalik")
@@ -2040,6 +2113,8 @@ def rapor_karsilastir():
     b2 = request.args.get("b2", "").strip()
     sonuc = None
     if sid and a1 and a2 and b1 and b2:
+        a1, a2 = _tarih_araligi_duzelt(a1, a2)
+        b1, b2 = _tarih_araligi_duzelt(b1, b2)
         sonuc = {
             "donem_a_tik": tik_sayisi_sinif_aralik(sid, a1, a2),
             "donem_a_olumlu": olumlu_sayisi_sinif_aralik(sid, a1, a2),
@@ -2105,12 +2180,16 @@ SIFIRLAMA_SIFRESI = "ERENLER2024"
 @app.route("/admin/sifirla", methods=["GET"])
 @giris_zorunlu
 def admin_sifirla_sayfa():
+    if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
+        abort(403)
     return render_template("sifirla.html",
         ogretmen_adi=session.get("ogretmen_adi",""))
 
 @app.route("/api/admin/sifirla", methods=["POST"])
 @giris_zorunlu
 def api_admin_sifirla():
+    if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
+        return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
     veri = request.json or {}
     girilen = veri.get("sifre", "").strip()
     if girilen != SIFIRLAMA_SIFRESI:

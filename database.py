@@ -2857,6 +2857,27 @@ def admin_meta_set(anahtar: str, deger: str) -> None:
     con.close()
 
 
+def randevu_talep_by_id(talep_id: int) -> dict | None:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    row = con.execute("SELECT * FROM randevu_talebi WHERE id = ?", (talep_id,)).fetchone()
+    con.close()
+    return dict(row) if row else None
+
+
+def gunluk_yansima_by_id(yansima_id: int) -> dict | None:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    row = con.execute("""
+        SELECT g.*, o.sinif_id AS ogrenci_sinif_id
+        FROM gunluk_yansima g
+        JOIN ogrenciler o ON o.id = g.ogrenci_id
+        WHERE g.id = ?
+    """, (yansima_id,)).fetchone()
+    con.close()
+    return dict(row) if row else None
+
+
 def randevu_talep_ekle(ogrenci_id: int, sinif_id: int, mesaj: str) -> dict:
     z = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     con = _conn()
@@ -2992,6 +3013,15 @@ def davranis_hedefi_ekle(
     bitis: str,
     aciklama: str,
 ) -> dict:
+    if ogrenci_id is not None:
+        con_chk = _conn()
+        ok = con_chk.execute(
+            "SELECT 1 FROM ogrenciler WHERE id = ? AND sinif_id = ?",
+            (ogrenci_id, sinif_id),
+        ).fetchone()
+        con_chk.close()
+        if not ok:
+            return {"ok": False, "sebep": "ogrenci_sinif_uyusmuyor"}
     con = _conn()
     _yardimci_tablolar_init(con)
     con.execute(
