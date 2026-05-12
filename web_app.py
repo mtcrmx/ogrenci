@@ -1199,9 +1199,15 @@ def service_worker():
 def tik_at(ogrenci_id):
     oid = session["ogretmen_id"]
     if not _ogretmen_ogrencisine_erisebilir(oid, ogrenci_id):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "sebep": "Bu öğrenci için yetkiniz yok."}), 403
         abort(403)
-    kriter   = request.form.get("kriter", "Diger")
+    kriter   = (request.form.get("kriter") or "Diger").strip()
     sinif_id = request.form.get("sinif_id", "")
+    if not kriter:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "sebep": "Kriter seçilmedi."}), 400
+        return redirect(url_for("dashboard", sinif=sinif_id))
 
     yeni  = tik_ekle(ogrenci_id, oid, kriter)
     d     = _durum(yeni)
@@ -1215,11 +1221,13 @@ def tik_at(ogrenci_id):
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({
+            "ok":          True,
             "tik_sayisi":  yeni,
             "durum":       d["kod"],
             "emoji":       d["emoji"],
             "etiket":      d["etiket"],
             "yeni_seviye": yeni_seviye,
+            "uyari":       yeni_seviye is not None,
         })
     return redirect(url_for("dashboard", sinif=sinif_id))
 

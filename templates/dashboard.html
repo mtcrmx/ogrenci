@@ -536,30 +536,52 @@ document.getElementById('tik-form').addEventListener('submit', async function(e)
   const kriter = btn.value;
   const sinifId = this.querySelector('[name=sinif_id]').value;
   const url = this.action;
+  const eskiMetin = btn.innerHTML;
 
   const fd = new FormData();
   fd.append('kriter', kriter);
   fd.append('sinif_id', sinifId);
 
-  const res  = await fetch(url, {
-    method: 'POST', body: fd,
-    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-  });
-  const data = await res.json();
+  btn.disabled = true;
+  btn.innerHTML = 'Kaydediliyor...';
 
-  document.getElementById('tik-modal').classList.add('hidden');
+  try {
+    const res  = await fetch(url, {
+      method: 'POST', body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok || data.ok === false) {
+      alert(data.sebep || 'Tik kaydedilemedi. Lütfen sayfayı yenileyip tekrar deneyin.');
+      return;
+    }
 
-  // Uyarı toast
-  if (data.uyari) {
+    document.getElementById('tik-modal').classList.add('hidden');
     const adi = document.getElementById('modal-ogrenci-adi').textContent;
-    const toast = document.getElementById('uyari-toast');
-    document.getElementById('uyari-ad').textContent = `${adi} — ${data.tik_sayisi} tike ulaştı!`;
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 4000);
-  }
+    const durumBar = document.getElementById('durum-bar');
+    if (durumBar) {
+      durumBar.textContent = `${adi} için tik kaydedildi. Güncel tik: ${data.tik_sayisi}`;
+      durumBar.classList.remove('text-slate-400');
+      durumBar.classList.add('text-emerald-700', 'font-bold');
+    }
 
-  // Sayfayı yenile
-  yenile();
+    // Uyarı toast
+    if (data.uyari) {
+      const toast = document.getElementById('uyari-toast');
+      document.getElementById('uyari-ad').textContent = `${adi} — ${data.tik_sayisi} tike ulaştı!`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 4000);
+    }
+
+    // Sayfayı yenile
+    await yenile();
+  } catch (err) {
+    alert('Tik kaydedilemedi. Bağlantı veya oturum hatası olabilir.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = eskiMetin;
+  }
 });
 
 document.getElementById('olumlu-form').addEventListener('submit', async function(e) {
@@ -641,7 +663,9 @@ async function yenile() {
   if (!SINIF_ID) return;
   try {
     const res  = await fetch(`/api/sinif/${SINIF_ID}`);
+    if (!res.ok) throw new Error('Sınıf verisi alınamadı');
     const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Beklenmeyen sınıf verisi');
     const kont = document.getElementById('ogrenci-listesi');
     const ara  = document.getElementById('ara').value.toLowerCase();
 
@@ -659,7 +683,10 @@ async function yenile() {
     const now = new Date().toLocaleTimeString('tr-TR');
     document.getElementById('guncelleme-info').textContent =
       `⏱ Son güncelleme: ${now}`;
-  } catch(e) { /* ağ hatası, sessiz geç */ }
+  } catch(e) {
+    const bilgi = document.getElementById('guncelleme-info');
+    if (bilgi) bilgi.textContent = 'Güncelleme alınamadı. Oturumu ve bağlantıyı kontrol edin.';
+  }
 }
 
 function kartHTML(o, sinifId) {
