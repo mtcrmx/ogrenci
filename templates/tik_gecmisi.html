@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if veli_modu %}Veli · {% endif %}{{ ogrenci.ad_soyad }} — Tik geçmişi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
+
+<header class="sticky top-0 z-20 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
+  <div class="max-w-2xl mx-auto px-4 py-3 flex flex-wrap items-center gap-2 justify-between">
+    <div class="text-xs font-bold text-slate-400">🏫 Erenler Cumhuriyet Ortaokulu</div>
+    <div class="flex flex-wrap gap-2">
+      {% if veli_modu %}
+      <a href="{{ url_for('veli_cikis') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Çıkış</a>
+      {% else %}
+      <a href="{{ url_for('ogrenci_cikis') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Çıkış</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+<main class="max-w-2xl mx-auto px-4 py-5 pb-24 space-y-5">
+
+  <div class="flex items-start gap-3">
+    <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-lg shrink-0"
+         style="background:{{ avatar.renk }}">{{ avatar.initials }}</div>
+    <div class="min-w-0 flex-1">
+      <h1 class="font-black text-xl break-words">{{ ogrenci.ad_soyad }}</h1>
+      <p class="text-sm text-slate-400">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}</p>
+      <p class="text-xs text-slate-500 mt-2">
+        {% if veli_modu %}
+        Bu ekranda yalnızca öğrencinizin aldığı tikler ve her tik için öğretmenin seçtiği neden (kriter) görünür.
+        {% else %}
+        Yalnızca kendi tik kayıtlarını ve nedenlerini görüntüleyebilirsin; başka öğrenciler listelenmez.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+      <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Toplam tik</div>
+      <div id="hdr-tik" class="text-3xl font-black mt-1">{{ ogrenci.tik_sayisi }}</div>
+    </div>
+    <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+      <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Durum</div>
+      <div id="hdr-durum" class="text-lg font-black mt-1">{{ ogrenci.emoji }} {{ ogrenci.etiket or 'Temiz' }}</div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+    <h2 class="font-black text-sm mb-1">Tik eşikleri</h2>
+    <p class="text-[11px] text-slate-500 mb-3">Aynı öğrenciye biriken tik sayısına göre okul içi uyarı basamakları.</p>
+    <div class="grid grid-cols-5 gap-1 text-center text-[9px]">
+      <div class="rounded-lg border border-slate-700 p-1.5 bg-slate-950"><div>✅</div><div class="text-emerald-400 font-bold mt-0.5">0–2</div></div>
+      <div class="rounded-lg border border-slate-700 p-1.5 bg-slate-950"><div>⚠️</div><div class="text-amber-400 font-bold mt-0.5">3+</div></div>
+      <div class="rounded-lg border border-slate-700 p-1.5 bg-slate-950"><div>📱</div><div class="text-orange-400 font-bold mt-0.5">6+</div></div>
+      <div class="rounded-lg border border-slate-700 p-1.5 bg-slate-950"><div>📋</div><div class="text-red-400 font-bold mt-0.5">9+</div></div>
+      <div class="rounded-lg border border-slate-700 p-1.5 bg-slate-950"><div>🚨</div><div class="text-purple-400 font-bold mt-0.5">12+</div></div>
+    </div>
+  </div>
+
+  <section class="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2">
+      <h2 class="font-black text-sm">Tik listesi</h2>
+      <span id="guncelleme-bilgi" class="text-[10px] text-slate-500">—</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
+            <th class="px-4 py-2 font-bold">#</th>
+            <th class="px-4 py-2 font-bold">Neden (kriter)</th>
+            <th class="px-4 py-2 font-bold whitespace-nowrap">Tarih</th>
+            <th class="px-4 py-2 font-bold">Kaydeden</th>
+          </tr>
+        </thead>
+        <tbody id="tik-tablo">
+          {% for g in gecmis %}
+          <tr class="border-b border-slate-800/80 hover:bg-slate-800/40">
+            <td class="px-4 py-2.5 text-slate-500">{{ loop.index }}</td>
+            <td class="px-4 py-2.5 font-medium text-white break-words max-w-[200px]">{{ g.kriter }}</td>
+            <td class="px-4 py-2.5 text-slate-400 whitespace-nowrap text-xs">{{ g.tarih }}</td>
+            <td class="px-4 py-2.5 text-slate-400 text-xs break-words">{{ g.ogretmen }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" class="px-4 py-10 text-center text-slate-500 text-sm">Henüz tik kaydı yok.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div class="fixed bottom-0 left-0 right-0 border-t border-slate-800 bg-slate-900/95 py-2 text-center text-[10px] text-slate-500">
+  <span id="countdown-bilgi">30 sn sonra yenilenecek</span>
+</div>
+
+<script>
+const API = "{{ url_for('api_kendi_tik_gecmisi') }}";
+
+function satirHtml(i, g) {
+  return `<tr class="border-b border-slate-800/80 hover:bg-slate-800/40">
+    <td class="px-4 py-2.5 text-slate-500">${i + 1}</td>
+    <td class="px-4 py-2.5 font-medium text-white break-words max-w-[200px]">${escapeHtml(g.kriter)}</td>
+    <td class="px-4 py-2.5 text-slate-400 whitespace-nowrap text-xs">${escapeHtml(g.tarih)}</td>
+    <td class="px-4 py-2.5 text-slate-400 text-xs break-words">${escapeHtml(g.ogretmen)}</td>
+  </tr>`;
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function yenile() {
+  try {
+    const res = await fetch(API);
+    if (!res.ok) return;
+    const d = await res.json();
+    const o = d.ogrenci;
+    if (!o) return;
+    document.getElementById('hdr-tik').textContent = o.tik_sayisi;
+    document.getElementById('hdr-durum').textContent = (o.emoji || '') + ' ' + (o.etiket || 'Temiz');
+    const tbody = document.getElementById('tik-tablo');
+    const liste = d.gecmis || [];
+    tbody.innerHTML = liste.length
+      ? liste.map((g, i) => satirHtml(i, g)).join('')
+      : '<tr><td colspan="4" class="px-4 py-10 text-center text-slate-500 text-sm">Henüz tik kaydı yok.</td></tr>';
+    document.getElementById('guncelleme-bilgi').textContent =
+      'Güncellendi: ' + new Date().toLocaleTimeString('tr-TR');
+  } catch (e) { /* sessiz */ }
+}
+
+let cd = 30;
+setInterval(() => {
+  cd--;
+  document.getElementById('countdown-bilgi').textContent = cd + ' sn sonra yenilenecek';
+  if (cd <= 0) { cd = 30; yenile(); }
+}, 1000);
+
+document.getElementById('guncelleme-bilgi').textContent = 'Yüklendi';
+</script>
+</body>
+</html>

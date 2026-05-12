@@ -117,20 +117,16 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
         },
         "ogrenci": {
             "baslik": "Öğrenci alanına hoş geldin",
-            "alt": "Bu ekran salt okunur: okuldaki tik sıralamasını gösterir.",
+            "alt": "Yalnızca kendi tik kayıtlarını ve nedenlerini görüntüleyebilirsin.",
             "adimlar": [
-                {"etiket": "Disiplin sırası", "metin": "Tüm öğrenciler tik sayısına göre listelenir; veri girişi yapılamaz."},
+                {"etiket": "Tik listesi", "metin": "Her satırda tik tarihi, öğretmenin seçtiği davranış nedeni (kriter) ve kaydı işleyen öğretmen adı yer alır."},
             ],
         },
         "veli": {
             "baslik": "Veli ekranına hoş geldiniz",
-            "alt": "Öğrencinizin okul sürecini kısa ve anlaşılır şekilde takip edebilirsiniz.",
+            "alt": "Yalnızca öğrencinizin tik kayıtlarını ve nedenlerini görüntüleyebilirsiniz.",
             "adimlar": [
-                {"etiket": "Genel özet", "metin": "Öğrencinizin güncel durumunu, risk seviyesini ve gelişim bilgisini görürsünüz."},
-                {"etiket": "Davranış geçmişi", "metin": "Tik kayıtları, olumlu gelişmeler ve sık görülen durumlar bu alanda izlenir."},
-                {"etiket": "Ödevler", "metin": "Verilen ve tamamlanan ödevlerin durumunu kontrol edebilirsiniz."},
-                {"etiket": "Öğretmen notları", "metin": "Öğretmenin veliye açık bıraktığı notlar burada görünür."},
-                {"etiket": "Karne", "metin": "Akıllı karne ekranı öğrencinin güçlü yönlerini ve destek alanlarını özetler."},
+                {"etiket": "Tik geçmişi", "metin": "Her satırda tik tarihi, öğretmenin seçtiği davranış nedeni (kriter) ve kaydı işleyen öğretmen adı yer alır."},
             ],
         },
     }
@@ -315,6 +311,14 @@ def _avatar(ogrenci: dict) -> dict:
     initials = "".join(parca[:1] for parca in ad.split()[:2]).upper() or "?"
     renk = palette[int(ogrenci.get("id", 0)) % len(palette)]
     return {"initials": initials, "renk": renk}
+
+
+def _kendi_ogrenci_id_veli_veya_ogrenci() -> int | None:
+    if session.get("ogrenci_giris") and session.get("ogrenci_id"):
+        return int(session["ogrenci_id"])
+    if session.get("veli_ogrenci_id"):
+        return int(session["veli_ogrenci_id"])
+    return None
 
 
 def _ogrenci_ozeti(ogrenci_id: int) -> dict | None:
@@ -549,10 +553,7 @@ def ogrenci_karne():
 
 @app.route("/veli/karne")
 def veli_karne():
-    ogrenci_id = session.get("veli_ogrenci_id")
-    if not ogrenci_id:
-        return redirect(url_for("veli_giris"))
-    return render_template("karne.html", karne=akilli_ogrenci_karnesi(int(ogrenci_id)), veli=True)
+    return redirect(url_for("veli_panel"))
 
 
 @app.route("/ogretmen/merkez")
@@ -605,11 +606,18 @@ def veli_panel():
     ogrenci_id = session.get("veli_ogrenci_id")
     if not ogrenci_id:
         return redirect(url_for("veli_giris"))
-    ozet = _ogrenci_ozeti(int(ogrenci_id))
-    if not ozet:
+    o = _ogrenci_bul(int(ogrenci_id))
+    if not o:
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
-    return render_template("veli.html", **ozet)
+    gecmis = ogrenci_tik_gecmisi(int(ogrenci_id))
+    return render_template(
+        "tik_gecmisi.html",
+        ogrenci=o,
+        gecmis=gecmis,
+        avatar=_avatar(o),
+        veli_modu=True,
+    )
 
 
 @app.route("/veli/cikis")
@@ -934,9 +942,15 @@ def tik_at(ogrenci_id):
 
 
 @app.route("/gecmis/<int:ogrenci_id>")
-@giris_zorunlu
 def gecmis(ogrenci_id):
-    return jsonify(ogrenci_tik_gecmisi(ogrenci_id))
+    if "ogretmen_id" in session:
+        return jsonify(ogrenci_tik_gecmisi(ogrenci_id))
+    oid = _kendi_ogrenci_id_veli_veya_ogrenci()
+    if oid == ogrenci_id:
+        return jsonify(ogrenci_tik_gecmisi(ogrenci_id))
+    if not session.get("ogretmen_id") and not session.get("ogrenci_giris") and not session.get("veli_ogrenci_id"):
+        return redirect(url_for("login"))
+    return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1036,44 +1050,44 @@ def yayin(sinif_id=None):
 @app.route("/ogrenci")
 @ogrenci_giris_zorunlu
 def ogrenci_gorunum():
-    ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
-    mufettis_veri = bugun_mufettis()
-    if mufettis_veri and not mufettis_veri.get("sonuc"):
-        mufettis_veri = {"sonuc": None, "gizli": True}
+    ogrenci_id = session.get("ogrenci_id")
+    if not ogrenci_id:
+        return redirect(url_for("ogrenci_giris", next=url_for("ogrenci_gorunum")))
+    o = _ogrenci_bul(int(ogrenci_id))
+    if not o:
+        session.pop("ogrenci_id", None)
+        session.pop("ogrenci_giris", None)
+        return redirect(url_for("ogrenci_giris"))
+    gecmis = ogrenci_tik_gecmisi(int(ogrenci_id))
     return render_template(
-        "ogrenci.html",
-        ogrenciler   = ogrenciler,
-        tablo        = [],
-        maclar       = [],
-        sezon        = sezon_siralama(),
-        seviyeleri   = tum_sinif_seviyeleri(),
-        rozetler     = son_rozetler(20),
-        seri         = tum_seri_tablosu(),
-        gorev        = bugun_gorev(),
-        alkislar     = son_alkislar(15),
-        mufettis     = mufettis_veri,
-        rozet_tanimi = ROZET_TANIMI,
+        "tik_gecmisi.html",
+        ogrenci=o,
+        gecmis=gecmis,
+        avatar=_avatar(o),
+        veli_modu=False,
     )
+
+
+@app.route("/api/kendi-tik-gecmisi")
+def api_kendi_tik_gecmisi():
+    oid = _kendi_ogrenci_id_veli_veya_ogrenci()
+    if not oid:
+        return jsonify({"ok": False, "sebep": "Giris gerekli"}), 401
+    o = _ogrenci_bul(int(oid))
+    if not o:
+        return jsonify({"ok": False, "sebep": "Ogrenci bulunamadi"}), 404
+    return jsonify({
+        "ok": True,
+        "ogrenci": o,
+        "gecmis": ogrenci_tik_gecmisi(int(oid)),
+    })
 
 
 @app.route("/api/ogrenci/veri")
 @ogrenci_giris_zorunlu
 def api_ogrenci_veri():
-    ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
-    muf = bugun_mufettis()
-    if muf and not muf.get("sonuc"):
-        muf = {"sonuc": None, "gizli": True}
-    return jsonify({
-        "ogrenciler": ogrenciler,
-        "tablo":      [],
-        "maclar":     [],
-        "gorev":      bugun_gorev(),
-        "alkislar":   son_alkislar(10),
-        "mufettis":   muf,
-        "rozetler":   son_rozetler(10),
-        "seri":       tum_seri_tablosu(),
-        "sezon":      sezon_siralama(),
-    })
+    """Eski uç nokta; artık yalnızca oturumdaki öğrencinin tik verisini döndürür."""
+    return api_kendi_tik_gecmisi()
 
 
 @app.route("/api/yayin/ogrenciler")
