@@ -96,6 +96,11 @@
         <div class="rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 text-xs text-slate-400">
           <div class="font-bold text-slate-200">#{{ y.yedek_id }} · {{ y.olusturma }}</div>
           <div>{{ y.kayit_sayisi }} kayıt · {{ y.tablo_sayisi }} tablo · {{ (y.boyut / 1024)|round(1) }} KB</div>
+          <button type="button"
+                  onclick="geriYukle({{ y.yedek_id }})"
+                  class="mt-2 w-full rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-1.5">
+            Bu yedeği geri yükle
+          </button>
         </div>
         {% endfor %}
       </div>
@@ -179,6 +184,38 @@ async function sifirla() {
     alert('Bağlantı hatası: ' + e.message);
     btn.disabled = false;
     btn.textContent = 'Yedekle ve Tüm Sistemi Sıfırla';
+  }
+}
+
+async function geriYukle(yedekId) {
+  const sifre = prompt(`#${yedekId} sistem yedeği geri yüklenecek. Onay şifresini girin:`);
+  if (!sifre) return;
+  if (!confirm('Mevcut kullanıcı verileri geri yükleme öncesi ayrıca yedeklenecek. Devam edilsin mi?')) return;
+  try {
+    const res = await fetch(`/api/admin/yedek/${yedekId}/geri-yukle`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ sifre })
+    });
+    const data = await res.json();
+    const overlay = document.getElementById('sonuc-overlay');
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+    if (data.ok) {
+      const toplam = Object.values(data.geri_yuklenen || {})
+                           .filter(v => typeof v === 'number')
+                           .reduce((a,b) => a+b, 0);
+      document.getElementById('sonuc-emoji').textContent = '✅';
+      document.getElementById('sonuc-baslik').textContent = 'Yedek geri yüklendi!';
+      document.getElementById('sonuc-aciklama').textContent =
+        `${toplam} kayıt geri yüklendi. Geri yükleme öncesi yedek #${data.geri_yukleme_oncesi_yedek?.yedek_id || '—'} olarak saklandı.`;
+    } else {
+      document.getElementById('sonuc-emoji').textContent = '❌';
+      document.getElementById('sonuc-baslik').textContent = 'Geri yükleme hatası!';
+      document.getElementById('sonuc-aciklama').textContent = data.sebep || 'Bilinmeyen hata';
+    }
+  } catch (e) {
+    alert('Bağlantı hatası: ' + e.message);
   }
 }
 </script>

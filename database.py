@@ -2176,6 +2176,71 @@ def sistem_yedek_listesi(limit: int = 8) -> list[dict]:
     return rows
 
 
+def _json_degerini_db_icin_coz(val):
+    if isinstance(val, dict) and "__bytes_hex__" in val:
+        return bytes.fromhex(val["__bytes_hex__"])
+    return val
+
+
+def sistem_yedegini_geri_yukle(yedek_id: int, ogretmen_id: int | None = None, ogretmen_adi: str = "") -> dict:
+    """Seçilen sistem yedeğindeki kullanıcı verilerini geri yükler.
+
+    `rapor_arsiv` ve `sistem_yedekleri` korunur; geri yüklemeden önce mevcut sıfırlanabilir
+    kullanıcı verilerinin de yeni bir yedeği alınır.
+    """
+    onceki_yedek = sistem_yedegi_olustur(ogretmen_id, ogretmen_adi or "Geri yukleme oncesi")
+    con = _conn()
+    _sistem_yedek_init(con)
+    row = con.execute(
+        "SELECT json_yedek FROM sistem_yedekleri WHERE yedek_id = ?",
+        (yedek_id,),
+    ).fetchone()
+    if not row:
+        con.close()
+        return {"ok": False, "sebep": "Yedek bulunamadi"}
+
+    try:
+        payload = json.loads(row["json_yedek"])
+    except Exception:
+        con.close()
+        return {"ok": False, "sebep": "Yedek okunamadi"}
+
+    tablolar = payload.get("tablolar") or {}
+    restored = {}
+    try:
+        con.execute("PRAGMA foreign_keys = OFF")
+        for tablo in reversed(_SIFIRLANACAK_TABLOLAR):
+            try:
+                con.execute(f"DELETE FROM {tablo}")
+            except Exception:
+                pass
+        for tablo in _SIFIRLANACAK_TABLOLAR:
+            rows = tablolar.get(tablo)
+            if not rows:
+                restored[tablo] = 0 if rows == [] else "yedekte yok"
+                continue
+            adet = 0
+            for item in rows:
+                if not isinstance(item, dict) or not item:
+                    continue
+                cols = list(item.keys())
+                values = [_json_degerini_db_icin_coz(item[c]) for c in cols]
+                col_sql = ", ".join(cols)
+                ph = ", ".join("?" for _ in cols)
+                con.execute(f"INSERT OR REPLACE INTO {tablo} ({col_sql}) VALUES ({ph})", values)
+                adet += 1
+            restored[tablo] = adet
+        con.execute("PRAGMA foreign_keys = ON")
+        con.commit()
+    except Exception as exc:
+        con.rollback()
+        con.execute("PRAGMA foreign_keys = ON")
+        con.close()
+        return {"ok": False, "sebep": f"Geri yukleme basarisiz: {exc}"}
+    con.close()
+    return {"ok": True, "geri_yuklenen": restored, "geri_yukleme_oncesi_yedek": onceki_yedek}
+
+
 def tum_verileri_sifirla(ogretmen_id: int | None = None, ogretmen_adi: str = "") -> dict:
     """Tik, lig, gamifikasyon vb. sıfırlanır. PDF analiz arşivi (rapor_arsiv) kasıtlı olarak
     bu listede yoktur — üretilmiş analiz PDF/JSON kayıtları korunur. Önce sistem yedeği alınır."""

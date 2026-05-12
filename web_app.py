@@ -36,7 +36,7 @@ from database import (
     ittifak_olustur, aktif_ittifaklar, ittifak_tamamla,
     ittifak_ogrenci_talebi, ittifak_onayla, ittifak_reddet,
     bekleyen_ogrenci_talepleri,
-    tum_verileri_sifirla, sistem_yedek_listesi,
+    tum_verileri_sifirla, sistem_yedek_listesi, sistem_yedegini_geri_yukle,
     quiz_sorular_getir, quiz_sonuc_kaydet, quiz_gunluk_dersleri,
     quiz_sinif_istatistik, quiz_sorulari_yukle,
     tik_dondur,
@@ -2312,6 +2312,23 @@ def api_admin_sifirla():
     if girilen != SIFIRLAMA_SIFRESI:
         return jsonify({"ok": False, "sebep": "Sifre yanlis!"}), 403
     sonuc = tum_verileri_sifirla(session["ogretmen_id"], session.get("ogretmen_adi", ""))
+    return jsonify(sonuc)
+
+
+@app.route("/api/admin/yedek/<int:yedek_id>/geri-yukle", methods=["POST"])
+@giris_zorunlu
+def api_admin_yedek_geri_yukle(yedek_id: int):
+    if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
+        return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
+    veri = request.json or {}
+    girilen = veri.get("sifre", "").strip()
+    if girilen != SIFIRLAMA_SIFRESI:
+        return jsonify({"ok": False, "sebep": "Sifre yanlis!"}), 403
+    sonuc = sistem_yedegini_geri_yukle(
+        yedek_id,
+        session["ogretmen_id"],
+        session.get("ogretmen_adi", ""),
+    )
     return jsonify(sonuc)
 
 
