@@ -45,9 +45,18 @@ from database import (
     oyun_puani_kaydet, GOREV_SABLONLARI,
     bilgilendirme_ekle, bilgilendirme_listesi, son_bilgilendirme,
     rapor_arsiv_kaydet, rapor_arsiv_listesi, rapor_arsiv_pdf_oku,
+    rapor_arsiv_tumunu_yedekle_ve_sil, rapor_arsiv_yedek_gruplari, rapor_arsiv_grubu_geri_yukle,
+    tik_kayitlari_siniflarda,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes
+from rapor_analiz import (
+    aylik_tik_sayilari,
+    durum_dagilimi_hesapla,
+    kriter_dagilimi_satirlardan,
+    oneriler_derle,
+    sinif_en_yuksek_ortalama_bul,
+)
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__,
@@ -841,10 +850,13 @@ def bildirimler():
 @giris_zorunlu
 def rapor_ozet():
     siniflar = _tum_siniflar()
+    sinif_idleri = [s["id"] for s in siniflar]
     okul = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
     sinif_ozetleri = []
     toplam_tik = sum(o["tik_sayisi"] for o in okul)
-    heatmap = []
+    ortalama_tik = round(toplam_tik / len(okul), 2) if okul else 0
+    heatmap_okul = []
+    heatmap_siniflar = []
     for s in siniflar:
         liste = _ogrencilere_durum_ekle(sinif_ogrencileri(s["id"]))
         sinif_tik = sum(o["tik_sayisi"] for o in liste)
@@ -867,30 +879,88 @@ def rapor_ozet():
             "ortalama": ortalama,
             "dagilim": dagilim,
         })
-        for o in sorted(liste, key=lambda x: (-x["tik_sayisi"], x["ad_soyad"]))[:12]:
-            heatmap.append({
+        for o in liste:
+            heatmap_okul.append({
                 "ad": o["ad_soyad"],
                 "sinif": s["sinif_adi"],
                 "tik": o["tik_sayisi"],
                 "durum": o["durum"],
                 "etiket": o["etiket"] or "Temiz",
             })
-    durum_dagilimi = {
-        "temiz": sum(1 for o in okul if o["tik_sayisi"] == 0),
-        "uyari": sum(1 for o in okul if 1 <= o["tik_sayisi"] <= 2),
-        "idari": sum(1 for o in okul if 3 <= o["tik_sayisi"] <= 5),
-        "veli": sum(1 for o in okul if 6 <= o["tik_sayisi"] <= 8),
-        "tutanak": sum(1 for o in okul if 9 <= o["tik_sayisi"] <= 11),
-        "disiplin": sum(1 for o in okul if o["tik_sayisi"] >= 12),
+        hucreler = []
+        for o in sorted(liste, key=lambda x: (-x["tik_sayisi"], x["ad_soyad"]))[:10]:
+            sicaklik = min(100, o["tik_sayisi"] * 9)
+            hucreler.append({
+                "ad": o["ad_soyad"],
+                "tik": o["tik_sayisi"],
+                "etiket": o["etiket"] or "Temiz",
+                "sicaklik": sicaklik,
+            })
+        if hucreler:
+            heatmap_siniflar.append({"sinif_adi": s["sinif_adi"], "hucreler": hucreler})
+    heatmap_okul.sort(key=lambda x: (-x["tik"], x["ad"]))
+    heatmap_okul = heatmap_okul[:42]
+
+    tik_satirlari = tik_kayitlari_siniflarda(sinif_idleri)
+    kriter_pairs = kriter_dagilimi_satirlardan(tik_satirlari)[:14]
+    kriter_chart = {
+        "labels": [k[0][:48] for k in kriter_pairs],
+        "values": [k[1] for k in kriter_pairs],
     }
+    aylik_raw = aylik_tik_sayilari(tik_satirlari)
+    aylik_chart = {
+        "labels": [x["etiket"] for x in aylik_raw],
+        "values": [x["adet"] for x in aylik_raw],
+    }
+
+    durum_dagilimi = durum_dagilimi_hesapla(okul)
+    durum_chart = {
+        "labels": ["Temiz", "Uyarı", "İdari", "Veli", "Tutanak", "Disiplin"],
+        "values": [
+            durum_dagilimi["temiz"],
+            durum_dagilimi["uyari"],
+            durum_dagilimi["idari"],
+            durum_dagilimi["veli"],
+            durum_dagilimi["tutanak"],
+            durum_dagilimi["disiplin"],
+        ],
+    }
+    sey = sinif_en_yuksek_ortalama_bul(sinif_ozetleri)
+    oneriler = oneriler_derle(
+        len(okul),
+        toplam_tik,
+        ortalama_tik,
+        durum_dagilimi,
+        kriter_pairs[:10],
+        sey,
+    )
+
+    # Sınıf × yoğunluk: ortalama tik ile basit ısı ölçeği
+    max_o = max((s["ortalama"] for s in sinif_ozetleri), default=0) or 1
+    sinif_isi_skala = []
+    for s in sinif_ozetleri:
+        oran = min(100, int(100 * float(s["ortalama"]) / max_o))
+        sinif_isi_skala.append({
+            "sinif_adi": s["sinif_adi"],
+            "ortalama": s["ortalama"],
+            "tik": s["tik"],
+            "isi": oran,
+        })
+
     return render_template(
         "rapor_ozet.html",
         sinif_ozetleri=sinif_ozetleri,
         okul=okul,
         toplam_tik=toplam_tik,
-        ortalama_tik=round(toplam_tik / len(okul), 2) if okul else 0,
+        ortalama_tik=ortalama_tik,
         durum_dagilimi=durum_dagilimi,
-        heatmap=heatmap,
+        durum_chart=durum_chart,
+        kriter_chart=kriter_chart,
+        aylik_chart=aylik_chart,
+        heatmap_okul=heatmap_okul,
+        heatmap_siniflar=heatmap_siniflar,
+        sinif_isi_skala=sinif_isi_skala,
+        oneriler=oneriler,
         sinif_xp_siralama=gelisim_ligi(),
         sezon=sezon_siralama(),
         rozetler=son_rozetler(12),
@@ -1294,8 +1364,40 @@ def rapor_analiz_pdf():
 @app.route("/rapor/arsiv")
 @giris_zorunlu
 def rapor_arsiv_sayfa():
-    kayitlar = rapor_arsiv_listesi(session["ogretmen_id"], 60)
-    return render_template("rapor_arsiv.html", kayitlar=kayitlar)
+    oid = session["ogretmen_id"]
+    kayitlar = rapor_arsiv_listesi(oid, 60)
+    yedek_gruplari = rapor_arsiv_yedek_gruplari(oid)
+    return render_template(
+        "rapor_arsiv.html",
+        kayitlar=kayitlar,
+        yedek_gruplari=yedek_gruplari,
+    )
+
+
+@app.route("/rapor/arsiv/sifirla", methods=["POST"])
+@giris_zorunlu
+def rapor_arsiv_sifirla():
+    sonuc = rapor_arsiv_tumunu_yedekle_ve_sil(session["ogretmen_id"])
+    if sonuc.get("tasinan", 0) == 0:
+        flash("Aktif PDF arşivinde silinecek kayıt yok.", "info")
+    else:
+        flash(
+            f"{sonuc['tasinan']} analiz raporu güvenli yedeğe alındı; liste temizlendi. "
+            "Aşağıdan «Geri yükle» ile istediğiniz silme anına dönebilirsiniz.",
+            "success",
+        )
+    return redirect(url_for("rapor_arsiv_sayfa"))
+
+
+@app.route("/rapor/arsiv/yedek/<path:grup_id>/geri-yukle", methods=["POST"])
+@giris_zorunlu
+def rapor_arsiv_yedek_geri_yukle(grup_id: str):
+    sonuc = rapor_arsiv_grubu_geri_yukle(session["ogretmen_id"], grup_id)
+    if sonuc.get("ok"):
+        flash(f"{sonuc['geri_yuklenen']} rapor tekrar arşive eklendi.", "success")
+    else:
+        flash(sonuc.get("sebep", "Geri yükleme yapılamadı."), "error")
+    return redirect(url_for("rapor_arsiv_sayfa"))
 
 
 @app.route("/rapor/arsiv/<int:arsiv_id>/indir")

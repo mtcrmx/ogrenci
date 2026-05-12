@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Özet Rapor{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
 {% block body %}
 <style>
 @keyframes rise { from { opacity:0; transform:translateY(16px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -51,6 +54,56 @@
     </div>
   </section>
 
+  {% if oneriler %}
+  <section class="anim-card rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-sm">
+    <h2 class="font-black text-lg text-slate-900 mb-1">Davranış iyileştirme — paydaş rehberi</h2>
+    <p class="text-xs text-slate-600 mb-4">{{ oneriler.ozet_cumle }}</p>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="rounded-2xl bg-white border border-violet-100 p-4 shadow-sm">
+        <h3 class="text-sm font-black text-violet-900 mb-2 flex items-center gap-2">👪 Veli için</h3>
+        <ul class="text-xs text-slate-700 space-y-2 list-disc pl-4">
+          {% for satir in oneriler.veli %}<li>{{ satir }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div class="rounded-2xl bg-white border border-amber-100 p-4 shadow-sm">
+        <h3 class="text-sm font-black text-amber-900 mb-2 flex items-center gap-2">🎒 Öğrenci için</h3>
+        <ul class="text-xs text-slate-700 space-y-2 list-disc pl-4">
+          {% for satir in oneriler.ogrenci %}<li>{{ satir }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div class="rounded-2xl bg-white border border-teal-100 p-4 shadow-sm">
+        <h3 class="text-sm font-black text-teal-900 mb-2 flex items-center gap-2">📚 Öğretmen için</h3>
+        <ul class="text-xs text-slate-700 space-y-2 list-disc pl-4">
+          {% for satir in oneriler.ogretmen %}<li>{{ satir }}</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="grid lg:grid-cols-3 gap-4">
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm lg:col-span-1">
+      <h2 class="font-black mb-3 text-sm">Durum dağılımı (pasta)</h2>
+      <div class="relative h-56 w-full max-w-xs mx-auto">
+        <canvas id="chartDurum" aria-label="Durum pasta grafiği"></canvas>
+      </div>
+    </div>
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm lg:col-span-2">
+      <h2 class="font-black mb-3 text-sm">En sık davranış / ihlal başlıkları (tik kayıtları)</h2>
+      <div class="relative h-64 w-full">
+        <canvas id="chartKriter" aria-label="İhlal türleri çubuk grafiği"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="anim-card rounded-3xl bg-white border border-slate-200 p-5 shadow-sm">
+    <h2 class="font-black mb-3">Aylık tik kayıt trendi</h2>
+    <p class="text-xs text-slate-500 mb-3">Her ay düşen toplam tik satırı sayısı (geçmiş kayıtların tarihine bağlıdır).</p>
+    <div class="relative h-72 w-full">
+      <canvas id="chartAylik" aria-label="Aylık trend"></canvas>
+    </div>
+  </section>
+
   <section class="grid lg:grid-cols-[1.4fr_.8fr] gap-4">
     <div class="anim-card rounded-3xl bg-white border border-slate-200 p-5 shadow-sm">
       <h2 class="font-black mb-4">Sınıf Performans Grafiği</h2>
@@ -98,15 +151,31 @@
     </div>
   </section>
 
+  {% if sinif_isi_skala %}
+  <section class="anim-card rounded-3xl bg-slate-900 text-white p-5 shadow-sm">
+    <h2 class="font-black mb-2">Sınıf yoğunluk şeridi</h2>
+    <p class="text-xs text-slate-400 mb-4">Öğrenci başına ortalama tik — sınıflar arası karşılaştırma (koyu = daha yüksek ortalama).</p>
+    <div class="flex flex-wrap gap-2">
+      {% for s in sinif_isi_skala %}
+      <div class="rounded-xl px-3 py-2 text-xs font-bold border border-white/10 min-w-[7rem]"
+           style="background:rgba(251,113,133,{{ 0.15 + (s.isi / 100) * 0.65 }})">
+        <div class="text-[10px] text-slate-300 font-normal truncate max-w-[10rem]" title="{{ s.sinif_adi }}">{{ s.sinif_adi }}</div>
+        <div class="text-sm">ø {{ s.ortalama }} <span class="text-slate-400 font-normal">· {{ s.tik }} tik</span></div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   <section class="anim-card rounded-3xl bg-white border border-slate-200 p-5 shadow-sm">
     <div class="flex items-center justify-between gap-3 mb-4">
       <div class="min-w-0">
-        <h2 class="font-black">Risk Isı Haritası</h2>
-        <p class="text-xs text-slate-500">Tik yoğunluğu yüksek öğrenciler daha sıcak renkle görünür.</p>
+        <h2 class="font-black">Okul geneli risk ısı haritası</h2>
+        <p class="text-xs text-slate-500">Tüm öğrenciler tik sayısına göre sıralanır; en yüksekler üstte (sunum için özet).</p>
       </div>
     </div>
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      {% for h in heatmap %}
+      {% for h in heatmap_okul %}
       {% set sicaklik = [100, h.tik * 9]|min %}
       <div class="heat-cell rounded-2xl border p-3"
            style="background:linear-gradient(135deg, rgba(239,68,68,{{ sicaklik / 140 }}), rgba(251,191,36,.10)); border-color:rgba(239,68,68,.22)">
@@ -117,10 +186,33 @@
         <div class="text-xs text-slate-600 mt-1">{{ h.sinif }} · {{ h.etiket }}</div>
       </div>
       {% else %}
-      <div class="text-sm text-slate-500">Risk kaydı yok.</div>
+      <div class="text-sm text-slate-500">Kayıt yok.</div>
       {% endfor %}
     </div>
   </section>
+
+  {% if heatmap_siniflar %}
+  <section class="space-y-4">
+    <h2 class="text-xl font-black text-slate-900 px-1">Sınıf bazlı detay ısı haritası</h2>
+    {% for blok in heatmap_siniflar %}
+    <div class="anim-card rounded-3xl bg-white border border-slate-200 p-5 shadow-sm">
+      <h3 class="font-black text-slate-800 mb-3 text-sm">{{ blok.sinif_adi }}</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+        {% for c in blok.hucreler %}
+        <div class="rounded-xl border px-2 py-2 text-xs"
+             style="background:linear-gradient(135deg, rgba(239,68,68,{{ c.sicaklik / 140 }}), rgba(251,191,36,.08)); border-color:rgba(239,68,68,.2)">
+          <div class="font-bold text-slate-900 truncate" title="{{ c.ad }}">{{ c.ad }}</div>
+          <div class="flex justify-between mt-1 text-[10px] text-slate-600">
+            <span>{{ c.etiket }}</span>
+            <span class="font-black text-red-700">{{ c.tik }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
 
   <section class="grid lg:grid-cols-2 gap-4">
     <div class="anim-card rounded-3xl bg-white border border-slate-200 p-4 shadow-sm">
@@ -149,4 +241,94 @@
     </div>
   </section>
 </main>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const palette = ["#10b981","#fbbf24","#fb923c","#f87171","#e879f9","#a855f7"];
+  const durumEl = document.getElementById("chartDurum");
+  const kriterEl = document.getElementById("chartKriter");
+  const aylikEl = document.getElementById("chartAylik");
+  const durumChart = {{ durum_chart | tojson }};
+  const kriterChart = {{ kriter_chart | tojson }};
+  const aylikChart = {{ aylik_chart | tojson }};
+
+  if (typeof Chart !== "undefined" && durumEl && durumChart.values && durumChart.values.some(v => v > 0)) {
+    new Chart(durumEl, {
+      type: "doughnut",
+      data: {
+        labels: durumChart.labels,
+        datasets: [{
+          data: durumChart.values,
+          backgroundColor: palette,
+          borderWidth: 1,
+          borderColor: "#fff"
+        }]
+      },
+      options: {
+        plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 10 } } } },
+        maintainAspectRatio: false
+      }
+    });
+  } else if (durumEl && durumEl.parentElement) {
+    durumEl.parentElement.innerHTML = '<p class="text-xs text-slate-500 text-center py-8">Grafik için dağılım verisi yok.</p>';
+  }
+
+  if (typeof Chart !== "undefined" && kriterEl && kriterChart.labels && kriterChart.labels.length) {
+    new Chart(kriterEl, {
+      type: "bar",
+      data: {
+        labels: kriterChart.labels,
+        datasets: [{
+          label: "Tik sayısı",
+          data: kriterChart.values,
+          backgroundColor: "rgba(59,130,246,.75)",
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 } },
+          y: { ticks: { font: { size: 10 }, autoSkip: false } }
+        }
+      }
+    });
+  } else if (kriterEl && kriterEl.parentElement) {
+    kriterEl.parentElement.innerHTML = '<p class="text-xs text-slate-500 text-center py-8">Henüz tik kaydı yok veya kriter çıkarılamadı.</p>';
+  }
+
+  if (typeof Chart !== "undefined" && aylikEl && aylikChart.labels && aylikChart.labels.length) {
+    new Chart(aylikEl, {
+      type: "line",
+      data: {
+        labels: aylikChart.labels,
+        datasets: [{
+          label: "Aylık tik",
+          data: aylikChart.values,
+          fill: true,
+          tension: 0.35,
+          borderColor: "rgb(14,165,233)",
+          backgroundColor: "rgba(14,165,233,.15)",
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 9 } } }
+        }
+      }
+    });
+  } else if (aylikEl && aylikEl.parentElement) {
+    aylikEl.parentElement.innerHTML = '<p class="text-xs text-slate-500 text-center py-8">Trend için tarihli tik kaydı yok.</p>';
+  }
+});
+</script>
 {% endblock %}

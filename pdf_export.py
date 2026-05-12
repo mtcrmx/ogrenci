@@ -40,6 +40,11 @@ from database import (
     tik_kayitlari_siniflarda,
 )
 from export import _ihlal_ozeti_yazisi, _kriter_saf_metin
+from rapor_analiz import (
+    aylik_tik_sayilari,
+    ogrenci_satirlarindan_durum,
+    oneriler_snapshot_icinden,
+)
 
 _FONT_NAME = "RaporFont"
 _FONT_READY = False
@@ -186,14 +191,32 @@ def derle_analiz_snapshot(
         "tik_kayit_adedi": len(tik_rows),
         "ortalama_tik": round(toplam_tik / n, 2) if n else 0,
     }
-    return {
+    risk_sorted = sorted(
+        ogrenci_satirlari,
+        key=lambda x: (-int(x.get("tik_sayisi") or 0), (x.get("ad_soyad") or "")),
+    )[:28]
+    risk_ozet = [
+        {
+            "ad_soyad": r.get("ad_soyad"),
+            "sinif_adi": r.get("sinif_adi"),
+            "tik": int(r.get("tik_sayisi") or 0),
+            "durum": r.get("durum"),
+        }
+        for r in risk_sorted
+    ]
+    base: dict[str, Any] = {
         "meta": meta,
         "ozet": ozet,
         "sinif_ozet": sorted(sinif_ozet_map.values(), key=lambda x: x["sinif_adi"]),
         "ogrenciler": ogrenci_satirlari,
         "kriter_dagilim": dict(sorted(kriter_cnt.items(), key=lambda x: (-x[1], x[0]))),
         "tik_satirlari": tik_archive,
+        "durum_dagilimi": ogrenci_satirlarindan_durum(ogrenci_satirlari),
+        "aylik_trend": aylik_tik_sayilari(tik_rows),
+        "risk_ozet": risk_ozet,
     }
+    base["oneriler"] = oneriler_snapshot_icinden(base)
+    return base
 
 
 def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
@@ -251,7 +274,107 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
         f"Öğrenci başına ortalama tik: {ozet.get('ortalama_tik', 0)}"
     )
     story.append(Paragraph(oz_txt, body))
+    oner = snapshot.get("oneriler") or {}
+    if oner.get("ozet_cumle"):
+        story.append(Spacer(1, 0.2 * cm))
+        story.append(Paragraph(str(oner["ozet_cumle"]), body))
     story.append(Spacer(1, 0.5 * cm))
+
+    dd = snapshot.get("durum_dagilimi") or {}
+    if dd:
+        story.append(Paragraph("Öğrenci durum bantları (tik sayısına göre)", h2))
+        ddt = [["Bant", "Öğrenci"]]
+        for label, key in [
+            ("Temiz (0 tik)", "temiz"),
+            ("Uyarı (1–2)", "uyari"),
+            ("İdari izlem (3–5)", "idari"),
+            ("Veli bilgilendirme (6–8)", "veli"),
+            ("Tutanak (9–11)", "tutanak"),
+            ("Disiplin (12+)", "disiplin"),
+        ]:
+            ddt.append([label, str(dd.get(key, 0))])
+        tdd = Table(ddt, colWidths=[11 * cm, 3 * cm])
+        tdd.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("FONTNAME", (0, 0), (-1, -1), fn),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+                ]
+            )
+        )
+        story.append(tdd)
+        story.append(Spacer(1, 0.4 * cm))
+
+    trend = snapshot.get("aylik_trend") or []
+    if trend:
+        story.append(Paragraph("Aylık tik kayıt sayısı (trend)", h2))
+        tr = [["Ay (Yıl.Ay)", "Kayıt adedi"]]
+        for row in trend[-18:]:
+            tr.append([str(row.get("ay", "")), str(row.get("adet", 0))])
+        ttrend = Table(tr, colWidths=[6 * cm, 4 * cm])
+        ttrend.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#475569")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("FONTNAME", (0, 0), (-1, -1), fn),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+                ]
+            )
+        )
+        story.append(ttrend)
+        story.append(Spacer(1, 0.4 * cm))
+
+    if oner.get("veli") or oner.get("ogrenci") or oner.get("ogretmen"):
+        story.append(Paragraph("Davranış iyileştirme — paydaş önerileri", h2))
+        if oner.get("veli"):
+            story.append(Paragraph("<b>Veli için öneriler</b>", body))
+            for line in oner["veli"]:
+                story.append(Paragraph(f"• {line}", body))
+            story.append(Spacer(1, 0.15 * cm))
+        if oner.get("ogrenci"):
+            story.append(Paragraph("<b>Öğrenci için öneriler</b>", body))
+            for line in oner["ogrenci"]:
+                story.append(Paragraph(f"• {line}", body))
+            story.append(Spacer(1, 0.15 * cm))
+        if oner.get("ogretmen"):
+            story.append(Paragraph("<b>Öğretmen için öneriler</b>", body))
+            for line in oner["ogretmen"]:
+                story.append(Paragraph(f"• {line}", body))
+        story.append(Spacer(1, 0.45 * cm))
+
+    ro = snapshot.get("risk_ozet") or []
+    if ro:
+        story.append(Paragraph("Risk özeti (okul genelinde en yüksek tik)", h2))
+        rt = [["Sınıf", "Öğrenci", "Tik", "Durum"]]
+        for r in ro[:22]:
+            rt.append(
+                [
+                    str(r.get("sinif_adi", ""))[:14],
+                    str(r.get("ad_soyad", ""))[:26],
+                    str(r.get("tik", 0)),
+                    str(r.get("durum", ""))[:16],
+                ]
+            )
+        trisk = Table(rt, colWidths=[2.8 * cm, 5 * cm, 1.2 * cm, 3 * cm])
+        trisk.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#991b1b")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("FONTNAME", (0, 0), (-1, -1), fn),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7),
+                    ("GRID", (0, 0), (-1, -1), 0.2, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        story.append(trisk)
+        story.append(Spacer(1, 0.45 * cm))
 
     story.append(Paragraph("Sınıf özeti", h2))
     so = [["Sınıf", "Öğr.", "Σ Tik", "Temiz", "Uyarı", "İdari"]]

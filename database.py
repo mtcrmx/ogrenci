@@ -7,6 +7,7 @@ Tablolar: ogretmenler, siniflar, ogretmen_sinif, ogrenciler, tik_kayitlari
 
 import sqlite3
 import os
+import uuid
 from datetime import datetime
 
 # Render.com gibi bulut ortamlarında /data klasörü kalıcıdır;
@@ -240,6 +241,27 @@ def initialize_db():
     con.close()
 
 
+def _rapor_arsiv_yedek_init(con: sqlite3.Connection) -> None:
+    """PDF arşivi manuel silindiğinde kayıtlar buraya taşınır; geri yükleme ile ana arşive dönülür."""
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS rapor_arsiv_yedek (
+            yid INTEGER PRIMARY KEY AUTOINCREMENT,
+            grup_id TEXT NOT NULL,
+            silinme TEXT NOT NULL,
+            kaynak_id INTEGER,
+            olusturma TEXT NOT NULL,
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            ogretmen_adi TEXT NOT NULL,
+            kapsam TEXT NOT NULL,
+            sinif_id INTEGER,
+            json_snapshot TEXT NOT NULL,
+            pdf_blob BLOB NOT NULL,
+            dosya_adi TEXT NOT NULL
+        )
+    """)
+    con.commit()
+
+
 def _rapor_arsiv_init(con: sqlite3.Connection) -> None:
     con.execute("""
         CREATE TABLE IF NOT EXISTS rapor_arsiv (
@@ -255,6 +277,7 @@ def _rapor_arsiv_init(con: sqlite3.Connection) -> None:
         )
     """)
     con.commit()
+    _rapor_arsiv_yedek_init(con)
 
 
 def _bilgilendirme_init(con: sqlite3.Connection):
@@ -1675,6 +1698,8 @@ _SIFIRLANACAK_TABLOLAR = [
 
 
 def tum_verileri_sifirla() -> dict:
+    """Tik, lig, gamifikasyon vb. sıfırlanır. PDF analiz arşivi (rapor_arsiv) kasıtlı olarak
+    bu listede yoktur — üretilmiş analiz PDF/JSON kayıtları korunur."""
     con = _conn()
     silinen = {}
     for tablo in _SIFIRLANACAK_TABLOLAR:
@@ -2735,3 +2760,95 @@ def rapor_arsiv_pdf_oku(arsiv_id: int, ogretmen_id: int) -> dict | None:
     """, (arsiv_id, ogretmen_id)).fetchone()
     con.close()
     return dict(row) if row else None
+
+
+def rapor_arsiv_tumunu_yedekle_ve_sil(ogretmen_id: int) -> dict:
+    """Aktif PDF arşivindeki tüm kayıtları yedek tablosuna taşır ve ana listeden siler."""
+    gid = str(uuid.uuid4())
+    silinme = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    con = _conn()
+    _rapor_arsiv_init(con)
+    rows = [dict(r) for r in con.execute(
+        "SELECT * FROM rapor_arsiv WHERE ogretmen_id = ?", (ogretmen_id,)
+    ).fetchall()]
+    for r in rows:
+        con.execute("""
+            INSERT INTO rapor_arsiv_yedek (
+                grup_id, silinme, kaynak_id, olusturma, ogretmen_id, ogretmen_adi,
+                kapsam, sinif_id, json_snapshot, pdf_blob, dosya_adi)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            gid,
+            silinme,
+            r.get("id"),
+            r["olusturma"],
+            r["ogretmen_id"],
+            r["ogretmen_adi"],
+            r["kapsam"],
+            r["sinif_id"],
+            r["json_snapshot"],
+            r["pdf_blob"],
+            r["dosya_adi"],
+        ))
+    con.execute("DELETE FROM rapor_arsiv WHERE ogretmen_id = ?", (ogretmen_id,))
+    con.commit()
+    n = len(rows)
+    con.close()
+    return {"ok": True, "grup_id": gid, "tasinan": n}
+
+
+def rapor_arsiv_yedek_gruplari(ogretmen_id: int) -> list[dict]:
+    """Manuel silme işlemlerinin özeti (geri yükleme için)."""
+    con = _conn()
+    _rapor_arsiv_yedek_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT grup_id,
+               MIN(silinme) AS silinme,
+               COUNT(*) AS adet
+        FROM rapor_arsiv_yedek
+        WHERE ogretmen_id = ?
+        GROUP BY grup_id
+        ORDER BY silinme DESC
+    """, (ogretmen_id,)).fetchall()]
+    con.close()
+    return rows
+
+
+def rapor_arsiv_grubu_geri_yukle(ogretmen_id: int, grup_id: str) -> dict:
+    """Belirtilen yedek grubunu tekrar aktif arşive ekler; yedekten düşer."""
+    con = _conn()
+    _rapor_arsiv_yedek_init(con)
+    n = con.execute(
+        "SELECT COUNT(*) FROM rapor_arsiv_yedek WHERE ogretmen_id = ? AND grup_id = ?",
+        (ogretmen_id, grup_id),
+    ).fetchone()[0]
+    if n == 0:
+        con.close()
+        return {"ok": False, "sebep": "Bu geri yükleme grubu bulunamadı."}
+    rows = [dict(r) for r in con.execute(
+        "SELECT * FROM rapor_arsiv_yedek WHERE ogretmen_id = ? AND grup_id = ?",
+        (ogretmen_id, grup_id),
+    ).fetchall()]
+    for r in rows:
+        con.execute("""
+            INSERT INTO rapor_arsiv (
+                olusturma, ogretmen_id, ogretmen_adi, kapsam, sinif_id,
+                json_snapshot, pdf_blob, dosya_adi)
+            VALUES (?,?,?,?,?,?,?,?)
+        """, (
+            r["olusturma"],
+            r["ogretmen_id"],
+            r["ogretmen_adi"],
+            r["kapsam"],
+            r["sinif_id"],
+            r["json_snapshot"],
+            r["pdf_blob"],
+            r["dosya_adi"],
+        ))
+    con.execute(
+        "DELETE FROM rapor_arsiv_yedek WHERE ogretmen_id = ? AND grup_id = ?",
+        (ogretmen_id, grup_id),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True, "geri_yuklenen": len(rows)}

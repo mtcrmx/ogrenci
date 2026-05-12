@@ -11,15 +11,39 @@
     <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-2">
       <div>
         <h1 class="text-xl font-black">Kayıtlı analiz raporları</h1>
-        <p class="text-xs text-blue-200 mt-1">Üretildiği andaki verinin PDF ve JSON anlık görüntüsü; tik silinse bile burada kalır.</p>
+        <p class="text-xs text-blue-200 mt-1">
+          Üretildiği andaki verinin PDF ve JSON anlık görüntüsü; tik silinse veya uygulama verisi sıfırlansa bile bu arşiv
+          <strong class="text-white">otomatik silinmez</strong>.
+        </p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap">
         <a href="{{ url_for('dashboard') }}" class="rounded-lg bg-white/15 px-3 py-2 text-xs font-bold hover:bg-white/25">Panele dön</a>
         <a href="{{ url_for('rapor_ozet') }}" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black hover:bg-emerald-500">Rapor özeti</a>
       </div>
     </div>
   </header>
-  <main class="max-w-3xl mx-auto px-4 py-6">
+  <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+      {% for category, message in messages %}
+      <div class="rounded-xl px-4 py-3 text-sm font-bold border
+        {% if category == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-900
+        {% elif category == 'error' %}bg-red-50 border-red-200 text-red-900
+        {% else %}bg-slate-50 border-slate-200 text-slate-800{% endif %}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="rounded-xl bg-indigo-50 border border-indigo-200 px-4 py-3 text-xs text-indigo-950">
+      <strong class="block mb-1">Tam veri sıfırlama (admin)</strong>
+      «Tüm verileri sıfırla» tikleri ve oyun verilerini temizler; <strong>PDF analiz arşivini silmez</strong>.
+      Arşivi yalnızca bu sayfadaki kırmızı düğme ile taşıyabilirsiniz — o zaman da kayıtlar aşağıdaki geçmişten geri yüklenir.
+    </div>
+
     {% if kayitlar %}
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
       <table class="w-full text-sm">
@@ -49,9 +73,60 @@
       </table>
     </div>
     {% else %}
-    <p class="text-center text-slate-500 py-16 rounded-2xl border border-dashed border-slate-300 bg-white">
-      Henüz kayıtlı rapor yok. «Detaylı analiz PDF» ile ilk raporu oluşturun.
+    <p class="text-center text-slate-500 py-8 rounded-2xl border border-dashed border-slate-300 bg-white">
+      Aktif listede kayıt yok. «Detaylı analiz PDF» ile yeni rapor oluşturun veya aşağıdan geçmiş silmeyi geri yükleyin.
     </p>
+    {% endif %}
+
+    <div class="rounded-2xl border border-rose-300 bg-rose-50 p-4">
+      <h2 class="text-sm font-black text-rose-950 mb-2">PDF analiz verilerini sıfırla</h2>
+      <p class="text-xs text-rose-900/90 mb-3">
+        Aktif arşivdeki tüm PDF analizleri bu listeden kaldırılır; içerik silinmez —
+        otomatik olarak <strong>yedek geçmişe</strong> taşınır ve aşağıdan tek tuşla geri yüklenebilir.
+      </p>
+      <form method="post" action="{{ url_for('rapor_arsiv_sifirla') }}"
+            onsubmit="return confirm('Aktif PDF arşivi yedeklenecek ve liste boşaltılacak. Onaylıyor musunuz?');">
+        <button type="submit"
+                class="w-full sm:w-auto rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-sm font-black px-4 py-2.5 shadow">
+          PDF analiz verilerini sıfırla (yedekle ve temizle)
+        </button>
+      </form>
+    </div>
+
+    {% if yedek_gruplari %}
+    <div>
+      <h2 class="text-lg font-black text-slate-900 mb-2">Silme geçmişi — geri yükle</h2>
+      <p class="text-xs text-slate-600 mb-3">Her sıfırlama bir grup olarak saklanır; geri yükle dendiğinde raporlar tekrar üst listeye döner.</p>
+      <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-700 text-white text-left">
+            <tr>
+              <th class="px-4 py-3 font-bold">Silinme zamanı</th>
+              <th class="px-4 py-3 font-bold text-right">Rapor adedi</th>
+              <th class="px-4 py-3 font-bold text-right">İşlem</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for g in yedek_gruplari %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ g.silinme }}</td>
+              <td class="px-4 py-3 text-right text-slate-600">{{ g.adet }}</td>
+              <td class="px-4 py-3 text-right">
+                <form method="post"
+                      action="{{ url_for('rapor_arsiv_yedek_geri_yukle', grup_id=g.grup_id) }}"
+                      class="inline"
+                      onsubmit="return confirm('Bu gruptaki {{ g.adet }} raporu tekrar arşive eklemek istiyor musunuz?');">
+                  <button type="submit" class="rounded-lg bg-indigo-600 text-white text-xs font-black px-3 py-1.5 hover:bg-indigo-700">
+                    Geri yükle
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
     {% endif %}
   </main>
 </body>
