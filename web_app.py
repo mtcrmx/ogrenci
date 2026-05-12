@@ -1689,15 +1689,10 @@ def rapor_excel_detayli():
 @app.route("/lig")
 @giris_zorunlu
 def lig():
-    maclar = bugun_maclar()
     tablo = lig_puan_tablosu()
     return render_template(
         "lig.html",
-        maclar=maclar,
         tablo=tablo,
-        ogretmen_id=session["ogretmen_id"],
-        var_ogretmenler=_var_hakem_idleri(),
-        kart_nedenleri=LIG_KART_NEDENLERI,
     )
 
 
