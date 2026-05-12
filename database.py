@@ -807,6 +807,27 @@ def ogrenci_olumlu_tik_sayisi(ogrenci_id: int) -> int:
     return int(n)
 
 
+def ogrenci_olumlu_tik_sayilari(ogrenci_ids: list[int]) -> dict[int, int]:
+    """Birden fazla öğrenci için olumlu tik sayıları (id -> sayı)."""
+    if not ogrenci_ids:
+        return {}
+    con = _conn()
+    _olumlu_davranis_migrate(con)
+    benzersiz = list(dict.fromkeys(int(i) for i in ogrenci_ids))
+    placeholders = ",".join("?" * len(benzersiz))
+    rows = con.execute(
+        f"""
+        SELECT ogrenci_id, COUNT(*) AS n
+        FROM olumlu_davranis
+        WHERE ogrenci_id IN ({placeholders})
+        GROUP BY ogrenci_id
+        """,
+        benzersiz,
+    ).fetchall()
+    con.close()
+    return {int(r["ogrenci_id"]): int(r["n"]) for r in rows}
+
+
 def lig_siralama() -> list[dict]:
     hafta = _bu_hafta_pazartesi()
     con = _conn()

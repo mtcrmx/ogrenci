@@ -17,7 +17,8 @@ from database import (
     ogretmen_dogrula, ogretmen_id_bul, ogretmen_siniflari,
     sinif_ogrencileri, tum_okul_ogrencileri, ogrenci_tik_gecmisi,
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
-    olumlu_tik_ekle, olumlu_sinif_etkinlik_ekle, ogrenci_olumlu_tik_sayisi,
+    olumlu_tik_ekle, olumlu_sinif_etkinlik_ekle,
+    ogrenci_olumlu_tik_sayisi, ogrenci_olumlu_tik_sayilari,
     lig_siralama, lig_manuel_sifirla, sinif_olumlu_gecmis,
     gunluk_mac_olustur, bugun_maclar, lig_puan_tablosu, lig_mac_tablo_sifirla,
     mac_sonucu_gir, mac_oy_ver, kart_ver, mac_kartlari,
@@ -944,9 +945,11 @@ def dashboard():
 
     olumlu_satirlari = sinif_olumlu_gecmis(aktif["id"])
     ids_ogr = [o["id"] for o in ogrenciler]
+    olumlu_h = ogrenci_olumlu_tik_sayilari(ids_ogr)
     roz_harita = ogrenci_rozetleri_yayin_map(ids_ogr, limit=6)
     for o in ogrenciler:
         o["rozetler"] = roz_harita.get(o["id"], [])
+        o["olumlu_tik"] = olumlu_h.get(o["id"], 0)
 
     return render_template("dashboard.html",
                            siniflar=siniflar, aktif=aktif,
@@ -968,9 +971,11 @@ def api_sinif(sinif_id):
         return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
     liste = _ogrencilere_durum_ekle(sinif_ogrencileri(sinif_id))
     ids = [o["id"] for o in liste]
+    olumlu_h = ogrenci_olumlu_tik_sayilari(ids)
     roz_harita = ogrenci_rozetleri_yayin_map(ids, limit=6)
     for o in liste:
         o["rozetler"] = roz_harita.get(o["id"], [])
+        o["olumlu_tik"] = olumlu_h.get(o["id"], 0)
     return jsonify(liste)
 
 
@@ -1199,15 +1204,9 @@ def service_worker():
 def tik_at(ogrenci_id):
     oid = session["ogretmen_id"]
     if not _ogretmen_ogrencisine_erisebilir(oid, ogrenci_id):
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify({"ok": False, "sebep": "Bu öğrenci için yetkiniz yok."}), 403
         abort(403)
-    kriter   = (request.form.get("kriter") or "Diger").strip()
+    kriter   = request.form.get("kriter", "Diger")
     sinif_id = request.form.get("sinif_id", "")
-    if not kriter:
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify({"ok": False, "sebep": "Kriter seçilmedi."}), 400
-        return redirect(url_for("dashboard", sinif=sinif_id))
 
     yeni  = tik_ekle(ogrenci_id, oid, kriter)
     d     = _durum(yeni)
@@ -1221,13 +1220,12 @@ def tik_at(ogrenci_id):
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({
-            "ok":          True,
             "tik_sayisi":  yeni,
             "durum":       d["kod"],
             "emoji":       d["emoji"],
             "etiket":      d["etiket"],
             "yeni_seviye": yeni_seviye,
-            "uyari":       yeni_seviye is not None,
+            "uyari":       yeni >= 3 and onceki < 3,
         })
     return redirect(url_for("dashboard", sinif=sinif_id))
 
@@ -1297,11 +1295,17 @@ def olumlu_ekle(sinif_id):
             return jsonify({"ok": False, "sebep": "Eksik veri"}), 400
         return redirect(url_for("dashboard", sinif=sinif_id))
     if not _ogretmen_sinifinda_mi(oid, sinif_id):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "sebep": "Bu sınıf için yetkiniz yok."}), 403
         abort(403)
     if not _ogretmen_ogrencisine_erisebilir(oid, ogrenci_id):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "sebep": "Bu öğrenci için yetkiniz yok."}), 403
         abort(403)
     og = _ogrenci_bul(ogrenci_id)
     if not og or int(og["sinif_id"]) != int(sinif_id):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "sebep": "Öğrenci bu sınıfa ait değil."}), 403
         abort(403)
     sonuc = olumlu_tik_ekle(ogrenci_id, sinif_id, oid, kriter)
 
@@ -1438,10 +1442,11 @@ def _yayin_verisi_hazirla():
     ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
     ids = [o["id"] for o in ogrenciler]
     rozet_haritasi = ogrenci_rozetleri_yayin_map(ids, limit=8)
+    olumlu_h = ogrenci_olumlu_tik_sayilari(ids)
     for o in ogrenciler:
         o["risk_yuzde"] = min(100, o["tik_sayisi"] * 8)
         o["rozetler"] = rozet_haritasi.get(o["id"], [])
-        o["olumlu_tik"] = ogrenci_olumlu_tik_sayisi(o["id"])
+        o["olumlu_tik"] = olumlu_h.get(o["id"], 0)
     en_cok_olumsuz = sorted(
         ogrenciler,
         key=lambda o: (-int(o.get("tik_sayisi") or 0), o.get("sinif_adi") or "", o.get("ad_soyad") or ""),
@@ -1689,10 +1694,15 @@ def rapor_excel_detayli():
 @app.route("/lig")
 @giris_zorunlu
 def lig():
+    maclar = bugun_maclar()
     tablo = lig_puan_tablosu()
     return render_template(
         "lig.html",
+        maclar=maclar,
         tablo=tablo,
+        ogretmen_id=session["ogretmen_id"],
+        var_ogretmenler=_var_hakem_idleri(),
+        kart_nedenleri=LIG_KART_NEDENLERI,
     )
 
 

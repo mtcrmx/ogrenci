@@ -186,23 +186,24 @@
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh]
               flex flex-col overflow-hidden" onclick="event.stopPropagation()">
 
-    <div class="bg-okul-800 text-white px-5 py-4 flex justify-between items-center">
+    <div class="bg-red-800 text-white px-5 py-4 flex justify-between items-center">
       <div>
-        <p class="text-xs text-blue-300">İhlal Kriteri Seç</p>
+        <p class="text-xs text-red-200">Olumsuz (disiplin) tik — kriter seçin</p>
         <p class="font-bold text-sm" id="modal-ogrenci-adi">—</p>
       </div>
       <button onclick="document.getElementById('tik-modal').classList.add('hidden')"
               class="text-white/70 hover:text-white text-2xl leading-none">×</button>
     </div>
 
-    <form id="tik-form" method="POST" class="overflow-y-auto p-4">
+    <form id="tik-form" method="POST" class="overflow-y-auto p-4" onsubmit="return false;">
       <input type="hidden" name="sinif_id" value="{{ aktif.id if aktif else '' }}">
       <div class="grid grid-cols-2 gap-2">
         {% for emoji, ad in kriterler %}
-        <button type="submit" name="kriter" value="{{ emoji }} {{ ad }}"
-                class="flex items-center gap-2 text-left text-xs font-medium
-                       bg-blue-50 hover:bg-blue-100 active:bg-blue-200
-                       text-blue-900 border border-blue-200
+        <button type="button"
+                data-kriter="{{ (emoji ~ ' ' ~ ad)|e }}"
+                class="tik-kriter-btn flex items-center gap-2 text-left text-xs font-medium
+                       bg-red-50 hover:bg-red-100 active:bg-red-200
+                       text-red-950 border border-red-200
                        rounded-xl px-3 py-2.5 transition w-full">
           <span class="text-base flex-shrink-0">{{ emoji }}</span>
           <span>{{ ad }}</span>
@@ -286,16 +287,17 @@
       <button type="button" onclick="document.getElementById('olumlu-modal').classList.add('hidden')"
               class="text-white/70 hover:text-white text-2xl leading-none">×</button>
     </div>
-    <form id="olumlu-form" method="POST" class="overflow-y-auto p-4">
+    <form id="olumlu-form" method="POST" class="overflow-y-auto p-4" onsubmit="return false;">
       <input type="hidden" name="ogrenci_id" id="olumlu-ogrenci-id" value="">
       <input type="hidden" name="sinif_id" id="olumlu-sinif-id" value="{{ aktif.id if aktif else '' }}">
       <p class="text-[11px] text-slate-500 mb-3">Her tik +5 XP ve sınıf ligine katkı. Her 3. tikte bir olumsuz tik düşer.</p>
       <div class="grid grid-cols-2 gap-2">
         {% for emoji, ad in olumlu_kriterler %}
-        <button type="submit" name="kriter" value="{{ emoji }} {{ ad }}"
-                class="flex items-center gap-2 text-left text-xs font-medium
+        <button type="button"
+                data-kriter="{{ (emoji ~ ' ' ~ ad)|e }}"
+                class="olumlu-kriter-btn flex items-center gap-2 text-left text-xs font-medium
                        bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200
-                       text-emerald-900 border border-emerald-200
+                       text-emerald-900 border border-emerald-300
                        rounded-xl px-3 py-2.5 transition w-full">
           <span class="text-base flex-shrink-0">{{ emoji }}</span>
           <span>{{ ad }}</span>
@@ -352,11 +354,6 @@
   'uyari':   'bg-amber-50    border-amber-300',
   'tehlike': 'bg-red-50      border-red-300 pulse-red',
 } %}
-{% set badge_cls = {
-  'temiz':   'bg-emerald-100 text-emerald-800',
-  'uyari':   'bg-amber-100   text-amber-800',
-  'tehlike': 'bg-red-100     text-red-800',
-} %}
 <div class="ogrenci-kart flex flex-wrap sm:flex-nowrap items-center gap-2 rounded-xl border px-3 py-2.5
             slide-in {{ durum_cls[o.durum] }}"
      data-ad="{{ o.ad_soyad }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}">
@@ -381,15 +378,21 @@
   </div>
 
   <!-- Tik göstergesi -->
-  <div class="flex items-center gap-1.5 flex-shrink-0">
-    <span class="{{ badge_cls[o.durum] }} text-xs font-bold px-2 py-0.5 rounded-full
-                 min-w-[28px] text-center">
+  <div class="flex items-center gap-1.5 flex-shrink-0" title="Kırmızı: olumsuz (disiplin) · Yeşil: olumlu davranış">
+    <span class="text-[10px] font-black text-red-600 hidden sm:inline">−</span>
+    <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full
+                 min-w-[28px] text-center border border-red-200">
       {{ o.tik_sayisi }}
     </span>
-    <span class="text-xs hidden sm:block text-slate-400">
+    <span class="text-[10px] font-black text-emerald-600 hidden sm:inline">+</span>
+    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full
+                 min-w-[28px] text-center border border-emerald-200">
+      {{ o.olumlu_tik|default(0) }}
+    </span>
+    <span class="text-xs hidden md:block text-slate-400">
       {% for i in range(3) %}
         {% if i < o.tik_sayisi %}
-          <span class="{{ 'text-red-500' if o.tik_sayisi >= 3 else 'text-amber-400' }}">●</span>
+          <span class="{{ 'text-red-500' if o.tik_sayisi >= 3 else 'text-amber-500' }}">●</span>
         {% else %}○{% endif %}
       {% endfor %}
       {% if o.tik_sayisi > 3 %}+{{ o.tik_sayisi - 3 }}{% endif %}
@@ -408,7 +411,7 @@
       + Olumlu
     </button>
     <button onclick="tikModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
-            class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800
+            class="bg-red-600 hover:bg-red-700 active:bg-red-800
                    text-white text-xs font-bold px-2.5 py-1.5 rounded-lg
                    transition whitespace-nowrap">
       + Tik
@@ -528,85 +531,101 @@ function modalKapat(e) {
   if (e.target === e.currentTarget)
     e.currentTarget.classList.add('hidden');
 }
-// Form submit: AJAX ile tik at
-document.getElementById('tik-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn = e.submitter;
+// Form submit: AJAX ile tik at (butonlar type=button; tıklama burada yakalanır)
+document.getElementById('tik-form').addEventListener('click', async function(e) {
+  const btn = e.target.closest('.tik-kriter-btn');
   if (!btn) return;
-  const kriter = btn.value;
-  const sinifId = this.querySelector('[name=sinif_id]').value;
-  const url = this.action;
-  const eskiMetin = btn.innerHTML;
-
+  const kriter = btn.getAttribute('data-kriter');
+  const form = document.getElementById('tik-form');
+  const sinifId = form.querySelector('[name=sinif_id]').value;
+  const url = form.action;
+  if (!kriter || !url || url === '') {
+    alert('Kriter veya öğrenci eksik.');
+    return;
+  }
   const fd = new FormData();
   fd.append('kriter', kriter);
   fd.append('sinif_id', sinifId);
 
-  btn.disabled = true;
-  btn.innerHTML = 'Kaydediliyor...';
-
+  let res;
   try {
-    const res  = await fetch(url, {
+    res = await fetch(url, {
       method: 'POST', body: fd,
       headers: { 'X-Requested-With': 'XMLHttpRequest' }
     });
-    let data = {};
-    try { data = await res.json(); } catch (_) {}
-    if (!res.ok || data.ok === false) {
-      alert(data.sebep || 'Tik kaydedilemedi. Lütfen sayfayı yenileyip tekrar deneyin.');
-      return;
-    }
-
-    document.getElementById('tik-modal').classList.add('hidden');
-    const adi = document.getElementById('modal-ogrenci-adi').textContent;
-    const durumBar = document.getElementById('durum-bar');
-    if (durumBar) {
-      durumBar.textContent = `${adi} için tik kaydedildi. Güncel tik: ${data.tik_sayisi}`;
-      durumBar.classList.remove('text-slate-400');
-      durumBar.classList.add('text-emerald-700', 'font-bold');
-    }
-
-    // Uyarı toast
-    if (data.uyari) {
-      const toast = document.getElementById('uyari-toast');
-      document.getElementById('uyari-ad').textContent = `${adi} — ${data.tik_sayisi} tike ulaştı!`;
-      toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), 4000);
-    }
-
-    // Sayfayı yenile
-    await yenile();
   } catch (err) {
-    alert('Tik kaydedilemedi. Bağlantı veya oturum hatası olabilir.');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = eskiMetin;
+    console.error(err);
+    alert('Ağ hatası.');
+    return;
   }
+  let data = null;
+  const raw = await res.text();
+  try { data = raw ? JSON.parse(raw) : null; } catch (err) { console.warn(err); }
+
+  document.getElementById('tik-modal').classList.add('hidden');
+
+  if (!res.ok || !data) {
+    alert((data && data.sebep) || 'Tik kaydedilemedi (' + res.status + ').');
+    yenile();
+    return;
+  }
+
+  // Uyarı toast
+  if (data.uyari) {
+    const adi = document.getElementById('modal-ogrenci-adi').textContent;
+    const toast = document.getElementById('uyari-toast');
+    document.getElementById('uyari-ad').textContent = `${adi} — ${data.tik_sayisi} tike ulaştı!`;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 4000);
+  }
+
+  yenile();
 });
 
-document.getElementById('olumlu-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn = e.submitter;
+document.getElementById('olumlu-form').addEventListener('click', async function(e) {
+  const btn = e.target.closest('.olumlu-kriter-btn');
   if (!btn) return;
-  const kriter = btn.value;
+  const kriter = btn.getAttribute('data-kriter');
   const oid = document.getElementById('olumlu-ogrenci-id').value;
-  const sinifId = document.getElementById('olumlu-sinif-id').value;
+  let sinifId = document.getElementById('olumlu-sinif-id').value;
+  if (!kriter || !oid || !sinifId) {
+    alert('Eksik bilgi: öğrenci veya sınıf seçili değil.');
+    return;
+  }
   const fd = new FormData();
   fd.append('kriter', kriter);
   fd.append('ogrenci_id', oid);
   fd.append('sinif_id', sinifId);
-  const res = await fetch('/olumlu/' + sinifId, {
-    method: 'POST',
-    body: fd,
-    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-  });
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch('/olumlu/' + sinifId, {
+      method: 'POST',
+      body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+  } catch (err) {
+    console.error(err);
+    alert('Ağ hatası: istek gönderilemedi.');
+    return;
+  }
+  let data = null;
+  const raw = await res.text();
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.warn('JSON parse', err, raw.slice(0, 200));
+  }
   document.getElementById('olumlu-modal').classList.add('hidden');
-  if (data.ok) {
-    let msg = 'Olumlu tik kaydedildi. XP: ' + data.xp + '.';
-    if (data.olumsuz_silindi) msg += ' 1 olumsuz tik kaldırıldı.';
-    alert(msg);
-  } else alert(data.sebep || 'İşlem yapılamadı');
+  if (!res.ok) {
+    alert(data && data.sebep ? data.sebep : ('İstek başarısız (' + res.status + '). Oturum veya yetkiyi kontrol edin.'));
+    yenile();
+    return;
+  }
+  if (data && data.ok) {
+    let msg = 'Olumlu tik kaydedildi. XP: ' + (data.xp ?? '—') + '.';
+      if (data.olumsuz_silindi) msg += ' 1 olumsuz tik kaldırıldı.';
+      alert(msg);
+  } else alert((data && data.sebep) || 'İşlem yapılamadı');
   yenile();
 });
 
@@ -663,9 +682,8 @@ async function yenile() {
   if (!SINIF_ID) return;
   try {
     const res  = await fetch(`/api/sinif/${SINIF_ID}`);
-    if (!res.ok) throw new Error('Sınıf verisi alınamadı');
     const data = await res.json();
-    if (!Array.isArray(data)) throw new Error('Beklenmeyen sınıf verisi');
+    if (!Array.isArray(data)) return;
     const kont = document.getElementById('ogrenci-listesi');
     const ara  = document.getElementById('ara').value.toLowerCase();
 
@@ -683,10 +701,7 @@ async function yenile() {
     const now = new Date().toLocaleTimeString('tr-TR');
     document.getElementById('guncelleme-info').textContent =
       `⏱ Son güncelleme: ${now}`;
-  } catch(e) {
-    const bilgi = document.getElementById('guncelleme-info');
-    if (bilgi) bilgi.textContent = 'Güncelleme alınamadı. Oturumu ve bağlantıyı kontrol edin.';
-  }
+  } catch(e) { /* ağ hatası, sessiz geç */ }
 }
 
 function kartHTML(o, sinifId) {
@@ -695,16 +710,13 @@ function kartHTML(o, sinifId) {
     uyari:    'bg-amber-50 border-amber-300',
     tehlike:  'bg-red-50 border-red-300 pulse-red',
   }[o.durum] || '';
-  const badgeCls = {
-    temiz:    'bg-emerald-100 text-emerald-800',
-    uyari:    'bg-amber-100 text-amber-800',
-    tehlike:  'bg-red-100 text-red-800',
-  }[o.durum] || '';
+
+  const ol = Number(o.olumlu_tik ?? 0);
 
   let noktalar = '';
   for (let i = 0; i < 3; i++) {
     noktalar += i < o.tik_sayisi
-      ? `<span class="${o.tik_sayisi >= 3 ? 'text-red-500' : 'text-amber-400'}">●</span>`
+      ? `<span class="${o.tik_sayisi >= 3 ? 'text-red-500' : 'text-amber-500'}">●</span>`
       : '○';
   }
   if (o.tik_sayisi > 3) noktalar += `+${o.tik_sayisi - 3}`;
@@ -728,11 +740,12 @@ function kartHTML(o, sinifId) {
       </div>
       <div class="text-xs text-slate-500">No: ${o.ogr_no}</div>
     </div>
-    <div class="flex items-center gap-1.5 flex-shrink-0">
-      <span class="${badgeCls} text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center">
-        ${o.tik_sayisi}
-      </span>
-      <span class="text-xs hidden sm:block text-slate-400">${noktalar}</span>
+    <div class="flex items-center gap-1.5 flex-shrink-0" title="Kırmızı: olumsuz · Yeşil: olumlu">
+      <span class="text-[10px] font-black text-red-600 hidden sm:inline">−</span>
+      <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center border border-red-200">${o.tik_sayisi}</span>
+      <span class="text-[10px] font-black text-emerald-600 hidden sm:inline">+</span>
+      <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center border border-emerald-200">${ol}</span>
+      <span class="text-xs hidden md:block text-slate-400">${noktalar}</span>
     </div>
     <div class="flex gap-1 flex-shrink-0 ml-auto flex-wrap justify-end">
       <button type="button" title="Pozitif rozet" onclick="pozitifRozet(${o.id})"
@@ -740,7 +753,7 @@ function kartHTML(o, sinifId) {
       <button type="button" onclick="olumluModalAc(${o.id}, ${adJs}, ${sinifId})"
               class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">+ Olumlu</button>
       <button type="button" onclick="tikModalAc(${o.id}, ${adJs}, ${sinifId})"
-              class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold
+              class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold
                      px-2.5 py-1.5 rounded-lg transition whitespace-nowrap">
         + Tik
       </button>
