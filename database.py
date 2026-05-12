@@ -5,6 +5,7 @@ Veritabanı yönetimi + PDF'lerden alınan gerçek okul verileri.
 Tablolar: ogretmenler, siniflar, ogretmen_sinif, ogrenciler, tik_kayitlari
 """
 
+import json
 import sqlite3
 import os
 import uuid
@@ -687,44 +688,60 @@ def tik_ekle(ogrenci_id: int, ogretmen_id: int, kriter: str) -> int:
 def tek_ogrenci_sifirla(ogrenci_id: int):
     con = _conn()
     con.execute("DELETE FROM tik_kayitlari WHERE ogrenci_id = ?", (ogrenci_id,))
+    _olumlu_davranis_migrate(con)
+    con.execute("DELETE FROM olumlu_davranis WHERE ogrenci_id = ?", (ogrenci_id,))
     con.commit()
     con.close()
 
 
 def ogretmenin_ogrenci_tiklerini_sifirla(ogrenci_id: int, ogretmen_id: int) -> int:
-    """Bir öğrencide yalnızca ilgili öğretmenin verdiği olumsuz tikleri siler."""
+    """Bir öğrencide yalnızca ilgili öğretmenin verdiği olumlu/olumsuz tikleri siler."""
     con = _conn()
     cur = con.execute(
         "DELETE FROM tik_kayitlari WHERE ogrenci_id = ? AND ogretmen_id = ?",
         (ogrenci_id, ogretmen_id),
     )
-    con.commit()
     silinen = cur.rowcount if cur.rowcount is not None else 0
+    _olumlu_davranis_migrate(con)
+    cur2 = con.execute(
+        "DELETE FROM olumlu_davranis WHERE ogrenci_id = ? AND ogretmen_id = ?",
+        (ogrenci_id, ogretmen_id),
+    )
+    silinen += cur2.rowcount if cur2.rowcount is not None else 0
+    con.commit()
     con.close()
     return int(silinen)
 
 
 def sinif_sifirla(sinif_id: int):
-    """Bir sınıfın tüm tiklerini sıfırlar."""
+    """Bir sınıfın tüm olumlu/olumsuz tiklerini sıfırlar."""
     con = _conn()
     con.execute("""
         DELETE FROM tik_kayitlari
         WHERE ogrenci_id IN (SELECT id FROM ogrenciler WHERE sinif_id = ?)
     """, (sinif_id,))
+    _olumlu_davranis_migrate(con)
+    con.execute("DELETE FROM olumlu_davranis WHERE sinif_id = ?", (sinif_id,))
     con.commit()
     con.close()
 
 
 def ogretmenin_sinif_tiklerini_sifirla(sinif_id: int, ogretmen_id: int) -> int:
-    """Bir sınıfta yalnızca ilgili öğretmenin verdiği olumsuz tikleri siler."""
+    """Bir sınıfta yalnızca ilgili öğretmenin verdiği olumlu/olumsuz tikleri siler."""
     con = _conn()
     cur = con.execute("""
         DELETE FROM tik_kayitlari
         WHERE ogretmen_id = ?
           AND ogrenci_id IN (SELECT id FROM ogrenciler WHERE sinif_id = ?)
     """, (ogretmen_id, sinif_id))
-    con.commit()
     silinen = cur.rowcount if cur.rowcount is not None else 0
+    _olumlu_davranis_migrate(con)
+    cur2 = con.execute(
+        "DELETE FROM olumlu_davranis WHERE sinif_id = ? AND ogretmen_id = ?",
+        (sinif_id, ogretmen_id),
+    )
+    silinen += cur2.rowcount if cur2.rowcount is not None else 0
+    con.commit()
     con.close()
     return int(silinen)
 
@@ -732,6 +749,8 @@ def ogretmenin_sinif_tiklerini_sifirla(sinif_id: int, ogretmen_id: int) -> int:
 def tum_tikleri_sifirla():
     con = _conn()
     con.execute("DELETE FROM tik_kayitlari")
+    _olumlu_davranis_migrate(con)
+    con.execute("DELETE FROM olumlu_davranis")
     con.commit()
     con.close()
 
@@ -2064,14 +2083,87 @@ _SIFIRLANACAK_TABLOLAR = [
     "taktik_formasyonu", "quiz_sonuclari", "odev_tamamlayanlar", "odevler",
     "gelisim_puan", "gelisim_gorevleri", "sandik_kayitlari", "telafi_gorevleri",
     "tebrik_kartlari", "avatar_envanter", "ogretmen_notlari", "hikaye_ilerleme",
-    "oyun_puanlari",
+    "oyun_puanlari", "bilgilendirmeler",
 ]
 
 
-def tum_verileri_sifirla() -> dict:
-    """Tik, lig, gamifikasyon vb. sıfırlanır. PDF analiz arşivi (rapor_arsiv) kasıtlı olarak
-    bu listede yoktur — üretilmiş analiz PDF/JSON kayıtları korunur."""
+def _sistem_yedekleri_init(con: sqlite3.Connection) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS sistem_yedekleri (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            tarih        TEXT NOT NULL,
+            ogretmen_id  INTEGER,
+            ogretmen_adi TEXT,
+            kapsam       TEXT NOT NULL,
+            veri_json    TEXT NOT NULL
+        )
+    """)
+
+
+def sistem_yedek_olustur(
+    ogretmen_id: int | None = None,
+    ogretmen_adi: str = "",
+    kapsam: str = "Tam sistem sıfırlama öncesi",
+) -> dict:
+    """Sıfırlanacak kullanıcı verilerini JSON olarak saklar; PDF analiz arşivi dahil edilmez."""
     con = _conn()
+    _sistem_yedekleri_init(con)
+    payload = {"tablolar": {}, "sayilar": {}}
+    toplam = 0
+    for tablo in _SIFIRLANACAK_TABLOLAR:
+        try:
+            rows = [dict(r) for r in con.execute(f"SELECT * FROM {tablo}").fetchall()]
+            payload["tablolar"][tablo] = rows
+            payload["sayilar"][tablo] = len(rows)
+            toplam += len(rows)
+        except Exception:
+            payload["tablolar"][tablo] = None
+            payload["sayilar"][tablo] = "tablo yok"
+    tarih = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cur = con.execute("""
+        INSERT INTO sistem_yedekleri (tarih, ogretmen_id, ogretmen_adi, kapsam, veri_json)
+        VALUES (?,?,?,?,?)
+    """, (
+        tarih,
+        ogretmen_id,
+        (ogretmen_adi or "")[:160],
+        kapsam[:200],
+        json.dumps(payload, ensure_ascii=False),
+    ))
+    con.commit()
+    yedek_id = cur.lastrowid
+    con.close()
+    return {"ok": True, "yedek_id": yedek_id, "tarih": tarih, "toplam": toplam}
+
+
+def sistem_yedek_listesi(limit: int = 10) -> list[dict]:
+    con = _conn()
+    _sistem_yedekleri_init(con)
+    rows = []
+    for r in con.execute("""
+        SELECT id, tarih, ogretmen_adi, kapsam, veri_json
+        FROM sistem_yedekleri
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,)).fetchall():
+        d = dict(r)
+        try:
+            payload = json.loads(d.pop("veri_json") or "{}")
+            sayilar = payload.get("sayilar") or {}
+            d["toplam"] = sum(v for v in sayilar.values() if isinstance(v, int))
+        except Exception:
+            d["toplam"] = 0
+        rows.append(d)
+    con.close()
+    return rows
+
+
+def tum_verileri_sifirla(ogretmen_id: int | None = None, ogretmen_adi: str = "") -> dict:
+    """Kullanıcıların ürettiği tüm veriler sıfırlanır.
+    PDF analiz arşivi (rapor_arsiv / rapor_arsiv_yedek) ve sistem yedekleri korunur."""
+    yedek = sistem_yedek_olustur(ogretmen_id, ogretmen_adi)
+    con = _conn()
+    _sistem_yedekleri_init(con)
     silinen = {}
     for tablo in _SIFIRLANACAK_TABLOLAR:
         try:
@@ -2082,7 +2174,7 @@ def tum_verileri_sifirla() -> dict:
             silinen[tablo] = "tablo yok"
     con.commit()
     con.close()
-    return {"ok": True, "silinen": silinen}
+    return {"ok": True, "silinen": silinen, "yedek": yedek}
 
 
 # ══════════════════════════════════════════════════════════════════════════

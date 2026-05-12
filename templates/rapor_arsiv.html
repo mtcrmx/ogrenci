@@ -40,8 +40,8 @@
 
     <div class="rounded-xl bg-indigo-50 border border-indigo-200 px-4 py-3 text-xs text-indigo-950">
       <strong class="block mb-1">Tam veri sıfırlama (admin)</strong>
-      «Tüm verileri sıfırla» tikleri ve oyun verilerini temizler; <strong>PDF analiz arşivini silmez</strong>.
-      Arşivi yalnızca bu sayfadaki kırmızı düğme ile taşıyabilirsiniz — o zaman da kayıtlar aşağıdaki geçmişten geri yüklenir.
+      «Tüm sistemi yedekle ve sıfırla» kullanıcıların girdiği verileri temizler; <strong>PDF analiz arşivini silmez</strong>.
+      Yedekleme ve tam sıfırlama işlemi ayrı admin sayfasındadır.
     </div>
 
     {% if kayitlar %}
@@ -78,19 +78,12 @@
     </p>
     {% endif %}
 
-    <div class="rounded-2xl border border-rose-300 bg-rose-50 p-4">
-      <h2 class="text-sm font-black text-rose-950 mb-2">PDF analiz verilerini sıfırla</h2>
-      <p class="text-xs text-rose-900/90 mb-3">
-        Aktif arşivdeki tüm PDF analizleri bu listeden kaldırılır; içerik silinmez —
-        otomatik olarak <strong>yedek geçmişe</strong> taşınır ve aşağıdan tek tuşla geri yüklenebilir.
+    <div class="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
+      <h2 class="text-sm font-black text-emerald-950 mb-2">PDF analiz arşivi korunur</h2>
+      <p class="text-xs text-emerald-900/90">
+        Bu ekrandaki raporlar silme/sıfırlama ekranından etkilenmez. Tam sistem sıfırlama yapılırken bu PDF arşivi
+        ve eski analiz yedekleri yerinde kalır.
       </p>
-      <form method="post" action="{{ url_for('rapor_arsiv_sifirla') }}"
-            onsubmit="return confirm('Aktif PDF arşivi yedeklenecek ve liste boşaltılacak. Onaylıyor musunuz?');">
-        <button type="submit"
-                class="w-full sm:w-auto rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-sm font-black px-4 py-2.5 shadow">
-          PDF analiz verilerini sıfırla (yedekle ve temizle)
-        </button>
-      </form>
     </div>
 
     {% if yedek_gruplari %}

@@ -36,7 +36,7 @@ from database import (
     ittifak_olustur, aktif_ittifaklar, ittifak_tamamla,
     ittifak_ogrenci_talebi, ittifak_onayla, ittifak_reddet,
     bekleyen_ogrenci_talepleri,
-    tum_verileri_sifirla,
+    tum_verileri_sifirla, sistem_yedek_listesi,
     quiz_sorular_getir, quiz_sonuc_kaydet, quiz_gunluk_dersleri,
     quiz_sinif_istatistik, quiz_sorulari_yukle,
     tik_dondur,
@@ -1586,15 +1586,7 @@ def rapor_arsiv_sayfa():
 @app.route("/rapor/arsiv/sifirla", methods=["POST"])
 @giris_zorunlu
 def rapor_arsiv_sifirla():
-    sonuc = rapor_arsiv_tumunu_yedekle_ve_sil(session["ogretmen_id"])
-    if sonuc.get("tasinan", 0) == 0:
-        flash("Aktif PDF arşivinde silinecek kayıt yok.", "info")
-    else:
-        flash(
-            f"{sonuc['tasinan']} analiz raporu güvenli yedeğe alındı; liste temizlendi. "
-            "Aşağıdan «Geri yükle» ile istediğiniz silme anına dönebilirsiniz.",
-            "success",
-        )
+    flash("PDF analiz arşivi artık bu ekrandan silinmiyor; raporlar sistem sıfırlansa bile korunur.", "info")
     return redirect(url_for("rapor_arsiv_sayfa"))
 
 
@@ -2284,7 +2276,8 @@ def admin_sifirla_sayfa():
     if not _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"]):
         abort(403)
     return render_template("sifirla.html",
-        ogretmen_adi=session.get("ogretmen_adi",""))
+        ogretmen_adi=session.get("ogretmen_adi",""),
+        sistem_yedekleri=sistem_yedek_listesi(8))
 
 @app.route("/api/admin/sifirla", methods=["POST"])
 @giris_zorunlu
@@ -2295,7 +2288,7 @@ def api_admin_sifirla():
     girilen = veri.get("sifre", "").strip()
     if girilen != SIFIRLAMA_SIFRESI:
         return jsonify({"ok": False, "sebep": "Sifre yanlis!"}), 403
-    sonuc = tum_verileri_sifirla()
+    sonuc = tum_verileri_sifirla(session["ogretmen_id"], session.get("ogretmen_adi", ""))
     return jsonify(sonuc)
 
 
