@@ -128,6 +128,7 @@ function addPlayer(p, team, mirror) {
     
     players.push({
         id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, team: team,
+        ozellikler: p.ozellikler || {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr},
         baseX: tx, baseY: ty,
         x: tx, y: ty, vx: 0, vy: 0,
         stamina: 100, // 0 to 100
@@ -203,7 +204,8 @@ function update() {
     } else {
         // Try to claim ball
         players.forEach(p => {
-            if (dist(p, ball) < 16 && ball.speed < 12 && p.actionCooldown <= 0) {
+            let interceptRadius = 14 + (p.ozellikler.defans / 20); // higher defense = wider intercept
+            if (dist(p, ball) < interceptRadius && ball.speed < 12 && p.actionCooldown <= 0) {
                 // Interception / receive
                 ball.owner = p; p.state = 'WITH_BALL'; p.hasBallTime = 0; p.stamina -= 5;
             }
@@ -214,31 +216,31 @@ function update() {
 
     // Player AI
     players.forEach(p => {
+        const isGK = Math.abs(p.baseY - p.team.defendY) < 50; // Check if goalkeeper
+        
         // Stamina logic
         if (p.stamina < 100 && p.state !== 'CHASE' && p.state !== 'WITH_BALL') {
-            p.stamina += 0.05; // recover
+            p.stamina += 0.05 + (p.ovr / 2000); // recover
         }
         
-        let speedMult = (p.ovr / 100) * 3.5; // Base speed based on rating
-        // Fatigue effect: drop to 60% speed if exhausted
-        speedMult *= Math.max(0.6, p.stamina / 100); 
+        let speedMult = (p.ozellikler.hiz / 100) * 4.0; // Base speed based on 'hiz'
+        // Fatigue effect: drop to 50% speed if exhausted
+        speedMult *= Math.max(0.5, p.stamina / 100); 
 
         if (p.actionCooldown > 0) p.actionCooldown--;
 
         if (p === ball.owner) {
             // DECISION ENGINE: HAS BALL
-            p.stamina -= 0.1; // dribbling tires
+            p.stamina -= 0.15; // dribbling tires faster
             if (p.stamina < 0) p.stamina = 0;
             
             const distToGoal = Math.abs(p.y - p.team.goalY);
-            const errorMargin = (100 - p.ovr) / 100; // 0.0 to 0.5 (lower ovr = higher error)
             
             if (p.actionCooldown <= 0) {
                 // Determine action
-                // 1. Shoot?
-                if (distToGoal < 280) {
+                // 1. Shoot? (Uses SUT)
+                if (distToGoal < 300) {
                     let pathClear = true;
-                    // simple check if opponent is directly in front
                     players.forEach(opp => {
                         if (opp.team !== p.team && opp.y > Math.min(p.y, p.team.goalY) && opp.y < Math.max(p.y, p.team.goalY)) {
                             if (Math.abs(opp.x - p.x) < 30) pathClear = false; // blocked
@@ -248,44 +250,41 @@ function update() {
                     if (pathClear || p.hasBallTime > 60 || Math.random() < 0.1) {
                         // SHOOT!
                         const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
-                        const errX = (Math.random() * 100 - 50) * errorMargin; // mistake
+                        const errorMarginSut = (100 - p.ozellikler.sut) / 100;
+                        const errX = (Math.random() * 140 - 70) * errorMarginSut; // mistake in aiming
                         const dir = normalize(gX + errX - p.x, p.team.goalY - p.y);
-                        const power = 18 + (p.ovr / 15);
+                        const power = 16 + (p.ozellikler.sut / 12);
                         ball.vx = dir.x * power; ball.vy = dir.y * power;
                         ball.owner = null; p.actionCooldown = 30;
                         return;
                     }
                 }
                 
-                // 2. Pass?
-                if (p.hasBallTime > 15 && Math.random() < 0.2) {
-                    // Evaluate best teammate
+                // 2. Pass? (Uses PAS)
+                if (p.hasBallTime > 15 && Math.random() < 0.25) {
                     let bestMate = null; let bestScore = -999;
                     players.forEach(m => {
                         if (m.team === p.team && m !== p) {
                             const d = dist(p, m);
-                            if (d > 50 && d < 400) {
+                            if (d > 50 && d < 450) {
                                 let score = 0;
-                                // reward if closer to goal
                                 if (Math.abs(m.y - p.team.goalY) < Math.abs(p.y - p.team.goalY)) score += 50;
-                                // penalty if opponents are near teammate
                                 let oppNear = 0;
                                 players.forEach(opp => { if (opp.team !== p.team && dist(m, opp) < 60) oppNear++; });
                                 score -= oppNear * 40;
-                                
                                 if (score > bestScore) { bestScore = score; bestMate = m; }
                             }
                         }
                     });
                     
                     if (bestMate && bestScore > -20) {
-                        // Execute Pass
-                        const errX = (Math.random() * 60 - 30) * errorMargin;
-                        const errY = (Math.random() * 60 - 30) * errorMargin;
+                        const errorMarginPas = (100 - p.ozellikler.pas) / 100;
+                        const errX = (Math.random() * 80 - 40) * errorMarginPas;
+                        const errY = (Math.random() * 80 - 40) * errorMarginPas;
                         const dir = normalize((bestMate.x+errX) - p.x, (bestMate.y+errY) - p.y);
-                        const passPower = 12 + (p.ovr/20);
+                        const passPower = 12 + (p.ozellikler.pas/20);
                         ball.vx = dir.x * passPower; ball.vy = dir.y * passPower;
-                        ball.targetPlayer = bestMate; // intention
+                        ball.targetPlayer = bestMate;
                         ball.owner = null; p.actionCooldown = 20;
                         return;
                     }
@@ -293,11 +292,10 @@ function update() {
             }
             
             // 3. Dribble
-            // Find open space towards goal
             const dir = normalize(GAME_WIDTH/2 - p.x, p.team.goalY - p.y);
-            // apply slight zig-zag based on ovr (better players dribble straighter)
-            const zig = Math.sin(timeTicks / 10) * errorMargin;
-            p.vx = (dir.x + zig) * speedMult * 0.7; // 0.7 = ball control slows you down
+            const errorMarginHiz = (100 - p.ozellikler.hiz) / 100;
+            const zig = Math.sin(timeTicks / 10) * errorMarginHiz;
+            p.vx = (dir.x + zig) * speedMult * 0.7; // slower with ball
             p.vy = dir.y * speedMult * 0.7;
             
         } else {
@@ -305,62 +303,68 @@ function update() {
             let targetX = p.baseX;
             let targetY = p.baseY;
             
-            // Tactical Shift (Takım Boyu / Defans Çizgisi)
-            const ballRelativeY = ball.y / GAME_HEIGHT; // 0 to 1
-            // Shift up to 150px up or down based on ball position
-            targetY = p.baseY + ((ballRelativeY - 0.5) * 200);
-
-            // Behavior
-            if (teamPossession === p.team) {
-                // We have the ball -> Support / Move into space
-                if (ball.targetPlayer === p) {
-                    // Ball is passed to me, run towards ball!
-                    targetX = ball.x + ball.vx*5;
-                    targetY = ball.y + ball.vy*5;
-                    p.state = 'CHASE';
-                } else {
-                    // Push forward slightly
-                    targetY += p.team.dirY * 50; 
-                    p.state = 'SUPPORT';
-                }
-            } else if (teamPossession && teamPossession !== p.team) {
-                // Opponent has ball -> Press or Defend
-                const dToBall = dist(p, ball);
+            // Goalkeeper specific logic
+            if (isGK) {
+                targetY = p.baseY; // GKs stay near goal line
+                targetX = Math.max(GAME_WIDTH/2 - 70, Math.min(GAME_WIDTH/2 + 70, ball.x)); // track ball X
                 
-                // Are we the closest?
-                let isClosest = true;
-                players.forEach(m => {
-                    if (m.team === p.team && m !== p && dist(m, ball) < dToBall) isClosest = false;
-                });
-                
-                if (isClosest || dToBall < 100) {
-                    // Press the ball!
-                    targetX = ball.x;
-                    targetY = ball.y;
-                    p.state = 'CHASE';
-                    p.stamina -= 0.05; // pressing drains stamina
-                } else {
-                    // Mark nearest opponent in zone
-                    p.state = 'IDLE';
+                // If ball is fast and in penalty box, DIVE
+                const distToGoalLine = Math.abs(ball.y - p.team.defendY);
+                if (distToGoalLine < 150 && ball.speed > 5) {
+                    p.state = 'GK_DIVE';
+                    targetX = ball.x + ball.vx * 10;
+                    targetY = ball.y + ball.vy * 10;
                 }
             } else {
-                // Loose ball -> Closest 2 players chase
-                let myTeamDist = [];
-                players.forEach(m => { if(m.team === p.team) myTeamDist.push({m:m, d:dist(m,ball)}); });
-                myTeamDist.sort((a,b)=>a.d - b.d);
-                if (myTeamDist[0].m === p || myTeamDist[1].m === p) {
-                    targetX = ball.x; targetY = ball.y;
-                    p.state = 'CHASE';
+                // Tactical Shift (Takım Boyu / Defans Çizgisi)
+                const ballRelativeY = ball.y / GAME_HEIGHT; // 0 to 1
+                targetY = p.baseY + ((ballRelativeY - 0.5) * 200);
+
+                if (teamPossession === p.team) {
+                    if (ball.targetPlayer === p) {
+                        targetX = ball.x + ball.vx*5;
+                        targetY = ball.y + ball.vy*5;
+                        p.state = 'CHASE';
+                    } else {
+                        targetY += p.team.dirY * 60; 
+                        p.state = 'SUPPORT';
+                    }
+                } else if (teamPossession && teamPossession !== p.team) {
+                    const dToBall = dist(p, ball);
+                    let isClosest = true;
+                    players.forEach(m => {
+                        if (m.team === p.team && m !== p && dist(m, ball) < dToBall) isClosest = false;
+                    });
+                    
+                    if (isClosest || dToBall < 120) {
+                        targetX = ball.x;
+                        targetY = ball.y;
+                        p.state = 'CHASE';
+                        p.stamina -= 0.05; // pressing drains stamina
+                    } else {
+                        p.state = 'IDLE';
+                    }
+                } else {
+                    let myTeamDist = [];
+                    players.forEach(m => { if(m.team === p.team) myTeamDist.push({m:m, d:dist(m,ball)}); });
+                    myTeamDist.sort((a,b)=>a.d - b.d);
+                    if (myTeamDist[0].m === p || myTeamDist[1].m === p) {
+                        targetX = ball.x; targetY = ball.y;
+                        p.state = 'CHASE';
+                    }
                 }
             }
 
-            // Move towards target smoothly
+            // Move towards target
             const dir = normalize(targetX - p.x, targetY - p.y);
             const d = dist(p, {x:targetX, y:targetY});
             
             if (d > 10) {
-                // If chasing, use full speed, otherwise jog
                 let curSpeed = p.state === 'CHASE' ? speedMult : speedMult * 0.6;
+                if (p.state === 'GK_DIVE') {
+                    // Dive speed depends on kaleci reflex stat
+                    curSpeed = (p.ozellikler.kaleci / 100) * 8.0; 
+                }
                 p.vx = dir.x * curSpeed;
                 p.vy = dir.y * curSpeed;
             } else {

@@ -640,6 +640,11 @@ def ogrenci_gelisim_panel():
     gl = gelisim_ligi()
     sinif_satir = next((s for s in gl if s["sinif_id"] == o["sinif_id"]), None)
     sinif_sira = next((i for i, s in enumerate(gl, 1) if s["sinif_id"] == o["sinif_id"]), None)
+    
+    # Yeni eklendi: Özellikler
+    tik_sayisi = ogrenci_tik_sayisi(oid)
+    ozellikler = ogrenci_ozellikleri_getir(oid, tik_sayisi)
+    
     return render_template(
         "ogrenci_xp_panel.html",
         ogrenci=o,
@@ -647,6 +652,7 @@ def ogrenci_gelisim_panel():
         sinif_satir=sinif_satir,
         sinif_sira=sinif_sira,
         sinif_sayisi=len(gl),
+        ozellikler=ozellikler
     )
 
 
@@ -845,6 +851,9 @@ def api_ogrenci_mac_2d_data():
                 pos = default_positions[i] if i < len(default_positions) else {"x": 50, "y": 50}
                 xp = ogr.get("tik_sayisi", 0)
                 ovr = min(99, 50 + int(xp * 0.8))
+                
+                oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
+                
                 players.append({
                     "id": ogr["id"],
                     "ad": ogr["ad_soyad"].split()[0],
@@ -853,7 +862,8 @@ def api_ogrenci_mac_2d_data():
                     "baseX": pos["x"],
                     "baseY": pos["y"],
                     "ovr": ovr,
-                    "renk": takim_renk
+                    "renk": takim_renk,
+                    "ozellikler": oz
                 })
             return players
             
@@ -862,6 +872,9 @@ def api_ogrenci_mac_2d_data():
             if ogr:
                 xp = ogr.get("tik_sayisi", 0)
                 ovr = min(99, 50 + int(xp * 0.8))
+                
+                oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
+                
                 players.append({
                     "id": ogr["id"],
                     "ad": ogr["ad_soyad"].split()[0],
@@ -870,7 +883,8 @@ def api_ogrenci_mac_2d_data():
                     "baseX": p.get("x", 50),
                     "baseY": p.get("y", 50),
                     "ovr": ovr,
-                    "renk": taktik.get("renk", takim_renk)
+                    "renk": taktik.get("renk", takim_renk),
+                    "ozellikler": oz
                 })
         return players
         
@@ -882,6 +896,17 @@ def api_ogrenci_mac_2d_data():
         "bizim_takim": {"ad": o["sinif_adi"], "oyuncular": bizim_oyuncular},
         "rakip_takim": {"ad": "Rakip", "oyuncular": rakip_oyuncular}
     })
+
+@app.route("/api/ogrenci/ozellik/artir", methods=["POST"])
+@ogrenci_giris_zorunlu
+def api_ogrenci_ozellik_artir():
+    oid = int(session["ogrenci_id"])
+    tik_sayisi = ogrenci_tik_sayisi(oid)
+    veri = request.get_json(silent=True) or {}
+    ozellik = veri.get("ozellik")
+    
+    sonuc = ogrenci_ozellik_artir(oid, ozellik, tik_sayisi)
+    return jsonify(sonuc)
 
 @app.route("/ogrenci/mac/2d")
 @ogrenci_giris_zorunlu

@@ -54,6 +54,34 @@
     {% endif %}
   </div>
 
+  {% if ozellikler %}
+  <section class="rounded-2xl border border-blue-500/40 bg-blue-950/20 overflow-hidden">
+    <div class="px-4 py-3 border-b border-blue-500/20 bg-blue-500/10 flex justify-between items-center">
+      <div>
+        <h2 class="font-black text-blue-100 text-sm">⚽ FM Oyuncu Özellikleri</h2>
+        <p class="text-[10px] text-blue-200/70 mt-1">XP puanlarınızı harcayarak sahada daha güçlü olun!</p>
+      </div>
+      <div class="text-right">
+        <span class="text-2xl font-black text-blue-400" id="kalan-puan">{{ ozellikler.kalan_puan }}</span>
+        <div class="text-[10px] text-blue-200/70">Kalan Puan</div>
+      </div>
+    </div>
+    <div class="p-4 space-y-3">
+      {% for oz, etiket, icon in [('hiz', 'Hız', '🏃'), ('sut', 'Şut', '🎯'), ('pas', 'Pas', '👟'), ('defans', 'Defans', '🛡️'), ('kaleci', 'Kaleci Refleks', '🧤')] %}
+      <div class="flex items-center justify-between gap-3">
+        <div class="w-24 text-xs font-bold text-slate-300">{{ icon }} {{ etiket }}</div>
+        <div class="flex-1 bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+          <div id="bar-{{ oz }}" class="bg-blue-500 h-full" style="width: {{ ozellikler[oz] }}%"></div>
+        </div>
+        <div class="w-8 text-right font-mono font-bold text-sm" id="val-{{ oz }}">{{ ozellikler[oz] }}</div>
+        <button type="button" onclick="ozellikArtir('{{ oz }}')" class="btn-artir w-8 h-8 rounded-lg bg-blue-600 font-black text-white hover:bg-blue-500 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" {% if ozellikler.kalan_puan <= 0 or ozellikler[oz] >= 99 %}disabled{% endif %}>+</button>
+      </div>
+      {% endendfor %}
+      <p id="ozellik-msg" class="text-xs text-center hidden mt-2"></p>
+    </div>
+  </section>
+  {% endif %}
+
   <section class="rounded-2xl border border-amber-500/40 bg-amber-950/20 overflow-hidden">
     <div class="px-4 py-3 border-b border-amber-500/20 bg-amber-500/10">
       <h2 class="font-black text-amber-100 text-sm">Bugünün görevi</h2>
@@ -101,6 +129,62 @@
 </main>
 
 <script>
+async function ozellikArtir(oz) {
+    const msg = document.getElementById("ozellik-msg");
+    const btns = document.querySelectorAll('.btn-artir');
+    btns.forEach(b => b.disabled = true);
+    msg.classList.remove("hidden", "text-red-300", "text-emerald-300");
+    msg.textContent = "Geliştiriliyor...";
+    msg.classList.add("text-blue-300");
+    
+    try {
+        const res = await fetch("{{ url_for('api_ogrenci_ozellik_artir') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ozellik: oz })
+        });
+        const data = await res.json();
+        
+        if (data.ok) {
+            let valEl = document.getElementById('val-' + oz);
+            let barEl = document.getElementById('bar-' + oz);
+            let puanEl = document.getElementById('kalan-puan');
+            
+            let currentVal = parseInt(valEl.textContent);
+            valEl.textContent = currentVal + 1;
+            barEl.style.width = (currentVal + 1) + '%';
+            puanEl.textContent = data.kalan;
+            
+            msg.textContent = "Özellik başarıyla geliştirildi!";
+            msg.classList.replace("text-blue-300", "text-emerald-300");
+            
+            // update buttons state
+            btns.forEach(b => {
+                let checkOz = b.getAttribute('onclick').match(/'([^']+)'/)[1];
+                let checkVal = parseInt(document.getElementById('val-' + checkOz).textContent);
+                if (data.kalan <= 0 || checkVal >= 99) {
+                    b.disabled = true;
+                } else {
+                    b.disabled = false;
+                }
+            });
+        } else {
+            msg.textContent = data.sebep || "Hata oluştu";
+            msg.classList.replace("text-blue-300", "text-red-300");
+            btns.forEach(b => {
+                let checkOz = b.getAttribute('onclick').match(/'([^']+)'/)[1];
+                let checkVal = parseInt(document.getElementById('val-' + checkOz).textContent);
+                if (parseInt(document.getElementById('kalan-puan').textContent) > 0 && checkVal < 99) {
+                    b.disabled = false;
+                }
+            });
+        }
+    } catch (e) {
+        msg.textContent = "Bağlantı hatası!";
+        msg.classList.replace("text-blue-300", "text-red-300");
+    }
+}
+
 (function () {
   const btn = document.getElementById("btn-gorev");
   const msg = document.getElementById("gorev-msg");
