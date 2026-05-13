@@ -71,6 +71,13 @@ const GAME_HEIGHT = 900;
 let timeTicks = 0;
 const TOTAL_TICKS = 180 * FPS; // 3 dakika gerçek zaman = 90 dk oyun zamanı
 
+// === PHYSICS CONSTANTS ===
+const GRASS_FRICTION = 0.965;    // Rolling friction on dry grass
+const AIR_DRAG = 0.002;          // Air resistance coefficient
+const BOUNCE_RESTITUTION = 0.6;  // Energy kept on bounce (40% loss)
+const MAGNUS_COEFF = 0.12;       // Spin curve strength
+const PLAYER_MASS = 75;          // kg (for collision calc)
+
 // State
 let isPlaying = false;
 let score1 = 0, score2 = 0;
@@ -107,7 +114,12 @@ function normalize(dx, dy) { const l = Math.hypot(dx, dy); return l===0 ? {x:0,y
 function randomRange(min, max) { return Math.random() * (max - min) + min; }
 
 // Entities
-let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, vx: 0, vy: 0, speed: 0, owner: null, targetPlayer: null, lastTouchedBy: null };
+let ball = {
+    x: GAME_WIDTH/2, y: GAME_HEIGHT/2, z: 0,
+    vx: 0, vy: 0, vz: 0,
+    spinX: 0, spinY: 0, // angular velocity for magnus
+    speed: 0, owner: null, targetPlayer: null, lastTouchedBy: null
+};
 let players = [];
 
 let team1 = { id: 1, name: "Biz", color: "#3b82f6", dirY: -1, goalY: 0, defendY: GAME_HEIGHT };
@@ -161,10 +173,11 @@ function addPlayer(p, team, mirror) {
         ozellikler: p.ozellikler || {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr},
         baseX: tx, baseY: ty,
         x: tx, y: ty, vx: 0, vy: 0,
-        stamina: 100, // 0 to 100
-        state: 'IDLE', // IDLE, CHASE, WITH_BALL, SUPPORT, RECOVER
+        mass: PLAYER_MASS + (Math.random()*20 - 10), // slight variation
+        stamina: 100,
+        state: 'IDLE',
         hasBallTime: 0,
-        actionCooldown: 0 // delay between decisions
+        actionCooldown: 0
     });
 }
 
@@ -173,8 +186,10 @@ function resetPositions() {
         p.x = p.baseX; p.y = p.baseY; p.vx = 0; p.vy = 0;
         p.state = 'IDLE'; p.stamina = 100;
     });
-    ball.x = GAME_WIDTH/2; ball.y = GAME_HEIGHT/2;
-    ball.vx = 0; ball.vy = 0; ball.owner = null; ball.targetPlayer = null;
+    ball.x = GAME_WIDTH/2; ball.y = GAME_HEIGHT/2; ball.z = 0;
+    ball.vx = 0; ball.vy = 0; ball.vz = 0;
+    ball.spinX = 0; ball.spinY = 0;
+    ball.owner = null; ball.targetPlayer = null;
     ball.lastTouchedBy = null;
     stateMachine = "PLAYING";
 }
@@ -427,9 +442,49 @@ function update() {
         return;
     }
 
-    // Ball Physics
-    ball.x += ball.vx; ball.y += ball.vy;
-    ball.vx *= 0.97; ball.vy *= 0.97; // Friction (less drag = more realistic rolling)
+    // === ADVANCED BALL PHYSICS ===
+    // Gravity
+    ball.vz -= 0.15;
+    ball.z += ball.vz;
+    
+    // Bounce off ground
+    if (ball.z <= 0) {
+        ball.z = 0;
+        if (ball.vz < -1) {
+            ball.vz = -ball.vz * BOUNCE_RESTITUTION; // bounce with energy loss
+            ball.vx *= 0.9; ball.vy *= 0.9; // horizontal energy loss on bounce
+        } else {
+            ball.vz = 0; // settle on ground
+        }
+    }
+    
+    // Ground friction (only when on ground)
+    if (ball.z <= 0.5) {
+        ball.vx *= GRASS_FRICTION;
+        ball.vy *= GRASS_FRICTION;
+    }
+    
+    // Air drag (when airborne, proportional to speed²)
+    if (ball.z > 0.5) {
+        const spd = Math.hypot(ball.vx, ball.vy);
+        if (spd > 0.5) {
+            const drag = AIR_DRAG * spd * spd;
+            const ratio = Math.max(0, 1 - drag / spd);
+            ball.vx *= ratio;
+            ball.vy *= ratio;
+        }
+    }
+    
+    // Magnus Effect (spin curves ball)
+    if (ball.z > 0 && (Math.abs(ball.spinX) > 0.01 || Math.abs(ball.spinY) > 0.01)) {
+        ball.vx += ball.spinX * MAGNUS_COEFF;
+        ball.vy += ball.spinY * MAGNUS_COEFF;
+        ball.spinX *= 0.97; ball.spinY *= 0.97; // spin decay
+    }
+    
+    // Apply velocity
+    ball.x += ball.vx;
+    ball.y += ball.vy;
     ball.speed = Math.hypot(ball.vx, ball.vy);
     
     // Goal Check: Ball must beat the goalkeeper
@@ -524,61 +579,65 @@ function update() {
         return;
     }
 
-    // Possession & Tackling Check
+    // === POSSESSION & PHYSICS-BASED TACKLING ===
     if (ball.owner) {
         ball.owner.hasBallTime++;
-        ball.x = ball.owner.x; 
-        ball.y = ball.owner.y;
-        ball.vx = 0; ball.vy = 0;
+        // Dribbling: ball follows player with slight impulse lag
+        const dribLag = 0.85;
+        ball.x = ball.x * (1-dribLag) + ball.owner.x * dribLag;
+        ball.y = ball.y * (1-dribLag) + ball.owner.y * dribLag;
+        ball.z = 0; ball.vx = 0; ball.vy = 0; ball.vz = 0;
+        ball.spinX = 0; ball.spinY = 0;
         ball.targetPlayer = null;
         ball.lastTouchedBy = ball.owner;
         
-        // Tackling
+        // Collision-based tackling (mass * velocity)
         for (let i = players.length - 1; i >= 0; i--) {
             let opp = players[i];
-            if (opp.team !== ball.owner.team && dist(opp, ball.owner) < 18 && opp.actionCooldown <= 0) {
-                const atkPower = ball.owner.ozellikler.hiz + Math.random()*20;
-                const defPower = opp.ozellikler.defans + Math.random()*20;
+            if (opp.team !== ball.owner.team && dist(opp, ball.owner) < 20 && opp.actionCooldown <= 0) {
+                // Momentum: mass × speed
+                const atkMomentum = ball.owner.mass * Math.hypot(ball.owner.vx, ball.owner.vy) + ball.owner.ozellikler.hiz * 0.5;
+                const defMomentum = opp.mass * Math.hypot(opp.vx, opp.vy) + opp.ozellikler.defans * 0.8;
+                const tackleRoll = Math.random() * 30;
                 
-                if (defPower > atkPower) {
-                    // Check for foul
-                    if (Math.random() < 0.20) {
-                        // FAUL!
+                if (defMomentum + tackleRoll > atkMomentum) {
+                    // Check foul
+                    const foulChance = 0.15 + (Math.hypot(opp.vx, opp.vy) > 3 ? 0.15 : 0); // slide tackle = higher foul risk
+                    if (Math.random() < foulChance) {
                         ball.owner.actionCooldown = 40;
                         opp.actionCooldown = 40;
                         stateMachine = "SET_PIECE";
                         setPieceTimer = 120;
-                        setPieceTeam = ball.owner.team; // fouled team gets the ball
+                        setPieceTeam = ball.owner.team;
                         
                         const inBox = Math.abs(ball.y - opp.team.defendY) < 150 && Math.abs(ball.x - GAME_WIDTH/2) < 120;
                         setPieceType = inBox ? "PENALTI" : "FRİKİK";
                         
                         let eventMsg = `${setPieceType}! ${opp.ad} sert girdi.`;
-                        
-                        // Cards
                         if (Math.random() < 0.3) {
                             if (Math.random() < 0.1) {
                                 eventMsg += ` 🟥 KIRMIZI KART!`;
-                                players.splice(i, 1); // remove player
+                                players.splice(i, 1);
                             } else {
                                 eventMsg += ` 🟨 SARI KART!`;
                             }
                         }
-                        
                         showEvent(eventMsg, 3000);
-                        
-                        // Frikik veya Penaltı'yı kullanması için topu faul yapılan oyuncuya ver
-                        ball.vx = 0; ball.vy = 0;
+                        ball.vx = 0; ball.vy = 0; ball.vz = 0;
                         if (setPieceType === "PENALTI") {
                             ball.x = GAME_WIDTH/2;
                             ball.y = opp.team.defendY === 0 ? 110 : GAME_HEIGHT-110;
-                            ball.owner.x = ball.x; ball.owner.y = ball.y + (opp.team.defendY === 0 ? 10 : -10);
                         }
-                        return; // break out
+                        return;
                     } else {
-                        // Clean tackle
-                        showEvent("Kritik müdahale!", 500);
-                        ball.owner.actionCooldown = 30; // stunned
+                        // Clean tackle with push-back (collision physics)
+                        const pushDir = normalize(ball.owner.x - opp.x, ball.owner.y - opp.y);
+                        const pushForce = (defMomentum - atkMomentum) * 0.02;
+                        ball.owner.vx += pushDir.x * pushForce;
+                        ball.owner.vy += pushDir.y * pushForce;
+                        
+                        showEvent(Math.hypot(opp.vx, opp.vy) > 3 ? "Kayarak müdahale!" : "Omuz omuza!", 500);
+                        ball.owner.actionCooldown = 25;
                         ball.owner = opp;
                         opp.state = 'WITH_BALL';
                         opp.hasBallTime = 0;
@@ -586,24 +645,29 @@ function update() {
                         return;
                     }
                 } else {
-                    opp.actionCooldown = 20; // left behind
+                    // Attacker wins: defender bounces off
+                    const pushDir = normalize(opp.x - ball.owner.x, opp.y - ball.owner.y);
+                    opp.vx += pushDir.x * 2;
+                    opp.vy += pushDir.y * 2;
+                    opp.actionCooldown = 15;
                 }
             }
         }
         
     } else {
-        // Try to claim ball - closest player first
+        // Interception: reach radius based on defans stat
         let bestClaim = null; let bestDist = 9999;
         players.forEach(p => {
-            const interceptRadius = 18 + (p.ozellikler.defans / 15);
+            const reachRadius = 16 + (p.ozellikler.defans / 12);
             const d = dist(p, ball);
-            if (d < interceptRadius && ball.speed < 15 && p.actionCooldown <= 0 && d < bestDist) {
+            if (d < reachRadius && ball.speed < 16 && p.actionCooldown <= 0 && d < bestDist) {
                 bestDist = d; bestClaim = p;
             }
         });
         if (bestClaim) {
             ball.owner = bestClaim; bestClaim.state = 'WITH_BALL';
             bestClaim.hasBallTime = 0; ball.lastTouchedBy = bestClaim;
+            ball.z = 0; ball.vz = 0;
         }
     }
 
@@ -632,7 +696,7 @@ function update() {
             const distToGoal = Math.abs(p.y - p.team.goalY);
             
             if (p.actionCooldown <= 0) {
-                // 1. Shoot? (Uses SUT) - only in shooting range and not too far
+                // 1. Shoot? Plase vs Sert Şut decision
                 if (distToGoal < 250) {
                     let pathClear = true;
                     if (distToGoal > 100) {
@@ -644,25 +708,50 @@ function update() {
                     }
                     
                     if (pathClear || p.hasBallTime > 55 || Math.random() < 0.08) {
-                        // SHOOT! Error increases with distance and low SUT XP
-                        const errorMarginSut = (100 - p.ozellikler.sut) / 100;
-                        const distFactor = distToGoal / 250; // farther = more error
-                        const totalErr = errorMarginSut + distFactor * 0.5;
+                        const errSut = (100 - p.ozellikler.sut) / 100;
+                        const distFactor = distToGoal / 250;
                         
-                        const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
-                        // Large error that can easily push it outside goal (or even out of bounds)
-                        const errX = (Math.random() * 400 - 200) * totalErr;
-                        const finalX = gX + errX;
-                        const dir = normalize(finalX - p.x, p.team.goalY - p.y);
-                        const power = 15 + (p.ozellikler.sut / 14);
-                        ball.vx = dir.x * power; ball.vy = dir.y * power;
+                        // Decide: plase (finesse) vs sert şut (power)
+                        const usePlase = distToGoal < 150 && Math.random() < 0.4;
+                        
+                        if (usePlase) {
+                            // PLASE: Low speed, high curve (spin), good accuracy
+                            const gX = GAME_WIDTH/2 + (Math.random() * 100 - 50);
+                            const errX = (Math.random() * 150 - 75) * errSut; // less error
+                            const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
+                            const power = 10 + (p.ozellikler.sut / 18);
+                            ball.vx = dir.x * power; ball.vy = dir.y * power;
+                            ball.vz = 2 + Math.random() * 2; // slight lift
+                            // High spin for curve
+                            ball.spinX = (Math.random() - 0.5) * 0.8;
+                            ball.spinY = 0;
+                            showEvent('🎯 Plase!', 800);
+                        } else {
+                            // SERT ŞUT: High speed, low spin, more error
+                            const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
+                            const totalErr = errSut + distFactor * 0.5;
+                            const errX = (Math.random() * 400 - 200) * totalErr;
+                            const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
+                            const power = 16 + (p.ozellikler.sut / 12);
+                            ball.vx = dir.x * power; ball.vy = dir.y * power;
+                            // Strike point: center = low, bottom = high lob
+                            const strikePoint = Math.random();
+                            if (strikePoint < 0.3) {
+                                ball.vz = 4 + Math.random() * 3; // hit bottom of ball = lob
+                            } else if (strikePoint < 0.6) {
+                                ball.vz = 1 + Math.random(); // center = low drive
+                            } else {
+                                ball.vz = 0; // top = ground shot
+                                ball.spinX = (Math.random()-0.5) * 0.3;
+                            }
+                            showEvent(distToGoal < 120 ? '🦵 Sert Şut!' : '🦵 Uzak Şut!', 800);
+                        }
                         ball.owner = null; p.actionCooldown = 40;
-                        showEvent(distToGoal < 120 ? '🦵 Şut!' : '🦵 Uzak şut!', 800);
                         return;
                     }
                 }
                 
-                // 2. Pass? (Uses PAS)
+                // 2. Pass with vectorial prediction (target run path)
                 if (p.hasBallTime > 15 && Math.random() < 0.30) {
                     let bestMate = null; let bestScore = -999;
                     players.forEach(m => {
@@ -680,15 +769,28 @@ function update() {
                     });
                     
                     if (bestMate && bestScore > -20) {
-                        const errorMarginPas = (100 - p.ozellikler.pas) / 100;
-                        // Dramatically increase pass error based on low XP
-                        const errX = (Math.random() * 300 - 150) * errorMarginPas;
-                        const errY = (Math.random() * 300 - 150) * errorMarginPas;
-                        const dir = normalize((bestMate.x+errX) - p.x, (bestMate.y+errY) - p.y);
-                        // Also vary the pass power randomly based on error margin
-                        const powerVariance = (Math.random() * 8 - 4) * errorMarginPas;
-                        const passPower = 12 + (p.ozellikler.pas/20) + powerVariance;
-                        ball.vx = dir.x * passPower; ball.vy = dir.y * passPower;
+                        const errPas = (100 - p.ozellikler.pas) / 100;
+                        
+                        // Vectorial prediction: target where teammate WILL be
+                        const passDist = dist(p, bestMate);
+                        const passSpeed = 12 + (p.ozellikler.pas / 20);
+                        const eta = passDist / passSpeed; // estimated arrival time in frames
+                        
+                        // Predict future position based on teammate's current velocity
+                        const predX = bestMate.x + bestMate.vx * eta * 0.6; // 60% prediction weight
+                        const predY = bestMate.y + bestMate.vy * eta * 0.6;
+                        
+                        // Add error
+                        const errX = (Math.random() * 200 - 100) * errPas;
+                        const errY = (Math.random() * 200 - 100) * errPas;
+                        const targetX = predX + errX;
+                        const targetY = predY + errY;
+                        
+                        const dir = normalize(targetX - p.x, targetY - p.y);
+                        const powerVar = (Math.random() * 6 - 3) * errPas;
+                        const pw = passSpeed + powerVar;
+                        ball.vx = dir.x * pw; ball.vy = dir.y * pw;
+                        ball.z = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0;
                         ball.targetPlayer = bestMate;
                         ball.owner = null; p.actionCooldown = 20;
                         return;
@@ -861,13 +963,28 @@ function draw() {
         ctx.fillRect(p.x - 10, p.y + 30, 20 * (p.stamina/100), 3);
     });
 
-    // Ball
-    ctx.beginPath(); ctx.arc(ball.x, ball.y, 7, 0, Math.PI*2);
-    ctx.fillStyle = '#fff'; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = '#000'; ctx.stroke();
-    // Ball shadow
+    // Ball shadow (on ground)
+    const shadowSize = Math.max(3, 7 - ball.z * 0.15);
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.arc(ball.x+3, ball.y+3, 7, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ball.x + 2, ball.y + 2 + ball.z * 0.4, shadowSize, 0, Math.PI*2); ctx.fill();
+    
+    // Ball (lifted by z)
+    const ballDrawY = ball.y - ball.z;
+    const ballSize = Math.max(5, 7 + ball.z * 0.15);
+    ctx.beginPath(); ctx.arc(ball.x, ballDrawY, ballSize, 0, Math.PI*2);
+    ctx.fillStyle = ball.z > 3 ? '#fde047' : '#fff'; // yellow when airborne
+    ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = '#000'; ctx.stroke();
+    
+    // Spin indicator when ball has curve
+    const spinMag = Math.hypot(ball.spinX || 0, ball.spinY || 0);
+    if (spinMag > 0.05 && ball.z > 1) {
+        ctx.strokeStyle = 'rgba(255,200,0,0.5)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ballDrawY);
+        ctx.lineTo(ball.x + (ball.spinX||0) * 40, ballDrawY + (ball.spinY||0) * 40);
+        ctx.stroke();
+    }
 }
 
 function gameLoop() {
