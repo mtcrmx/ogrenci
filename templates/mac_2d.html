@@ -170,7 +170,30 @@ function update() {
     
     if (timeTicks >= TOTAL_TICKS) {
         isPlaying = false; showEvent("Maç Sona Erdi!", 5000);
-        document.getElementById('close-btn').style.display = 'block'; return;
+        document.getElementById('close-btn').style.display = 'block';
+        
+        // Auto-submit result
+        if (window.opener && !window.opener.closed) {
+            try {
+                const spor = new URLSearchParams(window.location.search).get("spor") || "futbol";
+                const doc = window.opener.document;
+                const in1 = doc.getElementById("skor1-" + spor);
+                const in2 = doc.getElementById("skor2-" + spor);
+                if (in1 && in2) {
+                    in1.value = score1;
+                    in2.value = score2;
+                    // Find the parent form
+                    const form = in1.closest('form');
+                    if (form) {
+                        form.submit();
+                        setTimeout(() => showEvent("Sonuç öğretmene başarıyla gönderildi!", 5000), 1000);
+                    }
+                }
+            } catch (e) {
+                console.error("Auto submit failed", e);
+            }
+        }
+        return;
     }
 
     // Set Piece State
@@ -641,8 +664,13 @@ function draw() {
 }
 
 function gameLoop() {
-    update();
-    draw();
+    try {
+        update();
+        draw();
+    } catch (e) {
+        console.error("Game loop error:", e);
+        // Continue animation even if error happens to prevent freeze
+    }
     requestAnimationFrame(gameLoop);
 }
 

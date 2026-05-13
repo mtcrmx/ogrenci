@@ -939,6 +939,7 @@ def ogrenci_taktik():
         mevkiler_json=_mevkiler_json(),
         ana_menu_url=url_for("ogrenci_mac_panel"),
         kaydet_url=url_for("api_ogrenci_taktik_kaydet"),
+        ben_id=oid,
     )
 
 

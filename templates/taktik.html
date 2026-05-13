@@ -296,6 +296,7 @@ const SINIF_ID  = {{ sinif_id }};
 const KAYDET_URL = {{ kaydet_url|default('/api/taktik/' ~ sinif_id ~ '/kaydet')|tojson }};
 const KADRO_HAM = {{ kadro | tojson }};
 const KAYIT     = {{ kayit | tojson }};
+const BEN_ID    = {{ ben_id | default('null') }};
 
 // DB'den gelen mevkiler: [{no, emoji, ad}]
 const MEVKILER_DB  = {{ mevkiler_json | tojson }};
@@ -703,7 +704,14 @@ function rolModalAc(id) {
   const o = oyuncular[id];
   document.getElementById('rol-oyuncu-adi').textContent = `${o.numara}. ${o.ad}`;
   const sec = document.getElementById('rol-secenekler');
+  
+  let ekstraBtn = '';
+  if (typeof BEN_ID !== 'undefined' && BEN_ID === id) {
+    ekstraBtn = `<a href="/ogrenci/gelisim" class="block w-full text-center py-2 mb-3 rounded-xl text-xs font-black bg-amber-600 hover:bg-amber-500 text-white transition shadow-[0_0_15px_rgba(217,119,6,0.4)] border border-amber-400/50">💪 Özelliklerimi Dağıt (XP)</a>`;
+  }
+  
   sec.innerHTML = `
+    ${ekstraBtn}
     <div class="grid grid-cols-2 gap-1.5 mb-3">
       ${MEVKILER.map(m => `
         <button onclick="rolSec('${m}')"
