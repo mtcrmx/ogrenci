@@ -12,6 +12,7 @@ from flask import (
     session, jsonify, send_file, make_response, flash, abort,
 )
 from database import (
+    ogrenci_ozellikleri_getir, ogrenci_ozellik_artir,
     initialize_db, KRITERLER, OLUMLU_KRITERLER,
     tum_ogretmenler, tum_sifre_listesi,
     ogretmen_dogrula, ogretmen_id_bul, ogretmen_siniflari,

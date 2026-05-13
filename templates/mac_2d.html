@@ -81,11 +81,15 @@ function normalize(dx, dy) { const l = Math.hypot(dx, dy); return l===0 ? {x:0,y
 function randomRange(min, max) { return Math.random() * (max - min) + min; }
 
 // Entities
-let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, vx: 0, vy: 0, speed: 0, owner: null, targetPlayer: null };
+let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, vx: 0, vy: 0, speed: 0, owner: null, targetPlayer: null, lastTouchedBy: null };
 let players = [];
 
 let team1 = { id: 1, name: "Biz", color: "#3b82f6", dirY: -1, goalY: 0, defendY: GAME_HEIGHT };
 let team2 = { id: 2, name: "Rakip", color: "#ef4444", dirY: 1, goalY: GAME_HEIGHT, defendY: 0 };
+
+let setPieceType = "";
+let setPieceTimer = 0;
+let setPieceTeam = null;
 
 async function loadData() {
   try {
@@ -145,6 +149,7 @@ function resetPositions() {
     });
     ball.x = GAME_WIDTH/2; ball.y = GAME_HEIGHT/2;
     ball.vx = 0; ball.vy = 0; ball.owner = null; ball.targetPlayer = null;
+    ball.lastTouchedBy = null;
     stateMachine = "PLAYING";
 }
 
@@ -168,18 +173,77 @@ function update() {
         document.getElementById('close-btn').style.display = 'block'; return;
     }
 
+    // Set Piece State
+    if (stateMachine === "SET_PIECE") {
+        timeTicks++;
+        // Players reposition
+        players.forEach(p => {
+            if (p === ball.owner) return; // throw-in taker stays
+            
+            let targetX = p.baseX;
+            let targetY = p.baseY;
+            
+            if (setPieceType === "KORNER") {
+                // Crowd the penalty box
+                if (p.team === setPieceTeam) {
+                    targetX = GAME_WIDTH/2 + (Math.random()*100 - 50);
+                    targetY = setPieceTeam.dirY === -1 ? 100 : GAME_HEIGHT - 100; // Opponent goal
+                } else {
+                    targetX = GAME_WIDTH/2 + (Math.random()*100 - 50);
+                    targetY = setPieceTeam.dirY === -1 ? 80 : GAME_HEIGHT - 80; // Own goal
+                }
+            } else if (setPieceType === "TAC") {
+                // Players move slightly towards ball
+                targetX = p.baseX * 0.5 + ball.x * 0.5 + (Math.random()*60-30);
+                targetY = p.baseY * 0.7 + ball.y * 0.3 + (Math.random()*60-30);
+            }
+
+            const dir = normalize(targetX - p.x, targetY - p.y);
+            const d = dist(p, {x:targetX, y:targetY});
+            if (d > 5) {
+                p.x += dir.x * 2; p.y += dir.y * 2;
+            }
+        });
+
+        setPieceTimer--;
+        if (setPieceTimer <= 0) {
+            // Take the set piece
+            if (ball.owner) {
+                const p = ball.owner;
+                // find teammate
+                let bestMate = null; let bestScore = -999;
+                players.forEach(m => {
+                    if (m.team === p.team && m !== p) {
+                        const score = -dist(p, m) + (setPieceType === "KORNER" ? -dist(m, {x:GAME_WIDTH/2, y:p.team.goalY}) : 0);
+                        if (score > bestScore) { bestScore = score; bestMate = m; }
+                    }
+                });
+                
+                if (bestMate) {
+                    const dir = normalize(bestMate.x - p.x, bestMate.y - p.y);
+                    const power = setPieceType === "KORNER" ? 18 : 12;
+                    ball.vx = dir.x * power; ball.vy = dir.y * power;
+                    ball.targetPlayer = bestMate;
+                } else {
+                    ball.vx = (GAME_WIDTH/2 - p.x) * 0.05; ball.vy = (p.team.goalY - p.y) * 0.05;
+                }
+                
+                ball.lastTouchedBy = p;
+                ball.owner = null;
+                p.actionCooldown = 30;
+            }
+            stateMachine = "PLAYING";
+            showEvent("Oyun devam ediyor!", 1000);
+        }
+        return;
+    }
+
     // Ball Physics
     ball.x += ball.vx; ball.y += ball.vy;
     ball.vx *= 0.95; ball.vy *= 0.95; // Friction
     ball.speed = Math.hypot(ball.vx, ball.vy);
     
-    // Bounds (bouncing)
-    if (ball.x < 5) { ball.x = 5; ball.vx *= -0.6; }
-    if (ball.x > GAME_WIDTH-5) { ball.x = GAME_WIDTH-5; ball.vx *= -0.6; }
-    if (ball.y < 5) { ball.y = 5; ball.vy *= -0.6; }
-    if (ball.y > GAME_HEIGHT-5) { ball.y = GAME_HEIGHT-5; ball.vy *= -0.6; }
-
-    // Goal Check
+    // Goal Check (priority)
     const goalLeft = GAME_WIDTH/2 - 80, goalRight = GAME_WIDTH/2 + 80;
     if (ball.y <= 10 && ball.x > goalLeft && ball.x < goalRight) {
         score1++; document.getElementById('score1').textContent = score1;
@@ -194,20 +258,91 @@ function update() {
         setTimeout(resetPositions, 4000); return;
     }
 
-    // Possession Check
+    // Out of bounds logic
+    let isOut = false;
+    if (ball.x < 0 || ball.x > GAME_WIDTH) {
+        isOut = true;
+        setPieceType = "TAC";
+        ball.x = Math.max(2, Math.min(GAME_WIDTH-2, ball.x));
+    } else if (ball.y < 0 || ball.y > GAME_HEIGHT) {
+        isOut = true;
+        const defendingTeam = ball.y < 0 ? team1 : team2;
+        if (ball.lastTouchedBy && ball.lastTouchedBy.team === defendingTeam) {
+            setPieceType = "KORNER";
+            ball.x = ball.x < GAME_WIDTH/2 ? 5 : GAME_WIDTH-5;
+            ball.y = ball.y < 0 ? 5 : GAME_HEIGHT-5;
+        } else {
+            setPieceType = "AUT";
+            ball.x = GAME_WIDTH/2;
+            ball.y = ball.y < 0 ? 60 : GAME_HEIGHT-60;
+        }
+    }
+
+    if (isOut) {
+        stateMachine = "SET_PIECE";
+        setPieceTimer = 90; // 1.5 seconds wait
+        setPieceTeam = ball.lastTouchedBy && ball.lastTouchedBy.team === team1 ? team2 : team1;
+        
+        // Pick a player to take it
+        let taker = null;
+        if (setPieceType === "AUT") {
+            // Find GK
+            taker = players.find(p => p.team === setPieceTeam && Math.abs(p.baseY - setPieceTeam.defendY) < 50);
+        }
+        if (!taker) {
+            let closest = null; let d = 9999;
+            players.forEach(p => {
+                if (p.team === setPieceTeam && dist(p, ball) < d) { d = dist(p, ball); closest = p; }
+            });
+            taker = closest;
+        }
+        
+        ball.vx = 0; ball.vy = 0;
+        ball.owner = taker;
+        taker.x = ball.x; taker.y = ball.y;
+        
+        showEvent(setPieceTeam.name + " " + setPieceType + " kullanacak", 2000);
+        return;
+    }
+
+    // Possession & Tackling Check
     if (ball.owner) {
         ball.owner.hasBallTime++;
-        ball.x = ball.owner.x + (ball.owner.team.dirY === -1 ? 0 : 0); // Keep on player
+        ball.x = ball.owner.x; 
         ball.y = ball.owner.y;
         ball.vx = 0; ball.vy = 0;
         ball.targetPlayer = null;
+        ball.lastTouchedBy = ball.owner;
+        
+        // Tackling: If an opponent is very close, calculate a duel
+        players.forEach(opp => {
+            if (opp.team !== ball.owner.team && dist(opp, ball.owner) < 18 && opp.actionCooldown <= 0) {
+                // Duel! Attacker's Hız vs Defender's Defans
+                const atkPower = ball.owner.ozellikler.hiz + Math.random()*20;
+                const defPower = opp.ozellikler.defans + Math.random()*20;
+                
+                if (defPower > atkPower) {
+                    // Defender won the tackle
+                    showEvent("Kritik müdahale!", 500);
+                    ball.owner.actionCooldown = 30; // stunned
+                    ball.owner = opp;
+                    opp.state = 'WITH_BALL';
+                    opp.hasBallTime = 0;
+                    ball.lastTouchedBy = opp;
+                } else {
+                    // Attacker dribbled past
+                    opp.actionCooldown = 20; // left behind
+                }
+            }
+        });
+        
     } else {
         // Try to claim ball
         players.forEach(p => {
-            let interceptRadius = 14 + (p.ozellikler.defans / 20); // higher defense = wider intercept
+            let interceptRadius = 14 + (p.ozellikler.defans / 20);
             if (dist(p, ball) < interceptRadius && ball.speed < 12 && p.actionCooldown <= 0) {
-                // Interception / receive
                 ball.owner = p; p.state = 'WITH_BALL'; p.hasBallTime = 0; p.stamina -= 5;
+                ball.lastTouchedBy = p;
             }
         });
     }
