@@ -161,7 +161,8 @@ function getTeamWithBall() {
 
 // AI Update Loop
 function update() {
-    if (!isPlaying || stateMachine !== "PLAYING") return;
+    if (!isPlaying) return;
+    if (stateMachine === "GOAL_CELEBRATION") return;
     timeTicks++;
     
     const gameMin = Math.floor((timeTicks / TOTAL_TICKS) * 90);
@@ -256,8 +257,10 @@ function update() {
                 
                 if (setPieceType === "PENALTI" || setPieceType === "FRİKİK") {
                     // Shoot directly at goal
+                    const errMargin = (100 - p.ozellikler.sut) / 100;
                     const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
-                    const dir = normalize(gX - p.x, p.team.goalY - p.y);
+                    const errX = (Math.random() * 200 - 100) * errMargin;
+                    const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
                     const power = setPieceType === "PENALTI" ? 22 : 18 + (p.ozellikler.sut / 12);
                     ball.vx = dir.x * power; ball.vy = dir.y * power;
                 } else {
@@ -271,8 +274,12 @@ function update() {
                     });
                     
                     if (bestMate) {
-                        const dir = normalize(bestMate.x - p.x, bestMate.y - p.y);
-                        const power = setPieceType === "KORNER" ? 18 : 12;
+                        const errMargin = (100 - p.ozellikler.pas) / 100;
+                        const errX = (Math.random() * 100 - 50) * errMargin;
+                        const errY = (Math.random() * 100 - 50) * errMargin;
+                        const dir = normalize((bestMate.x + errX) - p.x, (bestMate.y + errY) - p.y);
+                        const basePower = setPieceType === "KORNER" ? 18 : 12;
+                        const power = basePower + (p.ozellikler.pas / 20) + (Math.random()*4-2)*errMargin;
                         ball.vx = dir.x * power; ball.vy = dir.y * power;
                         ball.targetPlayer = bestMate;
                     } else {
@@ -375,14 +382,50 @@ function update() {
                 const defPower = opp.ozellikler.defans + Math.random()*20;
                 
                 if (defPower > atkPower) {
-                    // Clean tackle (Fouls removed per user request)
-                    showEvent("Kritik müdahale!", 500);
-                    ball.owner.actionCooldown = 30; // stunned
-                    ball.owner = opp;
-                    opp.state = 'WITH_BALL';
-                    opp.hasBallTime = 0;
-                    ball.lastTouchedBy = opp;
-                    return;
+                    // Check for foul
+                    if (Math.random() < 0.20) {
+                        // FAUL!
+                        ball.owner.actionCooldown = 40;
+                        opp.actionCooldown = 40;
+                        stateMachine = "SET_PIECE";
+                        setPieceTimer = 120;
+                        setPieceTeam = ball.owner.team; // fouled team gets the ball
+                        
+                        const inBox = Math.abs(ball.y - opp.team.defendY) < 150 && Math.abs(ball.x - GAME_WIDTH/2) < 120;
+                        setPieceType = inBox ? "PENALTI" : "FRİKİK";
+                        
+                        let eventMsg = `${setPieceType}! ${opp.ad} sert girdi.`;
+                        
+                        // Cards
+                        if (Math.random() < 0.3) {
+                            if (Math.random() < 0.1) {
+                                eventMsg += ` 🟥 KIRMIZI KART!`;
+                                players.splice(i, 1); // remove player
+                            } else {
+                                eventMsg += ` 🟨 SARI KART!`;
+                            }
+                        }
+                        
+                        showEvent(eventMsg, 3000);
+                        
+                        // Frikik veya Penaltı'yı kullanması için topu faul yapılan oyuncuya ver
+                        ball.vx = 0; ball.vy = 0;
+                        if (setPieceType === "PENALTI") {
+                            ball.x = GAME_WIDTH/2;
+                            ball.y = opp.team.defendY === 0 ? 110 : GAME_HEIGHT-110;
+                            ball.owner.x = ball.x; ball.owner.y = ball.y + (opp.team.defendY === 0 ? 10 : -10);
+                        }
+                        return; // break out
+                    } else {
+                        // Clean tackle
+                        showEvent("Kritik müdahale!", 500);
+                        ball.owner.actionCooldown = 30; // stunned
+                        ball.owner = opp;
+                        opp.state = 'WITH_BALL';
+                        opp.hasBallTime = 0;
+                        ball.lastTouchedBy = opp;
+                        return;
+                    }
                 } else {
                     opp.actionCooldown = 20; // left behind
                 }
