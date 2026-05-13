@@ -267,7 +267,7 @@ function update() {
     if (stateMachine === "SET_PIECE") {
         // Realistic player repositioning (Football Manager Style)
         const atkGoalY = setPieceTeam.goalY; // goal the attacking team targets
-        const defGoalY = setPieceTeam.goalY === 0 ? GAME_HEIGHT : 0; // defending team's goal
+        const defGoalY = setPieceTeam.goalY; // defending team's goal line is the target goal
         const atkDir = setPieceTeam.dirY; // -1 or 1
         
         let atkCount = 0;
@@ -431,7 +431,9 @@ function update() {
             if (ball.owner) {
                 const p = ball.owner;
                 
-                if (setPieceType === "PENALTI" || setPieceType === "FRİKİK") {
+                const goalDistance = dist(p, {x: GAME_WIDTH/2, y: p.team.goalY});
+                const directShot = setPieceType === "PENALTI" || (setPieceType === "FRİKİK" && goalDistance < 270);
+                if (directShot) {
                     // Shoot directly at goal
                     const errMargin = (100 - p.ozellikler.sut) / 100;
                     const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
@@ -570,7 +572,7 @@ function update() {
         ball.x = Math.max(2, Math.min(GAME_WIDTH-2, ball.x));
     } else if (ball.y < 0 || ball.y > GAME_HEIGHT) {
         isOut = true;
-        const defendingTeam = ball.y < 0 ? team1 : team2;
+        const defendingTeam = ball.y < 0 ? team2 : team1;
         if (ball.lastTouchedBy && ball.lastTouchedBy.team === defendingTeam) {
             setPieceType = "KORNER";
             ball.x = ball.x < GAME_WIDTH/2 ? 5 : GAME_WIDTH-5;
