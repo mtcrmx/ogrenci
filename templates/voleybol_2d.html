@@ -45,6 +45,7 @@ const rakip_id = urlParams.get('rakip_id');
 const FPS = 60;
 const GAME_WIDTH = 450;
 const GAME_HEIGHT = 900;
+const NET_Y = GAME_HEIGHT / 2;
 
 // === PHYSICS CONSTANTS ===
 const GRAVITY = 0.18;           // 9.81 m/s² scaled (~0.18 px/frame²)
@@ -69,7 +70,7 @@ let team2 = null;
 let players = [];
 let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, z: 0, vx: 0, vy: 0, vz: 0,
     spinX: 0, spinY: 0, // Magnus spin components
-    owner: null, lastTouchedBy: null, lastTeamTouched: null };
+    owner: null, lastTouchedBy: null, lastTeamTouched: null, serveFlight: false };
 let teamTouches = 0;
 let goalTimer = 0;
 let eventTimeout = null;
@@ -90,6 +91,21 @@ const normalize = (dx, dy) => {
     if (len === 0) return {x:0, y:0};
     return {x: dx/len, y: dy/len};
 };
+
+function clampPointToTeamCourt(team, x, y, buffer = 18) {
+    const minY = team === team1 ? NET_Y + buffer : buffer;
+    const maxY = team === team1 ? GAME_HEIGHT - buffer : NET_Y - buffer;
+    return {
+        x: Math.max(buffer, Math.min(GAME_WIDTH - buffer, x)),
+        y: Math.max(minY, Math.min(maxY, y)),
+    };
+}
+
+function clampPlayerToOwnCourt(p, buffer = 15) {
+    const pos = clampPointToTeamCourt(p.team, p.x, p.y, buffer);
+    p.x = pos.x;
+    p.y = pos.y;
+}
 
 async function loadData() {
   try {
@@ -168,7 +184,7 @@ function resetPositions() {
         });
     });
 
-    ball.vx = 0; ball.vy = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0; ball.owner = null;
+    ball.vx = 0; ball.vy = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0; ball.owner = null; ball.serveFlight = false;
     teamTouches = 0; ball.lastTeamTouched = null;
     
     if (stateMachine !== "MATCH_END") {
@@ -185,6 +201,7 @@ function resetPositions() {
         // Move server to service line
         server.x = serverTeam.side === 1 ? GAME_WIDTH - 40 : 40;
         server.y = serverTeam.side === 1 ? GAME_HEIGHT - 20 : 20;
+        clampPlayerToOwnCourt(server, 12);
         ball.x = server.x; ball.y = server.y; ball.z = 10;
         ball.owner = server;
         server.actionCooldown = 60; // delay
@@ -260,36 +277,45 @@ function update() {
             let p = ball.owner;
             if (p.actionCooldown > 0) { p.actionCooldown--; return; }
             
-            // Servis mutlaka rakip yarı sahayı hedefler; hata sadece hedefin yerini bozar.
+            // Servis normalde rakip sahaya düşer; düşük ihtimalle file veya aut olur.
             const errMargin = (100 - p.ozellikler.sut) / 100;
-            const errX = (Math.random() * 70 - 35) * errMargin;
-            const errY = (Math.random() * 55 - 25) * errMargin;
+            const faultRoll = Math.random();
+            const serveFault = faultRoll < 0.055 ? "net" : (faultRoll < 0.095 ? "out" : null);
+            const errX = (Math.random() * 58 - 29) * errMargin;
+            const errY = (Math.random() * 46 - 23) * errMargin;
             const courtMargin = 70;
-            const gX = Math.max(courtMargin, Math.min(GAME_WIDTH - courtMargin,
-                courtMargin + Math.random() * (GAME_WIDTH - courtMargin * 2) + errX));
             const targetTop = p.team === team1;
-            const gY = targetTop
-                ? Math.max(80, Math.min(GAME_HEIGHT / 2 - 70, 175 + errY))
-                : Math.max(GAME_HEIGHT / 2 + 70, Math.min(GAME_HEIGHT - 80, GAME_HEIGHT - 175 + errY));
-            
-            const dir = normalize(gX - p.x, gY - p.y);
-            const d = dist(p, {x:gX, y:gY});
-            
-            ball.vz = 12 + Math.random() * 2.5;
-            const airTime = Math.max(46, Math.min(72, d / 7.4));
-            const power = Math.max(5.5, d / airTime);
-            
-            ball.vx = dir.x * power;
-            ball.vy = dir.y * power;
-            if (targetTop && ball.vy > -5.2) ball.vy = -5.2;
-            if (!targetTop && ball.vy < 5.2) ball.vy = 5.2;
+            let gX = Math.max(courtMargin, Math.min(GAME_WIDTH - courtMargin,
+                courtMargin + Math.random() * (GAME_WIDTH - courtMargin * 2) + errX));
+            let gY = targetTop
+                ? Math.max(90, Math.min(NET_Y - 95, 150 + Math.random() * 165 + errY))
+                : Math.max(NET_Y + 95, Math.min(GAME_HEIGHT - 90, GAME_HEIGHT - 315 + Math.random() * 165 + errY));
+            let travelFrames = 72 + Math.random() * 10;
+
+            if (serveFault === "out") {
+                const outX = Math.random() < 0.5 ? -35 : GAME_WIDTH + 35;
+                gX = Math.random() < 0.45 ? outX : gX;
+                gY = targetTop ? 45 + Math.random() * 35 : GAME_HEIGHT - 80 + Math.random() * 35;
+                travelFrames = 68 + Math.random() * 8;
+            } else if (serveFault === "net") {
+                gX = GAME_WIDTH / 2 + (Math.random() * 160 - 80);
+                gY = NET_Y + (targetTop ? -8 : 8);
+                travelFrames = Math.max(38, Math.min(48, Math.abs(gY - p.y) / 10));
+            }
+
+            ball.vx = (gX - p.x) / travelFrames;
+            ball.vy = (gY - p.y) / travelFrames;
+            ball.vz = serveFault === "net"
+                ? 3.6 + Math.random() * 0.35
+                : Math.max(6.1, ((0.5 * GRAVITY * travelFrames * travelFrames) - ball.z) / travelFrames);
             // Magnus spin: float serve vs jump serve
-            ball.spinX = (Math.random() - 0.5) * 0.08 * (1 - errMargin);
-            ball.spinY = (Math.random() - 0.5) * 0.05 * (1 - errMargin);
+            ball.spinX = serveFault ? 0 : (Math.random() - 0.5) * 0.035 * (1 - errMargin);
+            ball.spinY = serveFault ? 0 : (Math.random() - 0.5) * 0.02 * (1 - errMargin);
             
             ball.owner = null;
             ball.lastTouchedBy = null; // Reset so server can receive return
             ball.lastTeamTouched = p.team;
+            ball.serveFlight = true;
             lastNetSide = p.team;
             teamTouches = 0;
             stateMachine = "PLAYING";
@@ -305,14 +331,16 @@ function update() {
     // Air drag (proportional to speed²)
     const speed2D = Math.hypot(ball.vx, ball.vy);
     if (speed2D > 0.1) {
-        const dragForce = AIR_DRAG * speed2D * speed2D;
+        const dragCoeff = ball.serveFlight ? AIR_DRAG * 0.16 : AIR_DRAG;
+        const dragForce = dragCoeff * speed2D * speed2D;
         const dragRatio = Math.max(0, 1 - dragForce / speed2D);
         ball.vx *= dragRatio;
         ball.vy *= dragRatio;
     }
     // Vertical air drag
     if (Math.abs(ball.vz) > 0.1) {
-        ball.vz *= (1 - AIR_DRAG * Math.abs(ball.vz) * 0.3);
+        const verticalDrag = ball.serveFlight ? AIR_DRAG * 0.08 : AIR_DRAG;
+        ball.vz *= (1 - verticalDrag * Math.abs(ball.vz) * 0.3);
     }
     
     // Magnus Effect (spin curves the ball in air)
@@ -332,6 +360,7 @@ function update() {
     // ========== FLOOR COLLISION (with bounce) ==========
     if (ball.z <= 0) {
         ball.z = 0;
+        ball.serveFlight = false;
         const isOut = ball.x < 0 || ball.x > GAME_WIDTH || ball.y < 0 || ball.y > GAME_HEIGHT;
         
         if (isOut) {
@@ -356,6 +385,7 @@ function update() {
             ball.vx *= NET_RESTITUTION;
             ball.vz = Math.max(ball.vz, -1) - 0.5; // net pushes ball down slightly
             ball.y = prevY; // push back to previous side
+            ball.serveFlight = false;
             ball.spinX = (ball.spinX || 0) * 0.3; // kill most spin
             ball.spinY = (ball.spinY || 0) * 0.3;
             showEvent("File!", 400);
@@ -368,6 +398,7 @@ function update() {
         teamTouches = 0;
         lastNetSide = ballNetSide;
         ball.lastTouchedBy = null; // Reset double-hit tracking on net crossing
+        ball.serveFlight = false;
     }
 
     // ========== PLAYER AI + HITBOX SYSTEM ==========
@@ -400,8 +431,9 @@ function update() {
             });
             
             if (closerCount < 2) {
-                targetX = predX;
-                targetY = predY;
+                const ownCourtTarget = clampPointToTeamCourt(p.team, predX, predY, 22);
+                targetX = ownCourtTarget.x;
+                targetY = ownCourtTarget.y;
             }
         }
         
@@ -418,12 +450,7 @@ function update() {
         p.x += p.vx; p.y += p.vy;
         
         // Court boundaries (players can't cross net)
-        p.x = Math.max(15, Math.min(GAME_WIDTH - 15, p.x));
-        if (p.team === team1) {
-            p.y = Math.max(NET_Y + 15, Math.min(GAME_HEIGHT - 15, p.y));
-        } else {
-            p.y = Math.max(15, Math.min(NET_Y - 15, p.y));
-        }
+        clampPlayerToOwnCourt(p);
         
         // ========== HITBOX & CONTACT DETECTION ==========
         const HITBOX_RADIUS = 22; // arm reach
@@ -444,6 +471,7 @@ function update() {
             
             ball.lastTouchedBy = p;
             ball.lastTeamTouched = p.team;
+            ball.serveFlight = false;
             teamTouches++;
             p.actionCooldown = 25;
             
