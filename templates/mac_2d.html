@@ -68,6 +68,7 @@ const spor = urlParams.get('spor') || 'futbol';
 const FPS = 60;
 const GAME_WIDTH = 600;
 const GAME_HEIGHT = 900;
+const MID_Y = GAME_HEIGHT / 2;
 let timeTicks = 0;
 const TOTAL_TICKS = 180 * FPS; // 3 dakika gerçek zaman = 90 dk oyun zamanı
 
@@ -112,6 +113,21 @@ function showEvent(text, duration=2000) {
 function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function normalize(dx, dy) { const l = Math.hypot(dx, dy); return l===0 ? {x:0,y:0} : {x:dx/l, y:dy/l}; }
 function randomRange(min, max) { return Math.random() * (max - min) + min; }
+function ownHalfBounds(team, buffer = 28) {
+    return team.defendY === 0
+        ? { minY: buffer, maxY: MID_Y - buffer }
+        : { minY: MID_Y + buffer, maxY: GAME_HEIGHT - buffer };
+}
+function isInOwnHalf(team, y) {
+    return team.defendY === 0 ? y < MID_Y : y > MID_Y;
+}
+function clampToOwnHalf(team, x, y, buffer = 28) {
+    const b = ownHalfBounds(team, buffer);
+    return {
+        x: Math.max(18, Math.min(GAME_WIDTH - 18, x)),
+        y: Math.max(b.minY, Math.min(b.maxY, y)),
+    };
+}
 
 // Entities
 let ball = {
@@ -292,14 +308,15 @@ function update() {
                 const isDef = p.team !== setPieceTeam;
                 if (isDef) defCount++; else atkCount++;
                 const dirToGoal = normalize(GAME_WIDTH/2 - ball.x, defGoalY - ball.y);
+                const ballInDefendingHalf = isInOwnHalf(p.team, ball.y);
                 
                 if (isGK && isDef) {
                     const goalCenterX = GAME_WIDTH/2;
-                    targetX = goalCenterX + (ball.x - goalCenterX) * 0.4;
-                    targetY = defGoalY === 0 ? 5 : GAME_HEIGHT - 5;
+                    targetX = goalCenterX + (ball.x - goalCenterX) * 0.25;
+                    targetY = defGoalY === 0 ? 18 : GAME_HEIGHT - 18;
                 } else if (isDef) {
                     const distToGoal = dist(ball, {x: GAME_WIDTH/2, y: defGoalY});
-                    const needsWall = distToGoal < 300;
+                    const needsWall = ballInDefendingHalf && distToGoal < 300;
                     const wallSize = needsWall ? Math.max(2, Math.min(5, Math.floor((350 - distToGoal)/40))) : 0;
                     
                     if (defCount <= wallSize) {
@@ -310,13 +327,15 @@ function update() {
                         targetX = wallCenterX + perpX * offset;
                         targetY = wallCenterY + perpY * offset;
                     } else {
-                        // Kalan savunmacılar kaleyi boşaltmadan, top ile kale arasında doğal hat kurar.
-                        const holdDistance = isDefensiveRole ? 145 : 205;
-                        const holdX = ball.x + dirToGoal.x * holdDistance;
-                        const holdY = ball.y + dirToGoal.y * holdDistance;
-                        const spread = (defCount % 2 === 0 ? 1 : -1) * (35 + (defCount % 4) * 18);
-                        targetX = holdX + (-dirToGoal.y * spread);
-                        targetY = holdY + (dirToGoal.x * spread);
+                        // Faulde savunan takım kendi yarı sahasında bekler ve kaleyi kapatan hat kurar.
+                        const half = ownHalfBounds(p.team, 42);
+                        const depth = isDefensiveRole ? 115 : (isForwardRole ? 285 : 205);
+                        const lineFromGoal = p.team.defendY === 0
+                            ? Math.min(half.maxY, p.team.defendY + depth)
+                            : Math.max(half.minY, p.team.defendY - depth);
+                        const sideSpread = (defCount % 2 === 0 ? 1 : -1) * (38 + (defCount % 4) * 22);
+                        targetX = GAME_WIDTH / 2 + sideSpread;
+                        targetY = lineFromGoal;
                     }
                 } else {
                     if (atkCount === 1) { // Short option
@@ -395,6 +414,11 @@ function update() {
             
             targetX = Math.max(15, Math.min(GAME_WIDTH-15, targetX));
             targetY = Math.max(15, Math.min(GAME_HEIGHT-15, targetY));
+            if ((setPieceType === "FRİKİK" || setPieceType === "PENALTI") && p.team !== setPieceTeam) {
+                const safePos = clampToOwnHalf(p.team, targetX, targetY, isGK ? 12 : 30);
+                targetX = safePos.x;
+                targetY = isGK ? (p.team.defendY === 0 ? 18 : GAME_HEIGHT - 18) : safePos.y;
+            }
             
             const dir = normalize(targetX - p.x, targetY - p.y);
             const d = dist(p, {x:targetX, y:targetY});
