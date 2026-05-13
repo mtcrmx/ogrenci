@@ -143,7 +143,7 @@
           class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex-shrink-0">
     ◀ Geri
   </button>
-  <a href="{{ url_for('index') }}"
+  <a href="{{ ana_menu_url|default(url_for('index')) }}"
      class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-800 hover:bg-blue-700 text-blue-100 transition flex-shrink-0">
     Ana Menü
   </a>
@@ -293,6 +293,7 @@
 // VERİ
 // ════════════════════════════════════════════════════════════════════════
 const SINIF_ID  = {{ sinif_id }};
+const KAYDET_URL = {{ kaydet_url|default('/api/taktik/' ~ sinif_id ~ '/kaydet')|tojson }};
 const KADRO_HAM = {{ kadro | tojson }};
 const KAYIT     = {{ kayit | tojson }};
 
@@ -723,7 +724,7 @@ async function kaydet() {
   });
   durum('⏳ Kaydediliyor...');
   try {
-    const res  = await fetch(`/api/taktik/${SINIF_ID}/kaydet`, {
+    const res  = await fetch(KAYDET_URL, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(veri),
     });

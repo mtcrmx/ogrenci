@@ -1168,6 +1168,56 @@ def _lig_haftalik_puan_artir(con, sinif_id: int) -> int:
     return puan
 
 
+def _lig_puan_artir_miktar(con, sinif_id: int, miktar: int) -> int:
+    """Lig tablosunda bir sinifa verilen miktar kadar normal puan ekler."""
+    miktar = max(0, int(miktar or 0))
+    _ensure_lig_tablolari(con)
+    hafta = _bu_hafta_pazartesi()
+    mevcut = con.execute(
+        "SELECT puan, hafta_basi FROM lig WHERE sinif_id=?", (sinif_id,)
+    ).fetchone()
+    if not mevcut:
+        con.execute(
+            "INSERT INTO lig (sinif_id, puan, hafta_basi) VALUES (?,?,?)",
+            (sinif_id, miktar, hafta),
+        )
+        puan = miktar
+    elif mevcut["hafta_basi"] != hafta:
+        con.execute(
+            "UPDATE lig SET puan=?, hafta_basi=? WHERE sinif_id=?",
+            (miktar, hafta, sinif_id),
+        )
+        puan = miktar
+    else:
+        con.execute("UPDATE lig SET puan=puan+? WHERE sinif_id=?", (miktar, sinif_id))
+        puan = mevcut["puan"] + miktar
+    tablo_var = con.execute(
+        "SELECT sinif_id FROM lig_mac_tablo WHERE sinif_id=?", (sinif_id,)
+    ).fetchone()
+    if tablo_var:
+        con.execute(
+            "UPDATE lig_mac_tablo SET puan=puan+?, ag=ag+1 WHERE sinif_id=?",
+            (miktar, sinif_id),
+        )
+    else:
+        con.execute(
+            "INSERT INTO lig_mac_tablo (sinif_id, galibiyet, beraberlik, maglubiyet, puan, ag) "
+            "VALUES (?, 0, 0, 0, ?, 1)",
+            (sinif_id, miktar),
+        )
+    return puan
+
+
+def lig_puan_artir(sinif_id: int, miktar: int = 3) -> dict:
+    con = _conn()
+    try:
+        puan = _lig_puan_artir_miktar(con, sinif_id, miktar)
+        con.commit()
+        return {"ok": True, "puan": puan}
+    finally:
+        con.close()
+
+
 def gunluk_mac_olustur() -> list[dict]:
     import random
     bugun = datetime.now().strftime("%Y-%m-%d")
@@ -3193,6 +3243,176 @@ def taktik_kadro_guncelle(sinif_id: int, oyuncular: dict) -> None:
 # ══════════════════════════════════════════════════════════════════════════
 # Quiz / Bilgi Yarisması
 # ══════════════════════════════════════════════════════════════════════════
+
+def _ogrenci_maclari_init(con) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS ogrenci_maclari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            olusturan_ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            sinif1_id INTEGER NOT NULL REFERENCES siniflar(id),
+            sinif2_id INTEGER NOT NULL REFERENCES siniflar(id),
+            skor1 INTEGER NOT NULL DEFAULT 0,
+            skor2 INTEGER NOT NULL DEFAULT 0,
+            aciklama TEXT NOT NULL DEFAULT '',
+            durum TEXT NOT NULL DEFAULT 'onay_bekliyor',
+            tarih TEXT NOT NULL,
+            onaylayan_ogretmen_id INTEGER REFERENCES ogretmenler(id),
+            onay_tarihi TEXT,
+            puan_isledi INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+
+
+def ogrenci_mac_olustur(ogrenci_id: int, rakip_sinif_id: int, skor1: int, skor2: int,
+                        aciklama: str = "") -> dict:
+    try:
+        skor1 = int(skor1)
+        skor2 = int(skor2)
+        rakip_sinif_id = int(rakip_sinif_id)
+    except Exception:
+        return {"ok": False, "sebep": "Skor ve rakip sinif gecersiz."}
+    if skor1 < 0 or skor2 < 0:
+        return {"ok": False, "sebep": "Skor negatif olamaz."}
+    if skor1 == skor2:
+        return {"ok": False, "sebep": "Lig puani icin macin kazanan sinifi olmali."}
+    con = _conn()
+    try:
+        _ogrenci_maclari_init(con)
+        ogr = con.execute(
+            "SELECT sinif_id FROM ogrenciler WHERE id=?", (ogrenci_id,)
+        ).fetchone()
+        if not ogr:
+            return {"ok": False, "sebep": "Ogrenci bulunamadi."}
+        sinif1_id = int(ogr["sinif_id"])
+        rakip = con.execute("SELECT id FROM siniflar WHERE id=?", (rakip_sinif_id,)).fetchone()
+        if not rakip:
+            return {"ok": False, "sebep": "Rakip sinif bulunamadi."}
+        if sinif1_id == rakip_sinif_id:
+            return {"ok": False, "sebep": "Rakip sinif kendi sinifiniz olamaz."}
+        con.execute("""
+            INSERT INTO ogrenci_maclari
+                (olusturan_ogrenci_id, sinif1_id, sinif2_id, skor1, skor2, aciklama, tarih)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            ogrenci_id, sinif1_id, rakip_sinif_id, skor1, skor2,
+            (aciklama or "").strip()[:500],
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+        ))
+        mac_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+        con.commit()
+        return {"ok": True, "id": mac_id}
+    finally:
+        con.close()
+
+
+def _ogrenci_mac_satirlari(con, where: str = "", params: tuple = (), limit: int = 100) -> list[dict]:
+    sql = f"""
+        SELECT m.*,
+               o.ad_soyad AS olusturan_adi,
+               s1.sinif_adi AS sinif1_adi,
+               s2.sinif_adi AS sinif2_adi,
+               og.ad_soyad AS onaylayan_adi,
+               CASE WHEN m.skor1 > m.skor2 THEN m.sinif1_id ELSE m.sinif2_id END AS kazanan_sinif_id,
+               CASE WHEN m.skor1 > m.skor2 THEN s1.sinif_adi ELSE s2.sinif_adi END AS kazanan_sinif_adi
+        FROM ogrenci_maclari m
+        JOIN ogrenciler o ON o.id = m.olusturan_ogrenci_id
+        JOIN siniflar s1 ON s1.id = m.sinif1_id
+        JOIN siniflar s2 ON s2.id = m.sinif2_id
+        LEFT JOIN ogretmenler og ON og.id = m.onaylayan_ogretmen_id
+        {where}
+        ORDER BY m.id DESC
+        LIMIT ?
+    """
+    return [dict(r) for r in con.execute(sql, (*params, limit)).fetchall()]
+
+
+def ogrenci_mac_listesi(sinif_id: int | None = None, durum: str | None = None,
+                        limit: int = 50) -> list[dict]:
+    con = _conn()
+    try:
+        _ogrenci_maclari_init(con)
+        kosullar = []
+        params: list = []
+        if sinif_id is not None:
+            kosullar.append("(m.sinif1_id = ? OR m.sinif2_id = ?)")
+            params.extend([sinif_id, sinif_id])
+        if durum:
+            kosullar.append("m.durum = ?")
+            params.append(durum)
+        where = "WHERE " + " AND ".join(kosullar) if kosullar else ""
+        return _ogrenci_mac_satirlari(con, where, tuple(params), limit)
+    finally:
+        con.close()
+
+
+def ogrenci_mac_detay(mac_id: int) -> dict | None:
+    con = _conn()
+    try:
+        _ogrenci_maclari_init(con)
+        rows = _ogrenci_mac_satirlari(con, "WHERE m.id = ?", (mac_id,), 1)
+        return rows[0] if rows else None
+    finally:
+        con.close()
+
+
+def ogretmen_onay_bekleyen_ogrenci_maclari(ogretmen_id: int, tum_siniflar: bool = False,
+                                           durum: str | None = "onay_bekliyor") -> list[dict]:
+    con = _conn()
+    try:
+        _ogrenci_maclari_init(con)
+        kosullar = []
+        params: list = []
+        if durum:
+            kosullar.append("m.durum = ?")
+            params.append(durum)
+        if not tum_siniflar:
+            ids = [r["sinif_id"] for r in con.execute(
+                "SELECT sinif_id FROM ogretmen_sinif WHERE ogretmen_id=?", (ogretmen_id,)
+            ).fetchall()]
+            if not ids:
+                return []
+            yer = ",".join("?" * len(ids))
+            kosullar.append(f"(m.sinif1_id IN ({yer}) OR m.sinif2_id IN ({yer}))")
+            params.extend(ids + ids)
+        where = "WHERE " + " AND ".join(kosullar) if kosullar else ""
+        return _ogrenci_mac_satirlari(con, where, tuple(params), 100)
+    finally:
+        con.close()
+
+
+def ogrenci_mac_onayla(mac_id: int, ogretmen_id: int, onay: bool = True) -> dict:
+    con = _conn()
+    try:
+        _ogrenci_maclari_init(con)
+        mac = con.execute("SELECT * FROM ogrenci_maclari WHERE id=?", (mac_id,)).fetchone()
+        if not mac:
+            return {"ok": False, "sebep": "Mac bulunamadi."}
+        if mac["durum"] != "onay_bekliyor":
+            return {"ok": False, "sebep": "Bu mac zaten islenmis."}
+        simdi = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if not onay:
+            con.execute("""
+                UPDATE ogrenci_maclari
+                SET durum='reddedildi', onaylayan_ogretmen_id=?, onay_tarihi=?
+                WHERE id=?
+            """, (ogretmen_id, simdi, mac_id))
+            con.commit()
+            return {"ok": True, "durum": "reddedildi"}
+        skor1, skor2 = int(mac["skor1"]), int(mac["skor2"])
+        if skor1 == skor2:
+            return {"ok": False, "sebep": "Berabere mac lig puani veremez."}
+        kazanan_id = int(mac["sinif1_id"] if skor1 > skor2 else mac["sinif2_id"])
+        yeni_puan = _lig_puan_artir_miktar(con, kazanan_id, 3)
+        con.execute("""
+            UPDATE ogrenci_maclari
+            SET durum='onaylandi', onaylayan_ogretmen_id=?, onay_tarihi=?, puan_isledi=1
+            WHERE id=?
+        """, (ogretmen_id, simdi, mac_id))
+        con.commit()
+        return {"ok": True, "durum": "onaylandi", "kazanan_sinif_id": kazanan_id, "puan": yeni_puan}
+    finally:
+        con.close()
+
 
 def _quiz_init(con) -> None:
     con.execute("""

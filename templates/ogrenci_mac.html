@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mac ve Taktik</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-white">
+  <header class="border-b border-slate-800 bg-slate-900/90 px-4 py-3">
+    <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="text-xs font-bold uppercase tracking-wide text-emerald-300">{{ ogrenci.sinif_adi }}</div>
+        <h1 class="text-xl font-black">Mac ve Taktik Paneli</h1>
+      </div>
+      <nav class="flex flex-wrap gap-2">
+        <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold">XP Panel</a>
+        <a href="{{ url_for('ogrenci_gorunum') }}" class="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold">Tik gecmisi</a>
+        <a href="{{ url_for('oyunlar') }}" class="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold">Oyunlar</a>
+        <a href="{{ url_for('ogrenci_cikis') }}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold">Cikis</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto grid max-w-5xl gap-4 px-4 py-5 lg:grid-cols-[1fr_1.2fr]">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="lg:col-span-2 space-y-2">
+          {% for kategori, mesaj in messages %}
+            <div class="rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">{{ mesaj }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <section class="space-y-4">
+      <div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+        <div class="text-sm font-black text-slate-200">Taktik tahtasi</div>
+        <p class="mt-1 text-sm text-slate-400">Sinif kadronuzu sahaya yerlestirin, rollerini belirleyin ve kaydedin.</p>
+        <a href="{{ url_for('ogrenci_taktik') }}"
+           class="mt-4 inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500">
+          Taktik hazirla
+        </a>
+      </div>
+
+      <form method="post" action="{{ url_for('ogrenci_mac_olustur_route') }}"
+            class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+        <div class="text-sm font-black text-slate-200">Mac sonucu gonder</div>
+        <div class="mt-4 space-y-3">
+          <label class="block">
+            <span class="text-xs font-bold text-slate-400">Rakip sinif</span>
+            <select name="rakip_sinif_id" required
+                    class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+              {% for sinif in siniflar %}
+                <option value="{{ sinif.id }}">{{ sinif.sinif_adi }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-xs font-bold text-slate-400">Bizim skor</span>
+              <input name="skor1" type="number" min="0" required value="1"
+                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+            </label>
+            <label class="block">
+              <span class="text-xs font-bold text-slate-400">Rakip skor</span>
+              <input name="skor2" type="number" min="0" required value="0"
+                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+            </label>
+          </div>
+          <label class="block">
+            <span class="text-xs font-bold text-slate-400">Not</span>
+            <textarea name="aciklama" rows="3"
+                      class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                      placeholder="Mac ne zaman oynandi, kimler katildi?"></textarea>
+          </label>
+          <button class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-black hover:bg-amber-500">
+            Ogretmen onayina gonder
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+      <div class="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <div class="text-sm font-black text-slate-200">Sinif maclari</div>
+          <div class="text-xs text-slate-500">Onaylaninca kazanan sinifa lig tablosunda +3 puan islenir.</div>
+        </div>
+      </div>
+      <div class="space-y-2">
+        {% for mac in maclar %}
+          <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="font-black">{{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}</div>
+              {% if mac.durum == 'onaylandi' %}
+                <span class="rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-black text-emerald-300">Onaylandi</span>
+              {% elif mac.durum == 'reddedildi' %}
+                <span class="rounded-full bg-rose-500/15 px-2 py-1 text-[11px] font-black text-rose-300">Reddedildi</span>
+              {% else %}
+                <span class="rounded-full bg-amber-500/15 px-2 py-1 text-[11px] font-black text-amber-300">Onay bekliyor</span>
+              {% endif %}
+            </div>
+            <div class="mt-1 text-xs text-slate-500">{{ mac.tarih }} · Kazanan: {{ mac.kazanan_sinif_adi }}</div>
+            {% if mac.aciklama %}
+              <div class="mt-2 text-sm text-slate-300">{{ mac.aciklama }}</div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="rounded-lg border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">
+            Henuz mac sonucu girilmedi.
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </main>
+</body>
+</html>

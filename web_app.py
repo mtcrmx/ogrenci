@@ -49,6 +49,9 @@ from database import (
     hikaye_modu, pazar_urunleri_ogrenci, pazar_satin_al, ogretmen_notu_ekle,
     ogrenci_rozetleri_yayin_map, rozet_emojileri_ve_metin,
     oyun_puani_kaydet, GOREV_SABLONLARI,
+    MEVKILER, taktik_yukle, taktik_kaydet,
+    ogrenci_mac_olustur, ogrenci_mac_listesi, ogrenci_mac_detay,
+    ogretmen_onay_bekleyen_ogrenci_maclari, ogrenci_mac_onayla,
     bilgilendirme_ekle, bilgilendirme_listesi, bilgilendirme_yayinlayan_icin_sil,
     son_bilgilendirme,
     rapor_arsiv_kaydet, rapor_arsiv_listesi, rapor_arsiv_pdf_oku,
@@ -119,6 +122,15 @@ _TOPLU_SIFIRLAMA_AD_SOYAD = "ADEM AKGÜL"
 def _toplu_sifirlamaya_izinli_mi(ogretmen_id: int) -> bool:
     beklenen = ogretmen_id_bul(_TOPLU_SIFIRLAMA_AD_SOYAD)
     return beklenen is not None and beklenen == ogretmen_id
+
+
+def _ogretmen_ogrenci_macina_erisebilir(ogretmen_id: int, mac: dict | None) -> bool:
+    if not mac:
+        return False
+    if _toplu_sifirlamaya_izinli_mi(ogretmen_id):
+        return True
+    siniflar = {s["id"] for s in ogretmen_siniflari(ogretmen_id)}
+    return int(mac["sinif1_id"]) in siniflar or int(mac["sinif2_id"]) in siniflar
 
 
 # Yalnızca rapor/analiz görebilen öğretmenler (`yetki=rapor`) bu endpoint’lere girebilir;
@@ -355,6 +367,10 @@ def _tum_siniflar() -> list[dict]:
     return rows
 
 
+def _mevkiler_json() -> list[dict]:
+    return [{"no": no, "emoji": emoji, "ad": ad} for no, emoji, ad in MEVKILER]
+
+
 def _ogrenci_bul(ogrenci_id: int) -> dict | None:
     from database import _conn as _db
     con = _db()
@@ -491,6 +507,19 @@ def _bildirimleri_hazirla() -> list[dict]:
             "detay": "Ogrencilerden gelen bekleyen ittifak talebi",
             "hedef": url_for("oduller"),
         })
+    if session.get("ogretmen_id"):
+        pending = ogretmen_onay_bekleyen_ogrenci_maclari(
+            int(session["ogretmen_id"]),
+            _toplu_sifirlamaya_izinli_mi(int(session["ogretmen_id"])),
+        )
+        if pending:
+            bildirimler.append({
+                "tur": "Ogrenci maci",
+                "renk": "amber",
+                "baslik": f"{len(pending)} mac onay bekliyor",
+                "detay": "Ogrencilerin girdigi futbol sonucu ogretmen onayi bekliyor",
+                "hedef": url_for("ogretmen_ogrenci_maclari"),
+            })
     for o in _ogrencilere_durum_ekle(tum_okul_ogrencileri()):
         if o["tik_sayisi"] >= OLUMSUZ_TIK_LIMIT:
             bildirimler.append({
@@ -637,6 +666,74 @@ def oyunlar():
         quiz_dersler=QUIZ_DERSLER.get(sinif_seviyesi, []),
         ders_emoji=DERS_EMOJI,
     )
+
+
+@app.route("/ogrenci/mac")
+@ogrenci_giris_zorunlu
+def ogrenci_mac_panel():
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        session.pop("ogrenci_giris", None)
+        session.pop("ogrenci_id", None)
+        return redirect(url_for("ogrenci_giris"))
+    siniflar = [s for s in _tum_siniflar() if int(s["id"]) != int(o["sinif_id"])]
+    maclar = ogrenci_mac_listesi(sinif_id=int(o["sinif_id"]), limit=30)
+    return render_template(
+        "ogrenci_mac.html",
+        ogrenci=o,
+        siniflar=siniflar,
+        maclar=maclar,
+    )
+
+
+@app.route("/ogrenci/mac/olustur", methods=["POST"])
+@ogrenci_giris_zorunlu
+def ogrenci_mac_olustur_route():
+    oid = int(session["ogrenci_id"])
+    sonuc = ogrenci_mac_olustur(
+        oid,
+        request.form.get("rakip_sinif_id", type=int),
+        request.form.get("skor1", type=int),
+        request.form.get("skor2", type=int),
+        request.form.get("aciklama", ""),
+    )
+    if sonuc.get("ok"):
+        flash("Mac sonucu ogretmen onayina gonderildi.", "success")
+    else:
+        flash(sonuc.get("sebep", "Mac kaydedilemedi."), "warning")
+    return redirect(url_for("ogrenci_mac_panel"))
+
+
+@app.route("/ogrenci/taktik")
+@ogrenci_giris_zorunlu
+def ogrenci_taktik():
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        return redirect(url_for("ogrenci_giris"))
+    sinif_id = int(o["sinif_id"])
+    return render_template(
+        "taktik.html",
+        sinif_id=sinif_id,
+        sinif_adi=o["sinif_adi"],
+        kadro=sinif_ogrencileri(sinif_id),
+        kayit=taktik_yukle(sinif_id),
+        mevkiler_json=_mevkiler_json(),
+        ana_menu_url=url_for("ogrenci_mac_panel"),
+        kaydet_url=url_for("api_ogrenci_taktik_kaydet"),
+    )
+
+
+@app.route("/api/ogrenci/taktik/kaydet", methods=["POST"])
+@ogrenci_giris_zorunlu
+def api_ogrenci_taktik_kaydet():
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        return jsonify({"ok": False, "sebep": "Ogrenci bulunamadi"}), 404
+    veri = request.get_json(silent=True) or {}
+    return jsonify(taktik_kaydet(int(o["sinif_id"]), json.dumps(veri, ensure_ascii=False)))
 
 
 @app.route("/api/oyun/quiz-sorular")
@@ -2180,19 +2277,85 @@ def api_quiz_istatistik(sinif_id):
 @app.route("/taktik/<int:sinif_id>")
 @giris_zorunlu
 def taktik(sinif_id):
-    return redirect(url_for("dashboard", sinif=sinif_id))
+    ogretmen_id = int(session["ogretmen_id"])
+    if not _ogretmen_sinifinda_mi(ogretmen_id, sinif_id) and not _toplu_sifirlamaya_izinli_mi(ogretmen_id):
+        abort(403)
+    sinif = next((s for s in _tum_siniflar() if int(s["id"]) == int(sinif_id)), None)
+    if not sinif:
+        abort(404)
+    return render_template(
+        "taktik.html",
+        sinif_id=sinif_id,
+        sinif_adi=sinif["sinif_adi"],
+        kadro=sinif_ogrencileri(sinif_id),
+        kayit=taktik_yukle(sinif_id),
+        mevkiler_json=_mevkiler_json(),
+        ana_menu_url=url_for("dashboard", sinif=sinif_id),
+        kaydet_url=url_for("api_taktik_kaydet", sinif_id=sinif_id),
+    )
 
 
 @app.route("/api/taktik/<int:sinif_id>")
 @giris_zorunlu
 def api_taktik_yukle(sinif_id):
-    return jsonify({})
+    ogretmen_id = int(session["ogretmen_id"])
+    if not _ogretmen_sinifinda_mi(ogretmen_id, sinif_id) and not _toplu_sifirlamaya_izinli_mi(ogretmen_id):
+        abort(403)
+    return jsonify(taktik_yukle(sinif_id))
 
 
 @app.route("/api/taktik/<int:sinif_id>/kaydet", methods=["POST"])
 @giris_zorunlu
 def api_taktik_kaydet(sinif_id):
-    return jsonify({"ok": False, "sebep": "Taktik tahtasi kaldirildi"})
+    ogretmen_id = int(session["ogretmen_id"])
+    if not _ogretmen_sinifinda_mi(ogretmen_id, sinif_id) and not _toplu_sifirlamaya_izinli_mi(ogretmen_id):
+        abort(403)
+    veri = request.get_json(silent=True) or {}
+    return jsonify(taktik_kaydet(sinif_id, json.dumps(veri, ensure_ascii=False)))
+
+
+@app.route("/ogrenci-maclari")
+@giris_zorunlu
+def ogretmen_ogrenci_maclari():
+    ogretmen_id = int(session["ogretmen_id"])
+    admin_mi = _toplu_sifirlamaya_izinli_mi(ogretmen_id)
+    bekleyenler = ogretmen_onay_bekleyen_ogrenci_maclari(ogretmen_id, admin_mi, "onay_bekliyor")
+    son_islenenler = ogretmen_onay_bekleyen_ogrenci_maclari(ogretmen_id, admin_mi, None)[:30]
+    return render_template(
+        "ogrenci_mac_onay.html",
+        bekleyenler=bekleyenler,
+        son_islenenler=son_islenenler,
+    )
+
+
+@app.route("/ogrenci-maclari/<int:mac_id>/onayla", methods=["POST"])
+@giris_zorunlu
+def ogretmen_ogrenci_mac_onayla(mac_id):
+    ogretmen_id = int(session["ogretmen_id"])
+    mac = ogrenci_mac_detay(mac_id)
+    if not _ogretmen_ogrenci_macina_erisebilir(ogretmen_id, mac):
+        abort(403)
+    sonuc = ogrenci_mac_onayla(mac_id, ogretmen_id, True)
+    flash(
+        "Mac onaylandi; kazanan sinifa +3 lig puani islendi." if sonuc.get("ok") else sonuc.get("sebep", "Mac onaylanamadi."),
+        "success" if sonuc.get("ok") else "warning",
+    )
+    return redirect(url_for("ogretmen_ogrenci_maclari"))
+
+
+@app.route("/ogrenci-maclari/<int:mac_id>/reddet", methods=["POST"])
+@giris_zorunlu
+def ogretmen_ogrenci_mac_reddet(mac_id):
+    ogretmen_id = int(session["ogretmen_id"])
+    mac = ogrenci_mac_detay(mac_id)
+    if not _ogretmen_ogrenci_macina_erisebilir(ogretmen_id, mac):
+        abort(403)
+    sonuc = ogrenci_mac_onayla(mac_id, ogretmen_id, False)
+    flash(
+        "Mac reddedildi." if sonuc.get("ok") else sonuc.get("sebep", "Mac reddedilemedi."),
+        "info" if sonuc.get("ok") else "warning",
+    )
+    return redirect(url_for("ogretmen_ogrenci_maclari"))
 
 
 # ══════════════════════════════════════════════════════════════════════════

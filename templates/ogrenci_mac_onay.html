@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Ogrenci Maclari{% endblock %}
+
+{% block body %}
+<main class="mx-auto max-w-6xl px-4 py-5">
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900">Ogrenci Mac Onaylari</h1>
+      <p class="text-sm text-slate-600">Ogrencilerin girdigi futbol sonuclari onaylaninca kazanan sinifa lig tablosunda +3 normal puan eklenir.</p>
+    </div>
+    <a href="{{ url_for('lig') }}" class="rounded-lg bg-amber-700 px-4 py-2 text-sm font-black text-white hover:bg-amber-800">Lig tablosu</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for kategori, mesaj in messages %}
+          <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">{{ mesaj }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <section class="rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-4 py-3">
+      <h2 class="font-black text-slate-900">Onay bekleyen maclar</h2>
+    </div>
+    <div class="divide-y divide-slate-100">
+      {% for mac in bekleyenler %}
+        <div class="grid gap-3 px-4 py-3 md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <div class="text-lg font-black text-slate-900">{{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}</div>
+            <div class="mt-1 text-sm text-slate-600">
+              Gonderen: {{ mac.olusturan_adi }} · {{ mac.tarih }} · Kazanan: <b>{{ mac.kazanan_sinif_adi }}</b>
+            </div>
+            {% if mac.aciklama %}
+              <div class="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{{ mac.aciklama }}</div>
+            {% endif %}
+          </div>
+          <div class="flex gap-2">
+            <form method="post" action="{{ url_for('ogretmen_ogrenci_mac_onayla', mac_id=mac.id) }}">
+              <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-black text-white hover:bg-emerald-800">Onayla +3</button>
+            </form>
+            <form method="post" action="{{ url_for('ogretmen_ogrenci_mac_reddet', mac_id=mac.id) }}">
+              <button class="rounded-lg bg-rose-700 px-4 py-2 text-sm font-black text-white hover:bg-rose-800">Reddet</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <div class="px-4 py-8 text-center text-sm text-slate-500">Onay bekleyen ogrenci maci yok.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="mt-5 rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-4 py-3">
+      <h2 class="font-black text-slate-900">Son kayitlar</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[760px] text-left text-sm">
+        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-4 py-3">Mac</th>
+            <th class="px-4 py-3">Durum</th>
+            <th class="px-4 py-3">Gonderen</th>
+            <th class="px-4 py-3">Onaylayan</th>
+            <th class="px-4 py-3">Tarih</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for mac in son_islenenler %}
+            <tr>
+              <td class="px-4 py-3 font-bold text-slate-800">{{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}</td>
+              <td class="px-4 py-3">
+                {% if mac.durum == 'onaylandi' %}
+                  <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-black text-emerald-700">Onaylandi</span>
+                {% elif mac.durum == 'reddedildi' %}
+                  <span class="rounded-full bg-rose-100 px-2 py-1 text-xs font-black text-rose-700">Reddedildi</span>
+                {% else %}
+                  <span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-black text-amber-700">Bekliyor</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-slate-600">{{ mac.olusturan_adi }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ mac.onaylayan_adi or "-" }}</td>
+              <td class="px-4 py-3 text-slate-500">{{ mac.tarih }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" class="px-4 py-8 text-center text-slate-500">Kayit yok.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+{% endblock %}
