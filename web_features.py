@@ -413,7 +413,7 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
         if not ogr:
             return jsonify({"ok": False, "sebep": "Öğrenci bulunamadı."})
         _execute("INSERT INTO mufettisler (ogrenci_id, sinif_id, tarih) VALUES (?, ?, ?)", (ogrenci_id, ogr["sinif_id"], _today()))
-        return jsonify({"ok": True, "silinen": silinen, "yedekler_korundu": True})
+        return jsonify({"ok": True})
 
     @app.route("/api/mufettis/degerlendir", methods=["POST"])
     @giris_zorunlu
@@ -543,7 +543,7 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
         for tablo in SIFIRLANACAK_TABLOLAR:
             silinen[tablo] = _tablo_temizle(tablo)
         _execute("UPDATE lig_puan SET galibiyet=0, beraberlik=0, maglubiyet=0, ag=0, puan=0, sezon_puan=0, guncel_seri=0, en_uzun_seri=0")
-        return jsonify({"ok": True})
+        return jsonify({"ok": True, "silinen": silinen, "yedekler_korundu": True})
 
 
 def _conn() -> sqlite3.Connection:
@@ -574,6 +574,102 @@ def _execute(sql: str, params=()):
     con.execute(sql, params)
     con.commit()
     con.close()
+
+
+def _admin_sifre_al() -> str:
+    data = request.get_json(silent=True) or {}
+    return (data.get("sifre") or request.form.get("sifre") or "").strip()
+
+
+def _admin_sifre_hatasi(admin_sifre: str):
+    if _admin_sifre_al() != admin_sifre:
+        return jsonify({"ok": False, "hata": "Yönetici şifresi hatalı."}), 403
+    return None
+
+
+def _tablo_temizle(tablo: str) -> int:
+    if tablo not in SIFIRLANACAK_TABLOLAR:
+        raise ValueError("İzin verilmeyen tablo.")
+    con = _conn()
+    try:
+        sayi = con.execute(f"SELECT COUNT(*) FROM {tablo}").fetchone()[0]
+        con.execute(f"DELETE FROM {tablo}")
+        con.commit()
+        return int(sayi)
+    finally:
+        con.close()
+
+
+def _yedek_listesi() -> list[dict]:
+    return _rows("""
+        SELECT id, ad, olusturan, tarih
+        FROM sistem_yedekleri
+        ORDER BY id DESC
+    """)
+
+
+def _yedek_olustur(olusturan: str) -> dict:
+    con = _conn()
+    try:
+        veri = {}
+        for tablo in YEDEK_TABLOLARI:
+            rows = [dict(r) for r in con.execute(f"SELECT * FROM {tablo}").fetchall()]
+            veri[tablo] = rows
+        tarih = datetime.now().isoformat(timespec="seconds")
+        ad = f"Sistem yedeği {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        con.execute(
+            "INSERT INTO sistem_yedekleri (ad, veri, olusturan, tarih) VALUES (?, ?, ?, ?)",
+            (ad, json.dumps(veri, ensure_ascii=False), olusturan, tarih),
+        )
+        yedek_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+        con.commit()
+        return {"id": yedek_id, "ad": ad, "olusturan": olusturan, "tarih": tarih}
+    finally:
+        con.close()
+
+
+def _yedek_geri_yukle(yedek_id: int) -> tuple[bool, dict | str]:
+    con = _conn()
+    try:
+        row = con.execute("SELECT veri FROM sistem_yedekleri WHERE id=?", (yedek_id,)).fetchone()
+        if not row:
+            return False, "Yedek bulunamadı."
+        veri = json.loads(row["veri"] or "{}")
+        con.execute("PRAGMA foreign_keys = OFF")
+        for tablo in reversed(YEDEK_TABLOLARI):
+            con.execute(f"DELETE FROM {tablo}")
+        geri_yuklenen = {}
+        for tablo in YEDEK_TABLOLARI:
+            rows = veri.get(tablo, [])
+            geri_yuklenen[tablo] = len(rows)
+            if not rows:
+                continue
+            kolonlar = list(rows[0].keys())
+            yer = ",".join("?" * len(kolonlar))
+            kolon_sql = ",".join(kolonlar)
+            for item in rows:
+                con.execute(
+                    f"INSERT INTO {tablo} ({kolon_sql}) VALUES ({yer})",
+                    [item.get(k) for k in kolonlar],
+                )
+        con.commit()
+        con.execute("PRAGMA foreign_keys = ON")
+        return True, geri_yuklenen
+    except Exception as exc:
+        con.rollback()
+        return False, str(exc)
+    finally:
+        con.close()
+
+
+def _yedek_sil(yedek_id: int) -> bool:
+    con = _conn()
+    try:
+        cur = con.execute("DELETE FROM sistem_yedekleri WHERE id=?", (yedek_id,))
+        con.commit()
+        return cur.rowcount > 0
+    finally:
+        con.close()
 
 
 def _init_feature_db():

@@ -8,13 +8,28 @@
 </head>
 <body class="min-h-screen flex items-center justify-center p-4" style="background:#030710">
 
-<div class="w-full max-w-md">
+<div class="w-full max-w-3xl">
 
   <!-- Başlık -->
   <div class="text-center mb-6">
     <div class="text-6xl mb-3">⚠️</div>
     <h1 class="text-white font-black text-2xl">Tüm Verileri Sıfırla</h1>
     <p class="text-red-400 text-sm mt-1">Bu işlem geri alınamaz!</p>
+  </div>
+
+  <!-- Yedekleme -->
+  <div class="rounded-2xl border border-blue-900/50 overflow-hidden mb-4" style="background:#0d1a30">
+    <div class="px-5 py-4 border-b border-blue-900/30" style="background:#071528">
+      <div class="text-blue-300 font-black text-sm">💾 Sistem Yedekleri</div>
+      <p class="text-slate-500 text-xs mt-1">Sıfırlama yapılsa bile bu yedekler korunur. Yedek sadece kendi satırındaki Sil butonuyla kaldırılır.</p>
+    </div>
+    <div class="p-5 space-y-3">
+      <button onclick="yedekle()"
+              class="w-full py-3 rounded-xl font-black text-sm bg-blue-700 hover:bg-blue-600 text-white transition">
+        💾 Yedek Oluştur
+      </button>
+      <div id="yedek-listesi" class="space-y-2"></div>
+    </div>
   </div>
 
   <!-- Kart -->
@@ -46,6 +61,7 @@
         <div>• Sınıf listesi</div>
         <div>• Öğrenci listesi</div>
         <div>• Soru bankası (quiz)</div>
+        <div>• Sistem yedekleri</div>
       </div>
     </div>
 
@@ -53,7 +69,7 @@
     <div class="p-5 space-y-4">
       <div>
         <label class="block text-slate-400 text-xs font-bold mb-2">
-          Onay şifresini gir: <span class="text-yellow-400">ERENLER2024</span>
+          Onay şifresini gir: <span class="text-yellow-400">ECadmin</span>
         </label>
         <input id="sifre-input" type="text" placeholder="Şifreyi buraya yaz..."
                class="w-full rounded-xl px-4 py-3 bg-slate-800 border border-slate-600
@@ -102,7 +118,8 @@
 </div>
 
 <script>
-const DOGRU_SIFRE = "ERENLER2024";
+const DOGRU_SIFRE = "ECadmin";
+let YEDEKLER = {{ yedekler | tojson }};
 
 function kontrol() {
   const val = document.getElementById('sifre-input').value.trim();
@@ -146,7 +163,7 @@ async function sifirla() {
                            .filter(v => typeof v === 'number')
                            .reduce((a,b) => a+b, 0);
       document.getElementById('sonuc-aciklama').textContent =
-        `${toplam} kayıt silindi. Öğrenci ve sınıf bilgileri korundu.`;
+        `${toplam} kayıt silindi. Öğrenci, sınıf ve yedek bilgileri korundu.`;
     } else {
       document.getElementById('sonuc-emoji').textContent = '❌';
       document.getElementById('sonuc-baslik').textContent = 'Hata!';
@@ -158,6 +175,91 @@ async function sifirla() {
     btn.textContent = '🗑 Tüm Verileri Sıfırla';
   }
 }
+
+function sifreDegeri() {
+  return document.getElementById('sifre-input').value.trim();
+}
+
+function sifreDogruMu() {
+  const ok = sifreDegeri() === DOGRU_SIFRE;
+  if (!ok) alert('Önce onay şifresini doğru gir.');
+  return ok;
+}
+
+async function adminPost(url) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({sifre: sifreDegeri()})
+  });
+  const data = await res.json();
+  if (!res.ok || !data.ok) throw new Error(data.hata || data.sebep || 'İşlem yapılamadı.');
+  return data;
+}
+
+function yedekleriCiz() {
+  const alan = document.getElementById('yedek-listesi');
+  if (!YEDEKLER.length) {
+    alan.innerHTML = '<div class="text-center text-slate-600 text-xs py-4">Henüz yedek yok.</div>';
+    return;
+  }
+  alan.innerHTML = YEDEKLER.map(y => `
+    <div class="rounded-xl border border-slate-700 px-3 py-3 flex flex-col sm:flex-row sm:items-center gap-2" style="background:#07111f">
+      <div class="flex-1 min-w-0">
+        <div class="text-white font-bold text-sm truncate">${y.ad}</div>
+        <div class="text-slate-500 text-[11px]">${String(y.tarih || '').replace('T', ' ')} · ${y.olusturan || 'Sistem'}</div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="yedekGeriYukle(${y.id})"
+                class="px-3 py-2 rounded-lg text-xs font-black bg-emerald-700 hover:bg-emerald-600 text-white transition">
+          Geri Yükle
+        </button>
+        <button onclick="yedekSil(${y.id})"
+                class="px-3 py-2 rounded-lg text-xs font-black bg-red-800 hover:bg-red-700 text-white transition">
+          Sil
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function yedekle() {
+  if (!sifreDogruMu()) return;
+  try {
+    const data = await adminPost('/api/admin/yedekle');
+    YEDEKLER = data.yedekler || [];
+    yedekleriCiz();
+    alert('Yedek oluşturuldu.');
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function yedekGeriYukle(id) {
+  if (!sifreDogruMu()) return;
+  if (!confirm('Bu yedeği geri yüklemek mevcut verileri yedekteki hale getirir. Devam edilsin mi?')) return;
+  try {
+    await adminPost(`/api/admin/yedek/${id}/geri-yukle`);
+    alert('Yedek geri yüklendi.');
+    location.reload();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function yedekSil(id) {
+  if (!sifreDogruMu()) return;
+  if (!confirm('Sadece bu yedek silinecek. Devam edilsin mi?')) return;
+  try {
+    const data = await adminPost(`/api/admin/yedek/${id}/sil`);
+    YEDEKLER = data.yedekler || [];
+    yedekleriCiz();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+yedekleriCiz();
 </script>
 </body>
 </html>
