@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Ödev Takibi{% endblock %}
+{% block body %}
+<main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+      {% for cat, msg in messages %}
+      <div class="rounded-2xl border px-4 py-3 text-sm font-bold
+                  {% if cat == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-900{% else %}border-amber-200 bg-amber-50 text-amber-900{% endif %}">
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900">Ödev Takibi</h1>
+      <p class="text-sm text-slate-500">Öğretmen ödev girer, yapan öğrenciyi işaretler; veli ve öğrenci sonucu görür.</p>
+    </div>
+    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+      {% for s in siniflar %}
+      <a href="{{ url_for('yoklama', sinif=s.id) }}"
+         class="rounded-xl px-3 py-2 text-sm font-bold {{ 'bg-blue-600 text-white' if aktif and aktif.id == s.id else 'bg-white border border-slate-200 text-slate-700' }}">
+        {{ s.sinif_adi }}
+      </a>
+      {% endfor %}
+    </div>
+  </header>
+
+  {% if aktif %}
+  <section class="grid lg:grid-cols-[360px_1fr] gap-4">
+    <div class="space-y-4">
+      <form method="POST" action="{{ url_for('odev_olustur') }}"
+            class="rounded-3xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
+        <input type="hidden" name="sinif_id" value="{{ aktif.id }}">
+        <div>
+          <h2 class="font-black text-slate-900">Yeni ödev</h2>
+          <p class="text-xs text-slate-500">{{ aktif.sinif_adi }} için ödev oluştur.</p>
+        </div>
+        <input name="baslik" required placeholder="Ödev başlığı"
+               class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        <input name="ders" placeholder="Ders / konu" value="Genel"
+               class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        <textarea name="aciklama" rows="3" placeholder="Açıklama"
+                  class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        <input type="date" name="son_tarih" required
+               class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        <button class="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 transition">
+          Ödevi Yayınla
+        </button>
+      </form>
+
+      <div class="rounded-3xl bg-slate-950 text-white p-4 shadow-sm">
+        <h2 class="font-black mb-3">Ödevler</h2>
+        <div class="space-y-2">
+          {% for od in odevler %}
+          {% set oran = ((od.tamamlayan or 0) * 100 / (od.toplam_ogrenci or 1))|round(0) %}
+          <a href="{{ url_for('yoklama', sinif=aktif.id, odev=od.id) }}"
+             class="block rounded-2xl border px-3 py-3 transition {{ 'bg-blue-600 border-blue-400' if secili_odev and secili_odev.id == od.id else 'bg-white/5 border-white/10 hover:bg-white/10' }}">
+            <div class="flex justify-between gap-2 text-sm font-black">
+              <span>{{ od.baslik }}</span>
+              <span>%{{ oran|int }}</span>
+            </div>
+            <div class="text-xs text-slate-300 mt-1">{{ od.ders }} · Son: {{ od.son_tarih }}</div>
+            <div class="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
+              <div class="h-full bg-emerald-400" style="width:{{ oran }}%"></div>
+            </div>
+          </a>
+          {% else %}
+          <p class="text-sm text-slate-400">Henüz ödev yok.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <section class="rounded-3xl bg-white border border-slate-200 overflow-hidden shadow-sm">
+      {% if secili_odev %}
+      {% set toplam = secili_odev.toplam_ogrenci or 1 %}
+      {% set oran = (secili_odev.tamamlayan * 100 / toplam)|round(0) %}
+      <div class="p-4 sm:p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+        <div class="flex flex-wrap justify-between gap-3">
+          <div class="min-w-0">
+            <h2 class="text-xl font-black break-words">{{ secili_odev.baslik }}</h2>
+            <p class="text-sm text-blue-100">{{ secili_odev.ders }} · Son teslim: {{ secili_odev.son_tarih }}</p>
+            {% if secili_odev.aciklama %}
+            <p class="text-sm text-blue-50 mt-2 break-words">{{ secili_odev.aciklama }}</p>
+            {% endif %}
+          </div>
+          <div class="text-left sm:text-right">
+            <div class="text-4xl font-black">{{ secili_odev.tamamlayan }}/{{ secili_odev.toplam_ogrenci }}</div>
+            <div class="text-xs text-blue-100">tamamlandı</div>
+          </div>
+        </div>
+        <div class="mt-4 h-3 rounded-full bg-white/20 overflow-hidden">
+          <div class="h-full bg-emerald-300 transition-all duration-700" style="width:{{ oran }}%"></div>
+        </div>
+      </div>
+      <div class="divide-y divide-slate-100">
+        {% for o in secili_odev.ogrenciler %}
+        <form method="POST" action="{{ url_for('odev_tamamla_route', odev_id=secili_odev.id, ogrenci_id=o.id) }}"
+              class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3">
+          <input type="hidden" name="sinif_id" value="{{ aktif.id }}">
+          <input type="hidden" name="tamamlandi" value="{{ 0 if o.tamamlandi else 1 }}">
+          <div class="min-w-0">
+            <div class="font-bold text-slate-800 break-words">{{ o.ad_soyad }}</div>
+            <div class="text-xs text-slate-500">No {{ o.ogr_no }}{% if o.tamamlanma_tarihi %} · {{ o.tamamlanma_tarihi }}{% endif %}</div>
+          </div>
+          <button class="rounded-xl px-4 py-2 text-sm font-black transition w-full sm:w-auto {{ 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' if o.tamamlandi else 'bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-800' }}">
+            {{ 'Yaptı ✓' if o.tamamlandi else 'Yaptı işaretle' }}
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="p-10 text-center text-slate-500">
+        <div class="text-5xl mb-3">📝</div>
+        <p class="font-bold">Bir ödev oluşturun veya soldan ödev seçin.</p>
+      </div>
+      {% endif %}
+    </section>
+  </section>
+  {% else %}
+  <section class="rounded-2xl bg-white border border-slate-200 p-8 text-center text-slate-500">Sınıf bulunamadı.</section>
+  {% endif %}
+</main>
+{% endblock %}

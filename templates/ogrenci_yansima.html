@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Günlük yansıma</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <header class="border-b border-slate-800 px-4 py-4 flex justify-between items-center max-w-lg mx-auto">
+    <h1 class="font-black">Günlük yansıma</h1>
+    <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="text-xs font-bold bg-indigo-600 px-3 py-1.5 rounded-lg">Panele dön</a>
+  </header>
+  <main class="max-w-lg mx-auto px-4 py-6 space-y-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="rounded-xl px-3 py-2 text-sm {% if cat=='success' %}bg-emerald-900/50 border border-emerald-700{% else %}bg-red-900/40{% endif %}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <form method="POST" class="space-y-3">
+      <label class="block text-sm text-slate-400">Bugün neyi iyi yaptın? (max ~800 karakter)</label>
+      <textarea name="metin" rows="5" required maxlength="800"
+                class="w-full rounded-2xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm"
+                placeholder="Kısa ve samimi yazman yeterli; öğretmen onayından sonra görünür olabilir."></textarea>
+      <button type="submit" class="w-full rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-black py-3">Gönder</button>
+    </form>
+    <section>
+      <h2 class="text-xs font-bold text-slate-500 uppercase mb-2">Geçmiş</h2>
+      <ul class="space-y-2 text-sm">
+        {% for y in gecmis %}
+        <li class="rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2">
+          <div class="text-xs text-slate-500">{{ y.tarih[:16] }} · {{ y.durum }}</div>
+          <p class="mt-1">{{ y.metin }}</p>
+          {% if y.ogretmen_notu %}<p class="text-xs text-cyan-300 mt-1">Öğretmen: {{ y.ogretmen_notu }}</p>{% endif %}
+        </li>
+        {% else %}
+        <li class="text-slate-500">Henüz kayıt yok.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

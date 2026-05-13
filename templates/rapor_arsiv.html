@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapor arşivi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <header class="bg-okul-800 text-white px-4 py-4 shadow">
+    <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h1 class="text-xl font-black">Kayıtlı analiz raporları</h1>
+        <p class="text-xs text-blue-200 mt-1">
+          Üretildiği andaki verinin PDF ve JSON anlık görüntüsü; tik silinse veya uygulama verisi sıfırlansa bile bu arşiv
+          <strong class="text-white">otomatik silinmez</strong>.
+        </p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <a href="{{ url_for('dashboard') }}" class="rounded-lg bg-white/15 px-3 py-2 text-xs font-bold hover:bg-white/25">Panele dön</a>
+        <a href="{{ url_for('rapor_ozet') }}" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black hover:bg-emerald-500">Rapor özeti</a>
+      </div>
+    </div>
+  </header>
+  <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+      {% for category, message in messages %}
+      <div class="rounded-xl px-4 py-3 text-sm font-bold border
+        {% if category == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-900
+        {% elif category == 'error' %}bg-red-50 border-red-200 text-red-900
+        {% else %}bg-slate-50 border-slate-200 text-slate-800{% endif %}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="rounded-xl bg-indigo-50 border border-indigo-200 px-4 py-3 text-xs text-indigo-950">
+      <strong class="block mb-1">Tam veri sıfırlama (admin)</strong>
+      «Tüm sistemi yedekle ve sıfırla» kullanıcıların girdiği verileri temizler; <strong>PDF analiz arşivini silmez</strong>.
+      Yedekleme ve tam sıfırlama işlemi ayrı admin sayfasındadır.
+    </div>
+
+    {% if kayitlar %}
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-800 text-white text-left">
+          <tr>
+            <th class="px-4 py-3 font-bold">Tarih</th>
+            <th class="px-4 py-3 font-bold">Kapsam</th>
+            <th class="px-4 py-3 font-bold text-right">Boyut</th>
+            <th class="px-4 py-3 font-bold text-right">İndir</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for k in kayitlar %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ k.olusturma }}</td>
+            <td class="px-4 py-3 text-slate-600 break-words max-w-[200px]">{{ k.kapsam }}</td>
+            <td class="px-4 py-3 text-right text-slate-500">
+              {% if k.pdf_boyutu %}{{ (k.pdf_boyutu / 1024)|round(1) }} KB{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <a href="{{ url_for('rapor_arsiv_indir', arsiv_id=k.id) }}"
+                 class="inline-block rounded-lg bg-blue-600 text-white text-xs font-black px-3 py-1.5 hover:bg-blue-700">PDF</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-center text-slate-500 py-8 rounded-2xl border border-dashed border-slate-300 bg-white">
+      Aktif listede kayıt yok. «Detaylı analiz PDF» ile yeni rapor oluşturun veya aşağıdan geçmiş silmeyi geri yükleyin.
+    </p>
+    {% endif %}
+
+    <div class="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
+      <h2 class="text-sm font-black text-emerald-950 mb-2">PDF analiz arşivi korunur</h2>
+      <p class="text-xs text-emerald-900/90">
+        Bu ekrandaki raporlar silme/sıfırlama ekranından etkilenmez. Tam sistem sıfırlama yapılırken bu PDF arşivi
+        ve eski analiz yedekleri yerinde kalır.
+      </p>
+    </div>
+
+    {% if yedek_gruplari %}
+    <div>
+      <h2 class="text-lg font-black text-slate-900 mb-2">Silme geçmişi — geri yükle</h2>
+      <p class="text-xs text-slate-600 mb-3">Her sıfırlama bir grup olarak saklanır; geri yükle dendiğinde raporlar tekrar üst listeye döner.</p>
+      <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-700 text-white text-left">
+            <tr>
+              <th class="px-4 py-3 font-bold">Silinme zamanı</th>
+              <th class="px-4 py-3 font-bold text-right">Rapor adedi</th>
+              <th class="px-4 py-3 font-bold text-right">İşlem</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for g in yedek_gruplari %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ g.silinme }}</td>
+              <td class="px-4 py-3 text-right text-slate-600">{{ g.adet }}</td>
+              <td class="px-4 py-3 text-right">
+                <form method="post"
+                      action="{{ url_for('rapor_arsiv_yedek_geri_yukle', grup_id=g.grup_id) }}"
+                      class="inline"
+                      onsubmit="return confirm('Bu gruptaki {{ g.adet }} raporu tekrar arşive eklemek istiyor musunuz?');">
+                  <button type="submit" class="rounded-lg bg-indigo-600 text-white text-xs font-black px-3 py-1.5 hover:bg-indigo-700">
+                    Geri yükle
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+</body>
+</html>

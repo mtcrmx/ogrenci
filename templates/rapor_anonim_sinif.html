@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Anonim sınıf özeti{% endblock %}
+{% block body %}
+<main class="max-w-2xl mx-auto px-4 py-6 space-y-4">
+  <h1 class="text-2xl font-black text-slate-900">Anonim sınıf özeti</h1>
+  <p class="text-sm text-slate-600">{{ sinif_adi }} — öğrenci isimleri gösterilmez; sunum ve paylaşım içindir.</p>
+  <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm space-y-2 text-sm">
+    <p>Öğrenci sayısı: <strong>{{ oz.ogrenci_sayisi }}</strong></p>
+    <p>Toplam tik: <strong>{{ oz.toplam_tik }}</strong></p>
+    <p>Ortalama tik: <strong>{{ oz.ortalama_tik }}</strong></p>
+    <div class="mt-4 space-y-1">
+      <p class="font-bold text-slate-700">Durum bantları</p>
+      {% for k, v in oz.dagilim.items() %}
+      <div class="flex justify-between border-b border-slate-100 py-1"><span>{{ k }}</span><span>{{ v }}</span></div>
+      {% endfor %}
+    </div>
+  </div>
+  <p class="text-xs text-slate-500">Bu sayfayı paylaşırken yine de okul içi KVKK kurallarına uyun.</p>
+  <a href="{{ url_for('rapor_ozet') }}" class="text-sm font-bold text-blue-700">← Geri</a>
+</main>
+{% endblock %}

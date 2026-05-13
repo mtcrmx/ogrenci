@@ -1,0 +1,9 @@
+{
+  "name": "Öğrenci Takip",
+  "short_name": "Takip",
+  "start_url": "/login",
+  "display": "standalone",
+  "background_color": "#0f2144",
+  "theme_color": "#1a3a6b",
+  "icons": []
+}

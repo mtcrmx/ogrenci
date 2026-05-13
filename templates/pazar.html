@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rozet Pazarı</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes rise { from { opacity:0; transform:translateY(14px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+    .urun { animation: rise .35s ease both; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
+<main class="max-w-7xl mx-auto px-4 py-5 space-y-5">
+  <header class="flex flex-wrap justify-between gap-3">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-black">Rozet Pazarı / Avatar Odası</h1>
+      <p class="text-sm text-slate-400 break-words">{{ ogrenci.ad_soyad }} · {{ gelisim.puan.xp }} XP · {{ urunler|length }} ürün</p>
+      <p class="text-xs text-amber-200/80 mt-1">Rozetleri XP ile aldığında isminin yanında yayın panosunda görünür.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="rounded-xl bg-indigo-700 px-4 py-2 text-xs font-black h-fit">XP Panel</a>
+      <a href="{{ url_for('oyunlar') }}" class="rounded-xl bg-emerald-800 px-4 py-2 text-xs font-black h-fit">Oyunlar</a>
+    </div>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+      {% for cat, msg in messages %}
+      <div class="rounded-xl border px-4 py-2 text-sm font-bold
+        {% if cat == 'success' %}border-emerald-500/40 bg-emerald-500/10 text-emerald-200{% else %}border-red-500/40 bg-red-500/10 text-red-200{% endif %}">
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <section class="grid grid-cols-2 md:grid-cols-5 gap-2">
+    {% for ad, renk in [('Yaygin','slate'),('Nadir','emerald'),('Epik','purple'),('Efsane','amber'),('Mitik','cyan')] %}
+    {% set sayi = urunler|selectattr('nadirlik','equalto',ad)|list|length %}
+    <a href="#{{ ad }}" class="rounded-2xl bg-{{ renk }}-500/10 border border-{{ renk }}-500/25 px-4 py-3">
+      <div class="text-xs font-black text-{{ renk }}-200">{{ ad }}</div>
+      <div class="text-2xl font-black">{{ sayi }}</div>
+    </a>
+    {% endfor %}
+  </section>
+
+  {% set stil = {
+    'Yaygin': ('border-slate-700','from-slate-900 to-slate-800','text-slate-200','bg-slate-700'),
+    'Nadir': ('border-emerald-500/40','from-emerald-950 to-slate-900','text-emerald-200','bg-emerald-600'),
+    'Epik': ('border-purple-500/45','from-purple-950 to-slate-900','text-purple-200','bg-purple-600'),
+    'Efsane': ('border-amber-500/50','from-amber-950 to-slate-900','text-amber-200','bg-amber-600'),
+    'Mitik': ('border-cyan-400/60','from-cyan-950 to-slate-900','text-cyan-100','bg-cyan-600')
+  } %}
+
+  {% for nadirlik in ['Yaygin', 'Nadir', 'Epik', 'Efsane', 'Mitik'] %}
+  {% set grup = urunler|selectattr('nadirlik','equalto',nadirlik)|list %}
+  <section id="{{ nadirlik }}" class="space-y-3">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="text-xl font-black">{{ nadirlik }} Ürünler</h2>
+      <span class="text-xs text-slate-500">{{ grup|length }} seçenek</span>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      {% for u in grup %}
+      {% set s = stil[nadirlik] %}
+      <form method="POST" action="{{ url_for('pazar_satin_al_route') }}"
+            class="urun rounded-3xl bg-gradient-to-br {{ s[1] }} border {{ s[0] }} p-4 relative overflow-hidden"
+            style="animation-delay:{{ loop.index0 * 35 }}ms">
+        <input type="hidden" name="urun_kodu" value="{{ u.kod }}">
+        <div class="absolute right-3 top-3 rounded-full bg-black/30 border border-white/10 px-2 py-0.5 text-[10px] font-black {{ s[2] }}">
+          {{ u.nadirlik }}
+        </div>
+        <div class="text-6xl">{{ u.emoji }}</div>
+        <div class="font-black mt-3 pr-16 break-words">{{ u.ad }}</div>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-xs text-slate-400 min-w-0 break-words">{{ u.kategori }}</span>
+          <span class="text-sm font-black {{ s[2] }} shrink-0">{{ u.fiyat }} XP</span>
+        </div>
+        <button class="mt-4 w-full rounded-xl {{ 'bg-slate-700 text-slate-400' if u.sahip else s[3] ~ ' hover:brightness-110 text-white' }} px-3 py-2 text-sm font-black"
+                {{ 'disabled' if u.sahip else '' }}>
+          {{ 'Koleksiyonda' if u.sahip else 'Satın Al' }}
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</main>
+</body>
+</html>

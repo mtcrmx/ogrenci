@@ -1,0 +1,2 @@
+# Son duzeltme: Flask rotalari <int:...> tam surum — Render bu dosyayi gormeli
+REVISION=2026-05-09-routes

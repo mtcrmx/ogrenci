@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Bildirimler{% endblock %}
+{% block body %}
+<main class="max-w-5xl mx-auto px-4 py-5">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900">Bildirim Merkezi</h1>
+      <p class="text-sm text-slate-500">İttifak talepleri, disiplin uyarıları ve günlük görevler</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="rounded-xl bg-slate-800 text-white px-4 py-2 text-sm font-bold">Panele Dön</a>
+  </div>
+
+  <div class="grid gap-3">
+    {% for b in bildirimler %}
+    <a href="{{ b.hedef }}"
+       class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm hover:border-{{ b.renk }}-300 transition">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-xs font-black text-{{ b.renk }}-700 uppercase">{{ b.tur }}</div>
+          <div class="font-black text-slate-900">{{ b.baslik }}</div>
+          <div class="text-sm text-slate-500 mt-1">{{ b.detay }}</div>
+        </div>
+        <span class="text-slate-300 font-black">→</span>
+      </div>
+    </a>
+    {% else %}
+    <div class="rounded-2xl bg-white border border-slate-200 p-8 text-center text-slate-500">
+      Şu an bekleyen bildirim yok.
+    </div>
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}

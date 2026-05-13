@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Veli randevuları{% endblock %}
+{% block body %}
+<main class="max-w-3xl mx-auto px-4 py-6">
+  <h1 class="text-xl font-black text-slate-900 mb-4">Veli görüşme talepleri</h1>
+  {% if talepler %}
+  <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-800 text-white text-left">
+        <tr>
+          <th class="px-3 py-2">Tarih</th>
+          <th class="px-3 py-2">Sınıf</th>
+          <th class="px-3 py-2">Öğrenci</th>
+          <th class="px-3 py-2">Mesaj</th>
+          <th class="px-3 py-2">Durum</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for t in talepler %}
+        <tr class="hover:bg-slate-50 align-top">
+          <td class="px-3 py-2 whitespace-nowrap">{{ t.talep_tarihi[:16] }}</td>
+          <td class="px-3 py-2">{{ t.sinif_adi }}</td>
+          <td class="px-3 py-2">{{ t.ogrenci_ad }} <span class="text-slate-400">({{ t.ogr_no }})</span></td>
+          <td class="px-3 py-2 max-w-[180px] break-words">{{ t.mesaj or '—' }}</td>
+          <td class="px-3 py-2">
+            <form method="POST" action="{{ url_for('ogretmen_randevu_durum', talep_id=t.id) }}" class="flex flex-col gap-1">
+              <input type="hidden" name="durum" value="gorusuldu">
+              <button type="submit" class="text-xs font-bold bg-emerald-600 text-white px-2 py-1 rounded">Görüşüldü</button>
+            </form>
+            <form method="POST" action="{{ url_for('ogretmen_randevu_durum', talep_id=t.id) }}" class="mt-1">
+              <input type="hidden" name="durum" value="iptal">
+              <button type="submit" class="text-xs text-slate-500 underline">İptal</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-slate-500 text-sm">Bekleyen talep yok.</p>
+  {% endif %}
+  <a href="{{ url_for('dashboard') }}" class="inline-block mt-6 text-sm font-bold text-blue-700">← Panele dön</a>
+</main>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Denetim günlüğü{% endblock %}
+{% block body %}
+<main class="max-w-5xl mx-auto px-4 py-6">
+  <h1 class="text-2xl font-black text-slate-900 mb-2">Tik denetim günlüğü</h1>
+  <p class="text-sm text-slate-600 mb-4">Son eklenen ve geri alınan tik işlemleri (kim, hangi öğrenci).</p>
+  <div class="rounded-2xl border border-slate-200 bg-white overflow-x-auto shadow-sm">
+    <table class="w-full text-xs">
+      <thead class="bg-slate-800 text-white text-left">
+        <tr>
+          <th class="px-2 py-2">Zaman</th>
+          <th class="px-2 py-2">İşlem</th>
+          <th class="px-2 py-2">Öğretmen</th>
+          <th class="px-2 py-2">Öğrenci</th>
+          <th class="px-2 py-2">Detay</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for r in satirlar %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-2 py-1.5 whitespace-nowrap">{{ r.zaman }}</td>
+          <td class="px-2 py-1.5">{{ r.islem }}</td>
+          <td class="px-2 py-1.5">{{ r.ogretmen_adi or '—' }}</td>
+          <td class="px-2 py-1.5">{{ r.ogrenci_ad or '—' }}</td>
+          <td class="px-2 py-1.5 max-w-xs break-words">{{ r.detay or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <a href="{{ url_for('rapor_ozet') }}" class="inline-block mt-6 text-sm font-bold text-blue-700">← Raporlar</a>
+</main>
+{% endblock %}

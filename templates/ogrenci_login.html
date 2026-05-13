@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ogrenci Girisi - Erenler Cumhuriyet Ortaokulu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-10 overflow-x-hidden">
+  <main class="w-full max-w-sm">
+    <div class="mb-4">
+      <a href="{{ url_for('login') }}" class="inline-block rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 text-xs font-black">
+        Ana Menü
+      </a>
+    </div>
+    <div class="text-center mb-6">
+      <div class="text-5xl mb-3">🎓</div>
+      <h1 class="text-white text-2xl font-black">Ogrenci Girisi</h1>
+      <p class="text-slate-400 text-sm mt-1 break-words">Giriş sonrası yalnızca kendi tik kayıtlarınız ve nedenleri</p>
+    </div>
+
+    <form method="POST" class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div class="bg-emerald-700 px-5 py-4">
+        <h2 class="text-white font-bold text-center">Sifre gerekli</h2>
+      </div>
+
+      <div class="p-5 space-y-4">
+        {% if hata %}
+        <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {{ hata }}
+        </div>
+        {% endif %}
+
+        <input type="hidden" name="next" value="{{ next_url }}">
+
+        <label class="block">
+          <span class="block text-sm font-bold text-slate-700 mb-1">Öğrenci numarası</span>
+          <input type="number"
+                 name="ogr_no"
+                 inputmode="numeric"
+                 placeholder="Örn: 105"
+                 required
+                 class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3
+                        text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500">
+        </label>
+
+        <label class="block">
+          <span class="block text-sm font-bold text-slate-700 mb-1">Ogrenci sifresi</span>
+          <input type="password"
+                 name="sifre"
+                 autocomplete="current-password"
+                 autofocus
+                 required
+                 class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3
+                        text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500">
+        </label>
+
+        <button type="submit"
+                class="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700
+                       text-white font-black py-3 transition">
+          Giris Yap
+        </button>
+
+        <a href="{{ url_for('ogrenci_ben') }}"
+           class="block text-center text-xs font-bold text-emerald-700 hover:text-emerald-900">
+          Kişisel öğrenci ekranına git
+        </a>
+
+        <a href="{{ url_for('login') }}"
+           class="block text-center text-xs font-bold text-slate-500 hover:text-slate-800">
+          Ogretmen girisine don
+        </a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

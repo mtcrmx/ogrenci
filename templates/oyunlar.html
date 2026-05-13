@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oyun Merkezi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes pop { from { opacity:0; transform:scale(.94) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    .pop { animation: pop .35s ease both; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
+  <main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="min-w-0">
+        <h1 class="text-2xl font-black">Oyun Merkezi</h1>
+        <p class="text-sm text-slate-400">Sorulu, bulmacalı ve hafıza oyunlarıyla günlük pratik.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold">XP Panel</a>
+        <a href="{{ url_for('ogrenci_gorunum') }}" class="rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold">Tik geçmişi</a>
+      </div>
+    </header>
+
+    <section class="grid md:grid-cols-4 gap-3">
+      <button onclick="oyunAc('quiz')" class="pop rounded-2xl bg-blue-600/20 border border-blue-500/30 p-4 text-left hover:bg-blue-600/30">
+        <div class="text-3xl">⚡</div><div class="font-black mt-2">Hızlı Soru</div><p class="text-xs text-blue-200">10 saniyelik mini test</p>
+      </button>
+      <button onclick="oyunAc('kelime')" class="pop rounded-2xl bg-emerald-600/20 border border-emerald-500/30 p-4 text-left hover:bg-emerald-600/30" style="animation-delay:.06s">
+        <div class="text-3xl">🧩</div><div class="font-black mt-2">Kelime Bulmaca</div><p class="text-xs text-emerald-200">Karışık harfleri çöz</p>
+      </button>
+      <button onclick="oyunAc('eslestir')" class="pop rounded-2xl bg-amber-600/20 border border-amber-500/30 p-4 text-left hover:bg-amber-600/30" style="animation-delay:.12s">
+        <div class="text-3xl">🔗</div><div class="font-black mt-2">Eşleştirme</div><p class="text-xs text-amber-200">Kavram ve anlamını eşleştir</p>
+      </button>
+      <button onclick="oyunAc('hafiza')" class="pop rounded-2xl bg-purple-600/20 border border-purple-500/30 p-4 text-left hover:bg-purple-600/30" style="animation-delay:.18s">
+        <div class="text-3xl">🃏</div><div class="font-black mt-2">Hafıza Kartları</div><p class="text-xs text-purple-200">Çiftleri bul</p>
+      </button>
+    </section>
+
+    <section class="rounded-3xl bg-slate-900 border border-slate-800 p-5 min-h-[360px]">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <h2 id="baslik" class="font-black text-xl">Bir oyun seç</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="rounded-full bg-slate-950 border border-slate-800 px-4 py-1 text-sm font-black">
+            Puan: <span id="puan">0</span>
+          </div>
+          <div class="rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-4 py-1 text-sm font-black">
+            XP: <span id="xpKazanc">0</span>
+          </div>
+        </div>
+      </div>
+      <div id="sonuc" class="hidden mb-3 rounded-xl px-4 py-2 text-sm font-bold"></div>
+      <div id="alan" class="text-slate-400 break-words">Üstteki oyun kartlarından birini seçerek başla.</div>
+    </section>
+  </main>
+
+<script>
+let puan = 0;
+let oyunPuanlari = {quiz:0, kelime:0, eslestir:0, hafiza:0};
+let aktifOyun = 'quiz';
+const sorular = [
+  {s:'Türk alfabesinde kaç harf vardır?', a:['28','29','30','31'], d:'29'},
+  {s:'Bir üçgenin iç açıları toplamı kaç derecedir?', a:['90','180','270','360'], d:'180'},
+  {s:'Fotosentez yapan canlı grubu hangisidir?', a:['Bitkiler','Taşlar','Mantarlar','Metaller'], d:'Bitkiler'},
+  {s:'Cumhuriyet hangi yıl ilan edildi?', a:['1920','1921','1923','1938'], d:'1923'}
+];
+const kelimeler = [
+  {k:'PARAGRAF', ip:'Düşünce bütünlüğü olan yazı bölümü'},
+  {k:'KESİR', ip:'Pay ve paydadan oluşur'},
+  {k:'MİTOZ', ip:'Hücre bölünmesi türü'},
+  {k:'HARİTA', ip:'Yer şekillerini gösterir'}
+];
+const esler = [
+  ['Zıt anlam', 'Büyük - küçük'],
+  ['Eş anlam', 'Araba - otomobil'],
+  ['Başkent', 'Ankara'],
+  ['Gezegen', 'Dünya']
+];
+
+function puanEkle(n) {
+  puan += n;
+  puan = Math.max(0, puan);
+  oyunPuanlari[aktifOyun] = Math.max(0, (oyunPuanlari[aktifOyun] || 0) + n);
+  document.getElementById('puan').textContent = puan;
+  if (n > 0) oyunPuaniKaydet(aktifOyun, n);
+}
+function oyunPuaniKaydet(oyun, oyunPuani) {
+  (async () => {
+    try {
+      const res = await fetch('{{ url_for("oyun_puan_api") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({oyun, puan: oyunPuani})
+      });
+      const data = await res.json();
+      const box = document.getElementById('sonuc');
+      if (!data.ok) throw new Error(data.sebep || 'Puan kaydedilemedi');
+      document.getElementById('xpKazanc').textContent = data.xp;
+      box.className = 'mb-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-4 py-2 text-sm font-bold';
+      let m = data.xp > 0 ? `+${data.xp} XP kaydedildi.` : 'Puan kaydedildi. Günlük oyun XP limiti doldu.';
+      if (data.xp > 0 && data.sinifa_lig_katkisi) m += ' Sınıfının Süper Lig puanına +1 katkı!';
+      box.textContent = m;
+    } catch (e) {
+      const box = document.getElementById('sonuc');
+      box.className = 'mb-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-2 text-sm font-bold';
+      box.textContent = e.message;
+    }
+  })();
+}
+function karistir(arr) { return [...arr].sort(() => Math.random() - .5); }
+function oyunAc(tur) {
+  aktifOyun = tur;
+  if (tur === 'quiz') hizliSoru();
+  if (tur === 'kelime') kelimeOyunu();
+  if (tur === 'eslestir') eslestirme();
+  if (tur === 'hafiza') hafiza();
+}
+function hizliSoru() {
+  const q = sorular[Math.floor(Math.random() * sorular.length)];
+  document.getElementById('baslik').textContent = '⚡ Hızlı Soru';
+  document.getElementById('alan').innerHTML = `
+    <div class="pop space-y-4">
+      <div class="text-2xl font-black text-white">${q.s}</div>
+      <div class="grid md:grid-cols-2 gap-3">
+        ${q.a.map(x => `<button onclick="cevapla('${x}','${q.d}')" class="rounded-2xl bg-slate-950 border border-slate-800 p-4 font-bold hover:bg-blue-600/20">${x}</button>`).join('')}
+      </div>
+    </div>`;
+}
+function cevapla(secim, dogru) {
+  const ok = secim === dogru;
+  puanEkle(ok ? 10 : -3);
+  document.getElementById('alan').insertAdjacentHTML('afterbegin', `<div class="mb-3 rounded-xl ${ok ? 'bg-emerald-500/20 text-emerald-200' : 'bg-red-500/20 text-red-200'} px-4 py-2 font-bold">${ok ? 'Doğru!' : 'Yanlış, doğru cevap: ' + dogru}</div>`);
+}
+function kelimeOyunu() {
+  const sec = kelimeler[Math.floor(Math.random() * kelimeler.length)];
+  const karisik = karistir(sec.k.split('')).join(' ');
+  document.getElementById('baslik').textContent = '🧩 Kelime Bulmaca';
+  document.getElementById('alan').innerHTML = `
+    <div class="pop space-y-4">
+      <div class="text-sm text-slate-400">İpucu: ${sec.ip}</div>
+      <div class="text-2xl sm:text-4xl font-black tracking-widest text-emerald-300 break-words">${karisik}</div>
+      <input id="kelimeCevap" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-3 text-white" placeholder="Kelimeyi yaz">
+      <button onclick="kelimeKontrol('${sec.k}')" class="rounded-xl bg-emerald-600 px-4 py-2 font-black">Kontrol Et</button>
+    </div>`;
+}
+function kelimeKontrol(dogru) {
+  const v = document.getElementById('kelimeCevap').value.trim().toLocaleUpperCase('tr-TR');
+  puanEkle(v === dogru ? 12 : -2);
+  alert(v === dogru ? 'Harika, doğru!' : 'Tekrar dene. Doğru cevap: ' + dogru);
+}
+function eslestirme() {
+  document.getElementById('baslik').textContent = '🔗 Eşleştirme';
+  const sol = karistir(esler.map(x => x[0]));
+  const sag = karistir(esler.map(x => x[1]));
+  document.getElementById('alan').innerHTML = `
+    <div class="pop grid md:grid-cols-2 gap-4">
+      <div class="space-y-2">${sol.map((x,i)=>`<button data-v="${x}" onclick="sec(this)" class="sec w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-3 text-left font-bold">${x}</button>`).join('')}</div>
+      <div class="space-y-2">${sag.map(x=>`<button data-v="${x}" onclick="sec(this)" class="sec w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-3 text-left font-bold">${x}</button>`).join('')}</div>
+    </div>`;
+}
+let secilen = [];
+function sec(btn) {
+  btn.classList.add('ring-2','ring-blue-400');
+  secilen.push(btn);
+  if (secilen.length === 2) {
+    const a = secilen[0].dataset.v, b = secilen[1].dataset.v;
+    const ok = esler.some(x => (x[0] === a && x[1] === b) || (x[0] === b && x[1] === a));
+    puanEkle(ok ? 8 : -2);
+    secilen.forEach(x => x.className += ok ? ' bg-emerald-700/40' : ' bg-red-700/40');
+    secilen = [];
+  }
+}
+function hafiza() {
+  document.getElementById('baslik').textContent = '🃏 Hafıza Kartları';
+  const kartlar = karistir(['A','A','B','B','C','C','D','D']);
+  document.getElementById('alan').innerHTML = `<div class="pop grid grid-cols-2 sm:grid-cols-4 gap-3">${kartlar.map((k,i)=>`<button data-v="${k}" onclick="kartCevir(this)" class="h-20 sm:h-24 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-3xl font-black">?</button>`).join('')}</div>`;
+}
+let acik = [];
+function kartCevir(btn) {
+  if (btn.dataset.ok || acik.includes(btn)) return;
+  btn.textContent = btn.dataset.v;
+  acik.push(btn);
+  if (acik.length === 2) {
+    const ok = acik[0].dataset.v === acik[1].dataset.v;
+    puanEkle(ok ? 6 : -1);
+    setTimeout(() => {
+      if (ok) acik.forEach(b => { b.dataset.ok = '1'; b.classList.add('bg-emerald-600/40'); });
+      else acik.forEach(b => b.textContent = '?');
+      acik = [];
+    }, 500);
+  }
+}
+</script>
+</body>
+</html>
