@@ -78,6 +78,7 @@ let turKilitli = false;
 let secilen = [];
 let acik = [];
 let eslesmeCiftleri = [];
+let kelimeDogru = '';
 
 document.getElementById('dersSec').addEventListener('change', () => soruHavuzuYukle(true));
 
@@ -136,14 +137,11 @@ async function oyunPuaniKaydet(oyun, oyunPuani) {
       body: JSON.stringify({oyun, puan: oyunPuani})
     });
     const data = await res.json();
-    const box = document.getElementById('sonuc');
     if (!data.ok) throw new Error(data.sebep || 'Puan kaydedilemedi');
     document.getElementById('xpKazanc').textContent = data.xp;
-    box.className = 'mb-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-4 py-2 text-sm font-bold';
     let m = data.xp > 0 ? `+${data.xp} XP kaydedildi.` : 'Puan kaydedildi. Günlük oyun XP limiti doldu.';
     if (data.xp > 0 && data.sinifa_lig_katkisi) m += ' Sınıf Süper Lig puanına +1 katkı aldı.';
-    box.textContent = m;
-    box.classList.remove('hidden');
+    document.getElementById('altBilgi').textContent = m;
   } catch (e) {
     const box = document.getElementById('sonuc');
     box.className = 'mb-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-2 text-sm font-bold';
@@ -175,7 +173,7 @@ function hizliSoru() {
       <div class="text-xl sm:text-2xl font-black text-white">${escapeHtml(q.soru)}</div>
       <div class="grid md:grid-cols-2 gap-3">
         ${q.secenekler.map(s => `
-          <button data-harf="${s.harf}" onclick="cevaplaQuiz(this, ${JSON.stringify(q.dogru)})"
+          <button data-harf="${escapeHtml(s.harf)}" data-dogru="${escapeHtml(q.dogru)}" onclick="cevaplaQuiz(this)"
                   class="answer-btn rounded-2xl bg-slate-950 border border-slate-800 p-4 font-bold text-left hover:bg-blue-600/20">
             <span class="text-blue-300 font-black">${s.harf}</span> · ${escapeHtml(s.metin)}
           </button>`).join('')}
@@ -183,10 +181,11 @@ function hizliSoru() {
     </div>`;
 }
 
-function cevaplaQuiz(btn, dogru) {
+function cevaplaQuiz(btn) {
   if (turKilitli) return;
   turKilitli = true;
   document.querySelectorAll('.answer-btn').forEach(b => b.disabled = true);
+  const dogru = btn.dataset.dogru;
   const ok = btn.dataset.harf === dogru;
   btn.classList.add(ok ? 'bg-emerald-700/50' : 'bg-red-700/50');
   document.querySelectorAll('.answer-btn').forEach(b => {
@@ -201,27 +200,27 @@ function kelimeOyunu() {
   const q = soruSec();
   if (!q) return;
   turKilitli = false;
-  const dogru = dogruSecenek(q).metin || q.dogru_metin || '';
-  const harfler = karistir(dogru.toLocaleUpperCase('tr-TR').replace(/[^A-ZÇĞİÖŞÜ]/g, '').split('')).join(' ');
+  kelimeDogru = dogruSecenek(q).metin || q.dogru_metin || '';
+  const harfler = karistir(kelimeDogru.toLocaleUpperCase('tr-TR').replace(/[^A-ZÇĞİÖŞÜ]/g, '').split('')).join(' ');
   document.getElementById('baslik').textContent = '🧩 Kelime Avı';
   document.getElementById('alan').innerHTML = `
     <div class="pop space-y-4">
       <div class="text-sm text-slate-400">İpucu: ${escapeHtml(q.soru)}</div>
       <div class="text-2xl sm:text-4xl font-black tracking-widest text-emerald-300 break-words">${escapeHtml(harfler)}</div>
       <input id="kelimeCevap" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-3 text-white" placeholder="Cevabı yaz">
-      <button id="kelimeBtn" onclick="kelimeKontrol(${JSON.stringify(dogru)})" class="game-btn rounded-xl bg-emerald-600 px-4 py-2 font-black">Kontrol Et</button>
+      <button id="kelimeBtn" onclick="kelimeKontrol()" class="game-btn rounded-xl bg-emerald-600 px-4 py-2 font-black">Kontrol Et</button>
     </div>`;
 }
 
-function kelimeKontrol(dogru) {
+function kelimeKontrol() {
   if (turKilitli) return;
   turKilitli = true;
   document.getElementById('kelimeBtn').disabled = true;
   const v = document.getElementById('kelimeCevap').value.trim().toLocaleUpperCase('tr-TR');
-  const d = String(dogru).trim().toLocaleUpperCase('tr-TR');
+  const d = String(kelimeDogru).trim().toLocaleUpperCase('tr-TR');
   const ok = v === d;
   puanEkle(ok ? 12 : -2);
-  bildirim(ok ? 'Harika, doğru! Yeni kelime geliyor.' : 'Doğru cevap: ' + dogru, ok);
+  bildirim(ok ? 'Harika, doğru! Yeni kelime geliyor.' : 'Doğru cevap: ' + kelimeDogru, ok);
   setTimeout(kelimeOyunu, 1100);
 }
 
