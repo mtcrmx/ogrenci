@@ -64,6 +64,8 @@ let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, z: 0, vx: 0, vy: 0, vz: 0, owner
 let teamTouches = 0;
 let goalTimer = 0;
 let eventTimeout = null;
+let servisOyuncuIndex = 0; // rotates each set
+let lastNetSide = null; // track net crossing properly
 
 function showEvent(msg, duration=2000) {
     const el = document.getElementById('event-overlay');
@@ -128,11 +130,17 @@ function resetPositions() {
     
     if (stateMachine !== "MATCH_END") {
         stateMachine = "SERVIS";
-        // Place ball at server's position
-        let server = players.find(p => p.team === serverTeam && Math.abs(p.baseY - serverTeam.defendY) < 100);
-        if(!server) server = players.find(p => p.team === serverTeam);
-        ball.x = server.x; ball.y = server.y; ball.z = 20;
+        // Pick rotating server (back-right position = service line)
+        const teamPlayers = players.filter(p => p.team === serverTeam);
+        const serverIdx = servisOyuncuIndex % teamPlayers.length;
+        const server = teamPlayers[serverIdx] || teamPlayers[0];
+        // Move server to service corner
+        server.x = GAME_WIDTH - 40;
+        server.y = serverTeam === team1 ? GAME_HEIGHT - 40 : 40;
+        ball.x = server.x; ball.y = server.y; ball.z = 10;
         ball.owner = server;
+        server.actionCooldown = 60; // small delay before serving
+        lastNetSide = serverTeam;
     }
 }
 
@@ -145,6 +153,7 @@ function givePoint(team, reason) {
     document.getElementById('score1').textContent = score1;
     document.getElementById('score2').textContent = score2;
     serverTeam = team;
+    servisOyuncuIndex = (servisOyuncuIndex + 1) % 6; // rotate server
     
     // Check set win
     if ((score1 >= 25 || score2 >= 25) && Math.abs(score1 - score2) >= 2) {
@@ -249,10 +258,12 @@ function update() {
         ball.vx = ball.vx * 0.5;
     }
     
-    // Track if ball crosses net
-    let currentSide = ball.y > GAME_HEIGHT/2 ? team1 : team2;
-    if (ball.lastTeamTouched && currentSide !== ball.lastTeamTouched && ball.y > GAME_HEIGHT/2 - 10 && ball.y < GAME_HEIGHT/2 + 10) {
-        teamTouches = 0; // Reset touches when it safely crosses net
+    // Track net crossing: reset touches when ball safely crosses to other side
+    const ballNetSide = ball.y > GAME_HEIGHT/2 ? team1 : team2;
+    if (lastNetSide && ballNetSide !== lastNetSide && ball.z > 5) {
+        // Ball crossed net in the air = valid
+        teamTouches = 0;
+        lastNetSide = ballNetSide;
     }
 
     // Players AI
@@ -353,23 +364,25 @@ function update() {
             } else {
                 // Spike over the net! (Smaç)
                 showEvent("SMAÇ!", 500);
-                errMargin = (100 - p.ozellikler.sut) / 100; // uses sut for spike
-                const gX = GAME_WIDTH/2 + (Math.random() * 200 - 100);
-                const gY = p.team === team1 ? 150 : GAME_HEIGHT - 150;
+                errMargin = (100 - p.ozellikler.sut) / 100;
+                // Target inside opponent's court (clamped to stay in bounds)
+                const margin = 40;
+                const gX = margin + Math.random() * (GAME_WIDTH - margin*2);
+                const gY = p.team === team1
+                    ? margin + Math.random() * (GAME_HEIGHT/2 - margin - 50)
+                    : GAME_HEIGHT/2 + 50 + Math.random() * (GAME_HEIGHT/2 - margin - 50);
                 
-                const errX = (Math.random() * 160 - 80) * errMargin; // Reduced from 300
-                const errY = (Math.random() * 160 - 80) * errMargin; // Reduced from 300
-                const targetX = gX + errX;
-                const targetY = gY + errY;
+                const errX = (Math.random() * 120 - 60) * errMargin;
+                const errY = (Math.random() * 120 - 60) * errMargin;
+                const tX = Math.max(10, Math.min(GAME_WIDTH-10, gX + errX));
+                const tY = Math.max(10, Math.min(GAME_HEIGHT-10, gY + errY));
                 
-                const bDir = normalize(targetX - p.x, targetY - p.y);
-                const d = dist(p, {x:targetX, y:targetY});
-                
-                ball.vz = 2 + (Math.random()*2); // Flat and fast
+                const bDir = normalize(tX - p.x, tY - p.y);
+                const d = dist(p, {x:tX, y:tY});
+                ball.vz = 3 + Math.random()*2;
                 const airTime = (ball.vz / 0.2) * 2;
-                const power = d / airTime;
-                
-                ball.vx = bDir.x * power; ball.vy = bDir.y * power;
+                ball.vx = bDir.x * (d / airTime);
+                ball.vy = bDir.y * (d / airTime);
             }
         }
     });

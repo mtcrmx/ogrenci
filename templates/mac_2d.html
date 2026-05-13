@@ -199,7 +199,6 @@ function update() {
 
     // Set Piece State
     if (stateMachine === "SET_PIECE") {
-        timeTicks++;
         // Players reposition
         players.forEach(p => {
             if (p === ball.owner) return; // taker stays
@@ -299,7 +298,7 @@ function update() {
 
     // Ball Physics
     ball.x += ball.vx; ball.y += ball.vy;
-    ball.vx *= 0.95; ball.vy *= 0.95; // Friction
+    ball.vx *= 0.97; ball.vy *= 0.97; // Friction (less drag = more realistic rolling)
     ball.speed = Math.hypot(ball.vx, ball.vy);
     
     // Goal Check (priority)
@@ -433,14 +432,19 @@ function update() {
         }
         
     } else {
-        // Try to claim ball
+        // Try to claim ball - closest player first
+        let bestClaim = null; let bestDist = 9999;
         players.forEach(p => {
-            let interceptRadius = 14 + (p.ozellikler.defans / 20);
-            if (dist(p, ball) < interceptRadius && ball.speed < 12 && p.actionCooldown <= 0) {
-                ball.owner = p; p.state = 'WITH_BALL'; p.hasBallTime = 0; p.stamina -= 5;
-                ball.lastTouchedBy = p;
+            const interceptRadius = 18 + (p.ozellikler.defans / 15);
+            const d = dist(p, ball);
+            if (d < interceptRadius && ball.speed < 15 && p.actionCooldown <= 0 && d < bestDist) {
+                bestDist = d; bestClaim = p;
             }
         });
+        if (bestClaim) {
+            ball.owner = bestClaim; bestClaim.state = 'WITH_BALL';
+            bestClaim.hasBallTime = 0; ball.lastTouchedBy = bestClaim;
+        }
     }
 
     const teamPossession = getTeamWithBall();
@@ -544,14 +548,30 @@ function update() {
             const isGK = Math.abs(p.baseY - p.team.defendY) < 50 || (p.rol && p.rol.includes("Kaleci"));
             if (isGK) {
                 targetY = p.baseY; // GKs stay near goal line
-                targetX = Math.max(GAME_WIDTH/2 - 70, Math.min(GAME_WIDTH/2 + 70, ball.x)); // track ball X
+                targetX = Math.max(GAME_WIDTH/2 - 60, Math.min(GAME_WIDTH/2 + 60, ball.x)); // track ball X
                 
-                // If ball is fast and in penalty box, DIVE
+                // If ball is in penalty box, DIVE toward predicted position
                 const distToGoalLine = Math.abs(ball.y - p.team.defendY);
-                if (distToGoalLine < 150 && ball.speed > 5) {
+                if (distToGoalLine < 160 && ball.speed > 4) {
                     p.state = 'GK_DIVE';
-                    targetX = ball.x + ball.vx * 10;
-                    targetY = ball.y + ball.vy * 10;
+                    targetX = Math.max(50, Math.min(GAME_WIDTH-50, ball.x + ball.vx * 8));
+                    targetY = p.baseY; // GK stays on line, only moves X
+                }
+                // GK has ball: distribute quickly
+                if (p === ball.owner && p.hasBallTime > 30 && p.actionCooldown <= 0) {
+                    let gkTarget = null; let gkBest = -999;
+                    players.forEach(m => {
+                        if (m.team === p.team && m !== p && dist(p,m) < 350) {
+                            const sc = Math.abs(m.y - p.team.defendY) * -0.5; // prefer further from own goal
+                            if (sc > gkBest) { gkBest = sc; gkTarget = m; }
+                        }
+                    });
+                    if (gkTarget) {
+                        const d = normalize(gkTarget.x - p.x, gkTarget.y - p.y);
+                        ball.vx = d.x * 14; ball.vy = d.y * 14;
+                        ball.targetPlayer = gkTarget;
+                        ball.owner = null; p.actionCooldown = 60;
+                    }
                 }
             } else {
                 // Tactical Shift (Takım Boyu / Defans Çizgisi)
