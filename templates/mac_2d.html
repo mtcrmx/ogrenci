@@ -301,19 +301,48 @@ function update() {
     ball.vx *= 0.97; ball.vy *= 0.97; // Friction (less drag = more realistic rolling)
     ball.speed = Math.hypot(ball.vx, ball.vy);
     
-    // Goal Check (priority)
-    const goalLeft = GAME_WIDTH/2 - 80, goalRight = GAME_WIDTH/2 + 80;
+    // Goal Check: Ball must beat the goalkeeper
+    const goalLeft = GAME_WIDTH/2 - 75, goalRight = GAME_WIDTH/2 + 75;
+    function tryGoal(scoringTeam, defendingTeam, scoreEl, goalY) {
+        // Find GK of defending team
+        const gk = players.find(p => p.team === defendingTeam &&
+            (Math.abs(p.baseY - defendingTeam.defendY) < 60 || (p.rol && p.rol.includes('Kaleci'))));
+        if (gk) {
+            const savePower = gk.ozellikler.kaleci + Math.random() * 30;
+            const shotPower = (ball.lastTouchedBy ? ball.lastTouchedBy.ozellikler.sut : 50) + Math.random() * 20;
+            // GK save chance: higher kaleci = higher save rate
+            if (savePower > shotPower || dist(gk, ball) < 35) {
+                // SAVE!
+                showEvent(`${gk.ad} KURTARDI! 🧤`, 2000);
+                // GK pushes ball away
+                const pushDir = normalize(ball.x - GAME_WIDTH/2, ball.y - defendingTeam.defendY);
+                ball.vx = pushDir.x * 10 + (Math.random()-0.5)*6;
+                ball.vy = pushDir.y * 10;
+                ball.owner = null;
+                ball.lastTouchedBy = gk;
+                return false;
+            }
+        }
+        return true;
+    }
+    
     if (ball.y <= 10 && ball.x > goalLeft && ball.x < goalRight) {
-        score1++; document.getElementById('score1').textContent = score1;
-        showEvent(`GOOOL! ${team1.name} mükemmel bir organizasyonla yazdı!`, 4000);
-        stateMachine = "GOAL_CELEBRATION";
-        setTimeout(resetPositions, 4000); return;
+        if (tryGoal(team1, team2, 'score1', 0)) {
+            score1++; document.getElementById('score1').textContent = score1;
+            showEvent(`⚽ GOOOL! ${team1.name} yazdı!`, 4000);
+            stateMachine = "GOAL_CELEBRATION";
+            setTimeout(resetPositions, 4000);
+        }
+        return;
     }
     if (ball.y >= GAME_HEIGHT-10 && ball.x > goalLeft && ball.x < goalRight) {
-        score2++; document.getElementById('score2').textContent = score2;
-        showEvent(`GOOOL! ${team2.name} taktiksel zekasını konuşturdu!`, 4000);
-        stateMachine = "GOAL_CELEBRATION";
-        setTimeout(resetPositions, 4000); return;
+        if (tryGoal(team2, team1, 'score2', GAME_HEIGHT)) {
+            score2++; document.getElementById('score2').textContent = score2;
+            showEvent(`⚽ GOOOL! ${team2.name} yazdı!`, 4000);
+            stateMachine = "GOAL_CELEBRATION";
+            setTimeout(resetPositions, 4000);
+        }
+        return;
     }
 
     // Out of bounds logic
@@ -472,28 +501,32 @@ function update() {
             const distToGoal = Math.abs(p.y - p.team.goalY);
             
             if (p.actionCooldown <= 0) {
-                // Determine action
-                // 1. Shoot? (Uses SUT)
-                if (distToGoal < 300) {
+                // 1. Shoot? (Uses SUT) - only in shooting range and not too far
+                if (distToGoal < 250) {
                     let pathClear = true;
-                    // If we are very close to the goal line (<120), just shoot!
-                    if (distToGoal > 120) {
+                    if (distToGoal > 100) {
                         players.forEach(opp => {
                             if (opp.team !== p.team && opp.y > Math.min(p.y, p.team.goalY) && opp.y < Math.max(p.y, p.team.goalY)) {
-                                if (Math.abs(opp.x - p.x) < 30) pathClear = false; // blocked
+                                if (Math.abs(opp.x - p.x) < 35) pathClear = false;
                             }
                         });
                     }
                     
-                    if (pathClear || p.hasBallTime > 40 || Math.random() < 0.15) {
-                        // SHOOT!
-                        const gX = GAME_WIDTH/2 + (Math.random() * 60 - 30);
+                    if (pathClear || p.hasBallTime > 55 || Math.random() < 0.08) {
+                        // SHOOT! Error increases with distance and low SUT XP
                         const errorMarginSut = (100 - p.ozellikler.sut) / 100;
-                        const errX = (Math.random() * 240 - 120) * errorMarginSut; // mistake in aiming
-                        const dir = normalize(gX + errX - p.x, p.team.goalY - p.y);
-                        const power = 18 + (p.ozellikler.sut / 12);
+                        const distFactor = distToGoal / 250; // farther = more error
+                        const totalErr = errorMarginSut + distFactor * 0.5;
+                        
+                        const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
+                        // Large error that can easily push it outside goal (or even out of bounds)
+                        const errX = (Math.random() * 400 - 200) * totalErr;
+                        const finalX = gX + errX;
+                        const dir = normalize(finalX - p.x, p.team.goalY - p.y);
+                        const power = 15 + (p.ozellikler.sut / 14);
                         ball.vx = dir.x * power; ball.vy = dir.y * power;
-                        ball.owner = null; p.actionCooldown = 30;
+                        ball.owner = null; p.actionCooldown = 40;
+                        showEvent(distToGoal < 120 ? '🦵 Şut!' : '🦵 Uzak şut!', 800);
                         return;
                     }
                 }
@@ -554,8 +587,10 @@ function update() {
                 const distToGoalLine = Math.abs(ball.y - p.team.defendY);
                 if (distToGoalLine < 160 && ball.speed > 4) {
                     p.state = 'GK_DIVE';
-                    targetX = Math.max(50, Math.min(GAME_WIDTH-50, ball.x + ball.vx * 8));
-                    targetY = p.baseY; // GK stays on line, only moves X
+                    // Predict ball landing X with lookahead
+                    const lookahead = Math.min(20, distToGoalLine / Math.max(1, Math.abs(ball.vy)));
+                    targetX = Math.max(goalLeft + 10, Math.min(goalRight - 10, ball.x + ball.vx * lookahead));
+                    targetY = p.baseY; // GK stays on line
                 }
                 // GK has ball: distribute quickly
                 if (p === ball.owner && p.hasBallTime > 30 && p.actionCooldown <= 0) {
@@ -622,8 +657,8 @@ function update() {
             if (d > 10) {
                 let curSpeed = p.state === 'CHASE' ? speedMult : speedMult * 0.6;
                 if (p.state === 'GK_DIVE') {
-                    // Dive speed depends on kaleci reflex stat
-                    curSpeed = (p.ozellikler.kaleci / 100) * 8.0; 
+                    // GK dive speed is CRITICAL - based on kaleci XP (range 4-11 px/frame)
+                    curSpeed = 4 + (p.ozellikler.kaleci / 100) * 7.0;
                 }
                 p.vx = dir.x * curSpeed;
                 p.vy = dir.y * curSpeed;
