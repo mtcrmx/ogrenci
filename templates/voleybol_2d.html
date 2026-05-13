@@ -122,33 +122,72 @@ function addPlayer(p, team, mirror) {
     let tx = (p.baseX / 100) * GAME_WIDTH;
     let ty = (p.baseY / 100) * GAME_HEIGHT;
     if (mirror) { tx = GAME_WIDTH - tx; ty = GAME_HEIGHT - ty; }
+    let isLibero = (p.rol && p.rol.toLowerCase().includes('libero')) || players.filter(pl => pl.team === team).length === 5; // make 6th player libero if none specified
     players.push({
         id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, team: team,
         ozellikler: p.ozellikler || {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr},
         baseX: tx, baseY: ty, x: tx, y: ty, vx: 0, vy: 0,
-        actionCooldown: 0
+        actionCooldown: 0,
+        isLibero: isLibero
     });
 }
 
+const VOLLEYBALL_ZONES = [
+    {x: 0.8, y: 0.7, row: 'back'},   // Zone 1: Back Right (Server)
+    {x: 0.5, y: 0.7, row: 'back'},   // Zone 6: Back Center
+    {x: 0.2, y: 0.7, row: 'back'},   // Zone 5: Back Left
+    {x: 0.2, y: 0.3, row: 'front'},  // Zone 4: Front Left
+    {x: 0.5, y: 0.3, row: 'front'},  // Zone 3: Front Center
+    {x: 0.8, y: 0.3, row: 'front'}   // Zone 2: Front Right
+];
+
 function resetPositions() {
-    players.forEach(p => {
-        p.x = p.baseX; p.y = p.baseY; p.vx = 0; p.vy = 0; p.actionCooldown = 0;
+    [team1, team2].forEach(team => {
+        const teamPlayers = players.filter(p => p.team === team);
+        teamPlayers.forEach((p, i) => {
+            // Calculate rotational position
+            const rotIdx = team.rotationIndex || 0;
+            const currentZoneIdx = (i + rotIdx) % 6;
+            const zone = VOLLEYBALL_ZONES[currentZoneIdx];
+            
+            p.currentRow = zone.row; // 'front' or 'back'
+            p.currentZone = currentZoneIdx; // 0 is Server (Zone 1)
+            
+            // Mirror X for opponent side to align correctly? 
+            // Standard: Zone 1 is always back right from team's perspective.
+            let px = zone.x;
+            if (team.side === 2) px = 1 - px; // mirror X for top team so 'right' is their right
+            
+            p.baseX = px * GAME_WIDTH;
+            p.baseY = team.side === 1 
+                ? GAME_HEIGHT/2 + zone.y * (GAME_HEIGHT/2)
+                : GAME_HEIGHT/2 - zone.y * (GAME_HEIGHT/2);
+                
+            p.x = p.baseX; p.y = p.baseY; 
+            p.vx = 0; p.vy = 0; p.actionCooldown = 0;
+        });
     });
+
     ball.vx = 0; ball.vy = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0; ball.owner = null;
     teamTouches = 0; ball.lastTeamTouched = null;
     
     if (stateMachine !== "MATCH_END") {
         stateMachine = "SERVIS";
-        // Pick rotating server (back-right position = service line)
-        const teamPlayers = players.filter(p => p.team === serverTeam);
-        const serverIdx = servisOyuncuIndex % teamPlayers.length;
-        const server = teamPlayers[serverIdx] || teamPlayers[0];
-        // Move server to service corner
-        server.x = GAME_WIDTH - 40;
-        server.y = serverTeam === team1 ? GAME_HEIGHT - 40 : 40;
+        
+        // Server is always the player in Zone 1 (currentZoneIdx === 0), but Libero cannot serve
+        const servingTeamPlayers = players.filter(p => p.team === serverTeam);
+        let server = servingTeamPlayers.find(p => p.currentZone === 0) || servingTeamPlayers[0];
+        if (server.isLibero) {
+            // Pick another player to serve instead of Libero
+            server = servingTeamPlayers.find(p => p.currentZone === 1) || servingTeamPlayers[1];
+        }
+        
+        // Move server to service line
+        server.x = serverTeam.side === 1 ? GAME_WIDTH - 40 : 40;
+        server.y = serverTeam.side === 1 ? GAME_HEIGHT - 20 : 20;
         ball.x = server.x; ball.y = server.y; ball.z = 10;
         ball.owner = server;
-        server.actionCooldown = 60; // small delay before serving
+        server.actionCooldown = 60; // delay
         lastNetSide = serverTeam;
     }
 }
@@ -161,11 +200,17 @@ function givePoint(team, reason) {
     if (team === team1) score1++; else score2++;
     document.getElementById('score1').textContent = score1;
     document.getElementById('score2').textContent = score2;
-    serverTeam = team;
-    servisOyuncuIndex = (servisOyuncuIndex + 1) % 6; // rotate server
     
-    // Check set win
-    if ((score1 >= 25 || score2 >= 25) && Math.abs(score1 - score2) >= 2) {
+    // Rotation: only rotate if we won the serve back (Side-out)
+    if (serverTeam !== team) {
+        team.rotationIndex = ((team.rotationIndex || 0) + 1) % 6;
+    }
+    serverTeam = team;
+    
+    // Check set win (Set 5 is up to 15, others up to 25. Must win by 2)
+    let pointsToWin = (set1 + set2 === 4) ? 15 : 25;
+    
+    if ((score1 >= pointsToWin || score2 >= pointsToWin) && Math.abs(score1 - score2) >= 2) {
         if (score1 > score2) set1++; else set2++;
         document.getElementById('set1').textContent = set1;
         document.getElementById('set2').textContent = set2;
@@ -180,6 +225,8 @@ function givePoint(team, reason) {
         } else {
             showEvent(`SET BİTTİ!<br>${team.name} Seti Kazandı!`, 3000);
             goalTimer = 180;
+            // Switch sides
+            [team1.side, team2.side] = [team2.side, team1.side];
         }
     }
 }
@@ -410,6 +457,11 @@ function update() {
                 ((p.team === team1 && ball.vy < 0) || (p.team === team2 && ball.vy > 0));
             
             if (isBlock && p.ozellikler.defans > 30) {
+                // RULE: Libero cannot block
+                if (p.isLibero) {
+                    givePoint(p.team === team1 ? team2 : team1, "Libero Blok Hatası!");
+                    return;
+                }
                 // === BLOCK: reverse velocity ===
                 showEvent("BLOK! 🖐️", 600);
                 const blockPower = 0.6 + (p.ozellikler.defans / 200);
@@ -466,6 +518,18 @@ function update() {
                 
             } else {
                 // === SMAÇ (Spike): high velocity + topspin ===
+                // RULE: Back row attack violation (including Libero from anywhere)
+                if (Math.abs(p.y - NET_Y) < 150) {
+                    if (p.isLibero) {
+                        givePoint(p.team === team1 ? team2 : team1, "Libero Hücum İhlali!");
+                        return;
+                    }
+                    if (p.currentRow === 'back') {
+                        givePoint(p.team === team1 ? team2 : team1, "Arka Hat Hücum İhlali (3 Metre)!");
+                        return;
+                    }
+                }
+                
                 showEvent("SMAÇ! 💥", 600);
                 const sutErr = (100 - p.ozellikler.sut) / 100;
                 
@@ -542,7 +606,9 @@ function draw() {
         
         // Body
         ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI*2);
-        ctx.fillStyle = p.team.color; ctx.fill();
+        // Libero wears opposite color
+        ctx.fillStyle = p.isLibero ? (p.team === team1 ? team2.color : team1.color) : p.team.color; 
+        ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
         
         // Jersey number
