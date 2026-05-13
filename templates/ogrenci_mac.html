@@ -60,7 +60,7 @@
         <div class="mt-4 space-y-3">
           <label class="block">
             <span class="text-xs font-bold text-slate-400">Rakip sinif</span>
-            <select name="rakip_sinif_id" required
+            <select id="rakip-futbol" name="rakip_sinif_id" required
                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
               {% for sinif in siniflar %}
                 <option value="{{ sinif.id }}">{{ sinif.sinif_adi }}</option>
@@ -70,16 +70,17 @@
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
               <span class="text-xs font-bold text-slate-400">Bizim skor</span>
-              <input name="skor1" type="number" min="0" required value="1"
+              <input id="skor1-futbol" name="skor1" type="number" min="0" required value="1"
                      class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
             </label>
             <label class="block">
               <span class="text-xs font-bold text-slate-400">Rakip skor</span>
-              <input name="skor2" type="number" min="0" required value="0"
+              <input id="skor2-futbol" name="skor2" type="number" min="0" required value="0"
                      class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
             </label>
           </div>
-          <button class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-black hover:bg-amber-500">
+          <button type="button" onclick="macSimuleEt('futbol')" class="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black hover:bg-indigo-500 text-white">🎲 Maçı Simüle Et</button>
+          <button type="submit" class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-black hover:bg-amber-500">
             Ogretmen onayina gonder
           </button>
         </div>
@@ -92,7 +93,7 @@
         <div class="mt-4 space-y-3">
           <label class="block">
             <span class="text-xs font-bold text-slate-400">Rakip sinif</span>
-            <select name="rakip_sinif_id" required
+            <select id="rakip-voleybol" name="rakip_sinif_id" required
                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
               {% for sinif in siniflar %}
                 <option value="{{ sinif.id }}">{{ sinif.sinif_adi }}</option>
@@ -102,16 +103,17 @@
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
               <span class="text-xs font-bold text-slate-400">Bizim set</span>
-              <input name="skor1" type="number" min="0" max="3" required value="3"
+              <input id="skor1-voleybol" name="skor1" type="number" min="0" max="3" required value="3"
                      class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
             </label>
             <label class="block">
               <span class="text-xs font-bold text-slate-400">Rakip set</span>
-              <input name="skor2" type="number" min="0" max="3" required value="0"
+              <input id="skor2-voleybol" name="skor2" type="number" min="0" max="3" required value="0"
                      class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
             </label>
           </div>
-          <button class="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-black hover:bg-sky-500">
+          <button type="button" onclick="macSimuleEt('voleybol')" class="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black hover:bg-indigo-500 text-white">🎲 Maçı Simüle Et</button>
+          <button type="submit" class="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-black hover:bg-sky-500">
             Voleybol onayina gonder
           </button>
         </div>
@@ -154,5 +156,77 @@
       </div>
     </section>
   </main>
+
+  <!-- Simülasyon Modal -->
+  <div id="simulasyon-modal" class="fixed inset-0 z-50 flex hidden items-center justify-center bg-black/80 px-4">
+    <div class="w-full max-w-md overflow-hidden rounded-2xl bg-slate-900 border border-slate-700">
+      <div class="bg-indigo-600 px-4 py-3 text-lg font-black flex justify-between items-center text-white">
+        <span>🎲 Maç Simülasyonu</span>
+        <button type="button" onclick="kapatModal()" class="text-white hover:text-indigo-200">✕</button>
+      </div>
+      <div class="p-4">
+        <div id="simulasyon-icerik" class="space-y-2 text-sm text-slate-300 h-64 overflow-y-auto font-mono whitespace-pre-wrap">
+          Simüle ediliyor...
+        </div>
+        <button type="button" onclick="kapatModal()" class="mt-4 w-full rounded-lg bg-slate-700 px-4 py-2 font-black text-white hover:bg-slate-600">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  async function macSimuleEt(spor) {
+    const rakipId = document.getElementById('rakip-' + spor).value;
+    if (!rakipId) {
+      alert("Lütfen önce bir rakip sınıf seçin.");
+      return;
+    }
+    
+    const modal = document.getElementById('simulasyon-modal');
+    const icerik = document.getElementById('simulasyon-icerik');
+    modal.classList.remove('hidden');
+    icerik.innerHTML = "Simülasyon başlatılıyor...\\nTaktikler ve oyuncu güçleri hesaplanıyor...";
+    
+    try {
+      const res = await fetch("{{ url_for('api_ogrenci_mac_simule') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spor: spor, rakip_sinif_id: parseInt(rakipId) })
+      });
+      const data = await res.json();
+      
+      if (!data.ok) {
+        icerik.innerHTML = "<span class='text-rose-400'>Hata: " + data.sebep + "</span>";
+        return;
+      }
+      
+      icerik.innerHTML = "";
+      const satirlar = data.anlatim.split("\\n");
+      let gecikme = 0;
+      
+      for (let i = 0; i < satirlar.length; i++) {
+        setTimeout(() => {
+          const div = document.createElement("div");
+          div.className = satirlar[i].includes("GOOOL") || satirlar[i].includes("Set bizim") ? "text-emerald-400 font-bold" : (satirlar[i].includes("gol...") || satirlar[i].includes("Set rakibin") ? "text-rose-400" : "text-slate-300");
+          div.textContent = satirlar[i];
+          icerik.appendChild(div);
+          icerik.scrollTop = icerik.scrollHeight;
+        }, gecikme);
+        gecikme += 800;
+      }
+      
+      setTimeout(() => {
+        document.getElementById("skor1-" + spor).value = data.bizim_skor;
+        document.getElementById("skor2-" + spor).value = data.rakip_skor;
+      }, gecikme + 500);
+
+    } catch (err) {
+      icerik.innerHTML = "<span class='text-rose-400'>Bağlantı hatası: " + err.message + "</span>";
+    }
+  }
+
+  function kapatModal() {
+    document.getElementById('simulasyon-modal').classList.add('hidden');
+  }
+  </script>
 </body>
 </html>

@@ -707,6 +707,103 @@ def ogrenci_mac_olustur_route():
     return redirect(url_for("ogrenci_mac_panel"))
 
 
+@app.route("/api/ogrenci/mac/simule", methods=["POST"])
+@ogrenci_giris_zorunlu
+def api_ogrenci_mac_simule():
+    import random
+    import json
+    
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        return jsonify({"ok": False, "sebep": "Ogrenci bulunamadi"}), 404
+        
+    veri = request.get_json(silent=True) or {}
+    rakip_sinif_id = veri.get("rakip_sinif_id")
+    spor = veri.get("spor", "futbol")
+    
+    if not rakip_sinif_id:
+        return jsonify({"ok": False, "sebep": "Rakip sinif secilmedi"})
+        
+    bizim_sinif_id = int(o["sinif_id"])
+    
+    bizim_taktik = spor_taktik_yukle(bizim_sinif_id, spor) if spor == "voleybol" else taktik_yukle(bizim_sinif_id)
+    rakip_taktik = spor_taktik_yukle(rakip_sinif_id, spor) if spor == "voleybol" else taktik_yukle(rakip_sinif_id)
+    
+    bizim_k = sinif_ogrencileri(bizim_sinif_id)
+    rakip_k = sinif_ogrencileri(rakip_sinif_id)
+    
+    def calc_power(taktik, kadro):
+        if not taktik or not taktik.get("oyuncular"):
+            return 50
+        total = 0
+        count = 0
+        for pid, p in taktik["oyuncular"].items():
+            ogr = next((x for x in kadro if str(x["id"]) == str(pid)), None)
+            if ogr:
+                xp = ogr.get("tik_sayisi", 0)
+                ovr = min(99, 50 + int(xp * 0.8))
+                total += ovr
+                count += 1
+        return int(total / count) if count > 0 else 50
+        
+    bizim_guc = calc_power(bizim_taktik, bizim_k)
+    rakip_guc = calc_power(rakip_taktik, rakip_k)
+    
+    bizim_skor = 0
+    rakip_skor = 0
+    
+    anlatim = []
+    anlatim.append(f"🏁 {o['sinif_adi']} vs Rakip ({spor.capitalize()} Simülasyonu)")
+    anlatim.append(f"💪 Takım Gücü: Biz (⚡{bizim_guc}) - Rakip (⚡{rakip_guc})")
+    anlatim.append("---")
+    
+    if spor == "voleybol":
+        biz_set = 0
+        rak_set = 0
+        for i in range(1, 6):
+            if biz_set == 3 or rak_set == 3:
+                break
+            b_score = 0
+            r_score = 0
+            while (b_score < 25 and r_score < 25) or abs(b_score - r_score) < 2:
+                if random.randint(1, 100) <= (50 + (bizim_guc - rakip_guc) // 2):
+                    b_score += 1
+                else:
+                    r_score += 1
+            if b_score > r_score:
+                biz_set += 1
+                anlatim.append(f"🏐 {i}. Set: {b_score}-{r_score} (Set bizim!)")
+            else:
+                rak_set += 1
+                anlatim.append(f"🏐 {i}. Set: {b_score}-{r_score} (Set rakibin)")
+        bizim_skor = biz_set
+        rakip_skor = rak_set
+    else:
+        dakikalar = sorted(random.sample(range(1, 90), random.randint(3, 7)))
+        for dk in dakikalar:
+            if random.randint(1, 100) <= (50 + (bizim_guc - rakip_guc)):
+                bizim_skor += 1
+                anlatim.append(f"⚽ Dk {dk}: Harika bir atak ve GOOOL! ({bizim_skor}-{rakip_skor})")
+            else:
+                rakip_skor += 1
+                anlatim.append(f"❌ Dk {dk}: Rakip defansımızı aştı ve gol... ({bizim_skor}-{rakip_skor})")
+                
+    anlatim.append("---")
+    if bizim_skor > rakip_skor:
+        anlatim.append("🏆 MAÇ SONUCU: KAZANDIK!")
+    elif bizim_skor < rakip_skor:
+        anlatim.append("💀 MAÇ SONUCU: KAYBETTİK.")
+    else:
+        anlatim.append("🤝 MAÇ SONUCU: BERABERE.")
+        
+    return jsonify({
+        "ok": True,
+        "bizim_skor": bizim_skor,
+        "rakip_skor": rakip_skor,
+        "anlatim": "\\n".join(anlatim)
+    })
+
 @app.route("/ogrenci/taktik")
 @ogrenci_giris_zorunlu
 def ogrenci_taktik():

@@ -308,6 +308,7 @@ KADRO_HAM.forEach((o, i) => {
     ad:     o.ad_soyad || o.ad || '?',
     numara: i + 1,
     rol:    o.mevki || MEVKILER[i % MEVKILER.length] || MEVKILER[0],
+    tik_sayisi: o.tik_sayisi || 0,
     x: -1, y: -1, sahada: false,
   };
 });
@@ -386,6 +387,7 @@ function kadroRender() {
   liste.innerHTML = '';
   const sira = [...Object.values(oyuncular)].sort((a,b) => a.numara - b.numara);
   sira.forEach(o => {
+    const ovr = Math.min(99, 50 + Math.floor(parseInt(o.tik_sayisi) * 0.8));
     const div = document.createElement('div');
     div.id = 'ki-'+o.id;
     div.className = 'kadro-item' + (o.sahada ? ' sahada' : '');
@@ -397,6 +399,7 @@ function kadroRender() {
         <span class="mini-jer">${o.numara}</span>
       </div>
       <div class="min-w-0 flex-1">
+        <div class="float-right text-[9px] font-black px-1 mt-0.5 rounded bg-slate-800 ${ovr >= 85 ? 'text-amber-400' : (ovr >= 70 ? 'text-emerald-400' : 'text-slate-400')}">⚡${ovr}</div>
         <div class="text-white text-[9px] font-black leading-tight truncate">${o.ad}</div>
         <div class="text-slate-500 text-[8px] truncate">${(o.rol||'').split('(')[0].trim()}</div>
       </div>
