@@ -202,28 +202,36 @@ function update() {
     if (stateMachine === "SERVIS") {
         if (ball.owner) {
             let p = ball.owner;
-            if (p.actionCooldown <= 0) {
-                // Serve!
-                const errMargin = (100 - p.ozellikler.sut) / 100;
-                const errX = (Math.random() * 100 - 50) * errMargin;
-                const errY = (Math.random() * 100 - 50) * errMargin;
-                
-                const gX = GAME_WIDTH/2 + (Math.random() * 200 - 100) + errX;
-                const gY = (p.team === team1 ? 200 : GAME_HEIGHT-200) + errY; // opponent side
-                
-                const dir = normalize(gX - p.x, gY - p.y);
-                const d = dist(p, {x:gX, y:gY});
-                
-                ball.vz = 9 + (Math.random()*2); // High arc
-                const airTime = (ball.vz / 0.2) * 2; // Time to land
-                const power = d / airTime; // Exact power to reach target!
-                
-                ball.vx = dir.x * power; ball.vy = dir.y * power;
-                ball.owner = null;
-                ball.lastTeamTouched = p.team;
-                teamTouches = 1;
-                stateMachine = "PLAYING";
-            }
+            // Decrement cooldown so the server actually fires after the delay
+            if (p.actionCooldown > 0) { p.actionCooldown--; return; }
+            
+            // Serve!
+            const errMargin = (100 - p.ozellikler.sut) / 100;
+            const errX = (Math.random() * 100 - 50) * errMargin;
+            const errY = (Math.random() * 100 - 50) * errMargin;
+            
+            // Target: random spot deep in opponent's court (clamped inside court)
+            const margin = 50;
+            const gX = Math.max(margin, Math.min(GAME_WIDTH - margin,
+                GAME_WIDTH/2 + (Math.random() * 240 - 120) + errX));
+            const gY = p.team === team1
+                ? Math.max(margin, Math.min(GAME_HEIGHT/2 - margin, 180 + errY))
+                : Math.max(GAME_HEIGHT/2 + margin, Math.min(GAME_HEIGHT - margin, GAME_HEIGHT - 180 + errY));
+            
+            const dir = normalize(gX - p.x, gY - p.y);
+            const d = dist(p, {x:gX, y:gY});
+            
+            ball.vz = 9 + (Math.random() * 2); // high arc
+            const airTime = (ball.vz / 0.2) * 2;
+            const power = Math.max(2, d / airTime);
+            
+            ball.vx = dir.x * power; ball.vy = dir.y * power;
+            ball.owner = null;
+            ball.lastTeamTouched = p.team;
+            lastNetSide = p.team;
+            teamTouches = 1;
+            stateMachine = "PLAYING";
+            showEvent("Servis!", 600);
         }
         return;
     }
