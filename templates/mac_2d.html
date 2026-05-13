@@ -375,49 +375,14 @@ function update() {
                 const defPower = opp.ozellikler.defans + Math.random()*20;
                 
                 if (defPower > atkPower) {
-                    // Check for foul
-                    if (Math.random() < 0.20) {
-                        // FAUL!
-                        ball.owner.actionCooldown = 40;
-                        opp.actionCooldown = 40;
-                        stateMachine = "SET_PIECE";
-                        setPieceTimer = 120;
-                        setPieceTeam = ball.owner.team; // fouled team gets the ball
-                        
-                        const inBox = Math.abs(ball.y - opp.team.defendY) < 150 && Math.abs(ball.x - GAME_WIDTH/2) < 120;
-                        setPieceType = inBox ? "PENALTI" : "FRİKİK";
-                        
-                        let eventMsg = `${setPieceType}! ${opp.ad} sert girdi.`;
-                        
-                        // Cards
-                        if (Math.random() < 0.3) {
-                            if (Math.random() < 0.1) {
-                                eventMsg += ` 🟥 KIRMIZI KART!`;
-                                players.splice(i, 1); // remove player
-                            } else {
-                                eventMsg += ` 🟨 SARI KART!`;
-                            }
-                        }
-                        
-                        showEvent(eventMsg, 3000);
-                        
-                        // Frikik veya Penaltı'yı kullanması için topu faul yapılan oyuncuya ver
-                        ball.vx = 0; ball.vy = 0;
-                        if (setPieceType === "PENALTI") {
-                            ball.x = GAME_WIDTH/2;
-                            ball.y = opp.team.defendY === 0 ? 110 : GAME_HEIGHT-110;
-                            ball.owner.x = ball.x; ball.owner.y = ball.y + (opp.team.defendY === 0 ? 10 : -10);
-                        }
-                        return; // break out
-                    } else {
-                        // Clean tackle
-                        showEvent("Kritik müdahale!", 500);
-                        ball.owner.actionCooldown = 30; // stunned
-                        ball.owner = opp;
-                        opp.state = 'WITH_BALL';
-                        opp.hasBallTime = 0;
-                        ball.lastTouchedBy = opp;
-                    }
+                    // Clean tackle (Fouls removed per user request)
+                    showEvent("Kritik müdahale!", 500);
+                    ball.owner.actionCooldown = 30; // stunned
+                    ball.owner = opp;
+                    opp.state = 'WITH_BALL';
+                    opp.hasBallTime = 0;
+                    ball.lastTouchedBy = opp;
+                    return;
                 } else {
                     opp.actionCooldown = 20; // left behind
                 }
@@ -464,19 +429,22 @@ function update() {
                 // 1. Shoot? (Uses SUT)
                 if (distToGoal < 300) {
                     let pathClear = true;
-                    players.forEach(opp => {
-                        if (opp.team !== p.team && opp.y > Math.min(p.y, p.team.goalY) && opp.y < Math.max(p.y, p.team.goalY)) {
-                            if (Math.abs(opp.x - p.x) < 30) pathClear = false; // blocked
-                        }
-                    });
+                    // If we are very close to the goal line (<120), just shoot!
+                    if (distToGoal > 120) {
+                        players.forEach(opp => {
+                            if (opp.team !== p.team && opp.y > Math.min(p.y, p.team.goalY) && opp.y < Math.max(p.y, p.team.goalY)) {
+                                if (Math.abs(opp.x - p.x) < 30) pathClear = false; // blocked
+                            }
+                        });
+                    }
                     
-                    if (pathClear || p.hasBallTime > 60 || Math.random() < 0.1) {
+                    if (pathClear || p.hasBallTime > 40 || Math.random() < 0.15) {
                         // SHOOT!
                         const gX = GAME_WIDTH/2 + (Math.random() * 60 - 30);
                         const errorMarginSut = (100 - p.ozellikler.sut) / 100;
                         const errX = (Math.random() * 240 - 120) * errorMarginSut; // mistake in aiming
                         const dir = normalize(gX + errX - p.x, p.team.goalY - p.y);
-                        const power = 16 + (p.ozellikler.sut / 12);
+                        const power = 18 + (p.ozellikler.sut / 12);
                         ball.vx = dir.x * power; ball.vy = dir.y * power;
                         ball.owner = null; p.actionCooldown = 30;
                         return;
@@ -484,7 +452,7 @@ function update() {
                 }
                 
                 // 2. Pass? (Uses PAS)
-                if (p.hasBallTime > 15 && Math.random() < 0.25) {
+                if (p.hasBallTime > 15 && Math.random() < 0.30) {
                     let bestMate = null; let bestScore = -999;
                     players.forEach(m => {
                         if (m.team === p.team && m !== p) {
@@ -502,10 +470,13 @@ function update() {
                     
                     if (bestMate && bestScore > -20) {
                         const errorMarginPas = (100 - p.ozellikler.pas) / 100;
-                        const errX = (Math.random() * 120 - 60) * errorMarginPas;
-                        const errY = (Math.random() * 120 - 60) * errorMarginPas;
+                        // Dramatically increase pass error based on low XP
+                        const errX = (Math.random() * 300 - 150) * errorMarginPas;
+                        const errY = (Math.random() * 300 - 150) * errorMarginPas;
                         const dir = normalize((bestMate.x+errX) - p.x, (bestMate.y+errY) - p.y);
-                        const passPower = 12 + (p.ozellikler.pas/20);
+                        // Also vary the pass power randomly based on error margin
+                        const powerVariance = (Math.random() * 8 - 4) * errorMarginPas;
+                        const passPower = 12 + (p.ozellikler.pas/20) + powerVariance;
                         ball.vx = dir.x * passPower; ball.vy = dir.y * passPower;
                         ball.targetPlayer = bestMate;
                         ball.owner = null; p.actionCooldown = 20;
