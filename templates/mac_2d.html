@@ -327,7 +327,9 @@ function update() {
         
         ball.vx = 0; ball.vy = 0;
         ball.owner = taker;
-        taker.x = ball.x; taker.y = ball.y;
+        if (taker) {
+            taker.x = ball.x; taker.y = ball.y;
+        }
         
         showEvent(setPieceTeam.name + " " + setPieceType + " kullanacak", 2000);
         return;
@@ -440,9 +442,9 @@ function update() {
                     
                     if (pathClear || p.hasBallTime > 60 || Math.random() < 0.1) {
                         // SHOOT!
-                        const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
+                        const gX = GAME_WIDTH/2 + (Math.random() * 60 - 30);
                         const errorMarginSut = (100 - p.ozellikler.sut) / 100;
-                        const errX = (Math.random() * 140 - 70) * errorMarginSut; // mistake in aiming
+                        const errX = (Math.random() * 240 - 120) * errorMarginSut; // mistake in aiming
                         const dir = normalize(gX + errX - p.x, p.team.goalY - p.y);
                         const power = 16 + (p.ozellikler.sut / 12);
                         ball.vx = dir.x * power; ball.vy = dir.y * power;
@@ -470,8 +472,8 @@ function update() {
                     
                     if (bestMate && bestScore > -20) {
                         const errorMarginPas = (100 - p.ozellikler.pas) / 100;
-                        const errX = (Math.random() * 80 - 40) * errorMarginPas;
-                        const errY = (Math.random() * 80 - 40) * errorMarginPas;
+                        const errX = (Math.random() * 120 - 60) * errorMarginPas;
+                        const errY = (Math.random() * 120 - 60) * errorMarginPas;
                         const dir = normalize((bestMate.x+errX) - p.x, (bestMate.y+errY) - p.y);
                         const passPower = 12 + (p.ozellikler.pas/20);
                         ball.vx = dir.x * passPower; ball.vy = dir.y * passPower;
@@ -485,7 +487,7 @@ function update() {
             // 3. Dribble
             const dir = normalize(GAME_WIDTH/2 - p.x, p.team.goalY - p.y);
             const errorMarginHiz = (100 - p.ozellikler.hiz) / 100;
-            const zig = Math.sin(timeTicks / 10) * errorMarginHiz;
+            const zig = Math.sin(timeTicks / 10) * errorMarginHiz * 1.5;
             p.vx = (dir.x + zig) * speedMult * 0.7; // slower with ball
             p.vy = dir.y * speedMult * 0.7;
             
@@ -495,6 +497,7 @@ function update() {
             let targetY = p.baseY;
             
             // Goalkeeper specific logic
+            const isGK = Math.abs(p.baseY - p.team.defendY) < 50 || (p.rol && p.rol.includes("Kaleci"));
             if (isGK) {
                 targetY = p.baseY; // GKs stay near goal line
                 targetX = Math.max(GAME_WIDTH/2 - 70, Math.min(GAME_WIDTH/2 + 70, ball.x)); // track ball X
@@ -539,9 +542,11 @@ function update() {
                     let myTeamDist = [];
                     players.forEach(m => { if(m.team === p.team) myTeamDist.push({m:m, d:dist(m,ball)}); });
                     myTeamDist.sort((a,b)=>a.d - b.d);
-                    if (myTeamDist[0].m === p || myTeamDist[1].m === p) {
-                        targetX = ball.x; targetY = ball.y;
-                        p.state = 'CHASE';
+                    if (myTeamDist.length > 0) {
+                        if (myTeamDist[0].m === p || (myTeamDist.length > 1 && myTeamDist[1].m === p)) {
+                            targetX = ball.x; targetY = ball.y;
+                            p.state = 'CHASE';
+                        }
                     }
                 }
             }
