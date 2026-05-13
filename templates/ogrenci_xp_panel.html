@@ -76,7 +76,7 @@
         <div class="w-8 text-right font-mono font-bold text-sm" id="val-{{ oz }}">{{ ozellikler[oz] }}</div>
         <button type="button" onclick="ozellikArtir('{{ oz }}')" class="btn-artir w-8 h-8 rounded-lg bg-blue-600 font-black text-white hover:bg-blue-500 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" {% if ozellikler.kalan_puan <= 0 or ozellikler[oz] >= 99 %}disabled{% endif %}>+</button>
       </div>
-      {% endendfor %}
+      {% endfor %}
       <p id="ozellik-msg" class="text-xs text-center hidden mt-2"></p>
     </div>
   </section>
