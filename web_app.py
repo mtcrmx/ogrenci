@@ -921,6 +921,11 @@ def api_ogrenci_ozellik_artir():
 def ogrenci_mac_saha_2d():
     return render_template("mac_2d.html")
 
+@app.route("/ogrenci/voleybol/2d")
+@ogrenci_giris_zorunlu
+def ogrenci_voleybol_saha_2d():
+    return render_template("voleybol_2d.html")
+
 
 @app.route("/ogrenci/taktik")
 @ogrenci_giris_zorunlu

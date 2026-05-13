@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>2D Voleybol Motoru (Pro)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #000; color: #fff; margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
+    #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+    #header { height: 60px; background: #111; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 2px solid #333; }
+    #score-board { font-size: 20px; font-weight: 900; letter-spacing: 1px; text-align: center; }
+    #canvas-wrap { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #1a1a1a; }
+    canvas { background: #d97706; border: 20px solid #fbbf24; box-shadow: 0 0 20px rgba(0,0,0,0.8); max-width: 100%; max-height: 100%; }
+    #event-overlay {
+      position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
+      font-weight: bold; font-size: 16px; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div id="game-container">
+  <div id="header">
+    <div class="text-blue-400 font-bold text-sm w-1/3" id="team1-name">Bizim Sınıf</div>
+    <div id="score-board" class="w-1/3">
+       <div class="text-xs text-amber-400">SET <span id="set1">0</span> - <span id="set2">0</span></div>
+       <div class="text-lg"><span id="score1">0</span> - <span id="score2">0</span></div>
+    </div>
+    <div class="text-red-400 font-bold text-sm w-1/3 text-right" id="team2-name">Rakip Sınıf</div>
+    <button onclick="window.close()" class="absolute right-4 top-14 mt-2 px-3 py-1 bg-red-600 rounded text-xs font-bold hover:bg-red-500 z-50 hidden" id="close-btn">Kapat</button>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="pitch"></canvas>
+    <div id="event-overlay">Maç Başlıyor!</div>
+  </div>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const rakip_id = urlParams.get('rakip_id');
+
+const FPS = 60;
+const GAME_WIDTH = 450;
+const GAME_HEIGHT = 900;
+
+let isPlaying = false;
+let score1 = 0, score2 = 0;
+let set1 = 0, set2 = 0;
+let stateMachine = "SERVIS"; // SERVIS, PLAYING, POINT_CELEBRATION, MATCH_END
+let serverTeam = null;
+
+const canvas = document.getElementById('pitch');
+const ctx = canvas.getContext('2d');
+canvas.width = GAME_WIDTH;
+canvas.height = GAME_HEIGHT;
+
+let team1 = null;
+let team2 = null;
+let players = [];
+let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, z: 0, vx: 0, vy: 0, vz: 0, owner: null, lastTouchedBy: null, lastTeamTouched: null };
+let teamTouches = 0;
+let goalTimer = 0;
+let eventTimeout = null;
+
+function showEvent(msg, duration=2000) {
+    const el = document.getElementById('event-overlay');
+    el.innerHTML = msg;
+    el.style.opacity = 1;
+    clearTimeout(eventTimeout);
+    if(duration > 0) eventTimeout = setTimeout(() => el.style.opacity = 0, duration);
+}
+
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const normalize = (dx, dy) => {
+    const len = Math.hypot(dx, dy);
+    if (len === 0) return {x:0, y:0};
+    return {x: dx/len, y: dy/len};
+};
+
+async function loadData() {
+  try {
+    const res = await fetch("{{ url_for('api_ogrenci_mac_2d_data') }}", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ rakip_sinif_id: parseInt(rakip_id), spor: "voleybol" })
+    });
+    const data = await res.json();
+    if (!data.ok) return;
+    
+    document.getElementById('team1-name').textContent = data.bizim_takim.ad;
+    document.getElementById('team2-name').textContent = data.rakip_takim.ad;
+    team1 = { name: data.bizim_takim.ad, color: '#3b82f6', dirY: -1, defendY: GAME_HEIGHT, side: 1 };
+    team2 = { name: data.rakip_takim.ad, color: '#ef4444', dirY: 1, defendY: 0, side: 2 };
+    serverTeam = team1;
+    
+    data.bizim_takim.oyuncular.forEach(p => addPlayer(p, team1, false));
+    data.rakip_takim.oyuncular.forEach(p => addPlayer(p, team2, true));
+    
+    resetPositions();
+    showEvent("Voleybol Maçı Başlıyor!", 3000);
+    isPlaying = true;
+    requestAnimationFrame(gameLoop);
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function addPlayer(p, team, mirror) {
+    let tx = (p.baseX / 100) * GAME_WIDTH;
+    let ty = (p.baseY / 100) * GAME_HEIGHT;
+    if (mirror) { tx = GAME_WIDTH - tx; ty = GAME_HEIGHT - ty; }
+    players.push({
+        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, team: team,
+        ozellikler: p.ozellikler || {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr},
+        baseX: tx, baseY: ty, x: tx, y: ty, vx: 0, vy: 0,
+        actionCooldown: 0
+    });
+}
+
+function resetPositions() {
+    players.forEach(p => {
+        p.x = p.baseX; p.y = p.baseY; p.vx = 0; p.vy = 0; p.actionCooldown = 0;
+    });
+    ball.vx = 0; ball.vy = 0; ball.vz = 0; ball.owner = null;
+    teamTouches = 0; ball.lastTeamTouched = null;
+    
+    if (stateMachine !== "MATCH_END") {
+        stateMachine = "SERVIS";
+        // Place ball at server's position
+        let server = players.find(p => p.team === serverTeam && Math.abs(p.baseY - serverTeam.defendY) < 100);
+        if(!server) server = players.find(p => p.team === serverTeam);
+        ball.x = server.x; ball.y = server.y; ball.z = 20;
+        ball.owner = server;
+    }
+}
+
+function givePoint(team, reason) {
+    stateMachine = "POINT_CELEBRATION";
+    goalTimer = 120;
+    showEvent(reason + "<br>Sayı: " + team.name, 2000);
+    
+    if (team === team1) score1++; else score2++;
+    document.getElementById('score1').textContent = score1;
+    document.getElementById('score2').textContent = score2;
+    serverTeam = team;
+    
+    // Check set win
+    if ((score1 >= 25 || score2 >= 25) && Math.abs(score1 - score2) >= 2) {
+        if (score1 > score2) set1++; else set2++;
+        document.getElementById('set1').textContent = set1;
+        document.getElementById('set2').textContent = set2;
+        score1 = 0; score2 = 0;
+        document.getElementById('score1').textContent = score1;
+        document.getElementById('score2').textContent = score2;
+        
+        if (set1 === 3 || set2 === 3) {
+            stateMachine = "MATCH_END";
+            showEvent(`MAÇ BİTTİ!<br>Kazanan: ${set1===3 ? team1.name : team2.name}`, -1);
+            autoSubmit();
+        } else {
+            showEvent(`SET BİTTİ!<br>${team.name} Seti Kazandı!`, 3000);
+            goalTimer = 180;
+        }
+    }
+}
+
+function autoSubmit() {
+    document.getElementById('close-btn').style.display = 'block';
+    if(window.opener && !window.opener.closed) {
+        const form = window.opener.document.querySelector('form[action*="voleybol"]') || window.opener.document.forms[1];
+        if (form) {
+            const in1 = form.querySelector('input[name="skor1"]');
+            const in2 = form.querySelector('input[name="skor2"]');
+            if(in1) in1.value = set1;
+            if(in2) in2.value = set2;
+            showEvent("Sonuç öğretmene başarıyla gönderildi!", -1);
+            form.submit();
+        }
+    }
+}
+
+function update() {
+    if (!isPlaying || stateMachine === "MATCH_END") return;
+
+    if (stateMachine === "POINT_CELEBRATION") {
+        goalTimer--;
+        if (goalTimer <= 0) resetPositions();
+        return;
+    }
+
+    if (stateMachine === "SERVIS") {
+        if (ball.owner) {
+            let p = ball.owner;
+            if (p.actionCooldown <= 0) {
+                // Serve!
+                const gX = GAME_WIDTH/2 + (Math.random() * 200 - 100);
+                const gY = p.team === team1 ? 200 : GAME_HEIGHT-200; // opponent side
+                const dir = normalize(gX - p.x, gY - p.y);
+                const power = 10 + (p.ozellikler.sut / 10);
+                ball.vx = dir.x * power; ball.vy = dir.y * power;
+                ball.vz = 8; // High arc
+                ball.owner = null;
+                ball.lastTeamTouched = p.team;
+                teamTouches = 1;
+                stateMachine = "PLAYING";
+            }
+        }
+        return;
+    }
+
+    // PLAYING STATE
+    // Gravity for ball
+    ball.vz -= 0.2; 
+    ball.x += ball.vx; ball.y += ball.vy; ball.z += ball.vz;
+    
+    // Out of bounds check
+    const isOut = ball.x < 0 || ball.x > GAME_WIDTH || ball.y < 0 || ball.y > GAME_HEIGHT;
+    if (ball.z <= 0) {
+        ball.z = 0;
+        // Ball hit the floor!
+        if (isOut) {
+            // Point to the team that DID NOT touch it last
+            let pointTo = ball.lastTeamTouched === team1 ? team2 : team1;
+            givePoint(pointTo, "Top Dışarıda!");
+        } else {
+            // Hit the floor in bounds
+            let hitSide = ball.y > GAME_HEIGHT/2 ? team1 : team2; // team1 is bottom (defendY=900)
+            let pointTo = hitSide === team1 ? team2 : team1;
+            givePoint(pointTo, "Top Yerde!");
+        }
+        return;
+    }
+    
+    // Net Collision (middle line)
+    if (Math.abs(ball.y - GAME_HEIGHT/2) < Math.abs(ball.vy) && ball.z < 15) {
+        // Hit the net and didn't cross!
+        ball.vy = -ball.vy * 0.5;
+        ball.vx = ball.vx * 0.5;
+    }
+    
+    // Track if ball crosses net
+    let currentSide = ball.y > GAME_HEIGHT/2 ? team1 : team2;
+    if (ball.lastTeamTouched && currentSide !== ball.lastTeamTouched && ball.y > GAME_HEIGHT/2 - 10 && ball.y < GAME_HEIGHT/2 + 10) {
+        teamTouches = 0; // Reset touches when it safely crosses net
+    }
+
+    // Players AI
+    players.forEach(p => {
+        if (p.actionCooldown > 0) p.actionCooldown--;
+        
+        let targetX = p.baseX; let targetY = p.baseY;
+        
+        // If ball is on my side, react
+        let ballOnMySide = p.team === team1 ? ball.y > GAME_HEIGHT/2 : ball.y < GAME_HEIGHT/2;
+        
+        if (ballOnMySide && ball.vz < 5) {
+            // Find who should get it
+            let dToBall = dist(p, ball);
+            let isClosest = true;
+            players.forEach(m => {
+                if (m.team === p.team && m !== p && dist(m, ball) < dToBall) isClosest = false;
+            });
+            
+            if (isClosest) {
+                targetX = ball.x;
+                targetY = ball.y;
+            }
+        }
+        
+        // Move
+        const dir = normalize(targetX - p.x, targetY - p.y);
+        const d = dist(p, {x:targetX, y:targetY});
+        if (d > 5) {
+            let speedMult = (p.ozellikler.hiz / 100) * 5.0;
+            p.vx = dir.x * speedMult; p.vy = dir.y * speedMult;
+        } else {
+            p.vx *= 0.5; p.vy *= 0.5;
+        }
+        p.x += p.vx; p.y += p.vy;
+        
+        // Boundaries for players (don't cross net)
+        if(p.x < 15) p.x=15; if(p.x > GAME_WIDTH-15) p.x=GAME_WIDTH-15;
+        if(p.team === team1) {
+            if(p.y < GAME_HEIGHT/2 + 15) p.y = GAME_HEIGHT/2 + 15;
+            if(p.y > GAME_HEIGHT-15) p.y = GAME_HEIGHT-15;
+        } else {
+            if(p.y < 15) p.y = 15;
+            if(p.y > GAME_HEIGHT/2 - 15) p.y = GAME_HEIGHT/2 - 15;
+        }
+        
+        // Intercept Ball
+        if (ballOnMySide && ball.z > 0 && ball.z < 25 && dist(p, ball) < 20 && p.actionCooldown <= 0) {
+            if (ball.lastTeamTouched === p.team && teamTouches >= 3) {
+                givePoint(p.team === team1 ? team2 : team1, "4 Vuruş Hatası!");
+                return;
+            }
+            
+            ball.lastTouchedBy = p;
+            ball.lastTeamTouched = p.team;
+            teamTouches++;
+            p.actionCooldown = 30; // Cannot hit twice in a row
+            
+            // Calculate hit
+            let errMargin = (100 - p.ozellikler.pas) / 100;
+            
+            if (teamTouches === 1) {
+                // Dig to Setter (Pasör - usually player 3)
+                showEvent("Manşet!", 300);
+                let setter = players.find(m => m.team === p.team && m.numara === 3);
+                if (!setter) setter = players.find(m => m.team === p.team && m !== p);
+                
+                const errX = (Math.random() * 100 - 50) * errMargin;
+                const errY = (Math.random() * 100 - 50) * errMargin;
+                let bDir = normalize((setter.x + errX) - p.x, (setter.y + errY) - p.y);
+                ball.vx = bDir.x * 6; ball.vy = bDir.y * 6; ball.vz = 8;
+            } else if (teamTouches === 2) {
+                // Set to Spiker (Smaçör)
+                showEvent("Pas!", 300);
+                let spiker = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - GAME_HEIGHT/2) < 150);
+                if(!spiker) spiker = players.find(m => m.team === p.team && m !== p);
+                
+                const errX = (Math.random() * 100 - 50) * errMargin;
+                const errY = (Math.random() * 100 - 50) * errMargin;
+                let bDir = normalize((spiker.x + errX) - p.x, (spiker.y + errY) - p.y);
+                ball.vx = bDir.x * 7; ball.vy = bDir.y * 7; ball.vz = 10;
+            } else {
+                // Spike over the net! (Smaç)
+                showEvent("SMAÇ!", 500);
+                errMargin = (100 - p.ozellikler.sut) / 100; // uses sut for spike
+                const gX = GAME_WIDTH/2 + (Math.random() * 200 - 100);
+                const gY = p.team === team1 ? 150 : GAME_HEIGHT - 150;
+                
+                const errX = (Math.random() * 300 - 150) * errMargin;
+                const errY = (Math.random() * 300 - 150) * errMargin;
+                let bDir = normalize((gX + errX) - p.x, (gY + errY) - p.y);
+                
+                let power = 12 + (p.ozellikler.sut / 10);
+                ball.vx = bDir.x * power; ball.vy = bDir.y * power; ball.vz = 2; // Flat and fast
+            }
+        }
+    });
+}
+
+function draw() {
+    ctx.clearRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+    // Court Lines
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+    // Center line
+    ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2); ctx.stroke();
+    // 3 meter lines
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2 - 150); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2 - 150); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2 + 150); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2 + 150); ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Players
+    players.forEach(p => {
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.arc(p.x, p.y+5, 12, 0, Math.PI*2); ctx.fill();
+        
+        ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI*2);
+        ctx.fillStyle = p.team.color; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(p.numara, p.x, p.y);
+        ctx.font = 'bold 12px sans-serif'; ctx.fillText(p.ad, p.x, p.y + 22);
+    });
+
+    // Ball
+    let shadowOffset = ball.z * 0.5;
+    let ballSize = Math.max(5, 8 + ball.z * 0.2);
+    
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.arc(ball.x, ball.y + shadowOffset, ballSize, 0, Math.PI*2); ctx.fill();
+    
+    // Ball
+    ctx.beginPath(); ctx.arc(ball.x, ball.y - ball.z, ballSize, 0, Math.PI*2);
+    ctx.fillStyle = '#fde047'; ctx.fill(); // Yellow/Blue volleyball color
+    ctx.strokeStyle = '#1e3a8a'; ctx.lineWidth = 2; ctx.stroke();
+}
+
+function gameLoop() {
+    try {
+        update();
+        draw();
+    } catch(e) { console.error(e); }
+    requestAnimationFrame(gameLoop);
+}
+
+loadData();
+</script>
+</body>
+</html>

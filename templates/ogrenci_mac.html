@@ -208,7 +208,7 @@
       alert("Lütfen önce bir rakip sınıf seçin.");
       return;
     }
-    const url = "{{ url_for('ogrenci_mac_saha_2d') }}?rakip_id=" + rakipId + "&spor=" + spor;
+    const url = spor === 'voleybol' ? "{{ url_for('ogrenci_voleybol_saha_2d') }}?rakip_id=" + rakipId + "&spor=voleybol" : "{{ url_for('ogrenci_mac_saha_2d') }}?rakip_id=" + rakipId + "&spor=futbol";
     window.open(url, "2DMac", "width=400,height=750,resizable=yes");
   }
 
