@@ -210,6 +210,8 @@ let yanlis      = 0;
 let timerInter  = null;
 let timerKalan  = 30;
 let cevaplandimi = false;
+let quizOturumId = null;
+let sonucGonderiliyor = false;
 
 // ════════════════════════════════════════════════════════════════════════
 // SINIF SEÇİMİ
@@ -257,9 +259,11 @@ async function dersBaslat(ders, el) {
     return;
   }
   sorular = d.sorular;
+  quizOturumId = d.oturum_id;
   mevcutSoru = 0;
   cevaplar = {};
   dogru = yanlis = 0;
+  sonucGonderiliyor = false;
 
   document.getElementById('ekran-secim').classList.add('hidden');
   document.getElementById('ekran-quiz').classList.remove('hidden');
@@ -368,6 +372,8 @@ function cevapla(harf, tikBtn) {
 // SONUÇ GÖSTER
 // ════════════════════════════════════════════════════════════════════════
 async function sonucGoster() {
+  if (sonucGonderiliyor) return;
+  sonucGonderiliyor = true;
   clearInterval(timerInter);
   document.getElementById('ekran-quiz').classList.add('hidden');
 
@@ -379,10 +385,17 @@ async function sonucGoster() {
       sinif_id: SINIF_ID,
       sinif_seviyesi: seciliSinif,
       ders: seciliDers,
+      oturum_id: quizOturumId,
       cevaplar: cevaplar,
     })
   });
   const sonuc = await r.json();
+  if (!r.ok || !sonuc.ok) {
+    alert(sonuc.hata || 'Sonuç kaydedilemedi. Lütfen yeniden deneyin.');
+    sonucGonderiliyor = false;
+    document.getElementById('ekran-quiz').classList.remove('hidden');
+    return;
+  }
   dogru  = sonuc.dogru  || 0;
   yanlis = sonuc.yanlis || 0;
   const puan = sonuc.puan_degisim || 0;
@@ -404,7 +417,7 @@ async function sonucGoster() {
   document.getElementById('sonuc-yanlis').textContent = yanlis;
 
   const pd = document.getElementById('puan-degisim-text');
-  pd.textContent = (puan >= 0 ? '+' : '') + puan + ' Puan';
+  pd.textContent = sonuc.tekrar ? 'Puan zaten işlendi' : (puan >= 0 ? '+' : '') + puan + ' Puan';
   pd.className = puan >= 0 ? 'text-4xl font-black text-green-400' : 'text-4xl font-black text-red-400';
 
   // Detay listesi (sunucu dönen doğruları kullan)

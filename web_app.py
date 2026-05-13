@@ -23,7 +23,7 @@ from database import (
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
-from web_features import register_feature_routes
+from web_features import ogrenci_rozetleri_ekle, register_feature_routes
 
 # ── Uygulama ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -136,6 +136,7 @@ def dashboard():
         durum, emoji = _durum(o["tik_sayisi"])
         o["durum"]  = durum
         o["emoji"]  = emoji
+    ogrenci_rozetleri_ekle(ogrenciler)
 
     return render_template("dashboard.html",
                            siniflar=siniflar,
@@ -153,6 +154,7 @@ def api_sinif(sinif_id):
         durum, emoji = _durum(o["tik_sayisi"])
         o["durum"] = durum
         o["emoji"] = emoji
+    ogrenci_rozetleri_ekle(ogrenciler)
     return jsonify(ogrenciler)
 
 
@@ -236,6 +238,7 @@ def api_yayin(sinif_id):
     for o in ogrenciler:
         _, emoji = _durum(o["tik_sayisi"])
         o["emoji"] = emoji
+    ogrenci_rozetleri_ekle(ogrenciler)
     return jsonify(ogrenciler)
 
 

@@ -142,7 +142,17 @@
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-lg">{{ o.emoji }}</span>
               <span class="font-bold text-sm text-white">{{ o.ad_soyad }}</span>
+              {% if o.rozetler %}
+              <span class="inline-flex gap-0.5 rounded-full border border-amber-500/50 bg-amber-950/40 px-1.5 py-0.5" title="{{ o.rozet_sayisi }} rozet · {{ o.xp }} XP">
+                {% for r in o.rozetler[:4] %}
+                <span class="text-base">{{ r.emoji }}</span>
+                {% endfor %}
+              </span>
+              {% endif %}
               <span class="text-slate-500 text-xs">{{ o.sinif_adi }}</span>
+              {% if o.xp %}
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-black bg-indigo-950 text-indigo-300">{{ o.xp }} XP</span>
+              {% endif %}
               {% if o.etiket %}
               <span class="text-[10px] px-2 py-0.5 rounded-full font-bold"
                     style="background:{{ renk }}22; color:{{ renk }}">{{ o.etiket }}</span>
@@ -459,7 +469,34 @@
       Öğrenciler ve sınıflar başarıları karşılığında otomatik rozet kazanır.
     </div>
 
+    {% if envanterler %}
+    <div class="rounded-2xl border border-indigo-800 p-4 mb-5" style="background:#0d1526">
+      <div class="text-indigo-300 font-black text-sm mb-3">🎒 Öğrenci Envanteri</div>
+      <div class="space-y-2">
+        {% for o in envanterler %}
+        <div class="rounded-xl border border-slate-800 p-3" style="background:#080f20">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-black text-white text-sm">{{ o.ad_soyad }}</span>
+            <span class="text-slate-500 text-xs">{{ o.sinif_adi }}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-black bg-indigo-950 text-indigo-300">{{ o.xp }} XP</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            {% for r in o.rozetler %}
+            <span class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold border border-slate-700 text-slate-200" title="{{ r.aciklama }}">
+              <span>{{ r.emoji }}</span><span>{{ r.rozet_adi }}</span>
+            </span>
+            {% else %}
+            <span class="text-slate-600 text-xs">Rozet yok, XP birikiyor.</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     {% if rozetler %}
+    <div class="text-slate-400 text-xs font-bold mb-2">Son kazanılan rozetler</div>
     <div class="grid grid-cols-2 gap-3 mb-6">
       {% for r in rozetler %}
       <div class="rozet-kart rounded-2xl p-4 transition-all slide-up"
@@ -682,7 +719,9 @@ async function veriYenile() {
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-lg">${emoji}</span>
                 <span class="font-bold text-sm text-white">${o.ad_soyad}</span>
+                ${ogrenciRozetleriHTML(o)}
                 <span class="text-slate-500 text-xs">${o.sinif_adi}</span>
+                ${o.xp ? `<span class="text-[10px] px-2 py-0.5 rounded-full font-black bg-indigo-950 text-indigo-300">${o.xp} XP</span>` : ''}
                 ${etiket ? `<span class="text-[10px] px-2 py-0.5 rounded-full font-bold"
                   style="background:${renk}22;color:${renk}">${etiket}</span>` : ''}
               </div>
@@ -704,6 +743,15 @@ async function veriYenile() {
       'Güncellendi: ' + new Date().toLocaleTimeString('tr-TR');
     guncellemeYapildi = true;
   } catch(e) { console.warn('Yenileme hatası:', e); }
+}
+
+function ogrenciRozetleriHTML(o) {
+  const rozetler = Array.isArray(o.rozetler) ? o.rozetler.slice(0, 4) : [];
+  if (!rozetler.length) return '';
+  const baslik = `${o.rozet_sayisi || rozetler.length} rozet · ${o.xp || 0} XP`;
+  return `<span class="inline-flex gap-0.5 rounded-full border border-amber-500/50 bg-amber-950/40 px-1.5 py-0.5" title="${baslik}">
+    ${rozetler.map(r => `<span class="text-base">${r.emoji || '🏅'}</span>`).join('')}
+  </span>`;
 }
 
 setInterval(() => {

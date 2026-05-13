@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import random
 import sqlite3
+import uuid
 from datetime import datetime
 from typing import Callable
 
@@ -56,6 +57,20 @@ ROZET_TANIMI = {
     "quiz": ("🧠", "Bilgi Ustası", "Quizlerde yüksek başarı."),
 }
 
+ROZET_TANIMI.update({
+    "xp_10": ("⭐", "İlk Işık", "10 XP kazanan öğrenciye verilir."),
+    "xp_25": ("🌟", "Parlayan Yıldız", "25 XP kazanan öğrenciye verilir."),
+    "xp_50": ("💎", "Elmas Emek", "50 XP kazanan öğrenciye verilir."),
+    "xp_100": ("👑", "XP Efsanesi", "100 XP kazanan öğrenciye verilir."),
+})
+
+XP_ROZET_ESIKLERI = [
+    (10, "xp_10"),
+    (25, "xp_25"),
+    (50, "xp_50"),
+    (100, "xp_100"),
+]
+
 SEVIYELER = [
     (0, "🥚", "Yumurta"),
     (10, "🐣", "Civciv"),
@@ -94,6 +109,37 @@ KART_NEDENLERI = [
     "Takım arkadaşını olumsuz etkileme",
     "Kurala uymama",
     "Centilmenlik dışı davranış",
+]
+
+YEDEK_TABLOLARI = [
+    "tik_kayitlari",
+    "lig_puan",
+    "lig_maclari",
+    "lig_kartlari",
+    "quiz_sonuclari",
+    "taktik_kayitlari",
+    "rozetler",
+    "ogrenci_xp",
+    "alkislar",
+    "gunluk_gorev",
+    "gunluk_gorev_tamamlayan",
+    "mufettisler",
+    "ittifaklar",
+]
+
+SIFIRLANACAK_TABLOLAR = [
+    "tik_kayitlari",
+    "lig_kartlari",
+    "lig_maclari",
+    "quiz_sonuclari",
+    "taktik_kayitlari",
+    "rozetler",
+    "ogrenci_xp",
+    "alkislar",
+    "gunluk_gorev_tamamlayan",
+    "gunluk_gorev",
+    "mufettisler",
+    "ittifaklar",
 ]
 
 
@@ -168,10 +214,11 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
         ders = request.args.get("ders", "")
         banka = list(SORULAR.get(seviye, {}).get(ders, []))
         random.shuffle(banka)
-        anahtar = session.setdefault("quiz_cevap_anahtari", {})
+        anahtar = {}
+        oturum_id = uuid.uuid4().hex
         sorular = []
         for i, soru in enumerate(banka[:7], 1):
-            soru_id = f"{seviye}:{ders}:{i}:{abs(hash(soru))}"
+            soru_id = f"{oturum_id}:{i}:{abs(hash(soru))}"
             anahtar[soru_id] = soru[5]
             sorular.append({
                 "id": soru_id,
@@ -182,13 +229,18 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
                 "secenek_d": soru[4],
             })
         session["quiz_cevap_anahtari"] = anahtar
-        return jsonify({"ok": True, "sorular": sorular})
+        session["quiz_oturum_id"] = oturum_id
+        session["quiz_oturum_tamamlandi"] = False
+        return jsonify({"ok": True, "sorular": sorular, "oturum_id": oturum_id})
 
     @app.route("/api/quiz/cevapla", methods=["POST"])
     def api_quiz_cevapla():
         data = request.get_json(silent=True) or {}
         cevaplar = data.get("cevaplar", {})
         anahtar = session.get("quiz_cevap_anahtari", {})
+        oturum_id = data.get("oturum_id")
+        if not anahtar or oturum_id != session.get("quiz_oturum_id"):
+            return jsonify({"ok": False, "hata": "Quiz oturumu gecersiz.", "puan_degisim": 0}), 409
         dogru = yanlis = 0
         sonuclar = {}
         for soru_id, gercek in anahtar.items():
@@ -199,13 +251,32 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
             sonuclar[str(soru_id)] = {"dogru": ok, "gercek": gercek}
         puan = dogru - yanlis
         sinif_id = int(data.get("sinif_id") or 0)
+        ders = data.get("ders", "")
+        seviye = int(data.get("sinif_seviyesi") or 0)
         if sinif_id:
+            onceki = _one("""
+                SELECT dogru, yanlis, puan
+                FROM quiz_sonuclari
+                WHERE sinif_id=? AND ders=? AND tarih=?
+                ORDER BY id DESC LIMIT 1
+            """, (sinif_id, ders, _today()))
+            if onceki or session.get("quiz_oturum_tamamlandi"):
+                session["quiz_oturum_tamamlandi"] = True
+                return jsonify({
+                    "ok": True,
+                    "tekrar": True,
+                    "dogru": onceki["dogru"] if onceki else dogru,
+                    "yanlis": onceki["yanlis"] if onceki else yanlis,
+                    "puan_degisim": 0,
+                    "sonuclar": sonuclar,
+                })
             _execute("""
                 INSERT INTO quiz_sonuclari
                 (sinif_id, sinif_seviyesi, ders, dogru, yanlis, puan, tarih)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (sinif_id, int(data.get("sinif_seviyesi") or 0), data.get("ders", ""), dogru, yanlis, puan, _today()))
+            """, (sinif_id, seviye, ders, dogru, yanlis, puan, _today()))
             _lig_puan_ekle(sinif_id, puan, ag=max(puan, 0))
+            session["quiz_oturum_tamamlandi"] = True
         return jsonify({"ok": True, "dogru": dogru, "yanlis": yanlis, "puan_degisim": puan, "sonuclar": sonuclar})
 
     @app.route("/lig")
@@ -342,7 +413,7 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
         if not ogr:
             return jsonify({"ok": False, "sebep": "Öğrenci bulunamadı."})
         _execute("INSERT INTO mufettisler (ogrenci_id, sinif_id, tarih) VALUES (?, ?, ?)", (ogrenci_id, ogr["sinif_id"], _today()))
-        return jsonify({"ok": True})
+        return jsonify({"ok": True, "silinen": silinen, "yedekler_korundu": True})
 
     @app.route("/api/mufettis/degerlendir", methods=["POST"])
     @giris_zorunlu
@@ -354,6 +425,7 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
             muf = _one("SELECT sinif_id, ogrenci_id FROM mufettisler WHERE id=?", (mid,))
             if muf:
                 _lig_puan_ekle(muf["sinif_id"], 2, ag=2)
+                _ogrenci_xp_ekle(muf["ogrenci_id"], muf["sinif_id"], 10)
                 _rozet_ekle(muf["sinif_id"], muf["ogrenci_id"], "quiz")
         return jsonify({"ok": True})
 
@@ -398,6 +470,7 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
         """, (ogrenci_id, sinif_id, request.form.get("mesaj", "Harika iş!"), session.get("ogretmen_adi", "Öğretmen"), _today()))
         toplam = _one("SELECT COUNT(*) AS c FROM alkislar WHERE ogrenci_id=?", (ogrenci_id,))["c"]
         _lig_puan_ekle(sinif_id, 1, ag=1)
+        _ogrenci_xp_ekle(ogrenci_id, sinif_id, 1)
         if toplam >= 5:
             _rozet_ekle(sinif_id, ogrenci_id, "alkis")
         return jsonify({"ok": True, "toplam_alkis": toplam})
@@ -424,16 +497,51 @@ def register_feature_routes(app, giris_zorunlu: Callable, sifir_parola: str, adm
     @app.route("/sifirla")
     @giris_zorunlu
     def sifirla_sayfasi():
-        return render_template("sifirla.html", ogretmen_adi=session.get("ogretmen_adi", ""))
+        return render_template(
+            "sifirla.html",
+            ogretmen_adi=session.get("ogretmen_adi", ""),
+            yedekler=_yedek_listesi(),
+        )
+
+    @app.route("/api/admin/yedekle", methods=["POST"])
+    @giris_zorunlu
+    def api_admin_yedekle():
+        hata = _admin_sifre_hatasi(admin_sifre)
+        if hata:
+            return hata
+        yedek = _yedek_olustur(session.get("ogretmen_adi", "Öğretmen"))
+        return jsonify({"ok": True, "yedek": yedek, "yedekler": _yedek_listesi()})
+
+    @app.route("/api/admin/yedek/<int:yedek_id>/geri-yukle", methods=["POST"])
+    @giris_zorunlu
+    def api_admin_yedek_geri_yukle(yedek_id):
+        hata = _admin_sifre_hatasi(admin_sifre)
+        if hata:
+            return hata
+        ok, sonuc = _yedek_geri_yukle(yedek_id)
+        if not ok:
+            return jsonify({"ok": False, "hata": sonuc}), 404
+        return jsonify({"ok": True, "geri_yuklenen": sonuc})
+
+    @app.route("/api/admin/yedek/<int:yedek_id>/sil", methods=["POST"])
+    @giris_zorunlu
+    def api_admin_yedek_sil(yedek_id):
+        hata = _admin_sifre_hatasi(admin_sifre)
+        if hata:
+            return hata
+        silindi = _yedek_sil(yedek_id)
+        if not silindi:
+            return jsonify({"ok": False, "hata": "Yedek bulunamadı."}), 404
+        return jsonify({"ok": True, "yedekler": _yedek_listesi()})
 
     @app.route("/api/admin/sifirla", methods=["POST"])
     @giris_zorunlu
     def api_admin_sifirla():
-        if request.form.get("sifre") != admin_sifre:
+        if _admin_sifre_al() != admin_sifre:
             return jsonify({"ok": False, "hata": "Yönetici şifresi hatalı."}), 403
-        tum_tikleri_sifirla()
-        for tablo in ("lig_kartlari", "lig_maclari", "quiz_sonuclari", "alkislar", "gunluk_gorev_tamamlayan", "gunluk_gorev", "mufettisler", "ittifaklar"):
-            _execute(f"DELETE FROM {tablo}")
+        silinen = {}
+        for tablo in SIFIRLANACAK_TABLOLAR:
+            silinen[tablo] = _tablo_temizle(tablo)
         _execute("UPDATE lig_puan SET galibiyet=0, beraberlik=0, maglubiyet=0, ag=0, puan=0, sezon_puan=0, guncel_seri=0, en_uzun_seri=0")
         return jsonify({"ok": True})
 
@@ -528,6 +636,11 @@ def _init_feature_db():
             sahip TEXT NOT NULL,
             tarih TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS ogrenci_xp (
+            ogrenci_id INTEGER PRIMARY KEY REFERENCES ogrenciler(id),
+            xp INTEGER NOT NULL DEFAULT 0,
+            guncellendi TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS alkislar (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
@@ -561,6 +674,13 @@ def _init_feature_db():
             gorev TEXT NOT NULL,
             seans TEXT,
             durum TEXT NOT NULL DEFAULT 'bekliyor',
+            tarih TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sistem_yedekleri (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ad TEXT NOT NULL,
+            veri TEXT NOT NULL,
+            olusturan TEXT NOT NULL,
             tarih TEXT NOT NULL
         );
     """)
@@ -677,6 +797,7 @@ def _tum_ogrenciler_panel() -> list[dict]:
         ogr["sinif_id"] = ogr.get("sinif_id") or sinif_id_map.get(ogr.get("sinif_adi"))
         ogr["sinif_adi"] = ogr.get("sinif_adi") or sinif_map.get(ogr["sinif_id"], "")
         ogr["durum"], ogr["emoji"], ogr["etiket"] = _durum_ogrenci(ogr["tik_sayisi"])
+    ogrenci_rozetleri_ekle(ogrenciler)
     ogrenciler.sort(key=lambda o: (-o["tik_sayisi"], o["sinif_adi"], o["ad_soyad"]))
     return ogrenciler
 
@@ -720,6 +841,7 @@ def _odul_verisi() -> dict:
         "seviyeleri": _seviye_bilgisi(),
         "rozetler": _rozetler_getir(),
         "rozet_tanimi": ROZET_TANIMI,
+        "envanterler": _ogrenci_envanterleri(),
         "seri": _lig_tablo(),
         "gorev": _gorev_getir(),
         "mufettis": _mufettis_getir(),
@@ -794,12 +916,114 @@ def _rozetler_getir() -> list[dict]:
     return rozetler
 
 
+def _ogrenci_xp_haritasi(ogrenci_ids: list[int] | None = None) -> dict[int, int]:
+    if ogrenci_ids is None:
+        rows = _rows("SELECT ogrenci_id, xp FROM ogrenci_xp")
+    elif not ogrenci_ids:
+        return {}
+    else:
+        yer = ",".join("?" * len(ogrenci_ids))
+        rows = _rows(f"SELECT ogrenci_id, xp FROM ogrenci_xp WHERE ogrenci_id IN ({yer})", ogrenci_ids)
+    return {int(r["ogrenci_id"]): int(r["xp"] or 0) for r in rows}
+
+
+def _ogrenci_rozet_haritasi(ogrenci_ids: list[int] | None = None) -> dict[int, list[dict]]:
+    if ogrenci_ids is None:
+        rows = _rows("""
+            SELECT r.*, s.sinif_adi
+            FROM rozetler r
+            LEFT JOIN siniflar s ON s.id=r.sinif_id
+            WHERE r.ogrenci_id IS NOT NULL
+            ORDER BY r.id DESC
+        """)
+    elif not ogrenci_ids:
+        return {}
+    else:
+        yer = ",".join("?" * len(ogrenci_ids))
+        rows = _rows(f"""
+            SELECT r.*, s.sinif_adi
+            FROM rozetler r
+            LEFT JOIN siniflar s ON s.id=r.sinif_id
+            WHERE r.ogrenci_id IN ({yer})
+            ORDER BY r.id DESC
+        """, ogrenci_ids)
+
+    rozet_map: dict[int, list[dict]] = {}
+    gorulen: set[tuple[int, str]] = set()
+    for rozet in rows:
+        oid = int(rozet["ogrenci_id"])
+        kod = rozet["rozet_kodu"]
+        anahtar = (oid, kod)
+        if anahtar in gorulen:
+            continue
+        gorulen.add(anahtar)
+        emoji, ad, aciklama = ROZET_TANIMI.get(kod, ("🏅", kod, ""))
+        rozet["emoji"] = emoji
+        rozet["rozet_adi"] = ad
+        rozet["aciklama"] = aciklama
+        rozet_map.setdefault(oid, []).append(rozet)
+    return rozet_map
+
+
+def ogrenci_rozetleri_ekle(ogrenciler: list[dict]) -> list[dict]:
+    ids = [int(o["id"]) for o in ogrenciler if o.get("id")]
+    if not ids:
+        return ogrenciler
+    try:
+        xp_map = _ogrenci_xp_haritasi(ids)
+        rozet_map = _ogrenci_rozet_haritasi(ids)
+    except sqlite3.OperationalError:
+        xp_map, rozet_map = {}, {}
+
+    for ogr in ogrenciler:
+        oid = int(ogr["id"])
+        rozetler = rozet_map.get(oid, [])
+        ogr["xp"] = xp_map.get(oid, 0)
+        ogr["rozetler"] = rozetler
+        ogr["rozet_ozet"] = "".join(r["emoji"] for r in rozetler[:4])
+        ogr["rozet_sayisi"] = len(rozetler)
+    return ogrenciler
+
+
+def _ogrenci_envanterleri() -> list[dict]:
+    envanter = []
+    for ogr in _tum_ogrenciler_panel():
+        if ogr.get("xp", 0) > 0 or ogr.get("rozetler"):
+            envanter.append(ogr)
+    envanter.sort(key=lambda o: (-o.get("xp", 0), -o.get("rozet_sayisi", 0), o["sinif_adi"], o["ad_soyad"]))
+    return envanter
+
+
 def _rozet_ekle(sinif_id: int, ogrenci_id: int | None, kod: str):
+    if ogrenci_id is not None:
+        var = _one("SELECT id FROM rozetler WHERE ogrenci_id=? AND rozet_kodu=? LIMIT 1", (ogrenci_id, kod))
+        if var:
+            return
     sahip = "Sınıf" if ogrenci_id is None else (_one("SELECT ad_soyad FROM ogrenciler WHERE id=?", (ogrenci_id,)) or {}).get("ad_soyad", "Öğrenci")
     _execute("""
         INSERT INTO rozetler (sinif_id, ogrenci_id, rozet_kodu, sahip, tarih)
         VALUES (?, ?, ?, ?, ?)
     """, (sinif_id, ogrenci_id, kod, sahip, _today()))
+
+
+def _ogrenci_xp_ekle(ogrenci_id: int, sinif_id: int, xp: int):
+    if not ogrenci_id or xp <= 0:
+        return
+    simdi = datetime.now().isoformat(timespec="seconds")
+    con = _conn()
+    con.execute("""
+        INSERT INTO ogrenci_xp (ogrenci_id, xp, guncellendi)
+        VALUES (?, ?, ?)
+        ON CONFLICT(ogrenci_id) DO UPDATE SET
+            xp=ogrenci_xp.xp+excluded.xp,
+            guncellendi=excluded.guncellendi
+    """, (ogrenci_id, xp, simdi))
+    toplam = con.execute("SELECT xp FROM ogrenci_xp WHERE ogrenci_id=?", (ogrenci_id,)).fetchone()["xp"]
+    con.commit()
+    con.close()
+    for esik, kod in XP_ROZET_ESIKLERI:
+        if toplam >= esik:
+            _rozet_ekle(sinif_id, ogrenci_id, kod)
 
 
 def _kadro_getir(sinif_id: int) -> list[dict]:

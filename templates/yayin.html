@@ -178,7 +178,9 @@ function kartHTML(o, sira, barRef) {
           <span class="text-xl sm:text-2xl">${o.emoji}</span>
           <span class="font-bold text-sm sm:text-base truncate"
                 style="color:${textCls}">${o.ad_soyad}</span>
+          ${rozetHTML(o)}
         </div>
+        ${o.xp ? `<div class="text-[10px] mt-0.5 text-indigo-300 font-bold">${o.xp} XP</div>` : ''}
         <!-- Progress bar -->
         <div class="mt-1.5 h-2 rounded-full overflow-hidden" style="background:#0f172a">
           <div class="h-full rounded-full transition-all duration-700"
@@ -195,6 +197,15 @@ function kartHTML(o, sira, barRef) {
       </div>
     </div>
   </div>`;
+}
+
+function rozetHTML(o) {
+  const rozetler = Array.isArray(o.rozetler) ? o.rozetler.slice(0, 4) : [];
+  if (!rozetler.length) return '';
+  const baslik = `${o.rozet_sayisi || rozetler.length} rozet · ${o.xp || 0} XP`;
+  return `<span class="inline-flex gap-0.5 rounded-full border border-amber-500/50 bg-amber-950/40 px-1.5 py-0.5" title="${baslik}">
+    ${rozetler.map(r => `<span class="text-lg">${r.emoji || '🏅'}</span>`).join('')}
+  </span>`;
 }
 
 // ── Geri Sayım ───────────────────────────────────────────────────────────

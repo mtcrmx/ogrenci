@@ -319,10 +319,17 @@
 
   <!-- Emoji + Ad -->
   <div class="flex-1 min-w-0">
-    <div class="font-bold text-slate-800 text-sm truncate">
-      <span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}
+    <div class="font-bold text-slate-800 text-sm flex items-center gap-1 min-w-0">
+      <span class="min-w-0 truncate"><span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}</span>
+      {% if o.rozetler %}
+      <span class="flex-shrink-0 inline-flex align-middle gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5" title="{{ o.rozet_sayisi }} rozet · {{ o.xp }} XP">
+        {% for r in o.rozetler[:4] %}
+        <span class="text-base">{{ r.emoji }}</span>
+        {% endfor %}
+      </span>
+      {% endif %}
     </div>
-    <div class="text-xs text-slate-500">No: {{ o.ogr_no }}</div>
+    <div class="text-xs text-slate-500">No: {{ o.ogr_no }}{% if o.xp %} · {{ o.xp }} XP{% endif %}</div>
   </div>
 
   <!-- Tik göstergesi -->
@@ -536,10 +543,11 @@ function kartHTML(o, sinifId) {
               slide-in ${durumCls}"
        data-ad="${o.ad_soyad}" data-id="${o.id}" data-sinif="${sinifId}">
     <div class="flex-1 min-w-0">
-      <div class="font-bold text-slate-800 text-sm truncate">
-        <span class="mr-1">${o.emoji}</span>${o.ad_soyad}
+      <div class="font-bold text-slate-800 text-sm flex items-center gap-1 min-w-0">
+        <span class="min-w-0 truncate"><span class="mr-1">${o.emoji}</span>${o.ad_soyad}</span>
+        ${rozetHTML(o)}
       </div>
-      <div class="text-xs text-slate-500">No: ${o.ogr_no}</div>
+      <div class="text-xs text-slate-500">No: ${o.ogr_no}${o.xp ? ` · ${o.xp} XP` : ''}</div>
     </div>
     <div class="flex items-center gap-1.5 flex-shrink-0">
       <span class="${badgeCls} text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center">
@@ -565,6 +573,15 @@ function kartHTML(o, sinifId) {
       </form>
     </div>
   </div>`;
+}
+
+function rozetHTML(o) {
+  const rozetler = Array.isArray(o.rozetler) ? o.rozetler.slice(0, 4) : [];
+  if (!rozetler.length) return '';
+  const baslik = `${o.rozet_sayisi || rozetler.length} rozet · ${o.xp || 0} XP`;
+  return `<span class="flex-shrink-0 inline-flex align-middle gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5" title="${baslik}">
+    ${rozetler.map(r => `<span class="text-base">${r.emoji || '🏅'}</span>`).join('')}
+  </span>`;
 }
 
 // İlk yükleme + periyodik güncelleme
