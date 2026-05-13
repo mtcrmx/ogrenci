@@ -195,12 +195,21 @@ function update() {
             let p = ball.owner;
             if (p.actionCooldown <= 0) {
                 // Serve!
-                const gX = GAME_WIDTH/2 + (Math.random() * 200 - 100);
-                const gY = p.team === team1 ? 200 : GAME_HEIGHT-200; // opponent side
+                const errMargin = (100 - p.ozellikler.sut) / 100;
+                const errX = (Math.random() * 100 - 50) * errMargin;
+                const errY = (Math.random() * 100 - 50) * errMargin;
+                
+                const gX = GAME_WIDTH/2 + (Math.random() * 200 - 100) + errX;
+                const gY = (p.team === team1 ? 200 : GAME_HEIGHT-200) + errY; // opponent side
+                
                 const dir = normalize(gX - p.x, gY - p.y);
-                const power = 10 + (p.ozellikler.sut / 10);
+                const d = dist(p, {x:gX, y:gY});
+                
+                ball.vz = 9 + (Math.random()*2); // High arc
+                const airTime = (ball.vz / 0.2) * 2; // Time to land
+                const power = d / airTime; // Exact power to reach target!
+                
                 ball.vx = dir.x * power; ball.vy = dir.y * power;
-                ball.vz = 8; // High arc
                 ball.owner = null;
                 ball.lastTeamTouched = p.team;
                 teamTouches = 1;
@@ -313,18 +322,34 @@ function update() {
                 
                 const errX = (Math.random() * 100 - 50) * errMargin;
                 const errY = (Math.random() * 100 - 50) * errMargin;
-                let bDir = normalize((setter.x + errX) - p.x, (setter.y + errY) - p.y);
-                ball.vx = bDir.x * 6; ball.vy = bDir.y * 6; ball.vz = 8;
+                const targetX = setter.x + errX;
+                const targetY = setter.y + errY;
+                const bDir = normalize(targetX - p.x, targetY - p.y);
+                const d = dist(p, {x:targetX, y:targetY});
+                
+                ball.vz = 8 + (Math.random()*2);
+                const airTime = (ball.vz / 0.2) * 2;
+                const power = d / airTime;
+                
+                ball.vx = bDir.x * power; ball.vy = bDir.y * power;
             } else if (teamTouches === 2) {
                 // Set to Spiker (Smaçör)
                 showEvent("Pas!", 300);
                 let spiker = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - GAME_HEIGHT/2) < 150);
                 if(!spiker) spiker = players.find(m => m.team === p.team && m !== p);
                 
-                const errX = (Math.random() * 100 - 50) * errMargin;
-                const errY = (Math.random() * 100 - 50) * errMargin;
-                let bDir = normalize((spiker.x + errX) - p.x, (spiker.y + errY) - p.y);
-                ball.vx = bDir.x * 7; ball.vy = bDir.y * 7; ball.vz = 10;
+                const errX = (Math.random() * 80 - 40) * errMargin;
+                const errY = (Math.random() * 80 - 40) * errMargin;
+                const targetX = spiker.x + errX;
+                const targetY = spiker.y + errY;
+                const bDir = normalize(targetX - p.x, targetY - p.y);
+                const d = dist(p, {x:targetX, y:targetY});
+                
+                ball.vz = 10 + (Math.random()*2);
+                const airTime = (ball.vz / 0.2) * 2;
+                const power = d / airTime;
+                
+                ball.vx = bDir.x * power; ball.vy = bDir.y * power;
             } else {
                 // Spike over the net! (Smaç)
                 showEvent("SMAÇ!", 500);
@@ -332,12 +357,19 @@ function update() {
                 const gX = GAME_WIDTH/2 + (Math.random() * 200 - 100);
                 const gY = p.team === team1 ? 150 : GAME_HEIGHT - 150;
                 
-                const errX = (Math.random() * 300 - 150) * errMargin;
-                const errY = (Math.random() * 300 - 150) * errMargin;
-                let bDir = normalize((gX + errX) - p.x, (gY + errY) - p.y);
+                const errX = (Math.random() * 160 - 80) * errMargin; // Reduced from 300
+                const errY = (Math.random() * 160 - 80) * errMargin; // Reduced from 300
+                const targetX = gX + errX;
+                const targetY = gY + errY;
                 
-                let power = 12 + (p.ozellikler.sut / 10);
-                ball.vx = bDir.x * power; ball.vy = bDir.y * power; ball.vz = 2; // Flat and fast
+                const bDir = normalize(targetX - p.x, targetY - p.y);
+                const d = dist(p, {x:targetX, y:targetY});
+                
+                ball.vz = 2 + (Math.random()*2); // Flat and fast
+                const airTime = (ball.vz / 0.2) * 2;
+                const power = d / airTime;
+                
+                ball.vx = bDir.x * power; ball.vy = bDir.y * power;
             }
         }
     });
