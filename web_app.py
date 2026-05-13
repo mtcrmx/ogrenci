@@ -16,6 +16,7 @@ from database import (
     tum_ogretmenler, tum_sifre_listesi,
     ogretmen_dogrula, ogretmen_id_bul, ogretmen_siniflari,
     sinif_ogrencileri, tum_okul_ogrencileri, ogrenci_tik_gecmisi,
+    ogrenci_tik_sayisi, OLUMSUZ_TIK_LIMIT, OLUMLU_TIK_LIMIT,
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
     ogretmenin_ogrenci_tiklerini_sifirla, ogretmenin_sinif_tiklerini_sifirla,
     olumlu_tik_ekle, olumlu_sinif_etkinlik_ekle,
@@ -60,7 +61,7 @@ from database import (
     gunluk_yansima_ogrenci_gecmis,
     haftalik_sinif_ozeti, tik_sayisi_sinif_aralik, olumlu_sayisi_sinif_aralik,
     veli_ozet_metrikleri, anonim_sinif_dagilimi,
-    denetim_listesi, admin_meta_get, admin_meta_set,
+    denetim_listesi, denetim_kaydet, admin_meta_get, admin_meta_set,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes
@@ -491,7 +492,7 @@ def _bildirimleri_hazirla() -> list[dict]:
             "hedef": url_for("oduller"),
         })
     for o in _ogrencilere_durum_ekle(tum_okul_ogrencileri()):
-        if o["tik_sayisi"] >= 3:
+        if o["tik_sayisi"] >= OLUMSUZ_TIK_LIMIT:
             bildirimler.append({
                 "tur": "Disiplin",
                 "renk": "red",
@@ -622,7 +623,72 @@ def ogrenci_gelisim_panel():
 @app.route("/oyunlar")
 @ogrenci_giris_zorunlu
 def oyunlar():
-    return render_template("oyunlar.html")
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    sinif_adi = (o or {}).get("sinif_adi", "")
+    try:
+        sinif_seviyesi = int(str(sinif_adi).split("/")[0].strip()[0])
+    except Exception:
+        sinif_seviyesi = 5
+    return render_template(
+        "oyunlar.html",
+        sinif_seviyesi=sinif_seviyesi,
+        sinif_adi=sinif_adi,
+        quiz_dersler=QUIZ_DERSLER.get(sinif_seviyesi, []),
+        ders_emoji=DERS_EMOJI,
+    )
+
+
+@app.route("/api/oyun/quiz-sorular")
+@ogrenci_giris_zorunlu
+def oyun_quiz_sorular_api():
+    import random
+
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    sinif_adi = (o or {}).get("sinif_adi", "")
+    try:
+        sinif_seviyesi = int(str(sinif_adi).split("/")[0].strip()[0])
+    except Exception:
+        sinif_seviyesi = request.args.get("sinif_seviyesi", 5, type=int)
+    ders = (request.args.get("ders") or "").strip()
+    adet = max(8, min(request.args.get("adet", 40, type=int), 80))
+    quiz_sorulari_yukle()
+    from database import _conn as _db_conn
+    from database import _quiz_init
+
+    con = _db_conn()
+    _quiz_init(con)
+    params: list = [sinif_seviyesi]
+    where = "sinif_seviyesi=?"
+    if ders:
+        where += " AND ders=?"
+        params.append(ders)
+    rows = [dict(r) for r in con.execute(
+        f"SELECT * FROM quiz_sorulari WHERE {where} ORDER BY RANDOM() LIMIT ?",
+        (*params, adet),
+    ).fetchall()]
+    con.close()
+    sorular = []
+    for r in rows:
+        dogru = str(r.get("dogru_cevap") or "").upper()
+        secenekler = [
+            {"harf": "A", "metin": r.get("secenek_a") or ""},
+            {"harf": "B", "metin": r.get("secenek_b") or ""},
+            {"harf": "C", "metin": r.get("secenek_c") or ""},
+            {"harf": "D", "metin": r.get("secenek_d") or ""},
+        ]
+        random.shuffle(secenekler)
+        dogru_metin = next((s["metin"] for s in secenekler if s["harf"] == dogru), "")
+        sorular.append({
+            "id": r["id"],
+            "ders": r.get("ders") or "",
+            "soru": r.get("soru") or "",
+            "secenekler": secenekler,
+            "dogru": dogru,
+            "dogru_metin": dogru_metin,
+        })
+    return jsonify({"ok": True, "sinif_seviyesi": sinif_seviyesi, "sorular": sorular})
 
 
 @app.route("/api/oyun/puan", methods=["POST"])
@@ -1015,7 +1081,7 @@ def rapor_ozet():
             "sinif_adi": s["sinif_adi"],
             "ogrenci": ogrenci_sayisi,
             "tik": sinif_tik,
-            "idari": sum(1 for o in liste if o["tik_sayisi"] >= 3),
+            "idari": sum(1 for o in liste if o["tik_sayisi"] >= OLUMSUZ_TIK_LIMIT),
             "temiz": sum(1 for o in liste if o["tik_sayisi"] == 0),
             "ortalama": ortalama,
             "dagilim": dagilim,
@@ -1117,7 +1183,7 @@ def rapor_ozet_csv():
         liste = _ogrencilere_durum_ekle(sinif_ogrencileri(s["id"]))
         satirlar.append(
             f"{s['sinif_adi']},{len(liste)},{sum(o['tik_sayisi'] for o in liste)},"
-            f"{sum(1 for o in liste if o['tik_sayisi'] >= 3)},"
+            f"{sum(1 for o in liste if o['tik_sayisi'] >= OLUMSUZ_TIK_LIMIT)},"
             f"{sum(1 for o in liste if o['tik_sayisi'] == 0)}"
         )
     resp = make_response("\n".join(satirlar))
@@ -1210,24 +1276,55 @@ def tik_at(ogrenci_id):
     kriter   = request.form.get("kriter", "Diger")
     sinif_id = request.form.get("sinif_id", "")
 
+    onceki = ogrenci_tik_sayisi(ogrenci_id)
+    if onceki >= OLUMSUZ_TIK_LIMIT:
+        mesaj = f"Olumsuz tik limiti doldu ({OLUMSUZ_TIK_LIMIT}/12). Idari islem baslatilmali."
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            d = _durum(onceki)
+            return jsonify({
+                "ok": False,
+                "sebep": mesaj,
+                "tik_sayisi": onceki,
+                "durum": d["kod"],
+                "emoji": d["emoji"],
+                "etiket": d["etiket"],
+                "sinirda": True,
+                "idari_islem": True,
+            }), 400
+        flash(mesaj, "error")
+        return redirect(url_for("dashboard", sinif=sinif_id))
+
     yeni  = tik_ekle(ogrenci_id, oid, kriter)
     d     = _durum(yeni)
 
-    onceki = yeni - 1
     yeni_seviye = None
     for esik, _, _, etiket in TIK_SEVIYELERI:
         if esik > 0 and onceki < esik <= yeni:
             yeni_seviye = etiket
             break
+    idari_islem = yeni >= OLUMSUZ_TIK_LIMIT
+    if idari_islem and onceki < OLUMSUZ_TIK_LIMIT:
+        try:
+            denetim_kaydet(
+                "idari_islem_baslat",
+                f"{kriter} ile {OLUMSUZ_TIK_LIMIT}/12 olumsuz tik limitine ulasildi.",
+                ogretmen_id=oid,
+                ogrenci_id=ogrenci_id,
+            )
+        except Exception:
+            pass
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({
+            "ok": True,
             "tik_sayisi":  yeni,
             "durum":       d["kod"],
             "emoji":       d["emoji"],
             "etiket":      d["etiket"],
             "yeni_seviye": yeni_seviye,
-            "uyari":       yeni >= 3 and onceki < 3,
+            "uyari":       idari_islem and onceki < OLUMSUZ_TIK_LIMIT,
+            "idari_islem": idari_islem,
+            "limit":       OLUMSUZ_TIK_LIMIT,
         })
     return redirect(url_for("dashboard", sinif=sinif_id))
 
@@ -1310,9 +1407,14 @@ def olumlu_ekle(sinif_id):
             return jsonify({"ok": False, "sebep": "Öğrenci bu sınıfa ait değil."}), 403
         abort(403)
     sonuc = olumlu_tik_ekle(ogrenci_id, sinif_id, oid, kriter)
+    if not sonuc.get("ok", True):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify(sonuc), 400
+        flash(sonuc.get("sebep") or "Olumlu tik eklenemedi.", "error")
+        return redirect(url_for("dashboard", sinif=sinif_id))
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify({"ok": True, **sonuc})
+        return jsonify({"ok": True, "limit": OLUMLU_TIK_LIMIT, **sonuc})
     return redirect(url_for("dashboard", sinif=sinif_id))
 
 
@@ -1464,7 +1566,7 @@ def _yayin_verisi_hazirla():
         s["ogrenci"] += 1
         s["tik"] += o["tik_sayisi"]
         s["temiz"] += 1 if o["tik_sayisi"] == 0 else 0
-        s["idari"] += 1 if o["tik_sayisi"] >= 3 else 0
+        s["idari"] += 1 if o["tik_sayisi"] >= OLUMSUZ_TIK_LIMIT else 0
     odevler = []
     for s in _tum_siniflar():
         for od in sinif_odevleri(s["id"], 6):
@@ -1482,7 +1584,7 @@ def _yayin_verisi_hazirla():
             "tik": sum(o["tik_sayisi"] for o in ogrenciler),
             "temiz": sum(1 for o in ogrenciler if o["tik_sayisi"] == 0),
             "uyari": sum(1 for o in ogrenciler if 1 <= o["tik_sayisi"] <= 2),
-            "idari": sum(1 for o in ogrenciler if o["tik_sayisi"] >= 3),
+            "idari": sum(1 for o in ogrenciler if o["tik_sayisi"] >= OLUMSUZ_TIK_LIMIT),
             "veli": sum(1 for o in ogrenciler if 6 <= o["tik_sayisi"] <= 8),
             "tutanak": sum(1 for o in ogrenciler if 9 <= o["tik_sayisi"] <= 11),
             "disiplin": sum(1 for o in ogrenciler if o["tik_sayisi"] >= 12),
@@ -1686,7 +1788,7 @@ def rapor_excel_detayli():
         s["ogrenci"] += 1
         s["tik"] += o["tik_sayisi"]
         s["temiz"] += 1 if o["tik_sayisi"] == 0 else 0
-        s["idari"] += 1 if o["tik_sayisi"] >= 3 else 0
+        s["idari"] += 1 if o["tik_sayisi"] >= OLUMSUZ_TIK_LIMIT else 0
     for ad, s in sorted(sinif_ozet.items()):
         ws2.append([ad, s["ogrenci"], s["tik"], s["temiz"], s["idari"]])
     chart = BarChart()

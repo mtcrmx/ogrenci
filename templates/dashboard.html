@@ -160,9 +160,9 @@
 
     <!-- Durum çubuğu -->
     <div class="text-center text-xs text-slate-400 py-3" id="durum-bar">
-      {% set uyari_c = ogrenciler | selectattr('tik_sayisi', 'ge', 3) | list | length %}
+      {% set uyari_c = ogrenciler | selectattr('tik_sayisi', 'ge', 12) | list | length %}
       {% if uyari_c > 0 %}
-        ⚠️ {{ uyari_c }} öğrenci idari işlem gerektirir
+        ⚠️ {{ uyari_c }} öğrenci 12/12 olumsuz tikte: idari işlem başlatılmalı
       {% else %}
         ✅ Tüm öğrenciler temiz
       {% endif %}
@@ -341,7 +341,7 @@
             text-center hidden transition-all duration-300 max-w-sm w-full mx-4">
   <div class="text-2xl mb-1">🚨</div>
   <div class="font-bold text-sm" id="uyari-ad">—</div>
-  <div class="text-xs mt-1">İdari işlem başlatılmalıdır!</div>
+  <div class="text-xs mt-1">12/12 olumsuz tik doldu. İdari işlem başlatılmalıdır!</div>
 </div>
 
 {% endblock %}
@@ -382,20 +382,19 @@
     <span class="text-[10px] font-black text-red-600 hidden sm:inline">−</span>
     <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full
                  min-w-[28px] text-center border border-red-200">
-      {{ o.tik_sayisi }}
+      {{ o.tik_sayisi }}/12
     </span>
     <span class="text-[10px] font-black text-emerald-600 hidden sm:inline">+</span>
     <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full
                  min-w-[28px] text-center border border-emerald-200">
-      {{ o.olumlu_tik|default(0) }}
+      {{ o.olumlu_tik|default(0) }}/36
     </span>
     <span class="text-xs hidden md:block text-slate-400">
-      {% for i in range(3) %}
+      {% for i in range(12) %}
         {% if i < o.tik_sayisi %}
-          <span class="{{ 'text-red-500' if o.tik_sayisi >= 3 else 'text-amber-500' }}">●</span>
+          <span class="{{ 'text-red-500' if o.tik_sayisi >= 12 else 'text-amber-500' }}">●</span>
         {% else %}○{% endif %}
       {% endfor %}
-      {% if o.tik_sayisi > 3 %}+{{ o.tik_sayisi - 3 }}{% endif %}
     </span>
   </div>
 
@@ -407,11 +406,13 @@
       💚
     </button>
     <button onclick="olumluModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
-            class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">
+            {% if (o.olumlu_tik|default(0)) >= 36 %}disabled title="36/36 olumlu tik limiti doldu"{% endif %}
+            class="{% if (o.olumlu_tik|default(0)) >= 36 %}bg-slate-400 cursor-not-allowed{% else %}bg-teal-600 hover:bg-teal-700{% endif %} text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">
       + Olumlu
     </button>
     <button onclick="tikModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
-            class="bg-red-600 hover:bg-red-700 active:bg-red-800
+            {% if o.tik_sayisi >= 12 %}disabled title="12/12 olumsuz tik limiti doldu; idari işlem başlatılmalı"{% endif %}
+            class="{% if o.tik_sayisi >= 12 %}bg-slate-400 cursor-not-allowed{% else %}bg-red-600 hover:bg-red-700 active:bg-red-800{% endif %}
                    text-white text-xs font-bold px-2.5 py-1.5 rounded-lg
                    transition whitespace-nowrap">
       + Tik
@@ -624,7 +625,7 @@ document.getElementById('olumlu-form').addEventListener('click', async function(
       console.warn('JSON parse', err, raw.slice(0, 200));
     }
     if (!res.ok || !data || !data.ok) {
-      console.warn((data && data.sebep) || ('Olumlu tik işlenemedi (' + res.status + ')'));
+      alert((data && data.sebep) || ('Olumlu tik işlenemedi (' + res.status + ')'));
     }
   } catch (err) {
     console.error('Olumlu tik isteği gönderilemedi', err);
@@ -724,9 +725,9 @@ async function yenile() {
     if (ara) filtrele();
 
     // Durum çubuğu
-    const uyariC = data.filter(o => o.tik_sayisi >= 3).length;
+    const uyariC = data.filter(o => o.tik_sayisi >= 12).length;
     document.getElementById('durum-bar').textContent =
-      uyariC > 0 ? `⚠️ ${uyariC} öğrenci idari işlem gerektirir` : '✅ Tüm öğrenciler temiz';
+      uyariC > 0 ? `⚠️ ${uyariC} öğrenci 12/12 olumsuz tikte: idari işlem başlatılmalı` : '✅ Tüm öğrenciler temiz';
 
     // Son güncelleme
     const now = new Date().toLocaleTimeString('tr-TR');
@@ -745,12 +746,11 @@ function kartHTML(o, sinifId) {
   const ol = Number(o.olumlu_tik ?? 0);
 
   let noktalar = '';
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 12; i++) {
     noktalar += i < o.tik_sayisi
-      ? `<span class="${o.tik_sayisi >= 3 ? 'text-red-500' : 'text-amber-500'}">●</span>`
+      ? `<span class="${o.tik_sayisi >= 12 ? 'text-red-500' : 'text-amber-500'}">●</span>`
       : '○';
   }
-  if (o.tik_sayisi > 3) noktalar += `+${o.tik_sayisi - 3}`;
 
   const adStr = typeof o.ad_soyad === 'string' ? o.ad_soyad : '';
   const adJs = JSON.stringify(adStr);
@@ -773,18 +773,18 @@ function kartHTML(o, sinifId) {
     </div>
     <div class="flex items-center gap-1.5 flex-shrink-0" title="Kırmızı: olumsuz · Yeşil: olumlu">
       <span class="text-[10px] font-black text-red-600 hidden sm:inline">−</span>
-      <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center border border-red-200">${o.tik_sayisi}</span>
+      <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full min-w-[44px] text-center border border-red-200">${o.tik_sayisi}/12</span>
       <span class="text-[10px] font-black text-emerald-600 hidden sm:inline">+</span>
-      <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center border border-emerald-200">${ol}</span>
+      <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full min-w-[44px] text-center border border-emerald-200">${ol}/36</span>
       <span class="text-xs hidden md:block text-slate-400">${noktalar}</span>
     </div>
     <div class="flex gap-1 flex-shrink-0 ml-auto flex-wrap justify-end">
       <button type="button" title="Pozitif rozet" onclick="pozitifRozet(${o.id})"
               class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition">💚</button>
-      <button type="button" onclick='olumluModalAc(${o.id}, ${adJs}, ${sinifId})'
-              class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">+ Olumlu</button>
-      <button type="button" onclick='tikModalAc(${o.id}, ${adJs}, ${sinifId})'
-              class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold
+      <button type="button" ${ol >= 36 ? 'disabled title="36/36 olumlu tik limiti doldu"' : ''} onclick='olumluModalAc(${o.id}, ${adJs}, ${sinifId})'
+              class="${ol >= 36 ? 'bg-slate-400 cursor-not-allowed' : 'bg-teal-600 hover:bg-teal-700'} text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">+ Olumlu</button>
+      <button type="button" ${Number(o.tik_sayisi || 0) >= 12 ? 'disabled title="12/12 olumsuz tik limiti doldu; idari işlem başlatılmalı"' : ''} onclick='tikModalAc(${o.id}, ${adJs}, ${sinifId})'
+              class="${Number(o.tik_sayisi || 0) >= 12 ? 'bg-slate-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white text-xs font-bold
                      px-2.5 py-1.5 rounded-lg transition whitespace-nowrap">
         + Tik
       </button>

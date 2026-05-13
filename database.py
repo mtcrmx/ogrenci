@@ -694,6 +694,15 @@ def tik_ekle(ogrenci_id: int, ogretmen_id: int, kriter: str) -> int:
     """Tik kaydeder; güncel toplam tik sayısını döndürür."""
     tarih = datetime.now().strftime("%Y-%m-%d %H:%M")
     con = _conn()
+    mevcut = int(
+        con.execute(
+            "SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id = ?",
+            (ogrenci_id,),
+        ).fetchone()[0]
+    )
+    if mevcut >= OLUMSUZ_TIK_LIMIT:
+        con.close()
+        return mevcut
     con.execute(
         "INSERT INTO tik_kayitlari (ogrenci_id, ogretmen_id, kriter, tarih) VALUES (?, ?, ?, ?)",
         (ogrenci_id, ogretmen_id, kriter, tarih)
@@ -712,6 +721,18 @@ def tik_ekle(ogrenci_id: int, ogretmen_id: int, kriter: str) -> int:
         )
     except Exception:
         pass
+    return sayi
+
+
+def ogrenci_tik_sayisi(ogrenci_id: int) -> int:
+    con = _conn()
+    sayi = int(
+        con.execute(
+            "SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id = ?",
+            (ogrenci_id,),
+        ).fetchone()[0]
+    )
+    con.close()
     return sayi
 
 
@@ -809,6 +830,8 @@ def ogretmenin_sinif_tiklerini_sifirla(sinif_id: int, ogretmen_id: int) -> dict:
 # ══════════════════════════════════════════════════════════════════════════
 
 OLUMLU_TIK_XP = 5
+OLUMSUZ_TIK_LIMIT = 12
+OLUMLU_TIK_LIMIT = 36
 
 
 def _olumlu_davranis_migrate(con: sqlite3.Connection) -> None:
@@ -863,6 +886,20 @@ def olumlu_tik_ekle(ogrenci_id: int, sinif_id: int, ogretmen_id: int, kriter: st
     con = _conn()
     _olumlu_davranis_migrate(con)
     _gelisim_init(con)
+    mevcut_olumlu = int(
+        con.execute(
+            "SELECT COUNT(*) FROM olumlu_davranis WHERE ogrenci_id=?",
+            (ogrenci_id,),
+        ).fetchone()[0]
+    )
+    if mevcut_olumlu >= OLUMLU_TIK_LIMIT:
+        con.close()
+        return {
+            "ok": False,
+            "sebep": f"Olumlu tik limiti doldu ({OLUMLU_TIK_LIMIT}/36).",
+            "limit": OLUMLU_TIK_LIMIT,
+            "olumlu_sira": mevcut_olumlu,
+        }
     con.execute(
         """
         INSERT INTO olumlu_davranis (sinif_id, ogretmen_id, kriter, tarih, ogrenci_id)
@@ -872,12 +909,7 @@ def olumlu_tik_ekle(ogrenci_id: int, sinif_id: int, ogretmen_id: int, kriter: st
     )
     gp = _gelisim_puan_ekle(con, ogrenci_id, OLUMLU_TIK_XP)
     lig_puan = _lig_haftalik_puan_artir(con, sinif_id)
-    n = int(
-        con.execute(
-            "SELECT COUNT(*) FROM olumlu_davranis WHERE ogrenci_id=?",
-            (ogrenci_id,),
-        ).fetchone()[0]
-    )
+    n = mevcut_olumlu + 1
     olumsuz_silindi = False
     if n > 0 and n % 3 == 0:
         eski = con.execute(
