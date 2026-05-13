@@ -102,7 +102,7 @@
       <div class="mb-3 flex items-center justify-between gap-2">
         <div>
           <div class="text-sm font-black text-slate-200">Sinif maclari</div>
-          <div class="text-xs text-slate-500">Onaylaninca kazanan sinifa lig tablosunda +3 puan islenir.</div>
+          <div class="text-xs text-slate-500">Futbolda galibiyete +3, beraberlikte iki sinifa +1; voleybolda 3 set alan sinifa +3 puan islenir.</div>
         </div>
       </div>
       <div class="space-y-2">
@@ -121,7 +121,10 @@
                 <span class="rounded-full bg-amber-500/15 px-2 py-1 text-[11px] font-black text-amber-300">Onay bekliyor</span>
               {% endif %}
             </div>
-            <div class="mt-1 text-xs text-slate-500">{{ mac.tarih }} · Kazanan: {{ mac.kazanan_sinif_adi }}</div>
+            <div class="mt-1 text-xs text-slate-500">
+              {{ mac.tarih }} ·
+              {% if mac.kazanan_sinif_id %}Kazanan: {{ mac.kazanan_sinif_adi }}{% else %}Sonuc: Berabere{% endif %}
+            </div>
             {% if mac.aciklama %}
               <div class="mt-2 text-sm text-slate-300">{{ mac.aciklama }}</div>
             {% endif %}

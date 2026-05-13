@@ -3419,6 +3419,38 @@ def _ogrenci_maclari_init(con) -> None:
         con.execute("ALTER TABLE ogrenci_maclari ADD COLUMN spor TEXT NOT NULL DEFAULT 'futbol'")
 
 
+def _ogrenci_mac_skor_kontrol(spor: str, skor1: int, skor2: int) -> dict:
+    spor = (spor or "futbol").strip().lower()
+    if spor not in {"futbol", "voleybol"}:
+        return {"ok": False, "sebep": "Spor turu gecersiz."}
+    if skor1 < 0 or skor2 < 0:
+        return {"ok": False, "sebep": "Skor negatif olamaz."}
+    if spor == "futbol":
+        if skor1 > 20 or skor2 > 20:
+            return {"ok": False, "sebep": "Futbolda skor gercekci aralikta degil."}
+        if skor1 == skor2:
+            return {"ok": True, "sonuc": "beraberlik", "puan1": 1, "puan2": 1, "kazanan": None}
+        return {
+            "ok": True,
+            "sonuc": "galibiyet",
+            "puan1": 3 if skor1 > skor2 else 0,
+            "puan2": 3 if skor2 > skor1 else 0,
+            "kazanan": "sinif1" if skor1 > skor2 else "sinif2",
+        }
+    if max(skor1, skor2) != 3 or min(skor1, skor2) > 2 or skor1 == skor2:
+        return {
+            "ok": False,
+            "sebep": "Voleybolda mac skoru 3-0, 3-1, 3-2, 0-3, 1-3 veya 2-3 olmali.",
+        }
+    return {
+        "ok": True,
+        "sonuc": "galibiyet",
+        "puan1": 3 if skor1 > skor2 else 0,
+        "puan2": 3 if skor2 > skor1 else 0,
+        "kazanan": "sinif1" if skor1 > skor2 else "sinif2",
+    }
+
+
 def ogrenci_mac_olustur(ogrenci_id: int, rakip_sinif_id: int, skor1: int, skor2: int,
                         aciklama: str = "", spor: str = "futbol") -> dict:
     try:
@@ -3428,12 +3460,9 @@ def ogrenci_mac_olustur(ogrenci_id: int, rakip_sinif_id: int, skor1: int, skor2:
     except Exception:
         return {"ok": False, "sebep": "Skor ve rakip sinif gecersiz."}
     spor = (spor or "futbol").strip().lower()
-    if spor not in {"futbol", "voleybol"}:
-        return {"ok": False, "sebep": "Spor turu gecersiz."}
-    if skor1 < 0 or skor2 < 0:
-        return {"ok": False, "sebep": "Skor negatif olamaz."}
-    if skor1 == skor2:
-        return {"ok": False, "sebep": "Lig puani icin macin kazanan sinifi olmali."}
+    skor_kontrol = _ogrenci_mac_skor_kontrol(spor, skor1, skor2)
+    if not skor_kontrol.get("ok"):
+        return skor_kontrol
     con = _conn()
     try:
         _ogrenci_maclari_init(con)
@@ -3472,8 +3501,16 @@ def _ogrenci_mac_satirlari(con, where: str = "", params: tuple = (), limit: int 
                s2.sinif_adi AS sinif2_adi,
                og.ad_soyad AS onaylayan_adi,
                CASE WHEN COALESCE(m.spor, 'futbol') = 'voleybol' THEN 'Voleybol' ELSE 'Futbol' END AS spor_adi,
-               CASE WHEN m.skor1 > m.skor2 THEN m.sinif1_id ELSE m.sinif2_id END AS kazanan_sinif_id,
-               CASE WHEN m.skor1 > m.skor2 THEN s1.sinif_adi ELSE s2.sinif_adi END AS kazanan_sinif_adi
+               CASE
+                    WHEN m.skor1 = m.skor2 THEN NULL
+                    WHEN m.skor1 > m.skor2 THEN m.sinif1_id
+                    ELSE m.sinif2_id
+               END AS kazanan_sinif_id,
+               CASE
+                    WHEN m.skor1 = m.skor2 THEN 'Berabere'
+                    WHEN m.skor1 > m.skor2 THEN s1.sinif_adi
+                    ELSE s2.sinif_adi
+               END AS kazanan_sinif_adi
         FROM ogrenci_maclari m
         JOIN ogrenciler o ON o.id = m.olusturan_ogrenci_id
         JOIN siniflar s1 ON s1.id = m.sinif1_id
@@ -3562,8 +3599,26 @@ def ogrenci_mac_onayla(mac_id: int, ogretmen_id: int, onay: bool = True) -> dict
             con.commit()
             return {"ok": True, "durum": "reddedildi"}
         skor1, skor2 = int(mac["skor1"]), int(mac["skor2"])
-        if skor1 == skor2:
-            return {"ok": False, "sebep": "Berabere mac lig puani veremez."}
+        spor = (mac["spor"] or "futbol").strip().lower()
+        skor_kontrol = _ogrenci_mac_skor_kontrol(spor, skor1, skor2)
+        if not skor_kontrol.get("ok"):
+            return skor_kontrol
+        if skor_kontrol.get("sonuc") == "beraberlik":
+            puan1 = _lig_puan_artir_miktar(con, int(mac["sinif1_id"]), 1)
+            puan2 = _lig_puan_artir_miktar(con, int(mac["sinif2_id"]), 1)
+            con.execute("""
+                UPDATE ogrenci_maclari
+                SET durum='onaylandi', onaylayan_ogretmen_id=?, onay_tarihi=?, puan_isledi=1
+                WHERE id=?
+            """, (ogretmen_id, simdi, mac_id))
+            con.commit()
+            return {
+                "ok": True,
+                "durum": "onaylandi",
+                "beraberlik": True,
+                "puan1": puan1,
+                "puan2": puan2,
+            }
         kazanan_id = int(mac["sinif1_id"] if skor1 > skor2 else mac["sinif2_id"])
         yeni_puan = _lig_puan_artir_miktar(con, kazanan_id, 3)
         con.execute("""

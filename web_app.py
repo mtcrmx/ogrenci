@@ -719,7 +719,6 @@ def ogrenci_mac_olustur_route():
 @ogrenci_giris_zorunlu
 def api_ogrenci_mac_simule():
     import random
-    import json
     
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
@@ -728,12 +727,20 @@ def api_ogrenci_mac_simule():
         
     veri = request.get_json(silent=True) or {}
     rakip_sinif_id = veri.get("rakip_sinif_id")
-    spor = veri.get("spor", "futbol")
+    spor = (veri.get("spor", "futbol") or "futbol").strip().lower()
+    if spor not in {"futbol", "voleybol"}:
+        return jsonify({"ok": False, "sebep": "Spor turu gecersiz"})
     
     if not rakip_sinif_id:
         return jsonify({"ok": False, "sebep": "Rakip sinif secilmedi"})
+    try:
+        rakip_sinif_id = int(rakip_sinif_id)
+    except Exception:
+        return jsonify({"ok": False, "sebep": "Rakip sinif gecersiz"})
         
     bizim_sinif_id = int(o["sinif_id"])
+    if rakip_sinif_id == bizim_sinif_id:
+        return jsonify({"ok": False, "sebep": "Rakip sinif kendi sinifiniz olamaz"})
     
     bizim_taktik = spor_taktik_yukle(bizim_sinif_id, spor) if spor == "voleybol" else taktik_yukle(bizim_sinif_id)
     rakip_taktik = spor_taktik_yukle(rakip_sinif_id, spor) if spor == "voleybol" else taktik_yukle(rakip_sinif_id)
@@ -742,11 +749,12 @@ def api_ogrenci_mac_simule():
     rakip_k = sinif_ogrencileri(rakip_sinif_id)
     
     def calc_power(taktik, kadro):
-        if not taktik or not taktik.get("oyuncular"):
+        oyuncu_verisi = (taktik or {}).get("oyuncular") or (taktik or {}).get("yerlesim")
+        if not oyuncu_verisi:
             return 50
         total = 0
         count = 0
-        for pid, p in taktik["oyuncular"].items():
+        for pid, _p in oyuncu_verisi.items():
             ogr = next((x for x in kadro if str(x["id"]) == str(pid)), None)
             if ogr:
                 xp = ogr.get("tik_sayisi", 0)
@@ -769,16 +777,28 @@ def api_ogrenci_mac_simule():
     if spor == "voleybol":
         biz_set = 0
         rak_set = 0
+        nokta_ihtimali = max(35, min(65, 50 + (bizim_guc - rakip_guc) // 2))
         for i in range(1, 6):
             if biz_set == 3 or rak_set == 3:
                 break
             b_score = 0
             r_score = 0
             while (b_score < 25 and r_score < 25) or abs(b_score - r_score) < 2:
-                if random.randint(1, 100) <= (50 + (bizim_guc - rakip_guc) // 2):
+                if random.randint(1, 100) <= nokta_ihtimali:
                     b_score += 1
                 else:
                     r_score += 1
+                if b_score + r_score > 90:
+                    if b_score == r_score:
+                        if nokta_ihtimali >= 50:
+                            b_score += 1
+                        else:
+                            r_score += 1
+                    if abs(b_score - r_score) < 2:
+                        if b_score > r_score:
+                            b_score += 1
+                        else:
+                            r_score += 1
             if b_score > r_score:
                 biz_set += 1
                 anlatim.append(f"🏐 {i}. Set: {b_score}-{r_score} (Set bizim!)")
@@ -788,14 +808,34 @@ def api_ogrenci_mac_simule():
         bizim_skor = biz_set
         rakip_skor = rak_set
     else:
-        dakikalar = sorted(random.sample(range(1, 90), random.randint(3, 7)))
-        for dk in dakikalar:
-            if random.randint(1, 100) <= (50 + (bizim_guc - rakip_guc)):
-                bizim_skor += 1
-                anlatim.append(f"⚽ Dk {dk}: Harika bir atak ve GOOOL! ({bizim_skor}-{rakip_skor})")
+        def poisson(lam):
+            limit = 2.718281828459045 ** (-lam)
+            carpim = 1.0
+            adet = 0
+            while carpim > limit:
+                adet += 1
+                carpim *= random.random()
+            return max(0, adet - 1)
+
+        fark = max(-2.0, min(2.0, (bizim_guc - rakip_guc) / 28))
+        bizim_skor = min(7, poisson(1.25 + fark * 0.45))
+        rakip_skor = min(7, poisson(1.25 - fark * 0.45))
+        olaylar = ["biz"] * bizim_skor + ["rakip"] * rakip_skor
+        random.shuffle(olaylar)
+        dakikalar = sorted(random.sample(range(2, 90), len(olaylar))) if olaylar else []
+        anlik_biz = 0
+        anlik_rakip = 0
+        for dk, takim in zip(dakikalar, olaylar):
+            if takim == "biz":
+                anlik_biz += 1
+                anlatim.append(f"⚽ Dk {dk}: Hazirlanan atak gol oldu. ({anlik_biz}-{anlik_rakip})")
             else:
-                rakip_skor += 1
-                anlatim.append(f"❌ Dk {dk}: Rakip defansımızı aştı ve gol... ({bizim_skor}-{rakip_skor})")
+                anlik_rakip += 1
+                anlatim.append(f"❌ Dk {dk}: Rakip boslugu buldu ve gol atti. ({anlik_biz}-{anlik_rakip})")
+        bizim_skor = anlik_biz
+        rakip_skor = anlik_rakip
+        if not olaylar:
+            anlatim.append("⚽ Iki takim da savunmada dikkatliydi, gol sesi cikmadi.")
                 
     anlatim.append("---")
     if bizim_skor > rakip_skor:
@@ -822,9 +862,17 @@ def api_ogrenci_mac_2d_data():
         
     veri = request.get_json(silent=True) or {}
     rakip_sinif_id = veri.get("rakip_sinif_id")
-    spor = veri.get("spor", "futbol")
+    spor = (veri.get("spor", "futbol") or "futbol").strip().lower()
+    if spor not in {"futbol", "voleybol"}:
+        return jsonify({"ok": False, "sebep": "Spor turu gecersiz"}), 400
+    try:
+        rakip_sinif_id = int(rakip_sinif_id)
+    except Exception:
+        return jsonify({"ok": False, "sebep": "Rakip sinif gecersiz"}), 400
     
     bizim_sinif_id = int(o["sinif_id"])
+    if rakip_sinif_id == bizim_sinif_id:
+        return jsonify({"ok": False, "sebep": "Rakip sinif kendi sinifiniz olamaz"}), 400
     
     bizim_taktik = spor_taktik_yukle(bizim_sinif_id, spor) if spor == "voleybol" else taktik_yukle(bizim_sinif_id)
     rakip_taktik = spor_taktik_yukle(rakip_sinif_id, spor) if spor == "voleybol" else taktik_yukle(rakip_sinif_id)
@@ -834,11 +882,12 @@ def api_ogrenci_mac_2d_data():
     
     def extract_players(taktik, kadro, takim_renk):
         players = []
-        if not taktik or "oyuncular" not in taktik or not taktik["oyuncular"]:
+        taktik_oyuncular = (taktik or {}).get("oyuncular") or (taktik or {}).get("yerlesim")
+        if not taktik_oyuncular:
             if spor == "voleybol":
                 default_positions = [
-                    {"x": 25, "y": 65}, {"x": 50, "y": 65}, {"x": 75, "y": 65},
-                    {"x": 25, "y": 85}, {"x": 50, "y": 85}, {"x": 75, "y": 85}
+                    {"x": 25, "y": 58}, {"x": 50, "y": 58}, {"x": 75, "y": 58},
+                    {"x": 25, "y": 82}, {"x": 50, "y": 82}, {"x": 75, "y": 82}
                 ]
                 limit = 6
             else:
@@ -871,7 +920,7 @@ def api_ogrenci_mac_2d_data():
                 })
             return players
             
-        for pid, p in taktik["oyuncular"].items():
+        for pid, p in taktik_oyuncular.items():
             ogr = next((x for x in kadro if str(x["id"]) == str(pid)), None)
             if ogr:
                 ozet = gelisim_ozeti(ogr["id"])

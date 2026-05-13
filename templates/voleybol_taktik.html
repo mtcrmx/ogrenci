@@ -288,9 +288,9 @@ const MEVKILER     = ['Pasör', 'Smaçör', 'Orta Oyuncu', 'Pasör Çaprazı', '
 const EMOJI        = {'Pasör':'🏐', 'Smaçör':'💥', 'Orta Oyuncu':'🧱', 'Pasör Çaprazı':'⚡', 'Libero':'🛡️'};
 const MEVKI_NO_MAP = {'Pasör':1, 'Smaçör':2, 'Orta Oyuncu':3, 'Pasör Çaprazı':4, 'Libero':5};
 const FORMASYONLAR = {
-  'Standart': [{r:'Smaçör',x:25,y:65},{r:'Orta Oyuncu',x:50,y:65},{r:'Pasör Çaprazı',x:75,y:65},{r:'Smaçör',x:25,y:85},{r:'Libero',x:50,y:85},{r:'Pasör',x:75,y:85}],
-  'Servis Karşılama': [{r:'Smaçör',x:20,y:75},{r:'Orta Oyuncu',x:50,y:65},{r:'Pasör Çaprazı',x:80,y:75},{r:'Smaçör',x:35,y:88},{r:'Pasör',x:65,y:88},{r:'Libero',x:50,y:92}],
-  'Hücum': [{r:'Smaçör',x:15,y:60},{r:'Orta Oyuncu',x:50,y:55},{r:'Pasör Çaprazı',x:85,y:60},{r:'Smaçör',x:25,y:85},{r:'Libero',x:50,y:85},{r:'Pasör',x:75,y:85}]
+  'Standart': [{r:'Smaçör',x:25,y:58},{r:'Orta Oyuncu',x:50,y:58},{r:'Pasör Çaprazı',x:75,y:58},{r:'Smaçör',x:25,y:82},{r:'Libero',x:50,y:82},{r:'Pasör',x:75,y:82}],
+  'Servis Karşılama': [{r:'Smaçör',x:18,y:62},{r:'Orta Oyuncu',x:50,y:58},{r:'Pasör Çaprazı',x:82,y:62},{r:'Smaçör',x:25,y:82},{r:'Libero',x:50,y:88},{r:'Pasör',x:75,y:82}],
+  'Hücum': [{r:'Smaçör',x:18,y:56},{r:'Orta Oyuncu',x:50,y:54},{r:'Pasör Çaprazı',x:82,y:56},{r:'Smaçör',x:25,y:84},{r:'Libero',x:50,y:86},{r:'Pasör',x:75,y:78}]
 };
 
 // ════════════════════════════════════════════════════════════════════════
@@ -535,6 +535,12 @@ function yerleştirVeyaDegistir(id, x, y, rolSorulsun) {
 function yerleştir(id, x, y, rolSorulsun = false) {
   const o = oyuncular[id];
   if (!o) return;
+  const sahadakiSayisi = Object.values(oyuncular).filter(p => p.sahada).length;
+  if (!o.sahada && sahadakiSayisi >= 6) {
+    durum('⚠️ Voleybolda sahada en fazla 6 oyuncu olur.');
+    toast('Sahada en fazla 6 oyuncu olabilir.');
+    return;
+  }
   o.x = x; o.y = y; o.sahada = true;
   tokenOlustur(o);
   // Kadro listesi güncelle
@@ -754,6 +760,12 @@ function formasyonUygula(ad) {
 // ════════════════════════════════════════════════════════════════════════
 async function kaydet() {
   const veri = { renk: takimRengi, oyuncular: {} };
+  const sahadakiler = Object.values(oyuncular).filter(o => o.sahada);
+  if (sahadakiler.length !== 6) {
+    durum('⚠️ Voleybol taktigi kaydetmek icin sahada tam 6 oyuncu olmali.');
+    toast('Voleybol taktigi icin 6 oyuncu sec.');
+    return;
+  }
   Object.values(oyuncular).forEach(o => {
     if (o.sahada) veri.oyuncular[o.id] = {
       x: o.x, y: o.y,
