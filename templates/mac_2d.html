@@ -249,149 +249,142 @@ function update() {
 
     // Set Piece State
     if (stateMachine === "SET_PIECE") {
-        // Realistic player repositioning
+        // Realistic player repositioning (Football Manager Style)
         const atkGoalY = setPieceTeam.goalY; // goal the attacking team targets
         const defGoalY = setPieceTeam.goalY === 0 ? GAME_HEIGHT : 0; // defending team's goal
         const atkDir = setPieceTeam.dirY; // -1 or 1
         
-        let pIdx = 0; // counter for spreading players
+        let atkCount = 0;
+        let defCount = 0;
+        
         players.forEach(p => {
             if (p === ball.owner) return; // taker stays at ball
             
-            const isGK = Math.abs(p.baseY - p.team.defendY) < 60;
+            const isGK = Math.abs(p.baseY - p.team.defendY) < 60 || (p.rol && p.rol.includes("Kaleci"));
             let targetX = p.baseX;
             let targetY = p.baseY;
             
             if (setPieceType === "PENALTI") {
-                // Penalty spot is ~110px from goal line
-                const penSpotY = atkGoalY === 0 ? 110 : GAME_HEIGHT - 110;
-                const boxEdgeY = atkGoalY === 0 ? 145 : GAME_HEIGHT - 145;
-                const arcCenterX = GAME_WIDTH / 2;
-                
                 if (isGK && p.team !== setPieceTeam) {
-                    // Defending GK: centered on goal line
-                    targetX = GAME_WIDTH / 2;
-                    targetY = defGoalY === 0 ? 8 : GAME_HEIGHT - 8;
+                    targetX = GAME_WIDTH / 2; targetY = defGoalY === 0 ? 5 : GAME_HEIGHT - 5;
                 } else if (isGK && p.team === setPieceTeam) {
-                    // Attacking GK: stays back at own half
-                    targetX = GAME_WIDTH / 2;
-                    targetY = p.team.defendY === 0 ? 60 : GAME_HEIGHT - 60;
+                    targetX = GAME_WIDTH / 2; targetY = p.team.defendY === 0 ? 80 : GAME_HEIGHT - 80;
                 } else {
-                    // Everyone else: outside box, behind ball, spread on penalty arc
-                    pIdx++;
-                    const spread = (pIdx % 2 === 0 ? 1 : -1) * (30 + Math.ceil(pIdx/2) * 35);
-                    targetX = arcCenterX + spread;
-                    targetY = boxEdgeY + (atkDir * -20); // behind the penalty spot line
+                    // Everyone else stands exactly outside the penalty box and arc.
+                    const penSpotY = atkGoalY === 0 ? 110 : GAME_HEIGHT - 110;
+                    const isDef = p.team !== setPieceTeam;
+                    if (isDef) defCount++; else atkCount++;
+                    
+                    const lineY = atkGoalY === 0 ? 135 : GAME_HEIGHT - 135;
+                    const idx = isDef ? defCount : atkCount;
+                    const offset = isDef ? (idx * 25) : (idx * 25 + 10);
+                    targetX = GAME_WIDTH / 2 + (idx % 2 === 0 ? offset : -offset);
+                    targetY = lineY + (atkDir * -20); 
+                    
+                    if (dist({x: targetX, y: targetY}, {x: GAME_WIDTH/2, y: penSpotY}) < 65) {
+                        targetY += (atkDir * -30); // push back out of arc
+                    }
                 }
-                
             } else if (setPieceType === "FRİKİK") {
-                const distBallToGoal = Math.abs(ball.y - atkGoalY);
+                const isDef = p.team !== setPieceTeam;
+                if (isDef) defCount++; else atkCount++;
                 
-                if (isGK && p.team !== setPieceTeam) {
-                    // Defending GK: on goal line, slightly shifted toward ball side
-                    targetX = GAME_WIDTH/2 + (ball.x - GAME_WIDTH/2) * 0.3;
-                    targetY = defGoalY === 0 ? 8 : GAME_HEIGHT - 8;
-                } else if (p.team !== setPieceTeam) {
-                    // Defenders: 3-4 players form wall, rest mark attackers
-                    pIdx++;
-                    if (pIdx <= 4) {
-                        // Wall: 80px from ball, perpendicular to goal direction
-                        const wallCenterX = ball.x;
-                        const wallY = ball.y + (atkDir * -80); // 80px toward own goal from ball
-                        targetX = wallCenterX + (pIdx - 2.5) * 18; // spread 18px apart
-                        targetY = wallY;
+                if (isGK && isDef) {
+                    const goalCenterX = GAME_WIDTH/2;
+                    targetX = goalCenterX + (ball.x - goalCenterX) * 0.4;
+                    targetY = defGoalY === 0 ? 5 : GAME_HEIGHT - 5;
+                } else if (isDef) {
+                    const distToGoal = dist(ball, {x: GAME_WIDTH/2, y: defGoalY});
+                    const needsWall = distToGoal < 300;
+                    const wallSize = needsWall ? Math.max(2, Math.min(5, Math.floor((350 - distToGoal)/40))) : 0;
+                    
+                    if (defCount <= wallSize) {
+                        const dirToGoal = normalize(GAME_WIDTH/2 - ball.x, defGoalY - ball.y);
+                        const perpX = -dirToGoal.y; const perpY = dirToGoal.x;
+                        const wallCenterX = ball.x + dirToGoal.x * 80;
+                        const wallCenterY = ball.y + dirToGoal.y * 80;
+                        const offset = (defCount - (wallSize+1)/2) * 16;
+                        targetX = wallCenterX + perpX * offset;
+                        targetY = wallCenterY + perpY * offset;
                     } else {
-                        // Remaining defenders: mark space in penalty area
-                        targetX = GAME_WIDTH/2 + ((pIdx-4) % 3 - 1) * 100;
-                        targetY = defGoalY === 0 ? 80 + (pIdx-4) * 25 : GAME_HEIGHT - 80 - (pIdx-4) * 25;
+                        const lineY = Math.max(130, Math.min(GAME_HEIGHT-130, ball.y + atkDir * -120)); // offside line
+                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 1 : -1) * (20 + (defCount%4)*30);
+                        targetY = atkGoalY === 0 ? lineY : GAME_HEIGHT - lineY;
                     }
                 } else {
-                    // Attacking team: spread around box for rebounds
-                    pIdx++;
-                    if (pIdx <= 2) {
-                        // Near ball for short pass option
-                        targetX = ball.x + (pIdx === 1 ? -60 : 60);
-                        targetY = ball.y + atkDir * 30;
-                    } else {
-                        // In/around penalty box
-                        targetX = GAME_WIDTH/2 + ((pIdx-2) % 3 - 1) * 110;
-                        targetY = atkGoalY === 0 ? 90 + (pIdx-2) * 20 : GAME_HEIGHT - 90 - (pIdx-2) * 20;
+                    if (atkCount === 1) { // Short option
+                        targetX = ball.x + (ball.x < GAME_WIDTH/2 ? 40 : -40);
+                        targetY = ball.y + atkDir * 20;
+                    } else if (atkCount <= 5) { // Runs into box
+                        targetX = GAME_WIDTH/2 + (atkCount % 2 === 0 ? 1 : -1) * (10 + atkCount*15);
+                        targetY = defGoalY === 0 ? 100 + atkCount*10 : GAME_HEIGHT - (100 + atkCount*10);
+                    } else { // Stay back
+                        targetX = p.baseX; targetY = GAME_HEIGHT/2 + (atkDir * -100);
                     }
                 }
-                
             } else if (setPieceType === "KORNER") {
-                const cornerSide = ball.x < GAME_WIDTH/2 ? 'left' : 'right';
+                const isLeftCorner = ball.x < GAME_WIDTH/2;
+                const isDef = p.team !== setPieceTeam;
+                if (isDef) defCount++; else atkCount++;
                 
-                if (isGK && p.team !== setPieceTeam) {
-                    // Defending GK: near post (closer to corner)
-                    targetX = cornerSide === 'left' ? GAME_WIDTH/2 - 30 : GAME_WIDTH/2 + 30;
-                    targetY = defGoalY === 0 ? 12 : GAME_HEIGHT - 12;
-                } else if (isGK && p.team === setPieceTeam) {
-                    // Attacking GK: stays in own half
-                    targetX = GAME_WIDTH / 2;
-                    targetY = p.team.defendY === 0 ? 60 : GAME_HEIGHT - 60;
-                } else if (p.team === setPieceTeam) {
-                    // Attackers: crowd the 6-yard and penalty area
-                    pIdx++;
-                    const boxY = atkGoalY === 0 ? 50 + pIdx * 22 : GAME_HEIGHT - 50 - pIdx * 22;
-                    targetX = GAME_WIDTH/2 + (pIdx % 2 === 0 ? -1 : 1) * (30 + pIdx * 20);
-                    targetY = boxY;
-                } else {
-                    // Defenders: man-mark in the box, one stays back
-                    pIdx++;
-                    if (pIdx <= 1) {
-                        // One defender stays at halfway for counter-attack cover
-                        targetX = GAME_WIDTH/2; targetY = GAME_HEIGHT/2;
-                    } else {
-                        const boxY = defGoalY === 0 ? 40 + pIdx * 20 : GAME_HEIGHT - 40 - pIdx * 20;
-                        targetX = GAME_WIDTH/2 + (pIdx % 2 === 0 ? -1 : 1) * (20 + pIdx * 18);
-                        targetY = boxY;
+                if (isGK && isDef) {
+                    targetX = isLeftCorner ? GAME_WIDTH/2 - 20 : GAME_WIDTH/2 + 20;
+                    targetY = defGoalY === 0 ? 10 : GAME_HEIGHT - 10;
+                } else if (isDef) {
+                    if (defCount === 1) { targetX = isLeftCorner ? GAME_WIDTH/2 - 50 : GAME_WIDTH/2 + 50; targetY = defGoalY === 0 ? 10 : GAME_HEIGHT - 10; }
+                    else if (defCount === 2) { targetX = isLeftCorner ? GAME_WIDTH/2 + 50 : GAME_WIDTH/2 - 50; targetY = defGoalY === 0 ? 10 : GAME_HEIGHT - 10; }
+                    else if (defCount === 3) { targetX = GAME_WIDTH/2; targetY = defGoalY === 0 ? 130 : GAME_HEIGHT - 130; }
+                    else if (defCount === 4) { targetX = GAME_WIDTH/2; targetY = GAME_HEIGHT/2 + (atkDir * 100); }
+                    else { 
+                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 1 : -1) * (10 + defCount*10);
+                        targetY = defGoalY === 0 ? 40 + defCount*5 : GAME_HEIGHT - (40 + defCount*5);
                     }
+                } else {
+                    if (atkCount === 1) { targetX = ball.x + (isLeftCorner ? 60 : -60); targetY = ball.y + (defGoalY === 0 ? 40 : -40); }
+                    else if (atkCount <= 5) { targetX = GAME_WIDTH/2 + (atkCount % 2 === 0 ? 1 : -1) * (20 + atkCount*12); targetY = defGoalY === 0 ? 50 + atkCount*10 : GAME_HEIGHT - (50 + atkCount*10); }
+                    else if (atkCount <= 7) { targetX = GAME_WIDTH/2 + (atkCount === 6 ? -50 : 50); targetY = defGoalY === 0 ? 140 : GAME_HEIGHT - 140; }
+                    else { targetX = GAME_WIDTH/2 + (atkCount === 8 ? -70 : 70); targetY = GAME_HEIGHT/2; }
                 }
-                
             } else if (setPieceType === "TAC") {
-                if (p.team === setPieceTeam) {
-                    // Teammates: spread near the thrower to receive
-                    pIdx++;
-                    const throwY = ball.y;
-                    if (pIdx <= 2) {
-                        // Short option: close to thrower
-                        targetX = ball.x + (ball.x < GAME_WIDTH/2 ? 60 : -60);
-                        targetY = throwY + (pIdx === 1 ? -40 : 40);
-                    } else if (pIdx <= 4) {
-                        // Medium option
-                        targetX = GAME_WIDTH/2 + (pIdx % 2 === 0 ? -50 : 50);
-                        targetY = throwY + atkDir * (30 + pIdx * 20);
-                    } else {
-                        // Stay back for safety
-                        targetX = p.baseX;
+                const isDef = p.team !== setPieceTeam;
+                if (isDef) defCount++; else atkCount++;
+                
+                const sidelineDir = ball.x < GAME_WIDTH/2 ? 1 : -1;
+                
+                if (isDef) {
+                    if (defCount <= 3) { // Press the throw
+                        targetX = ball.x + sidelineDir * (40 + defCount*15);
+                        targetY = ball.y + (defCount === 1 ? -30 : (defCount === 2 ? 0 : 30));
+                    } else { // Shift block
+                        targetX = p.baseX + sidelineDir * ((GAME_WIDTH/2) - Math.abs(GAME_WIDTH/2 - ball.x)) * 0.5;
                         targetY = p.baseY;
                     }
                 } else {
-                    // Opponents: mark nearby attackers
-                    pIdx++;
-                    targetX = ball.x + (ball.x < GAME_WIDTH/2 ? 80 : -80) + (pIdx % 3 - 1) * 50;
-                    targetY = ball.y + (pIdx % 2 === 0 ? -30 : 30) + pIdx * 15 * -atkDir;
+                    if (atkCount <= 2) { // Short
+                        targetX = ball.x + sidelineDir * 50; targetY = ball.y + (atkCount === 1 ? -40 : 40);
+                    } else if (atkCount === 3) { // Down line
+                        targetX = ball.x + sidelineDir * 20; targetY = ball.y + atkDir * 80;
+                    } else { // Shift
+                        targetX = p.baseX + sidelineDir * ((GAME_WIDTH/2) - Math.abs(GAME_WIDTH/2 - ball.x)) * 0.4;
+                        targetY = p.baseY;
+                    }
                 }
-                
             } else if (setPieceType === "AUT") {
-                // Goal kick: defending team spreads, attackers push up
-                if (p.team === setPieceTeam) {
-                    targetX = p.baseX;
-                    targetY = p.baseY;
+                if (isGK && p.team === setPieceTeam) {
+                    targetX = GAME_WIDTH/2; targetY = p.team.defendY === 0 ? 60 : GAME_HEIGHT - 60;
+                } else if (p.team === setPieceTeam) {
+                    targetX = p.baseX; targetY = p.baseY + p.team.dirY * -100; // Drop deep to receive
                 } else {
-                    targetX = p.baseX;
-                    targetY = p.baseY;
+                    targetX = p.baseX; targetY = p.baseY + p.team.dirY * 100; // Push up to press
                 }
             }
             
-            // Clamp to field
             targetX = Math.max(15, Math.min(GAME_WIDTH-15, targetX));
             targetY = Math.max(15, Math.min(GAME_HEIGHT-15, targetY));
             
             const dir = normalize(targetX - p.x, targetY - p.y);
             const d = dist(p, {x:targetX, y:targetY});
-            if (d > 5) { p.x += dir.x * 3; p.y += dir.y * 3; } // slightly faster repositioning
+            if (d > 5) { p.x += dir.x * 3; p.y += dir.y * 3; }
         });
 
         setPieceTimer--;
@@ -689,61 +682,52 @@ function update() {
         if (p.actionCooldown > 0) p.actionCooldown--;
 
         if (p === ball.owner) {
-            // DECISION ENGINE: HAS BALL
+            // DECISION ENGINE: HAS BALL (FM-Style)
             p.stamina -= 0.15; // dribbling tires faster
             if (p.stamina < 0) p.stamina = 0;
             
             const distToGoal = Math.abs(p.y - p.team.goalY);
             
             if (p.actionCooldown <= 0) {
-                // 1. Shoot? Plase vs Sert Şut decision
-                if (distToGoal < 250) {
+                // 1. Shoot?
+                if (distToGoal < 220) {
                     let pathClear = true;
-                    if (distToGoal > 100) {
+                    if (distToGoal > 80) {
                         players.forEach(opp => {
-                            if (opp.team !== p.team && opp.y > Math.min(p.y, p.team.goalY) && opp.y < Math.max(p.y, p.team.goalY)) {
-                                if (Math.abs(opp.x - p.x) < 35) pathClear = false;
+                            if (opp.team !== p.team && dist(opp, p) < distToGoal && 
+                                Math.abs(opp.x - p.x) < 40 && opp.y > Math.min(p.y, p.team.goalY) && opp.y < Math.max(p.y, p.team.goalY)) {
+                                pathClear = false;
                             }
                         });
                     }
                     
-                    if (pathClear || p.hasBallTime > 55 || Math.random() < 0.08) {
+                    // High probability to shoot if in box and clear, or just very close
+                    if (distToGoal < 120 || (pathClear && Math.random() < 0.15)) {
                         const errSut = (100 - p.ozellikler.sut) / 100;
                         const distFactor = distToGoal / 250;
-                        
-                        // Decide: plase (finesse) vs sert şut (power)
-                        const usePlase = distToGoal < 150 && Math.random() < 0.4;
+                        const usePlase = distToGoal < 150 && Math.random() < 0.5;
                         
                         if (usePlase) {
-                            // PLASE: Low speed, high curve (spin), good accuracy
                             const gX = GAME_WIDTH/2 + (Math.random() * 100 - 50);
-                            const errX = (Math.random() * 150 - 75) * errSut; // less error
+                            const errX = (Math.random() * 150 - 75) * errSut;
                             const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
                             const power = 10 + (p.ozellikler.sut / 18);
                             ball.vx = dir.x * power; ball.vy = dir.y * power;
-                            ball.vz = 2 + Math.random() * 2; // slight lift
-                            // High spin for curve
+                            ball.vz = 2 + Math.random() * 2;
                             ball.spinX = (Math.random() - 0.5) * 0.8;
                             ball.spinY = 0;
                             showEvent('🎯 Plase!', 800);
                         } else {
-                            // SERT ŞUT: High speed, low spin, more error
                             const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
                             const totalErr = errSut + distFactor * 0.5;
                             const errX = (Math.random() * 400 - 200) * totalErr;
                             const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
                             const power = 16 + (p.ozellikler.sut / 12);
                             ball.vx = dir.x * power; ball.vy = dir.y * power;
-                            // Strike point: center = low, bottom = high lob
                             const strikePoint = Math.random();
-                            if (strikePoint < 0.3) {
-                                ball.vz = 4 + Math.random() * 3; // hit bottom of ball = lob
-                            } else if (strikePoint < 0.6) {
-                                ball.vz = 1 + Math.random(); // center = low drive
-                            } else {
-                                ball.vz = 0; // top = ground shot
-                                ball.spinX = (Math.random()-0.5) * 0.3;
-                            }
+                            if (strikePoint < 0.3) { ball.vz = 4 + Math.random() * 3; } 
+                            else if (strikePoint < 0.6) { ball.vz = 1 + Math.random(); } 
+                            else { ball.vz = 0; ball.spinX = (Math.random()-0.5) * 0.3; }
                             showEvent(distToGoal < 120 ? '🦵 Sert Şut!' : '🦵 Uzak Şut!', 800);
                         }
                         ball.owner = null; p.actionCooldown = 40;
@@ -751,44 +735,62 @@ function update() {
                     }
                 }
                 
-                // 2. Pass with vectorial prediction (target run path)
-                if (p.hasBallTime > 15 && Math.random() < 0.30) {
+                // 2. Pass Evaluation (Intelligent FM style)
+                if (p.hasBallTime > 10) {
                     let bestMate = null; let bestScore = -999;
                     players.forEach(m => {
                         if (m.team === p.team && m !== p) {
                             const d = dist(p, m);
-                            if (d > 50 && d < 450) {
+                            if (d > 40 && d < 450) { // Valid pass range
                                 let score = 0;
-                                if (Math.abs(m.y - p.team.goalY) < Math.abs(p.y - p.team.goalY)) score += 50;
+                                // Reward forward passes
+                                const forwardDist = Math.abs(p.y - p.team.goalY) - Math.abs(m.y - p.team.goalY);
+                                score += forwardDist * 0.4;
+                                
+                                // Penalize if an opponent is too close to the receiver
                                 let oppNear = 0;
-                                players.forEach(opp => { if (opp.team !== p.team && dist(m, opp) < 60) oppNear++; });
-                                score -= oppNear * 40;
+                                players.forEach(opp => { if (opp.team !== p.team && dist(m, opp) < 70) oppNear++; });
+                                score -= oppNear * 60;
+                                
+                                // Penalize if passing lane is blocked
+                                let blocked = false;
+                                players.forEach(opp => {
+                                    if (opp.team !== p.team && dist(p, opp) < d) {
+                                        // Quick distance-to-line check
+                                        const dot = ((opp.x - p.x)*(m.x - p.x) + (opp.y - p.y)*(m.y - p.y)) / (d*d);
+                                        if (dot > 0 && dot < 1) {
+                                            const projX = p.x + dot*(m.x - p.x);
+                                            const projY = p.y + dot*(m.y - p.y);
+                                            if (dist(opp, {x:projX, y:projY}) < 25) blocked = true;
+                                        }
+                                    }
+                                });
+                                if (blocked) score -= 100;
+                                
                                 if (score > bestScore) { bestScore = score; bestMate = m; }
                             }
                         }
                     });
                     
-                    if (bestMate && bestScore > -20) {
+                    // If a good pass is found, OR forced to pass because pressed
+                    let oppPressing = false;
+                    players.forEach(opp => { if (opp.team !== p.team && dist(p, opp) < 40) oppPressing = true; });
+                    
+                    if (bestMate && (bestScore > 10 || (oppPressing && bestScore > -50) || p.hasBallTime > 60)) {
                         const errPas = (100 - p.ozellikler.pas) / 100;
-                        
-                        // Vectorial prediction: target where teammate WILL be
                         const passDist = dist(p, bestMate);
                         const passSpeed = 12 + (p.ozellikler.pas / 20);
-                        const eta = passDist / passSpeed; // estimated arrival time in frames
+                        const eta = passDist / passSpeed;
                         
-                        // Predict future position based on teammate's current velocity
-                        const predX = bestMate.x + bestMate.vx * eta * 0.6; // 60% prediction weight
-                        const predY = bestMate.y + bestMate.vy * eta * 0.6;
+                        // Through-ball logic: if teammate is running forward, pass to space ahead
+                        let predX = bestMate.x + bestMate.vx * eta;
+                        let predY = bestMate.y + bestMate.vy * eta;
                         
-                        // Add error
-                        const errX = (Math.random() * 200 - 100) * errPas;
-                        const errY = (Math.random() * 200 - 100) * errPas;
-                        const targetX = predX + errX;
-                        const targetY = predY + errY;
+                        const errX = (Math.random() * 150 - 75) * errPas;
+                        const errY = (Math.random() * 150 - 75) * errPas;
+                        const dir = normalize((predX + errX) - p.x, (predY + errY) - p.y);
                         
-                        const dir = normalize(targetX - p.x, targetY - p.y);
-                        const powerVar = (Math.random() * 6 - 3) * errPas;
-                        const pw = passSpeed + powerVar;
+                        const pw = passSpeed + (Math.random() * 4 - 2) * errPas;
                         ball.vx = dir.x * pw; ball.vy = dir.y * pw;
                         ball.z = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0;
                         ball.targetPlayer = bestMate;
@@ -798,12 +800,30 @@ function update() {
                 }
             }
             
-            // 3. Dribble
-            const dir = normalize(GAME_WIDTH/2 - p.x, p.team.goalY - p.y);
-            const errorMarginHiz = (100 - p.ozellikler.hiz) / 100;
-            const zig = Math.sin(timeTicks / 10) * errorMarginHiz * 1.5;
-            p.vx = (dir.x + zig) * speedMult * 0.7; // slower with ball
-            p.vy = dir.y * speedMult * 0.7;
+            // 3. Dribbling (Look for space)
+            let dribbleDir = { x: 0, y: p.team.dirY }; // Default forward
+            
+            // Avoid nearby opponents
+            let avoidVec = { x: 0, y: 0 };
+            players.forEach(opp => {
+                if (opp.team !== p.team) {
+                    const d = dist(p, opp);
+                    if (d < 80) {
+                        avoidVec.x += (p.x - opp.x) / d;
+                        avoidVec.y += (p.y - opp.y) / d;
+                    }
+                }
+            });
+            
+            if (Math.hypot(avoidVec.x, avoidVec.y) > 0.1) {
+                dribbleDir = normalize(dribbleDir.x + avoidVec.x*2, dribbleDir.y + avoidVec.y*2);
+            } else {
+                // Drift slightly towards center if wide, or look for gap
+                dribbleDir = normalize((GAME_WIDTH/2 - p.x)*0.01, p.team.dirY);
+            }
+            
+            p.vx = dribbleDir.x * speedMult * 0.75;
+            p.vy = dribbleDir.y * speedMult * 0.75;
             
         } else {
             // NOT BALL OWNER
@@ -842,43 +862,92 @@ function update() {
                     }
                 }
             } else {
-                // Tactical Shift (Takım Boyu / Defans Çizgisi)
+                // === FM-STYLE TACTICAL ZONAL AI ===
+                // X-axis shifting: compact towards the ball
+                const ballRelativeX = (ball.x - GAME_WIDTH/2) / (GAME_WIDTH/2); // -1 to +1
+                // Wingers shift less than central players, but overall team compresses horizontally
+                const shiftX = ballRelativeX * 60; 
+                targetX = p.baseX + shiftX;
+                
+                // Y-axis tactical lines
                 const ballRelativeY = ball.y / GAME_HEIGHT; // 0 to 1
-                targetY = p.baseY + ((ballRelativeY - 0.5) * 200);
-
-                if (teamPossession === p.team) {
+                const isAttacking = teamPossession === p.team;
+                
+                if (isAttacking) {
+                    // ATTACKING PHASE
+                    // Push formation up, but defenders stay behind midfield
+                    const pushY = (p.team.dirY === -1) 
+                        ? Math.max(p.baseY - 250, ball.y + 100) // Attack up to goal, defs don't pass ball much
+                        : Math.min(p.baseY + 250, ball.y - 100);
+                        
+                    targetY = p.baseY + p.team.dirY * 150; // default aggressive push
+                    
                     if (ball.targetPlayer === p) {
-                        targetX = ball.x + ball.vx*5;
-                        targetY = ball.y + ball.vy*5;
+                        targetX = ball.x + ball.vx*6;
+                        targetY = ball.y + ball.vy*6;
                         p.state = 'CHASE';
                     } else {
-                        targetY += p.team.dirY * 60; 
+                        // Forwards make runs into the box
+                        if (Math.abs(p.baseY - p.team.goalY) < 300) {
+                            targetY = p.team.goalY + (p.team.dirY * -40); // Sit on offside line
+                            // Look for space
+                            targetX += (Math.random()-0.5) * 40;
+                        }
                         p.state = 'SUPPORT';
                     }
-                } else if (teamPossession && teamPossession !== p.team) {
+                } else if (teamPossession && !isAttacking) {
+                    // DEFENDING PHASE
+                    // Drop back and maintain shape. Do not drop past the penalty box line unless ball is there
+                    const defLineY = p.team.defendY === 0 ? Math.max(130, ball.y - 50) : Math.min(GAME_HEIGHT - 130, ball.y + 50);
+                    
+                    targetY = p.baseY + (p.team.defendY === 0 ? -1 : 1) * 80; // Drop deep
+                    // Maintain vertical compactness
+                    if (p.team.defendY === 0 && targetY > defLineY + 250) targetY = defLineY + 250;
+                    if (p.team.defendY !== 0 && targetY < defLineY - 250) targetY = defLineY - 250;
+
+                    // Pressing Logic (Closest 1-2 players press, rest hold shape)
                     const dToBall = dist(p, ball);
+                    let pressCount = 0;
                     let isClosest = true;
                     players.forEach(m => {
-                        if (m.team === p.team && m !== p && dist(m, ball) < dToBall) isClosest = false;
+                        if (m.team === p.team && m !== p) {
+                            if (dist(m, ball) < dToBall) isClosest = false;
+                            if (dist(m, ball) < 100) pressCount++;
+                        }
                     });
                     
-                    if (isClosest || dToBall < 120) {
+                    if (isClosest || (dToBall < 120 && pressCount < 2)) {
                         targetX = ball.x;
                         targetY = ball.y;
                         p.state = 'CHASE';
-                        p.stamina -= 0.05; // pressing drains stamina
+                        p.stamina -= 0.08; // heavy press drain
                     } else {
                         p.state = 'IDLE';
+                        // Cover passing lanes: shift slightly towards nearest opponent
+                        let nearestOpp = null; let dOpp = 999;
+                        players.forEach(opp => {
+                            if (opp.team !== p.team && dist(opp, p) < dOpp) { dOpp = dist(opp,p); nearestOpp = opp; }
+                        });
+                        if (nearestOpp && dOpp < 150) {
+                            // Stand exactly between opponent and our goal
+                            const goalCenter = {x: GAME_WIDTH/2, y: p.team.defendY};
+                            const blockDir = normalize(nearestOpp.x - goalCenter.x, nearestOpp.y - goalCenter.y);
+                            targetX = nearestOpp.x - blockDir.x * 40;
+                            targetY = nearestOpp.y - blockDir.y * 40;
+                        }
                     }
                 } else {
+                    // NEUTRAL BALL (Loose)
                     let myTeamDist = [];
                     players.forEach(m => { if(m.team === p.team) myTeamDist.push({m:m, d:dist(m,ball)}); });
                     myTeamDist.sort((a,b)=>a.d - b.d);
-                    if (myTeamDist.length > 0) {
-                        if (myTeamDist[0].m === p || (myTeamDist.length > 1 && myTeamDist[1].m === p)) {
-                            targetX = ball.x; targetY = ball.y;
-                            p.state = 'CHASE';
-                        }
+                    if (myTeamDist[0].m === p || (myTeamDist.length > 1 && myTeamDist[1].m === p)) {
+                        targetX = ball.x + ball.vx * 3; 
+                        targetY = ball.y + ball.vy * 3;
+                        p.state = 'CHASE';
+                    } else {
+                        // Hold shape but shift to ball
+                        targetY = p.baseY + ((ballRelativeY - 0.5) * 150);
                     }
                 }
             }
