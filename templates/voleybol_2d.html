@@ -93,8 +93,8 @@ const normalize = (dx, dy) => {
 };
 
 function clampPointToTeamCourt(team, x, y, buffer = 18) {
-    const minY = team === team1 ? NET_Y + buffer : buffer;
-    const maxY = team === team1 ? GAME_HEIGHT - buffer : NET_Y - buffer;
+    const minY = team.side === 1 ? NET_Y + buffer : buffer;
+    const maxY = team.side === 1 ? GAME_HEIGHT - buffer : NET_Y - buffer;
     return {
         x: Math.max(buffer, Math.min(GAME_WIDTH - buffer, x)),
         y: Math.max(minY, Math.min(maxY, y)),
@@ -105,6 +105,22 @@ function clampPlayerToOwnCourt(p, buffer = 15) {
     const pos = clampPointToTeamCourt(p.team, p.x, p.y, buffer);
     p.x = pos.x;
     p.y = pos.y;
+}
+
+function teamOnSide(side) {
+    return team1.side === side ? team1 : team2;
+}
+
+function teamForBallY(y) {
+    return y > NET_Y ? teamOnSide(1) : teamOnSide(2);
+}
+
+function ballOnTeamSide(team, y) {
+    return team.side === 1 ? y > NET_Y : y < NET_Y;
+}
+
+function ballMovingTowardTeam(team) {
+    return team.side === 1 ? ball.vy > 0 : ball.vy < 0;
 }
 
 async function loadData() {
@@ -284,7 +300,7 @@ function update() {
             const errX = (Math.random() * 58 - 29) * errMargin;
             const errY = (Math.random() * 46 - 23) * errMargin;
             const courtMargin = 70;
-            const targetTop = p.team === team1;
+            const targetTop = p.team.side === 1;
             let gX = Math.max(courtMargin, Math.min(GAME_WIDTH - courtMargin,
                 courtMargin + Math.random() * (GAME_WIDTH - courtMargin * 2) + errX));
             let gY = targetTop
@@ -366,7 +382,7 @@ function update() {
         if (isOut) {
             givePoint(ball.lastTeamTouched === team1 ? team2 : team1, "Top Dışarıda! (Aut)");
         } else {
-            const hitSide = ball.y > GAME_HEIGHT/2 ? team1 : team2;
+            const hitSide = teamForBallY(ball.y);
             givePoint(hitSide === team1 ? team2 : team1, "Top Yerde!");
         }
         return;
@@ -374,7 +390,6 @@ function update() {
     
     // ========== NET COLLISION (elastic barrier) ==========
     const NET_HEIGHT = 18; // net top edge in z
-    const NET_Y = GAME_HEIGHT / 2;
     const prevY = ball.y - ball.vy;
     
     // Check if ball crossed net line this frame
@@ -393,7 +408,7 @@ function update() {
     }
     
     // ========== NET CROSSING TRACKING ==========
-    const ballNetSide = ball.y > NET_Y ? team1 : team2;
+    const ballNetSide = teamForBallY(ball.y);
     if (lastNetSide && ballNetSide !== lastNetSide && ball.z >= NET_HEIGHT) {
         teamTouches = 0;
         lastNetSide = ballNetSide;
@@ -407,7 +422,7 @@ function update() {
         let targetX = p.baseX;
         let targetY = p.baseY;
         
-        const ballOnMySide = p.team === team1 ? ball.y > NET_Y : ball.y < NET_Y;
+        const ballOnMySide = ballOnTeamSide(p.team, ball.y);
         const servingTeamLocked = ball.serveFlight && p.team === ball.lastTeamTouched;
         
         // Movement AI: predict ball landing spot
@@ -483,8 +498,7 @@ function update() {
             
             // Check if opponent is near net for BLOCK
             const nearNet = Math.abs(p.y - NET_Y) < 80;
-            const isBlock = nearNet && ball.vz < 0 && ball.z > 12 &&
-                ((p.team === team1 && ball.vy < 0) || (p.team === team2 && ball.vy > 0));
+            const isBlock = nearNet && ball.vz < 0 && ball.z > 12 && ballMovingTowardTeam(p.team);
             
             if (isBlock && p.ozellikler.defans > 30) {
                 // RULE: Libero cannot block
@@ -565,7 +579,7 @@ function update() {
                 
                 const margin = 40;
                 const gX = margin + Math.random() * (GAME_WIDTH - margin * 2);
-                const gY = p.team === team1
+                const gY = p.team.side === 1
                     ? margin + Math.random() * (NET_Y - margin - 40)
                     : NET_Y + 40 + Math.random() * (GAME_HEIGHT - NET_Y - margin - 40);
                 
@@ -586,7 +600,7 @@ function update() {
                 
                 // Topspin (Magnus): ball curves downward
                 ball.spinX = (Math.random() - 0.5) * 0.2;
-                ball.spinY = (p.team === team1 ? -0.15 : 0.15) * (1 - sutErr); // topspin toward opponent
+                ball.spinY = (p.team.side === 1 ? -0.15 : 0.15) * (1 - sutErr); // topspin toward opponent
             }
         }
     });
