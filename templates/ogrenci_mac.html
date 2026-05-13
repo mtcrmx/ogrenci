@@ -67,24 +67,11 @@
               {% endfor %}
             </select>
           </label>
-          <div class="grid grid-cols-2 gap-3">
-            <label class="block">
-              <span class="text-xs font-bold text-slate-400">Bizim skor</span>
-              <input id="skor1-futbol" name="skor1" type="number" min="0" required value="1"
-                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            </label>
-            <label class="block">
-              <span class="text-xs font-bold text-slate-400">Rakip skor</span>
-              <input id="skor2-futbol" name="skor2" type="number" min="0" required value="0"
-                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            </label>
-          </div>
+          <input type="hidden" id="skor1-futbol" name="skor1" value="0">
+          <input type="hidden" id="skor2-futbol" name="skor2" value="0">
           <div class="grid grid-cols-1 gap-2">
-            <button type="button" onclick="mac2dIzle('futbol')" class="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-black hover:bg-green-500 text-white">📺 2D Maç İzle</button>
+            <button type="button" onclick="mac2dIzle('futbol')" class="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-black hover:bg-green-500 text-white">📺 2D Maç İzle (Otomatik Kaydedilir)</button>
           </div>
-          <button type="submit" class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-black hover:bg-amber-500">
-            Ogretmen onayina gonder
-          </button>
         </div>
       </form>
 
@@ -102,24 +89,11 @@
               {% endfor %}
             </select>
           </label>
-          <div class="grid grid-cols-2 gap-3">
-            <label class="block">
-              <span class="text-xs font-bold text-slate-400">Bizim set</span>
-              <input id="skor1-voleybol" name="skor1" type="number" min="0" max="3" required value="3"
-                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            </label>
-            <label class="block">
-              <span class="text-xs font-bold text-slate-400">Rakip set</span>
-              <input id="skor2-voleybol" name="skor2" type="number" min="0" max="3" required value="0"
-                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            </label>
-          </div>
+          <input type="hidden" id="skor1-voleybol" name="skor1" value="0">
+          <input type="hidden" id="skor2-voleybol" name="skor2" value="0">
           <div class="grid grid-cols-1 gap-2">
-            <button type="button" onclick="mac2dIzle('voleybol')" class="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-black hover:bg-green-500 text-white">📺 2D Maç İzle</button>
+            <button type="button" onclick="mac2dIzle('voleybol')" class="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-black hover:bg-green-500 text-white">📺 2D Maç İzle (Otomatik Kaydedilir)</button>
           </div>
-          <button type="submit" class="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-black hover:bg-sky-500">
-            Voleybol onayina gonder
-          </button>
         </div>
       </form>
     </section>

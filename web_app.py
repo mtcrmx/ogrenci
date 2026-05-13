@@ -2915,4 +2915,5 @@ if __name__ == "__main__":
         ip = "127.0.0.1"
 
     print(f"\n  http://localhost:{port}  |  http://{ip}:{port}\n")
-    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
