@@ -400,7 +400,14 @@ function update() {
                         }
                         
                         showEvent(eventMsg, 3000);
-                        ball.owner = null;
+                        
+                        // Frikik veya Penaltı'yı kullanması için topu faul yapılan oyuncuya ver
+                        ball.vx = 0; ball.vy = 0;
+                        if (setPieceType === "PENALTI") {
+                            ball.x = GAME_WIDTH/2;
+                            ball.y = opp.team.defendY === 0 ? 110 : GAME_HEIGHT-110;
+                            ball.owner.x = ball.x; ball.owner.y = ball.y + (opp.team.defendY === 0 ? 10 : -10);
+                        }
                         return; // break out
                     } else {
                         // Clean tackle
