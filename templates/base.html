@@ -1,9 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Öğrenci Takip{% endblock %} — Erenler Cumhuriyet Ortaokulu</title>
+  <link rel="manifest" href="{{ url_for('manifest') }}">
+  <meta name="theme-color" content="#1a3a6b">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -38,13 +40,13 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body class="bg-slate-100 min-h-screen">
+<body class="bg-slate-100 min-h-screen overflow-x-hidden">
 
 {% if session.ogretmen_adi %}
 <!-- ── Üst Bar ─────────────────────────────────────────────────────────── -->
 <header class="bg-okul-800 text-white shadow-lg sticky top-0 z-40">
-  <div class="flex items-center justify-between px-4 py-3 max-w-screen-xl mx-auto">
-    <div class="flex items-center gap-3">
+  <div class="flex items-center justify-between gap-2 px-3 sm:px-4 py-3 max-w-screen-xl mx-auto">
+    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
       <!-- Mobil menü butonu -->
       <button id="sidebar-toggle"
               class="lg:hidden p-1 rounded hover:bg-okul-700 transition"
@@ -54,68 +56,96 @@
                 d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
       </button>
-      <div>
+      <div class="min-w-0">
         <div class="font-bold text-sm sm:text-base leading-tight">
-          🏫 Erenler Cumhuriyet Ortaokulu
+          <span class="sm:hidden">🏫 ECO</span>
+          <span class="hidden sm:inline">🏫 Erenler Cumhuriyet Ortaokulu</span>
         </div>
-        <div class="text-xs text-blue-300 hidden sm:block">Öğrenci Takip Paneli</div>
+        <div class="text-xs text-blue-300 hidden sm:block">Davranış tik kaydı</div>
       </div>
     </div>
 
     <div class="flex items-center gap-2 sm:gap-3 min-w-0">
-      <nav class="hidden md:flex items-center gap-1.5">
+      <nav class="hidden md:flex items-center gap-1.5 flex-wrap justify-end">
+        <a href="{{ url_for('dashboard') }}"
+           class="bg-okul-700 hover:bg-okul-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
+          Ana Menü
+        </a>
+        <a href="{{ url_for('yoklama') }}"
+           class="bg-emerald-700 hover:bg-emerald-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Sınıfa ödev ver">
+          Ödev
+        </a>
+        <a href="{{ url_for('yayin') }}"
+           class="bg-violet-700 hover:bg-violet-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Okul geneli canlı yayın panosu">
+          Yayın
+        </a>
         <a href="{{ url_for('lig') }}"
-           class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Süper Lig
+           class="bg-amber-700 hover:bg-amber-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Süper Lig puan tablosu">
+          Lig
         </a>
-        <a href="{{ url_for('oduller') }}"
-           class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Ödüller
+        <a href="{{ url_for('bilgilendirme_yonetimi') }}"
+           class="bg-sky-700 hover:bg-sky-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Öğrenci ve veliye duyuru">
+          Duyuru
         </a>
-        <a href="{{ url_for('ogrenci_panel') }}"
-           class="bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Öğrenci
-        </a>
-        <a href="{{ url_for('sifirla_sayfasi') }}"
-           class="bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold
-                  px-3 py-1.5 rounded-lg transition whitespace-nowrap">
-          Genel Sıfırla
+        <a href="{{ url_for('analiz_merkezi') }}"
+           class="bg-rose-700 hover:bg-rose-900 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Analiz PDF, yedek ve sıfırlama">
+          Analiz
         </a>
       </nav>
 
       <span class="hidden sm:block text-xs text-blue-200">👤 {{ session.ogretmen_adi }}</span>
 
       {% if aktif %}
-      <!-- Yayın Modu -->
-      <a href="{{ url_for('yayin', sinif_id=aktif.id) }}"
-         target="_blank"
-         class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold
-                px-3 py-1.5 rounded-lg transition hidden sm:block">
-        📺 Yayın
-      </a>
-      <!-- Excel -->
       <a href="{{ url_for('rapor_excel', sinif_id=aktif.id) }}"
          class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold
-                px-3 py-1.5 rounded-lg transition hidden sm:block">
+                px-3 py-1.5 rounded-lg transition hidden sm:block"
+         title="Tik listesi Excel">
         📊 Excel
+      </a>
+      <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}"
+         class="bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold
+                px-3 py-1.5 rounded-lg transition hidden md:block"
+         title="Analiz merkezi ve PDF">
+        📑 Analiz
       </a>
       {% endif %}
 
       <a href="{{ url_for('logout') }}"
          class="bg-slate-600 hover:bg-slate-500 text-white text-xs
-                px-3 py-1.5 rounded-lg transition">
+                px-2.5 sm:px-3 py-1.5 rounded-lg transition whitespace-nowrap">
         Çıkış
       </a>
     </div>
   </div>
+  <nav class="md:hidden flex gap-1.5 px-3 pb-2 max-w-screen-xl mx-auto overflow-x-auto scrollbar-thin">
+    <a href="{{ url_for('dashboard') }}" class="shrink-0 rounded-lg bg-okul-700 px-2.5 py-1 text-[11px] font-bold">Menü</a>
+    <a href="{{ url_for('yoklama') }}" class="shrink-0 rounded-lg bg-emerald-700 px-2.5 py-1 text-[11px] font-bold">Ödev</a>
+    <a href="{{ url_for('yayin') }}" class="shrink-0 rounded-lg bg-violet-700 px-2.5 py-1 text-[11px] font-bold">Yayın</a>
+    <a href="{{ url_for('lig') }}" class="shrink-0 rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-bold">Lig</a>
+    <a href="{{ url_for('bilgilendirme_yonetimi') }}" class="shrink-0 rounded-lg bg-sky-700 px-2.5 py-1 text-[11px] font-bold">Duyuru</a>
+    <a href="{{ url_for('analiz_merkezi') }}" class="shrink-0 rounded-lg bg-rose-900 px-2.5 py-1 text-[11px] font-bold">Analiz</a>
+  </nav>
 </header>
 {% endif %}
 
 {% block body %}{% endblock %}
 
 {% block scripts %}{% endblock %}
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('{{ url_for("service_worker") }}').catch(() => {});
+}
+</script>
 </body>
 </html>
