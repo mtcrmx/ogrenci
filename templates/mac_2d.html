@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>2D Maç Motoru</title>
+  <title>2D FM Maç Motoru (Pro)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background: #000; color: #fff; margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -12,8 +12,6 @@
     #score-board { font-size: 24px; font-weight: 900; letter-spacing: 2px; }
     #canvas-wrap { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #1a1a1a; }
     canvas { background: #2f855a; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.8); max-width: 100%; max-height: 100%; }
-    
-    /* Overlay for match events */
     #event-overlay {
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
@@ -43,18 +41,21 @@ const urlParams = new URLSearchParams(window.location.search);
 const rakip_id = urlParams.get('rakip_id');
 const spor = urlParams.get('spor') || 'futbol';
 
-// Game State
-let isPlaying = false;
-let timeTicks = 0; // 60 ticks = 1 second. 1 match = 90 mins game time = 180 seconds real time.
-const TOTAL_TICKS = 180 * 60; 
-let score1 = 0;
-let score2 = 0;
-
-// Canvas setup
-const canvas = document.getElementById('pitch');
-const ctx = canvas.getContext('2d');
+// Game Engine Config
+const FPS = 60;
 const GAME_WIDTH = 600;
 const GAME_HEIGHT = 900;
+let timeTicks = 0;
+const TOTAL_TICKS = 180 * FPS; // 3 dakika gerçek zaman = 90 dk oyun zamanı
+
+// State
+let isPlaying = false;
+let score1 = 0, score2 = 0;
+let stateMachine = "PLAYING"; // PLAYING, GOAL_CELEBRATION
+
+// Canvas
+const canvas = document.getElementById('pitch');
+const ctx = canvas.getContext('2d');
 canvas.width = GAME_WIDTH;
 canvas.height = GAME_HEIGHT;
 
@@ -67,14 +68,6 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// Entities
-let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, vx: 0, vy: 0, speed: 0, owner: null };
-let players = [];
-
-// Teams
-let team1 = { id: 1, name: "Biz", color: "#3b82f6", dirY: -1, goalY: 0 }; // attacks top
-let team2 = { id: 2, name: "Rakip", color: "#ef4444", dirY: 1, goalY: GAME_HEIGHT }; // attacks bottom
-
 function showEvent(text, duration=2000) {
   const el = document.getElementById('event-overlay');
   el.textContent = text;
@@ -82,328 +75,377 @@ function showEvent(text, duration=2000) {
   setTimeout(() => el.style.opacity = 0, duration);
 }
 
-// Fetch Data
+// Math Utils
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function normalize(dx, dy) { const l = Math.hypot(dx, dy); return l===0 ? {x:0,y:0} : {x:dx/l, y:dy/l}; }
+function randomRange(min, max) { return Math.random() * (max - min) + min; }
+
+// Entities
+let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, vx: 0, vy: 0, speed: 0, owner: null, targetPlayer: null };
+let players = [];
+
+let team1 = { id: 1, name: "Biz", color: "#3b82f6", dirY: -1, goalY: 0, defendY: GAME_HEIGHT };
+let team2 = { id: 2, name: "Rakip", color: "#ef4444", dirY: 1, goalY: GAME_HEIGHT, defendY: 0 };
+
 async function loadData() {
   try {
+    showEvent("Veri bekleniyor...", 5000);
     const res = await fetch('/api/ogrenci/mac/2d_data', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rakip_sinif_id: parseInt(rakip_id), spor: spor })
     });
+    
+    if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
-    if (!data.ok) { alert("Veri yüklenemedi!"); return; }
+    if (!data.ok) { showEvent("Hata: " + (data.sebep||"Bilinmiyor"), 5000); return; }
     
     document.getElementById('team1-name').textContent = data.bizim_takim.ad;
     document.getElementById('team2-name').textContent = data.rakip_takim.ad;
     team1.name = data.bizim_takim.ad;
     team2.name = data.rakip_takim.ad;
     
-    // Parse players
-    // Bizim takim (Team 1) starts at bottom (Y=50..100 maps to 450..900)
-    data.bizim_takim.oyuncular.forEach(p => {
-        players.appendPlayer(p, team1, false);
-    });
-    
-    // Rakip takim (Team 2) starts at top (Y=50..100 maps to 0..450 mirrored)
-    data.rakip_takim.oyuncular.forEach(p => {
-        players.appendPlayer(p, team2, true);
-    });
+    data.bizim_takim.oyuncular.forEach(p => addPlayer(p, team1, false));
+    data.rakip_takim.oyuncular.forEach(p => addPlayer(p, team2, true));
     
     resetPositions();
-    showEvent("Hakem düdüğü çaldı, maç başladı!", 3000);
+    showEvent("Hakem düdüğü çaldı, taktiksel maç başladı!", 3000);
     isPlaying = true;
-    gameLoop();
+    requestAnimationFrame(gameLoop);
   } catch(e) {
-    alert("Hata: " + e.message);
+    showEvent("JS Hatası: " + e.message, 10000);
   }
 }
 
-players.appendPlayer = function(p, team, mirror) {
-    // p.baseX (0-100), p.baseY(0-100) from taktik
+function addPlayer(p, team, mirror) {
     let tx = (p.baseX / 100) * GAME_WIDTH;
     let ty = (p.baseY / 100) * GAME_HEIGHT;
     
-    // Convert taktik Y (10=top, 90=bottom) to actual canvas
-    // Team 1 defends bottom, attacks top. Taktik 10 is top (attack), 90 is bottom (defend).
-    if (!mirror) {
-        // Just use standard mapping, but flip if needed
-        ty = (p.baseY / 100) * GAME_HEIGHT;
-    } else {
-        // Team 2 mirrored
+    if (mirror) {
         tx = GAME_WIDTH - tx;
-        ty = GAME_HEIGHT - ((p.baseY / 100) * GAME_HEIGHT);
+        ty = GAME_HEIGHT - ty;
     }
     
-    this.push({
-        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr,
-        team: team,
+    players.push({
+        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, team: team,
         baseX: tx, baseY: ty,
-        x: tx, y: ty,
-        vx: 0, vy: 0,
-        state: 'IDLE', // IDLE, CHASE, WITH_BALL, RETURN
-        hasBallTime: 0
+        x: tx, y: ty, vx: 0, vy: 0,
+        stamina: 100, // 0 to 100
+        state: 'IDLE', // IDLE, CHASE, WITH_BALL, SUPPORT, RECOVER
+        hasBallTime: 0,
+        actionCooldown: 0 // delay between decisions
     });
-};
+}
 
 function resetPositions() {
     players.forEach(p => {
-        p.x = p.baseX;
-        p.y = p.baseY;
-        p.vx = 0; p.vy = 0;
-        p.state = 'IDLE';
+        p.x = p.baseX; p.y = p.baseY; p.vx = 0; p.vy = 0;
+        p.state = 'IDLE'; p.stamina = 100;
     });
-    ball.x = GAME_WIDTH/2;
-    ball.y = GAME_HEIGHT/2;
-    ball.vx = 0; ball.vy = 0;
-    ball.owner = null;
+    ball.x = GAME_WIDTH/2; ball.y = GAME_HEIGHT/2;
+    ball.vx = 0; ball.vy = 0; ball.owner = null; ball.targetPlayer = null;
+    stateMachine = "PLAYING";
 }
 
-function dist(a, b) {
-    return Math.hypot(a.x - b.x, a.y - b.y);
+function getTeamWithBall() {
+    if (ball.owner) return ball.owner.team;
+    if (ball.targetPlayer) return ball.targetPlayer.team;
+    return null;
 }
 
-function normalize(dx, dy) {
-    const len = Math.hypot(dx, dy);
-    if(len === 0) return {x:0, y:0};
-    return {x: dx/len, y: dy/len};
-}
-
-// Logic tick
+// AI Update Loop
 function update() {
-    if (!isPlaying) return;
-    
+    if (!isPlaying || stateMachine !== "PLAYING") return;
     timeTicks++;
+    
     const gameMin = Math.floor((timeTicks / TOTAL_TICKS) * 90);
     const gameSec = Math.floor(((timeTicks / TOTAL_TICKS) * 90 * 60) % 60);
     document.getElementById('timer').textContent = `${gameMin.toString().padStart(2,'0')}:${gameSec.toString().padStart(2,'0')}`;
     
     if (timeTicks >= TOTAL_TICKS) {
-        isPlaying = false;
-        showEvent("Maç Sona Erdi!", 5000);
-        document.getElementById('close-btn').style.display = 'block';
-        return;
+        isPlaying = false; showEvent("Maç Sona Erdi!", 5000);
+        document.getElementById('close-btn').style.display = 'block'; return;
     }
 
-    // Ball physics
-    ball.x += ball.vx;
-    ball.y += ball.vy;
-    ball.vx *= 0.96;
-    ball.vy *= 0.96;
+    // Ball Physics
+    ball.x += ball.vx; ball.y += ball.vy;
+    ball.vx *= 0.95; ball.vy *= 0.95; // Friction
     ball.speed = Math.hypot(ball.vx, ball.vy);
     
-    // Wall collisions
-    if (ball.x < 10) { ball.x = 10; ball.vx *= -0.8; }
-    if (ball.x > GAME_WIDTH-10) { ball.x = GAME_WIDTH-10; ball.vx *= -0.8; }
-    
-    // Goal zones (X: 200 to 400, Y: 0 or GAME_HEIGHT)
-    if (ball.y < 5 && ball.x > GAME_WIDTH/2 - 80 && ball.x < GAME_WIDTH/2 + 80) {
-        score1++;
-        document.getElementById('score1').textContent = score1;
-        showEvent(`GOOOL! ${team1.name}`, 3000);
-        isPlaying = false;
-        setTimeout(() => { resetPositions(); isPlaying = true; }, 3000);
-        return;
-    }
-    if (ball.y > GAME_HEIGHT-5 && ball.x > GAME_WIDTH/2 - 80 && ball.x < GAME_WIDTH/2 + 80) {
-        score2++;
-        document.getElementById('score2').textContent = score2;
-        showEvent(`GOOOL! ${team2.name}`, 3000);
-        isPlaying = false;
-        setTimeout(() => { resetPositions(); isPlaying = true; }, 3000);
-        return;
-    }
-    
-    // Out of bounds (Autoplay -> keep in bounds for simplicity, just bounce)
-    if (ball.y < 5) { ball.y = 5; ball.vy *= -0.8; }
-    if (ball.y > GAME_HEIGHT-5) { ball.y = GAME_HEIGHT-5; ball.vy *= -0.8; }
+    // Bounds (bouncing)
+    if (ball.x < 5) { ball.x = 5; ball.vx *= -0.6; }
+    if (ball.x > GAME_WIDTH-5) { ball.x = GAME_WIDTH-5; ball.vx *= -0.6; }
+    if (ball.y < 5) { ball.y = 5; ball.vy *= -0.6; }
+    if (ball.y > GAME_HEIGHT-5) { ball.y = GAME_HEIGHT-5; ball.vy *= -0.6; }
 
-    // Ball ownership
+    // Goal Check
+    const goalLeft = GAME_WIDTH/2 - 80, goalRight = GAME_WIDTH/2 + 80;
+    if (ball.y <= 10 && ball.x > goalLeft && ball.x < goalRight) {
+        score1++; document.getElementById('score1').textContent = score1;
+        showEvent(`GOOOL! ${team1.name} mükemmel bir organizasyonla yazdı!`, 4000);
+        stateMachine = "GOAL_CELEBRATION";
+        setTimeout(resetPositions, 4000); return;
+    }
+    if (ball.y >= GAME_HEIGHT-10 && ball.x > goalLeft && ball.x < goalRight) {
+        score2++; document.getElementById('score2').textContent = score2;
+        showEvent(`GOOOL! ${team2.name} taktiksel zekasını konuşturdu!`, 4000);
+        stateMachine = "GOAL_CELEBRATION";
+        setTimeout(resetPositions, 4000); return;
+    }
+
+    // Possession Check
     if (ball.owner) {
         ball.owner.hasBallTime++;
-        ball.x = ball.owner.x + 10; // keep slightly in front
-        ball.y = ball.owner.y + (ball.owner.team.dirY * 10);
+        ball.x = ball.owner.x + (ball.owner.team.dirY === -1 ? 0 : 0); // Keep on player
+        ball.y = ball.owner.y;
         ball.vx = 0; ball.vy = 0;
+        ball.targetPlayer = null;
     } else {
         // Try to claim ball
         players.forEach(p => {
-            if (dist(p, ball) < 15 && ball.speed < 10) {
-                ball.owner = p;
-                p.state = 'WITH_BALL';
-                p.hasBallTime = 0;
+            if (dist(p, ball) < 16 && ball.speed < 12 && p.actionCooldown <= 0) {
+                // Interception / receive
+                ball.owner = p; p.state = 'WITH_BALL'; p.hasBallTime = 0; p.stamina -= 5;
             }
         });
     }
 
-    // AI Logic
-    // Find closest player to ball for each team
-    let closestT1 = null, minDistT1 = 9999;
-    let closestT2 = null, minDistT2 = 9999;
-    
-    players.forEach(p => {
-        const d = dist(p, ball);
-        if (p.team.id === 1 && d < minDistT1) { minDistT1 = d; closestT1 = p; }
-        if (p.team.id === 2 && d < minDistT2) { minDistT2 = d; closestT2 = p; }
-    });
+    const teamPossession = getTeamWithBall();
 
+    // Player AI
     players.forEach(p => {
-        const speedMultiplier = (p.ovr / 100) * 3.5; // max speed ~3.5
+        // Stamina logic
+        if (p.stamina < 100 && p.state !== 'CHASE' && p.state !== 'WITH_BALL') {
+            p.stamina += 0.05; // recover
+        }
         
+        let speedMult = (p.ovr / 100) * 3.5; // Base speed based on rating
+        // Fatigue effect: drop to 60% speed if exhausted
+        speedMult *= Math.max(0.6, p.stamina / 100); 
+
+        if (p.actionCooldown > 0) p.actionCooldown--;
+
         if (p === ball.owner) {
-            // WITH BALL
-            const distToGoal = Math.abs(p.y - p.team.goalY);
+            // DECISION ENGINE: HAS BALL
+            p.stamina -= 0.1; // dribbling tires
+            if (p.stamina < 0) p.stamina = 0;
             
-            // Should shoot?
-            if (distToGoal < 250 && p.hasBallTime > 15) {
-                // Shoot!
-                const goalCenterX = GAME_WIDTH/2 + (Math.random()*40-20);
-                const dir = normalize(goalCenterX - p.x, p.team.goalY - p.y);
-                const power = 15 + (p.ovr/10);
-                ball.vx = dir.x * power;
-                ball.vy = dir.y * power;
-                ball.owner = null;
-                p.state = 'IDLE';
-                showEvent(`${p.ad} şut çekiyor!`, 1000);
-            } else if (p.hasBallTime > 30) {
-                // Pass or dribble?
-                // Simple: just dribble towards goal
-                const dir = normalize(GAME_WIDTH/2 - p.x, p.team.goalY - p.y);
-                p.vx = dir.x * speedMultiplier * 0.8; // slower with ball
-                p.vy = dir.y * speedMultiplier * 0.8;
+            const distToGoal = Math.abs(p.y - p.team.goalY);
+            const errorMargin = (100 - p.ovr) / 100; // 0.0 to 0.5 (lower ovr = higher error)
+            
+            if (p.actionCooldown <= 0) {
+                // Determine action
+                // 1. Shoot?
+                if (distToGoal < 280) {
+                    let pathClear = true;
+                    // simple check if opponent is directly in front
+                    players.forEach(opp => {
+                        if (opp.team !== p.team && opp.y > Math.min(p.y, p.team.goalY) && opp.y < Math.max(p.y, p.team.goalY)) {
+                            if (Math.abs(opp.x - p.x) < 30) pathClear = false; // blocked
+                        }
+                    });
+                    
+                    if (pathClear || p.hasBallTime > 60 || Math.random() < 0.1) {
+                        // SHOOT!
+                        const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
+                        const errX = (Math.random() * 100 - 50) * errorMargin; // mistake
+                        const dir = normalize(gX + errX - p.x, p.team.goalY - p.y);
+                        const power = 18 + (p.ovr / 15);
+                        ball.vx = dir.x * power; ball.vy = dir.y * power;
+                        ball.owner = null; p.actionCooldown = 30;
+                        return;
+                    }
+                }
                 
-                // Random pass
-                if (Math.random() < 0.05) {
-                    // find teammate closer to goal
-                    let bestMate = null;
+                // 2. Pass?
+                if (p.hasBallTime > 15 && Math.random() < 0.2) {
+                    // Evaluate best teammate
+                    let bestMate = null; let bestScore = -999;
                     players.forEach(m => {
-                        if (m.team.id === p.team.id && m !== p) {
-                            if ((p.team.id===1 && m.y < p.y) || (p.team.id===2 && m.y > p.y)) {
-                                bestMate = m;
+                        if (m.team === p.team && m !== p) {
+                            const d = dist(p, m);
+                            if (d > 50 && d < 400) {
+                                let score = 0;
+                                // reward if closer to goal
+                                if (Math.abs(m.y - p.team.goalY) < Math.abs(p.y - p.team.goalY)) score += 50;
+                                // penalty if opponents are near teammate
+                                let oppNear = 0;
+                                players.forEach(opp => { if (opp.team !== p.team && dist(m, opp) < 60) oppNear++; });
+                                score -= oppNear * 40;
+                                
+                                if (score > bestScore) { bestScore = score; bestMate = m; }
                             }
                         }
                     });
-                    if (bestMate) {
-                        const dirP = normalize(bestMate.x - p.x, bestMate.y - p.y);
-                        ball.vx = dirP.x * 12;
-                        ball.vy = dirP.y * 12;
-                        ball.owner = null;
-                        p.state = 'IDLE';
+                    
+                    if (bestMate && bestScore > -20) {
+                        // Execute Pass
+                        const errX = (Math.random() * 60 - 30) * errorMargin;
+                        const errY = (Math.random() * 60 - 30) * errorMargin;
+                        const dir = normalize((bestMate.x+errX) - p.x, (bestMate.y+errY) - p.y);
+                        const passPower = 12 + (p.ovr/20);
+                        ball.vx = dir.x * passPower; ball.vy = dir.y * passPower;
+                        ball.targetPlayer = bestMate; // intention
+                        ball.owner = null; p.actionCooldown = 20;
+                        return;
                     }
                 }
-            } else {
-                // Just dribble
-                const dir = normalize(GAME_WIDTH/2 - p.x, p.team.goalY - p.y);
-                p.vx = dir.x * speedMultiplier * 0.8;
-                p.vy = dir.y * speedMultiplier * 0.8;
             }
-        } 
-        else {
+            
+            // 3. Dribble
+            // Find open space towards goal
+            const dir = normalize(GAME_WIDTH/2 - p.x, p.team.goalY - p.y);
+            // apply slight zig-zag based on ovr (better players dribble straighter)
+            const zig = Math.sin(timeTicks / 10) * errorMargin;
+            p.vx = (dir.x + zig) * speedMult * 0.7; // 0.7 = ball control slows you down
+            p.vy = dir.y * speedMult * 0.7;
+            
+        } else {
             // NOT BALL OWNER
             let targetX = p.baseX;
             let targetY = p.baseY;
             
-            // Shift base based on ball position
-            const ballYRatio = ball.y / GAME_HEIGHT;
-            targetY = p.baseY + ((ballYRatio - 0.5) * 200); // move line up/down
+            // Tactical Shift (Takım Boyu / Defans Çizgisi)
+            const ballRelativeY = ball.y / GAME_HEIGHT; // 0 to 1
+            // Shift up to 150px up or down based on ball position
+            targetY = p.baseY + ((ballRelativeY - 0.5) * 200);
 
-            if (p === closestT1 || p === closestT2) {
-                // Chase ball
-                targetX = ball.x;
-                targetY = ball.y;
+            // Behavior
+            if (teamPossession === p.team) {
+                // We have the ball -> Support / Move into space
+                if (ball.targetPlayer === p) {
+                    // Ball is passed to me, run towards ball!
+                    targetX = ball.x + ball.vx*5;
+                    targetY = ball.y + ball.vy*5;
+                    p.state = 'CHASE';
+                } else {
+                    // Push forward slightly
+                    targetY += p.team.dirY * 50; 
+                    p.state = 'SUPPORT';
+                }
+            } else if (teamPossession && teamPossession !== p.team) {
+                // Opponent has ball -> Press or Defend
+                const dToBall = dist(p, ball);
+                
+                // Are we the closest?
+                let isClosest = true;
+                players.forEach(m => {
+                    if (m.team === p.team && m !== p && dist(m, ball) < dToBall) isClosest = false;
+                });
+                
+                if (isClosest || dToBall < 100) {
+                    // Press the ball!
+                    targetX = ball.x;
+                    targetY = ball.y;
+                    p.state = 'CHASE';
+                    p.stamina -= 0.05; // pressing drains stamina
+                } else {
+                    // Mark nearest opponent in zone
+                    p.state = 'IDLE';
+                }
+            } else {
+                // Loose ball -> Closest 2 players chase
+                let myTeamDist = [];
+                players.forEach(m => { if(m.team === p.team) myTeamDist.push({m:m, d:dist(m,ball)}); });
+                myTeamDist.sort((a,b)=>a.d - b.d);
+                if (myTeamDist[0].m === p || myTeamDist[1].m === p) {
+                    targetX = ball.x; targetY = ball.y;
+                    p.state = 'CHASE';
+                }
             }
 
-            // Move towards target
+            // Move towards target smoothly
             const dir = normalize(targetX - p.x, targetY - p.y);
             const d = dist(p, {x:targetX, y:targetY});
             
-            if (d > 5) {
-                p.vx = dir.x * speedMultiplier;
-                p.vy = dir.y * speedMultiplier;
+            if (d > 10) {
+                // If chasing, use full speed, otherwise jog
+                let curSpeed = p.state === 'CHASE' ? speedMult : speedMult * 0.6;
+                p.vx = dir.x * curSpeed;
+                p.vy = dir.y * curSpeed;
             } else {
-                p.vx = 0; p.vy = 0;
+                p.vx *= 0.8; p.vy *= 0.8; // smooth stop
             }
         }
 
-        // Apply vel
-        p.x += p.vx;
-        p.y += p.vy;
+        // Apply physics
+        p.x += p.vx; p.y += p.vy;
         
         // Bounds
-        if(p.x < 10) p.x=10; if(p.x > GAME_WIDTH-10) p.x=GAME_WIDTH-10;
-        if(p.y < 10) p.y=10; if(p.y > GAME_HEIGHT-10) p.y=GAME_HEIGHT-10;
+        if(p.x < 15) p.x=15; if(p.x > GAME_WIDTH-15) p.x=GAME_WIDTH-15;
+        if(p.y < 15) p.y=15; if(p.y > GAME_HEIGHT-15) p.y=GAME_HEIGHT-15;
     });
 }
 
 function draw() {
-    // Clear pitch
-    ctx.fillStyle = '#2f855a';
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    // Grass stripes
+    for (let i=0; i<10; i++) {
+        ctx.fillStyle = i%2===0 ? '#276749' : '#2f855a';
+        ctx.fillRect(0, i*(GAME_HEIGHT/10), GAME_WIDTH, GAME_HEIGHT/10);
+    }
     
-    // Lines
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    // Center line
+    // Pitch Lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 3; ctx.beginPath();
+    // Center line & circle
     ctx.moveTo(0, GAME_HEIGHT/2); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2);
-    // Center circle
     ctx.arc(GAME_WIDTH/2, GAME_HEIGHT/2, 60, 0, Math.PI*2);
     // Penalty boxes
-    ctx.rect(GAME_WIDTH/2 - 150, 0, 300, 150); // top
-    ctx.rect(GAME_WIDTH/2 - 150, GAME_HEIGHT-150, 300, 150); // bot
+    ctx.rect(GAME_WIDTH/2 - 150, 0, 300, 130);
+    ctx.rect(GAME_WIDTH/2 - 150, GAME_HEIGHT-130, 300, 130);
     // Goal areas
-    ctx.rect(GAME_WIDTH/2 - 80, 0, 160, 50);
-    ctx.rect(GAME_WIDTH/2 - 80, GAME_HEIGHT-50, 160, 50);
+    ctx.rect(GAME_WIDTH/2 - 60, 0, 120, 40);
+    ctx.rect(GAME_WIDTH/2 - 60, GAME_HEIGHT-40, 120, 40);
     ctx.stroke();
 
-    // Draw players
+    // Players
     players.forEach(p => {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 12, 0, Math.PI*2);
-        ctx.fillStyle = p.team.color;
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = p.team.id === 1 ? '#bfdbfe' : '#fca5a5';
-        ctx.stroke();
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath(); ctx.arc(p.x+3, p.y+3, 12, 0, Math.PI*2); ctx.fill();
         
-        // Number / Name
+        // Body
+        ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI*2);
+        ctx.fillStyle = p.team.color; ctx.fill();
+        
+        // Outline (fatigue indication - dims if tired)
+        let alpha = 0.4 + (p.stamina/100)*0.6;
+        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+        ctx.lineWidth = 2; ctx.stroke();
+        
+        // Info
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(p.numara, p.x, p.y);
         
-        ctx.font = 'bold 12px sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.fillText(p.ad, p.x, p.y + 22);
         
-        // Rating
+        // Rating Badge
         ctx.fillStyle = p.ovr > 80 ? '#fbbf24' : '#a7f3d0';
         ctx.font = '10px monospace';
-        ctx.fillText(p.ovr, p.x, p.y - 20);
+        ctx.fillText(`⚡${p.ovr}`, p.x, p.y - 18);
+        
+        // Stamina bar (small line below name)
+        ctx.fillStyle = p.stamina > 50 ? '#4ade80' : (p.stamina > 20 ? '#facc15' : '#ef4444');
+        ctx.fillRect(p.x - 10, p.y + 30, 20 * (p.stamina/100), 3);
     });
 
-    // Draw ball
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 6, 0, Math.PI*2);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#000';
-    ctx.stroke();
+    // Ball
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, 7, 0, Math.PI*2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = '#000'; ctx.stroke();
+    // Ball shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.arc(ball.x+3, ball.y+3, 7, 0, Math.PI*2); ctx.fill();
 }
 
 function gameLoop() {
     update();
     draw();
-    if (isPlaying) {
-        requestAnimationFrame(gameLoop);
-    } else {
-        // even if not playing, keep drawing so we see last frame
-        draw();
-        requestAnimationFrame(gameLoop);
-    }
+    requestAnimationFrame(gameLoop);
 }
 
-// Start
 loadData();
 
 </script>

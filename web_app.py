@@ -826,8 +826,37 @@ def api_ogrenci_mac_2d_data():
     
     def extract_players(taktik, kadro, takim_renk):
         players = []
-        if not taktik or "oyuncular" not in taktik:
+        if not taktik or "oyuncular" not in taktik or not taktik["oyuncular"]:
+            if spor == "voleybol":
+                default_positions = [
+                    {"x": 25, "y": 65}, {"x": 50, "y": 65}, {"x": 75, "y": 65},
+                    {"x": 25, "y": 85}, {"x": 50, "y": 85}, {"x": 75, "y": 85}
+                ]
+                limit = 6
+            else:
+                default_positions = [
+                    {"x": 50, "y": 90}, # GK
+                    {"x": 20, "y": 70}, {"x": 40, "y": 75}, {"x": 60, "y": 75}, {"x": 80, "y": 70}, # DEF
+                    {"x": 20, "y": 50}, {"x": 40, "y": 50}, {"x": 60, "y": 50}, {"x": 80, "y": 50}, # MID
+                    {"x": 35, "y": 30}, {"x": 65, "y": 30} # FWD
+                ]
+                limit = 11
+            for i, ogr in enumerate(kadro[:limit]):
+                pos = default_positions[i] if i < len(default_positions) else {"x": 50, "y": 50}
+                xp = ogr.get("tik_sayisi", 0)
+                ovr = min(99, 50 + int(xp * 0.8))
+                players.append({
+                    "id": ogr["id"],
+                    "ad": ogr["ad_soyad"].split()[0],
+                    "numara": i + 1,
+                    "rol": "Oyuncu",
+                    "baseX": pos["x"],
+                    "baseY": pos["y"],
+                    "ovr": ovr,
+                    "renk": takim_renk
+                })
             return players
+            
         for pid, p in taktik["oyuncular"].items():
             ogr = next((x for x in kadro if str(x["id"]) == str(pid)), None)
             if ogr:
