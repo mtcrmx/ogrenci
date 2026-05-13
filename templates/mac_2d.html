@@ -17,6 +17,20 @@
       background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
       font-weight: bold; font-size: 16px; opacity: 0; transition: opacity 0.3s; pointer-events: none;
     }
+    #halftime-overlay {
+      position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.92);
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; padding: 20px;
+    }
+    #halftime-overlay.active { display: flex; }
+    #halftime-overlay h2 { font-size: 28px; font-weight: 900; color: #fbbf24; }
+    #halftime-overlay .ht-timer { font-size: 48px; font-weight: 900; color: #ef4444; font-family: monospace; }
+    #halftime-overlay .ht-btn {
+      padding: 12px 28px; border-radius: 12px; font-weight: 900; font-size: 16px;
+      cursor: pointer; border: none; transition: transform 0.15s;
+    }
+    #halftime-overlay .ht-btn:hover { transform: scale(1.05); }
+    #halftime-overlay .ht-status { font-size: 14px; color: #94a3b8; }
   </style>
 </head>
 <body>
@@ -32,6 +46,15 @@
   <div id="canvas-wrap">
     <canvas id="pitch"></canvas>
     <div id="event-overlay">Maç Başlıyor!</div>
+  </div>
+  <!-- Halftime Overlay -->
+  <div id="halftime-overlay">
+    <h2>⏸️ DEVRE ARASI</h2>
+    <div class="text-lg text-slate-300">İlk Yarı: <span id="ht-score" class="text-white font-black"></span></div>
+    <div class="ht-timer" id="ht-countdown">2:00</div>
+    <button class="ht-btn" style="background:#3b82f6;color:#fff" onclick="openTaktik()">📋 Taktik Ekranını Aç</button>
+    <button class="ht-btn" id="ht-ready-btn" style="background:#22c55e;color:#fff" onclick="htReady()">✅ Taktikleri Onayla (2. Yarıya Hazırım)</button>
+    <div class="ht-status" id="ht-status">Taktik değişikliklerinizi yapın, süre dolunca 2. yarı başlar.</div>
   </div>
 </div>
 
@@ -51,7 +74,10 @@ const TOTAL_TICKS = 180 * FPS; // 3 dakika gerçek zaman = 90 dk oyun zamanı
 // State
 let isPlaying = false;
 let score1 = 0, score2 = 0;
-let stateMachine = "PLAYING"; // PLAYING, GOAL_CELEBRATION
+let stateMachine = "PLAYING"; // PLAYING, GOAL_CELEBRATION, SET_PIECE, HALFTIME
+let isSecondHalf = false;
+let htCountdown = 0; // halftime countdown in frames (2 min = 120*60)
+let htTeamReady = false; // player confirmed tactics
 
 // Canvas
 const canvas = document.getElementById('pitch');
@@ -163,11 +189,21 @@ function getTeamWithBall() {
 function update() {
     if (!isPlaying) return;
     if (stateMachine === "GOAL_CELEBRATION") return;
+    if (stateMachine === "HALFTIME") {
+        // Halftime countdown handled by setInterval, not gameLoop
+        return;
+    }
     timeTicks++;
     
     const gameMin = Math.floor((timeTicks / TOTAL_TICKS) * 90);
     const gameSec = Math.floor(((timeTicks / TOTAL_TICKS) * 90 * 60) % 60);
     document.getElementById('timer').textContent = `${gameMin.toString().padStart(2,'0')}:${gameSec.toString().padStart(2,'0')}`;
+    
+    // Halftime check at 45 min (halfway)
+    if (!isSecondHalf && timeTicks >= TOTAL_TICKS / 2) {
+        startHalftime();
+        return;
+    }
     
     if (timeTicks >= TOTAL_TICKS) {
         isPlaying = false; showEvent("Maç Sona Erdi!", 5000);
@@ -183,7 +219,6 @@ function update() {
                 if (in1 && in2) {
                     in1.value = score1;
                     in2.value = score2;
-                    // Find the parent form
                     const form = in1.closest('form');
                     if (form) {
                         form.submit();
@@ -199,53 +234,149 @@ function update() {
 
     // Set Piece State
     if (stateMachine === "SET_PIECE") {
-        // Players reposition
+        // Realistic player repositioning
+        const atkGoalY = setPieceTeam.goalY; // goal the attacking team targets
+        const defGoalY = setPieceTeam.goalY === 0 ? GAME_HEIGHT : 0; // defending team's goal
+        const atkDir = setPieceTeam.dirY; // -1 or 1
+        
+        let pIdx = 0; // counter for spreading players
         players.forEach(p => {
-            if (p === ball.owner) return; // taker stays
+            if (p === ball.owner) return; // taker stays at ball
             
+            const isGK = Math.abs(p.baseY - p.team.defendY) < 60;
             let targetX = p.baseX;
             let targetY = p.baseY;
             
-            if (setPieceType === "KORNER") {
-                if (p.team === setPieceTeam) {
-                    targetX = GAME_WIDTH/2 + (Math.random()*100 - 50);
-                    targetY = setPieceTeam.dirY === -1 ? 100 : GAME_HEIGHT - 100; // Opponent goal
-                } else {
-                    targetX = GAME_WIDTH/2 + (Math.random()*100 - 50);
-                    targetY = setPieceTeam.dirY === -1 ? 80 : GAME_HEIGHT - 80; // Own goal
-                }
-            } else if (setPieceType === "TAC") {
-                targetX = p.baseX * 0.5 + ball.x * 0.5 + (Math.random()*60-30);
-                targetY = p.baseY * 0.7 + ball.y * 0.3 + (Math.random()*60-30);
-            } else if (setPieceType === "PENALTI") {
-                const isGK = Math.abs(p.baseY - p.team.defendY) < 50;
+            if (setPieceType === "PENALTI") {
+                // Penalty spot is ~110px from goal line
+                const penSpotY = atkGoalY === 0 ? 110 : GAME_HEIGHT - 110;
+                const boxEdgeY = atkGoalY === 0 ? 145 : GAME_HEIGHT - 145;
+                const arcCenterX = GAME_WIDTH / 2;
+                
                 if (isGK && p.team !== setPieceTeam) {
-                    targetX = GAME_WIDTH/2;
-                    targetY = p.team.defendY === 0 ? 10 : GAME_HEIGHT - 10;
+                    // Defending GK: centered on goal line
+                    targetX = GAME_WIDTH / 2;
+                    targetY = defGoalY === 0 ? 8 : GAME_HEIGHT - 8;
+                } else if (isGK && p.team === setPieceTeam) {
+                    // Attacking GK: stays back at own half
+                    targetX = GAME_WIDTH / 2;
+                    targetY = p.team.defendY === 0 ? 60 : GAME_HEIGHT - 60;
                 } else {
-                    // Everyone else stands outside the box
-                    targetY = setPieceTeam.dirY === -1 ? 250 : GAME_HEIGHT - 250;
-                    targetX = GAME_WIDTH/2 + (Math.random()*200 - 100);
+                    // Everyone else: outside box, behind ball, spread on penalty arc
+                    pIdx++;
+                    const spread = (pIdx % 2 === 0 ? 1 : -1) * (30 + Math.ceil(pIdx/2) * 35);
+                    targetX = arcCenterX + spread;
+                    targetY = boxEdgeY + (atkDir * -20); // behind the penalty spot line
                 }
+                
             } else if (setPieceType === "FRİKİK") {
-                const isGK = Math.abs(p.baseY - p.team.defendY) < 50;
+                const distBallToGoal = Math.abs(ball.y - atkGoalY);
+                
                 if (isGK && p.team !== setPieceTeam) {
-                    targetX = GAME_WIDTH/2; targetY = p.team.defendY === 0 ? 10 : GAME_HEIGHT - 10;
+                    // Defending GK: on goal line, slightly shifted toward ball side
+                    targetX = GAME_WIDTH/2 + (ball.x - GAME_WIDTH/2) * 0.3;
+                    targetY = defGoalY === 0 ? 8 : GAME_HEIGHT - 8;
                 } else if (p.team !== setPieceTeam) {
-                    // Wall formation
-                    const dirToGoal = normalize(GAME_WIDTH/2 - ball.x, p.team.defendY - ball.y);
-                    targetX = ball.x + dirToGoal.x * 80 + (Math.random()*40-20);
-                    targetY = ball.y + dirToGoal.y * 80 + (Math.random()*40-20);
+                    // Defenders: 3-4 players form wall, rest mark attackers
+                    pIdx++;
+                    if (pIdx <= 4) {
+                        // Wall: 80px from ball, perpendicular to goal direction
+                        const wallCenterX = ball.x;
+                        const wallY = ball.y + (atkDir * -80); // 80px toward own goal from ball
+                        targetX = wallCenterX + (pIdx - 2.5) * 18; // spread 18px apart
+                        targetY = wallY;
+                    } else {
+                        // Remaining defenders: mark space in penalty area
+                        targetX = GAME_WIDTH/2 + ((pIdx-4) % 3 - 1) * 100;
+                        targetY = defGoalY === 0 ? 80 + (pIdx-4) * 25 : GAME_HEIGHT - 80 - (pIdx-4) * 25;
+                    }
                 } else {
-                    // Attackers prepare for rebound
-                    targetX = GAME_WIDTH/2 + (Math.random()*100 - 50);
-                    targetY = ball.y + setPieceTeam.dirY * 50;
+                    // Attacking team: spread around box for rebounds
+                    pIdx++;
+                    if (pIdx <= 2) {
+                        // Near ball for short pass option
+                        targetX = ball.x + (pIdx === 1 ? -60 : 60);
+                        targetY = ball.y + atkDir * 30;
+                    } else {
+                        // In/around penalty box
+                        targetX = GAME_WIDTH/2 + ((pIdx-2) % 3 - 1) * 110;
+                        targetY = atkGoalY === 0 ? 90 + (pIdx-2) * 20 : GAME_HEIGHT - 90 - (pIdx-2) * 20;
+                    }
+                }
+                
+            } else if (setPieceType === "KORNER") {
+                const cornerSide = ball.x < GAME_WIDTH/2 ? 'left' : 'right';
+                
+                if (isGK && p.team !== setPieceTeam) {
+                    // Defending GK: near post (closer to corner)
+                    targetX = cornerSide === 'left' ? GAME_WIDTH/2 - 30 : GAME_WIDTH/2 + 30;
+                    targetY = defGoalY === 0 ? 12 : GAME_HEIGHT - 12;
+                } else if (isGK && p.team === setPieceTeam) {
+                    // Attacking GK: stays in own half
+                    targetX = GAME_WIDTH / 2;
+                    targetY = p.team.defendY === 0 ? 60 : GAME_HEIGHT - 60;
+                } else if (p.team === setPieceTeam) {
+                    // Attackers: crowd the 6-yard and penalty area
+                    pIdx++;
+                    const boxY = atkGoalY === 0 ? 50 + pIdx * 22 : GAME_HEIGHT - 50 - pIdx * 22;
+                    targetX = GAME_WIDTH/2 + (pIdx % 2 === 0 ? -1 : 1) * (30 + pIdx * 20);
+                    targetY = boxY;
+                } else {
+                    // Defenders: man-mark in the box, one stays back
+                    pIdx++;
+                    if (pIdx <= 1) {
+                        // One defender stays at halfway for counter-attack cover
+                        targetX = GAME_WIDTH/2; targetY = GAME_HEIGHT/2;
+                    } else {
+                        const boxY = defGoalY === 0 ? 40 + pIdx * 20 : GAME_HEIGHT - 40 - pIdx * 20;
+                        targetX = GAME_WIDTH/2 + (pIdx % 2 === 0 ? -1 : 1) * (20 + pIdx * 18);
+                        targetY = boxY;
+                    }
+                }
+                
+            } else if (setPieceType === "TAC") {
+                if (p.team === setPieceTeam) {
+                    // Teammates: spread near the thrower to receive
+                    pIdx++;
+                    const throwY = ball.y;
+                    if (pIdx <= 2) {
+                        // Short option: close to thrower
+                        targetX = ball.x + (ball.x < GAME_WIDTH/2 ? 60 : -60);
+                        targetY = throwY + (pIdx === 1 ? -40 : 40);
+                    } else if (pIdx <= 4) {
+                        // Medium option
+                        targetX = GAME_WIDTH/2 + (pIdx % 2 === 0 ? -50 : 50);
+                        targetY = throwY + atkDir * (30 + pIdx * 20);
+                    } else {
+                        // Stay back for safety
+                        targetX = p.baseX;
+                        targetY = p.baseY;
+                    }
+                } else {
+                    // Opponents: mark nearby attackers
+                    pIdx++;
+                    targetX = ball.x + (ball.x < GAME_WIDTH/2 ? 80 : -80) + (pIdx % 3 - 1) * 50;
+                    targetY = ball.y + (pIdx % 2 === 0 ? -30 : 30) + pIdx * 15 * -atkDir;
+                }
+                
+            } else if (setPieceType === "AUT") {
+                // Goal kick: defending team spreads, attackers push up
+                if (p.team === setPieceTeam) {
+                    targetX = p.baseX;
+                    targetY = p.baseY;
+                } else {
+                    targetX = p.baseX;
+                    targetY = p.baseY;
                 }
             }
-
+            
+            // Clamp to field
+            targetX = Math.max(15, Math.min(GAME_WIDTH-15, targetX));
+            targetY = Math.max(15, Math.min(GAME_HEIGHT-15, targetY));
+            
             const dir = normalize(targetX - p.x, targetY - p.y);
             const d = dist(p, {x:targetX, y:targetY});
-            if (d > 5) { p.x += dir.x * 2; p.y += dir.y * 2; }
+            if (d > 5) { p.x += dir.x * 3; p.y += dir.y * 3; } // slightly faster repositioning
         });
 
         setPieceTimer--;
@@ -748,6 +879,93 @@ function gameLoop() {
         // Continue animation even if error happens to prevent freeze
     }
     requestAnimationFrame(gameLoop);
+}
+// ========== HALFTIME SYSTEM ==========
+let htInterval = null;
+let htSecondsLeft = 120; // 2 minutes
+
+function startHalftime() {
+    stateMachine = "HALFTIME";
+    htTeamReady = false;
+    htSecondsLeft = 120;
+    
+    // Show overlay
+    const overlay = document.getElementById('halftime-overlay');
+    overlay.classList.add('active');
+    document.getElementById('ht-score').textContent = `${score1} - ${score2}`;
+    document.getElementById('ht-ready-btn').style.display = '';
+    document.getElementById('ht-ready-btn').textContent = '✅ Taktikleri Onayla (2. Yarıya Hazırım)';
+    document.getElementById('ht-status').textContent = 'Taktik değişikliklerinizi yapın, süre dolunca 2. yarı başlar.';
+    updateHtTimer();
+    
+    // Start countdown
+    htInterval = setInterval(() => {
+        htSecondsLeft--;
+        updateHtTimer();
+        if (htSecondsLeft <= 0) {
+            endHalftime();
+        }
+    }, 1000);
+}
+
+function updateHtTimer() {
+    const min = Math.floor(htSecondsLeft / 60);
+    const sec = htSecondsLeft % 60;
+    document.getElementById('ht-countdown').textContent = `${min}:${sec.toString().padStart(2,'0')}`;
+    // Change color as time runs out
+    const el = document.getElementById('ht-countdown');
+    el.style.color = htSecondsLeft <= 10 ? '#ef4444' : (htSecondsLeft <= 30 ? '#f59e0b' : '#22c55e');
+}
+
+function openTaktik() {
+    // Open tactic screen in new window (parent page's tactic URL)
+    const taktikUrl = "{{ url_for('ogrenci_taktik') }}";
+    window.open(taktikUrl, "TaktikEkrani", "width=800,height=700,resizable=yes");
+}
+
+function htReady() {
+    htTeamReady = true;
+    document.getElementById('ht-ready-btn').style.display = 'none';
+    document.getElementById('ht-status').textContent = `✅ Hazırsınız! Süre dolmasını bekliyorsunuz... (${htSecondsLeft}s)`;
+    
+    // If less than 10 seconds left, start immediately
+    if (htSecondsLeft <= 10) {
+        endHalftime();
+    }
+}
+
+function endHalftime() {
+    clearInterval(htInterval);
+    htInterval = null;
+    
+    // Hide overlay
+    document.getElementById('halftime-overlay').classList.remove('active');
+    
+    // Mark second half
+    isSecondHalf = true;
+    stateMachine = "PLAYING";
+    
+    // Reset positions for 2nd half (swap sides)
+    players.forEach(p => {
+        p.baseX = GAME_WIDTH - p.baseX;
+        p.baseY = GAME_HEIGHT - p.baseY;
+        p.x = p.baseX; p.y = p.baseY;
+        p.vx = 0; p.vy = 0;
+        p.stamina = 100;
+        p.state = 'IDLE';
+        p.actionCooldown = 0;
+    });
+    
+    // Swap team directions
+    [team1.dirY, team2.dirY] = [team2.dirY, team1.dirY];
+    [team1.goalY, team2.goalY] = [team2.goalY, team1.goalY];
+    [team1.defendY, team2.defendY] = [team2.defendY, team1.defendY];
+    
+    // Ball to center
+    ball.x = GAME_WIDTH/2; ball.y = GAME_HEIGHT/2;
+    ball.vx = 0; ball.vy = 0; ball.owner = null; ball.targetPlayer = null;
+    
+    showEvent("2. Yarı Başlıyor!", 3000);
 }
 
 loadData();

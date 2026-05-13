@@ -46,6 +46,13 @@ const FPS = 60;
 const GAME_WIDTH = 450;
 const GAME_HEIGHT = 900;
 
+// === PHYSICS CONSTANTS ===
+const GRAVITY = 0.18;           // 9.81 m/s² scaled (~0.18 px/frame²)
+const AIR_DRAG = 0.003;         // Air resistance coefficient
+const FLOOR_RESTITUTION = 0.85; // 15% energy loss on floor bounce
+const NET_RESTITUTION = 0.4;    // 60% energy loss on net collision
+const NET_TOP_Z = 18;           // Net height in Z units
+
 let isPlaying = false;
 let score1 = 0, score2 = 0;
 let set1 = 0, set2 = 0;
@@ -60,7 +67,9 @@ canvas.height = GAME_HEIGHT;
 let team1 = null;
 let team2 = null;
 let players = [];
-let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, z: 0, vx: 0, vy: 0, vz: 0, owner: null, lastTouchedBy: null, lastTeamTouched: null };
+let ball = { x: GAME_WIDTH/2, y: GAME_HEIGHT/2, z: 0, vx: 0, vy: 0, vz: 0,
+    spinX: 0, spinY: 0, // Magnus spin components
+    owner: null, lastTouchedBy: null, lastTeamTouched: null };
 let teamTouches = 0;
 let goalTimer = 0;
 let eventTimeout = null;
@@ -125,7 +134,7 @@ function resetPositions() {
     players.forEach(p => {
         p.x = p.baseX; p.y = p.baseY; p.vx = 0; p.vy = 0; p.actionCooldown = 0;
     });
-    ball.vx = 0; ball.vy = 0; ball.vz = 0; ball.owner = null;
+    ball.vx = 0; ball.vy = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0; ball.owner = null;
     teamTouches = 0; ball.lastTeamTouched = null;
     
     if (stateMachine !== "MATCH_END") {
@@ -202,15 +211,13 @@ function update() {
     if (stateMachine === "SERVIS") {
         if (ball.owner) {
             let p = ball.owner;
-            // Decrement cooldown so the server actually fires after the delay
             if (p.actionCooldown > 0) { p.actionCooldown--; return; }
             
-            // Serve!
+            // Serve with spin
             const errMargin = (100 - p.ozellikler.sut) / 100;
-            const errX = (Math.random() * 100 - 50) * errMargin;
-            const errY = (Math.random() * 100 - 50) * errMargin;
+            const errX = (Math.random() * 80 - 40) * errMargin;
+            const errY = (Math.random() * 80 - 40) * errMargin;
             
-            // Target: random spot deep in opponent's court (clamped inside court)
             const margin = 50;
             const gX = Math.max(margin, Math.min(GAME_WIDTH - margin,
                 GAME_WIDTH/2 + (Math.random() * 240 - 120) + errX));
@@ -221,12 +228,18 @@ function update() {
             const dir = normalize(gX - p.x, gY - p.y);
             const d = dist(p, {x:gX, y:gY});
             
-            ball.vz = 9 + (Math.random() * 2); // high arc
-            const airTime = (ball.vz / 0.2) * 2;
+            ball.vz = 8 + Math.random() * 3;
+            const airTime = (ball.vz / GRAVITY) * 2;
             const power = Math.max(2, d / airTime);
             
-            ball.vx = dir.x * power; ball.vy = dir.y * power;
+            ball.vx = dir.x * power;
+            ball.vy = dir.y * power;
+            // Magnus spin: float serve vs jump serve
+            ball.spinX = (Math.random() - 0.5) * 0.15 * (1 - errMargin);
+            ball.spinY = (Math.random() - 0.5) * 0.1 * (1 - errMargin);
+            
             ball.owner = null;
+            ball.lastTouchedBy = p;
             ball.lastTeamTouched = p.team;
             lastNetSide = p.team;
             teamTouches = 1;
@@ -236,90 +249,144 @@ function update() {
         return;
     }
 
-    // PLAYING STATE
-    // Gravity for ball
-    ball.vz -= 0.2; 
-    ball.x += ball.vx; ball.y += ball.vy; ball.z += ball.vz;
+    // ========== ADVANCED BALL PHYSICS ==========
+    // Gravity (9.81 m/s² scaled to game units: ~0.18 px/frame²)
+    ball.vz -= GRAVITY;
     
-    // Out of bounds check
-    const isOut = ball.x < 0 || ball.x > GAME_WIDTH || ball.y < 0 || ball.y > GAME_HEIGHT;
+    // Air drag (proportional to speed²)
+    const speed2D = Math.hypot(ball.vx, ball.vy);
+    if (speed2D > 0.1) {
+        const dragForce = AIR_DRAG * speed2D * speed2D;
+        const dragRatio = Math.max(0, 1 - dragForce / speed2D);
+        ball.vx *= dragRatio;
+        ball.vy *= dragRatio;
+    }
+    // Vertical air drag
+    if (Math.abs(ball.vz) > 0.1) {
+        ball.vz *= (1 - AIR_DRAG * Math.abs(ball.vz) * 0.3);
+    }
+    
+    // Magnus Effect (spin curves the ball in air)
+    if (ball.z > 0) {
+        ball.vx += (ball.spinX || 0);
+        ball.vy += (ball.spinY || 0);
+        // Spin decays over time
+        ball.spinX = (ball.spinX || 0) * 0.98;
+        ball.spinY = (ball.spinY || 0) * 0.98;
+    }
+    
+    // Apply velocity
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    ball.z += ball.vz;
+    
+    // ========== FLOOR COLLISION (with bounce) ==========
     if (ball.z <= 0) {
         ball.z = 0;
-        // Ball hit the floor!
+        const isOut = ball.x < 0 || ball.x > GAME_WIDTH || ball.y < 0 || ball.y > GAME_HEIGHT;
+        
         if (isOut) {
-            // Point to the team that DID NOT touch it last
-            let pointTo = ball.lastTeamTouched === team1 ? team2 : team1;
-            givePoint(pointTo, "Top Dışarıda!");
+            givePoint(ball.lastTeamTouched === team1 ? team2 : team1, "Top Dışarıda! (Aut)");
         } else {
-            // Hit the floor in bounds
-            let hitSide = ball.y > GAME_HEIGHT/2 ? team1 : team2; // team1 is bottom (defendY=900)
-            let pointTo = hitSide === team1 ? team2 : team1;
-            givePoint(pointTo, "Top Yerde!");
+            const hitSide = ball.y > GAME_HEIGHT/2 ? team1 : team2;
+            givePoint(hitSide === team1 ? team2 : team1, "Top Yerde!");
         }
         return;
     }
     
-    // Net Collision (middle line)
-    if (Math.abs(ball.y - GAME_HEIGHT/2) < Math.abs(ball.vy) && ball.z < 15) {
-        // Hit the net and didn't cross!
-        ball.vy = -ball.vy * 0.5;
-        ball.vx = ball.vx * 0.5;
+    // ========== NET COLLISION (elastic barrier) ==========
+    const NET_HEIGHT = 18; // net top edge in z
+    const NET_Y = GAME_HEIGHT / 2;
+    const prevY = ball.y - ball.vy;
+    
+    // Check if ball crossed net line this frame
+    if ((prevY < NET_Y && ball.y >= NET_Y) || (prevY > NET_Y && ball.y <= NET_Y)) {
+        if (ball.z < NET_HEIGHT) {
+            // Ball hit the net!
+            ball.vy = -ball.vy * NET_RESTITUTION; // bounce back with energy loss
+            ball.vx *= NET_RESTITUTION;
+            ball.vz = Math.max(ball.vz, -1) - 0.5; // net pushes ball down slightly
+            ball.y = prevY; // push back to previous side
+            ball.spinX = (ball.spinX || 0) * 0.3; // kill most spin
+            ball.spinY = (ball.spinY || 0) * 0.3;
+            showEvent("File!", 400);
+        }
     }
     
-    // Track net crossing: reset touches when ball safely crosses to other side
-    const ballNetSide = ball.y > GAME_HEIGHT/2 ? team1 : team2;
-    if (lastNetSide && ballNetSide !== lastNetSide && ball.z > 5) {
-        // Ball crossed net in the air = valid
+    // ========== NET CROSSING TRACKING ==========
+    const ballNetSide = ball.y > NET_Y ? team1 : team2;
+    if (lastNetSide && ballNetSide !== lastNetSide && ball.z >= NET_HEIGHT) {
         teamTouches = 0;
         lastNetSide = ballNetSide;
     }
 
-    // Players AI
+    // ========== PLAYER AI + HITBOX SYSTEM ==========
     players.forEach(p => {
         if (p.actionCooldown > 0) p.actionCooldown--;
         
-        let targetX = p.baseX; let targetY = p.baseY;
+        let targetX = p.baseX;
+        let targetY = p.baseY;
         
-        // If ball is on my side, react
-        let ballOnMySide = p.team === team1 ? ball.y > GAME_HEIGHT/2 : ball.y < GAME_HEIGHT/2;
+        const ballOnMySide = p.team === team1 ? ball.y > NET_Y : ball.y < NET_Y;
         
-        if (ballOnMySide && ball.vz < 5) {
-            // Find who should get it
-            let dToBall = dist(p, ball);
-            let isClosest = true;
+        // Movement AI: predict ball landing spot
+        if (ballOnMySide && ball.z > 0) {
+            // Predict where ball will land
+            let predX = ball.x, predY = ball.y, predVz = ball.vz;
+            let predTime = 0;
+            while (predVz > -20 && predTime < 120) { // max 2 seconds lookahead
+                predVz -= GRAVITY;
+                predX += ball.vx * (1 - AIR_DRAG * 0.5);
+                predY += ball.vy * (1 - AIR_DRAG * 0.5);
+                predTime++;
+                if (predVz + predTime * -GRAVITY < 0) break; // ball descending
+            }
+            
+            // Only closest 2 players chase
+            let dToBall = dist(p, {x: predX, y: predY});
+            let closerCount = 0;
             players.forEach(m => {
-                if (m.team === p.team && m !== p && dist(m, ball) < dToBall) isClosest = false;
+                if (m.team === p.team && m !== p && dist(m, {x:predX, y:predY}) < dToBall) closerCount++;
             });
             
-            if (isClosest) {
-                targetX = ball.x;
-                targetY = ball.y;
+            if (closerCount < 2) {
+                targetX = predX;
+                targetY = predY;
             }
         }
         
-        // Move
-        const dir = normalize(targetX - p.x, targetY - p.y);
+        // Movement physics
+        const moveDir = normalize(targetX - p.x, targetY - p.y);
         const d = dist(p, {x:targetX, y:targetY});
         if (d > 5) {
-            let speedMult = (p.ozellikler.hiz / 100) * 5.0;
-            p.vx = dir.x * speedMult; p.vy = dir.y * speedMult;
+            const speedMult = (p.ozellikler.hiz / 100) * 5.5;
+            p.vx = moveDir.x * speedMult;
+            p.vy = moveDir.y * speedMult;
         } else {
-            p.vx *= 0.5; p.vy *= 0.5;
+            p.vx *= 0.4; p.vy *= 0.4;
         }
         p.x += p.vx; p.y += p.vy;
         
-        // Boundaries for players (don't cross net)
-        if(p.x < 15) p.x=15; if(p.x > GAME_WIDTH-15) p.x=GAME_WIDTH-15;
-        if(p.team === team1) {
-            if(p.y < GAME_HEIGHT/2 + 15) p.y = GAME_HEIGHT/2 + 15;
-            if(p.y > GAME_HEIGHT-15) p.y = GAME_HEIGHT-15;
+        // Court boundaries (players can't cross net)
+        p.x = Math.max(15, Math.min(GAME_WIDTH - 15, p.x));
+        if (p.team === team1) {
+            p.y = Math.max(NET_Y + 15, Math.min(GAME_HEIGHT - 15, p.y));
         } else {
-            if(p.y < 15) p.y = 15;
-            if(p.y > GAME_HEIGHT/2 - 15) p.y = GAME_HEIGHT/2 - 15;
+            p.y = Math.max(15, Math.min(NET_Y - 15, p.y));
         }
         
-        // Intercept Ball
-        if (ballOnMySide && ball.z > 0 && ball.z < 25 && dist(p, ball) < 20 && p.actionCooldown <= 0) {
+        // ========== HITBOX & CONTACT DETECTION ==========
+        const HITBOX_RADIUS = 22; // arm reach
+        const hitDist = dist(p, ball);
+        const zOK = ball.z > 0 && ball.z < 30; // reachable height
+        
+        if (ballOnMySide && zOK && hitDist < HITBOX_RADIUS && p.actionCooldown <= 0) {
+            // === RULE: Double Hit ===
+            if (ball.lastTouchedBy === p) {
+                givePoint(p.team === team1 ? team2 : team1, "Çift Vuruş Hatası!");
+                return;
+            }
+            // === RULE: 4th touch ===
             if (ball.lastTeamTouched === p.team && teamTouches >= 3) {
                 givePoint(p.team === team1 ? team2 : team1, "4 Vuruş Hatası!");
                 return;
@@ -328,69 +395,103 @@ function update() {
             ball.lastTouchedBy = p;
             ball.lastTeamTouched = p.team;
             teamTouches++;
-            p.actionCooldown = 30; // Cannot hit twice in a row
+            p.actionCooldown = 25;
             
-            // Calculate hit
-            let errMargin = (100 - p.ozellikler.pas) / 100;
+            // === HIT TYPE SELECTION ===
+            const errMargin = (100 - p.ozellikler.pas) / 100;
             
-            if (teamTouches === 1) {
-                // Dig to Setter (Pasör - usually player 3)
-                showEvent("Manşet!", 300);
-                let setter = players.find(m => m.team === p.team && m.numara === 3);
+            // Contact angle affects output angle
+            const contactAngle = Math.atan2(ball.y - p.y, ball.x - p.x);
+            
+            // Check if opponent is near net for BLOCK
+            const nearNet = Math.abs(p.y - NET_Y) < 80;
+            const isBlock = nearNet && ball.vz < 0 && ball.z > 12 &&
+                ((p.team === team1 && ball.vy < 0) || (p.team === team2 && ball.vy > 0));
+            
+            if (isBlock && p.ozellikler.defans > 30) {
+                // === BLOCK: reverse velocity ===
+                showEvent("BLOK! 🖐️", 600);
+                const blockPower = 0.6 + (p.ozellikler.defans / 200);
+                ball.vx = -ball.vx * blockPower + (Math.random() - 0.5) * 2;
+                ball.vy = -ball.vy * blockPower;
+                ball.vz = Math.abs(ball.vz) * 0.3 + 2;
+                ball.spinX = 0; ball.spinY = 0;
+                teamTouches--; // blocks don't count as team touch (FIVB rule)
+                
+            } else if (teamTouches === 1) {
+                // === MANŞET (Dig/Bump): absorb speed, redirect up ===
+                showEvent("Manşet!", 400);
+                let setter = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - NET_Y) < 120);
                 if (!setter) setter = players.find(m => m.team === p.team && m !== p);
-                
-                const errX = (Math.random() * 100 - 50) * errMargin;
-                const errY = (Math.random() * 100 - 50) * errMargin;
-                const targetX = setter.x + errX;
-                const targetY = setter.y + errY;
-                const bDir = normalize(targetX - p.x, targetY - p.y);
-                const d = dist(p, {x:targetX, y:targetY});
-                
-                ball.vz = 8 + (Math.random()*2);
-                const airTime = (ball.vz / 0.2) * 2;
-                const power = d / airTime;
-                
-                ball.vx = bDir.x * power; ball.vy = bDir.y * power;
-            } else if (teamTouches === 2) {
-                // Set to Spiker (Smaçör)
-                showEvent("Pas!", 300);
-                let spiker = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - GAME_HEIGHT/2) < 150);
-                if(!spiker) spiker = players.find(m => m.team === p.team && m !== p);
                 
                 const errX = (Math.random() * 80 - 40) * errMargin;
                 const errY = (Math.random() * 80 - 40) * errMargin;
-                const targetX = spiker.x + errX;
-                const targetY = spiker.y + errY;
-                const bDir = normalize(targetX - p.x, targetY - p.y);
-                const d = dist(p, {x:targetX, y:targetY});
+                const tgt = {x: setter.x + errX, y: setter.y + errY};
+                const tgtDist = dist(p, tgt);
+                const bDir = normalize(tgt.x - p.x, tgt.y - p.y);
                 
-                ball.vz = 10 + (Math.random()*2);
-                const airTime = (ball.vz / 0.2) * 2;
-                const power = d / airTime;
+                // Manşet absorbs incoming energy, sends high
+                const incomingSpeed = Math.hypot(ball.vx, ball.vy, ball.vz);
+                const absorbed = FLOOR_RESTITUTION; // energy absorption
+                ball.vz = 9 + Math.random() * 3; // high pop-up
+                const airT = (ball.vz / GRAVITY) * 2;
+                const pw = Math.max(1.5, tgtDist / airT) * absorbed;
+                ball.vx = bDir.x * pw;
+                ball.vy = bDir.y * pw;
+                ball.spinX = (Math.random() - 0.5) * 0.05; // minimal spin
+                ball.spinY = (Math.random() - 0.5) * 0.05;
                 
-                ball.vx = bDir.x * power; ball.vy = bDir.y * power;
+            } else if (teamTouches === 2) {
+                // === PARMAK PAS (Finger Set): precise placement ===
+                showEvent("Parmak Pas! 🤲", 400);
+                let spiker = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - NET_Y) < 100);
+                if (!spiker) spiker = players.find(m => m.team === p.team && m !== p);
+                
+                // Parmak pas = very precise, low error
+                const precisionBonus = 0.5; // halves error
+                const errX = (Math.random() * 60 - 30) * errMargin * precisionBonus;
+                const errY = (Math.random() * 60 - 30) * errMargin * precisionBonus;
+                const tgt = {x: spiker.x + errX, y: spiker.y + errY};
+                const tgtDist = dist(p, tgt);
+                const bDir = normalize(tgt.x - p.x, tgt.y - p.y);
+                
+                // Set goes high and precise
+                ball.vz = 10 + Math.random() * 3;
+                const airT = (ball.vz / GRAVITY) * 2;
+                const pw = Math.max(1.5, tgtDist / airT);
+                ball.vx = bDir.x * pw;
+                ball.vy = bDir.y * pw;
+                ball.spinX = 0; ball.spinY = 0; // clean set
+                
             } else {
-                // Spike over the net! (Smaç)
-                showEvent("SMAÇ!", 500);
-                errMargin = (100 - p.ozellikler.sut) / 100;
-                // Target inside opponent's court (clamped to stay in bounds)
-                const margin = 40;
-                const gX = margin + Math.random() * (GAME_WIDTH - margin*2);
-                const gY = p.team === team1
-                    ? margin + Math.random() * (GAME_HEIGHT/2 - margin - 50)
-                    : GAME_HEIGHT/2 + 50 + Math.random() * (GAME_HEIGHT/2 - margin - 50);
+                // === SMAÇ (Spike): high velocity + topspin ===
+                showEvent("SMAÇ! 💥", 600);
+                const sutErr = (100 - p.ozellikler.sut) / 100;
                 
-                const errX = (Math.random() * 120 - 60) * errMargin;
-                const errY = (Math.random() * 120 - 60) * errMargin;
-                const tX = Math.max(10, Math.min(GAME_WIDTH-10, gX + errX));
-                const tY = Math.max(10, Math.min(GAME_HEIGHT-10, gY + errY));
+                const margin = 40;
+                const gX = margin + Math.random() * (GAME_WIDTH - margin * 2);
+                const gY = p.team === team1
+                    ? margin + Math.random() * (NET_Y - margin - 40)
+                    : NET_Y + 40 + Math.random() * (GAME_HEIGHT - NET_Y - margin - 40);
+                
+                const errX = (Math.random() * 100 - 50) * sutErr;
+                const errY = (Math.random() * 100 - 50) * sutErr;
+                const tX = Math.max(5, Math.min(GAME_WIDTH - 5, gX + errX));
+                const tY = Math.max(5, Math.min(GAME_HEIGHT - 5, gY + errY));
                 
                 const bDir = normalize(tX - p.x, tY - p.y);
-                const d = dist(p, {x:tX, y:tY});
-                ball.vz = 3 + Math.random()*2;
-                const airTime = (ball.vz / 0.2) * 2;
-                ball.vx = bDir.x * (d / airTime);
-                ball.vy = bDir.y * (d / airTime);
+                const tgtDist = dist(p, {x: tX, y: tY});
+                
+                // Spike: flat trajectory, fast
+                ball.vz = 2 + Math.random() * 3;
+                const airT = (ball.vz / GRAVITY) * 2;
+                const pw = Math.max(3, tgtDist / airT);
+                ball.vx = bDir.x * pw;
+                ball.vy = bDir.y * pw;
+                
+                // Topspin (Magnus): ball curves downward
+                ball.spinX = (Math.random() - 0.5) * 0.2;
+                ball.spinY = (p.team === team1 ? -0.15 : 0.15) * (1 - sutErr); // topspin toward opponent
             }
         }
     });
@@ -398,43 +499,103 @@ function update() {
 
 function draw() {
     ctx.clearRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+    
+    // Court floor
+    ctx.fillStyle = '#c27803';
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    
     // Court Lines
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+    ctx.strokeRect(2, 2, GAME_WIDTH-4, GAME_HEIGHT-4); // outer boundary
+    
     // Center line
+    ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2); ctx.stroke();
-    // 3 meter lines
+    
+    // 3 meter attack lines
     ctx.lineWidth = 2;
     ctx.setLineDash([10, 5]);
     ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2 - 150); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2 - 150); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2 + 150); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2 + 150); ctx.stroke();
     ctx.setLineDash([]);
     
+    // Net visualization (thicker, with posts)
+    const netY = GAME_HEIGHT/2;
+    // Net posts
+    ctx.fillStyle = '#666'; 
+    ctx.fillRect(-2, netY - 8, 8, 16);
+    ctx.fillRect(GAME_WIDTH - 6, netY - 8, 8, 16);
+    // Net mesh
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(0, netY); ctx.lineTo(GAME_WIDTH, netY); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+    for (let nx = 0; nx < GAME_WIDTH; nx += 15) {
+        ctx.beginPath(); ctx.moveTo(nx, netY - 5); ctx.lineTo(nx, netY + 5); ctx.stroke();
+    }
+    
     // Players
     players.forEach(p => {
+        // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath(); ctx.arc(p.x, p.y+5, 12, 0, Math.PI*2); ctx.fill();
         
+        // Body
         ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI*2);
         ctx.fillStyle = p.team.color; ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
         
+        // Jersey number
         ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(p.numara, p.x, p.y);
-        ctx.font = 'bold 12px sans-serif'; ctx.fillText(p.ad, p.x, p.y + 22);
+        // Name
+        ctx.font = 'bold 10px sans-serif'; 
+        ctx.fillText(p.ad, p.x, p.y + 22);
     });
 
-    // Ball
-    let shadowOffset = ball.z * 0.5;
-    let ballSize = Math.max(5, 8 + ball.z * 0.2);
+    // Ball spin trail (ghosting effect)
+    const spinMag = Math.hypot(ball.spinX || 0, ball.spinY || 0);
+    if (ball.z > 0 && spinMag > 0.03) {
+        ctx.globalAlpha = 0.15;
+        for (let t = 1; t <= 3; t++) {
+            const trailSize = Math.max(3, 7 + ball.z * 0.15 - t);
+            ctx.beginPath();
+            ctx.arc(ball.x - ball.vx * t * 2, ball.y - ball.vy * t * 2 - ball.z + ball.vz * t, trailSize, 0, Math.PI*2);
+            ctx.fillStyle = '#fde047'; ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+    }
+
+    // Ball shadow
+    const shadowOffset = ball.z * 0.5;
+    const shadowSize = Math.max(3, 8 - ball.z * 0.1);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.arc(ball.x, ball.y + shadowOffset, shadowSize, 0, Math.PI*2); ctx.fill();
     
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.beginPath(); ctx.arc(ball.x, ball.y + shadowOffset, ballSize, 0, Math.PI*2); ctx.fill();
-    
     // Ball
-    ctx.beginPath(); ctx.arc(ball.x, ball.y - ball.z, ballSize, 0, Math.PI*2);
-    ctx.fillStyle = '#fde047'; ctx.fill(); // Yellow/Blue volleyball color
+    const ballSize = Math.max(5, 8 + ball.z * 0.2);
+    const ballDrawY = ball.y - ball.z;
+    ctx.beginPath(); ctx.arc(ball.x, ballDrawY, ballSize, 0, Math.PI*2);
+    
+    // Ball color changes with speed
+    const speed = Math.hypot(ball.vx, ball.vy, ball.vz);
+    if (speed > 8) {
+        ctx.fillStyle = '#ef4444'; // red = fast spike
+    } else if (speed > 4) {
+        ctx.fillStyle = '#fbbf24'; // amber = medium
+    } else {
+        ctx.fillStyle = '#fde047'; // yellow = slow set
+    }
+    ctx.fill();
     ctx.strokeStyle = '#1e3a8a'; ctx.lineWidth = 2; ctx.stroke();
+    
+    // Spin indicator (small line on ball)
+    if (spinMag > 0.02) {
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ballDrawY);
+        ctx.lineTo(ball.x + (ball.spinX || 0) * 30, ballDrawY + (ball.spinY || 0) * 30);
+        ctx.stroke();
+    }
 }
 
 function gameLoop() {
