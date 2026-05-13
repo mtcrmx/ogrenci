@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{{ aktif.sinif_adi if aktif else 'Panel' }}{% endblock %}
 
 {% block body %}
-<div class="flex h-[calc(100vh-56px)]">
+<div class="flex min-h-[calc(100vh-56px)]">
 
   <!-- ══════════════════════════════════════════════════════════════
        Sol Kenar Çubuğu – Sınıf Listesi
@@ -33,47 +33,51 @@
       {% endfor %}
     </div>
 
-    <!-- Sınıf sıfırla & tümünü sıfırla -->
     {% if aktif %}
+    <div class="px-2 pb-3 mt-2 border-t border-slate-200 pt-3 space-y-1.5">
+      <p class="text-[10px] font-bold text-slate-400 tracking-widest px-1 mb-2">
+        ÖDEV VE YAYIN
+      </p>
+      <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
+         class="block w-full text-center text-xs font-bold py-2 rounded-lg
+                bg-emerald-600 text-white hover:bg-emerald-700 transition">
+        Ödev ver
+      </a>
+      <a href="{{ url_for('yayin') }}"
+         class="block w-full text-center text-xs font-bold py-2 rounded-lg
+                bg-violet-600 text-white hover:bg-violet-700 transition">
+        Canlı yayın
+      </a>
+      <a href="{{ url_for('bilgilendirme_yonetimi') }}"
+         class="block w-full text-center text-xs font-semibold py-2 rounded-lg
+                bg-sky-100 text-sky-900 hover:bg-sky-200 transition">
+        Duyuru yayınla
+      </a>
+      <a href="{{ url_for('ogretmen_randevular') }}"
+         class="block w-full text-center text-xs font-bold py-2 rounded-lg bg-rose-100 text-rose-900 hover:bg-rose-200 transition">
+        Veli randevuları
+      </a>
+      <a href="{{ url_for('ogretmen_yansimalar') }}"
+         class="block w-full text-center text-xs font-bold py-2 rounded-lg bg-cyan-100 text-cyan-900 hover:bg-cyan-200 transition">
+        Günlük yansımalar
+      </a>
+    </div>
     <div class="px-2 pb-4 mt-2 border-t border-slate-200 pt-3 space-y-1.5">
       <p class="text-[10px] font-bold text-slate-400 tracking-widest px-1 mb-2">
-        YENİ ÖZELLİKLER
+        TİK SIFIRLAMA
       </p>
-      <a href="{{ url_for('lig') }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition">
-        Süper Lig
-      </a>
-      <a href="{{ url_for('oduller') }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200 transition">
-        Ödüller
-      </a>
-      <a href="{{ url_for('quiz', sinif_id=aktif.id) }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-purple-100 text-purple-800 hover:bg-purple-200 transition">
-        Quiz
-      </a>
-      <a href="{{ url_for('taktik', sinif_id=aktif.id) }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition">
-        Taktik
-      </a>
-      <a href="{{ url_for('ogrenci_panel') }}"
-         class="block w-full text-center text-xs font-bold py-2 rounded-lg
-                bg-cyan-100 text-cyan-800 hover:bg-cyan-200 transition">
-        Öğrenci
-      </a>
       <button onclick="sifirlaModalAc('sinif', {{ aktif.id }})"
               class="w-full text-xs font-semibold py-2 rounded-lg
                      bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
         ↺ Sınıfı Sıfırla
       </button>
+      {% if toplu_sifirlamaya_izin %}
       <button onclick="sifirlaModalAc('hepsi', 0)"
               class="w-full text-xs font-semibold py-2 rounded-lg
                      bg-red-100 text-red-700 hover:bg-red-200 transition">
         🗑 Tümünü Sıfırla
       </button>
+      {% endif %}
     </div>
     {% endif %}
   </aside>
@@ -86,86 +90,66 @@
   <!-- ══════════════════════════════════════════════════════════════
        Sağ: Ana İçerik
   ══════════════════════════════════════════════════════════════ -->
-  <main class="flex-1 overflow-y-auto bg-slate-100 lg:ml-0">
+  <main class="flex-1 min-w-0 bg-slate-100 lg:ml-0">
 
     {% if aktif %}
     <!-- Üst başlık + araçlar -->
-    <div class="sticky top-0 bg-white border-b border-slate-200 z-10 px-4 py-3
-                flex flex-wrap items-center gap-2">
-      <div class="flex-1 min-w-0">
-        <h2 class="font-bold text-slate-800 text-sm sm:text-base truncate">
+    <div class="sticky top-0 bg-white border-b border-slate-200 z-10 px-3 sm:px-4 py-3
+                flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+      <div class="w-full sm:flex-1 min-w-0">
+        <h2 class="font-bold text-slate-800 text-sm sm:text-base break-words">
           📚 {{ aktif.sinif_adi }} Şubesi —
           <span class="font-normal text-slate-500">{{ ogrenciler|length }} öğrenci</span>
         </h2>
         <p class="text-xs text-slate-400" id="guncelleme-info">
-          ⏱ Otomatik güncelleme: 10 saniyede bir
+          Tik kaydı · liste 10 saniyede bir yenilenir
         </p>
       </div>
 
       <input type="text" id="ara" placeholder="🔍 Ara..."
              oninput="filtrele()"
              class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm
-                    w-36 sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
 
-      <!-- Mobil araç butonları -->
-      <div class="flex gap-1.5 sm:hidden">
-        <a href="{{ url_for('yayin', sinif_id=aktif.id) }}" target="_blank"
-           class="bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          📺
-        </a>
+      <div class="flex gap-1.5 sm:hidden w-full flex-wrap">
         <a href="{{ url_for('rapor_excel', sinif_id=aktif.id) }}"
-           class="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          📊
+           class="flex-1 min-w-[40%] text-center bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+          📊 Excel
+        </a>
+        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}"
+           class="flex-1 min-w-[40%] text-center bg-rose-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+          📑 Analiz
         </a>
       </div>
     </div>
 
-    <div class="px-3 pt-3">
-      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
-        <a href="{{ url_for('lig') }}"
-           class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-3
-                  text-indigo-900 hover:bg-indigo-100 transition">
-          <div class="text-lg">⚽</div>
-          <div class="font-black text-sm leading-tight">Süper Lig</div>
-          <div class="text-[10px] text-indigo-500 mt-0.5">Maç ve puan</div>
-        </a>
-        <a href="{{ url_for('oduller') }}"
-           class="rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-3 py-3
-                  text-fuchsia-900 hover:bg-fuchsia-100 transition">
-          <div class="text-lg">🎮</div>
-          <div class="font-black text-sm leading-tight">Ödüller</div>
-          <div class="text-[10px] text-fuchsia-500 mt-0.5">Rozet, görev, alkış</div>
-        </a>
-        <a href="{{ url_for('quiz', sinif_id=aktif.id) }}"
-           class="rounded-xl border border-purple-200 bg-purple-50 px-3 py-3
-                  text-purple-900 hover:bg-purple-100 transition">
-          <div class="text-lg">🧠</div>
-          <div class="font-black text-sm leading-tight">Quiz</div>
-          <div class="text-[10px] text-purple-500 mt-0.5">Bilgi yarışması</div>
-        </a>
-        <a href="{{ url_for('taktik', sinif_id=aktif.id) }}"
-           class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3
-                  text-emerald-900 hover:bg-emerald-100 transition">
-          <div class="text-lg">🟢</div>
-          <div class="font-black text-sm leading-tight">Taktik</div>
-          <div class="text-[10px] text-emerald-500 mt-0.5">Sınıf kadrosu</div>
-        </a>
-        <a href="{{ url_for('ogrenci_panel') }}"
-           class="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3
-                  text-cyan-900 hover:bg-cyan-100 transition">
-          <div class="text-lg">👁</div>
-          <div class="font-black text-sm leading-tight">Öğrenci</div>
-          <div class="text-[10px] text-cyan-600 mt-0.5">İzleme paneli</div>
-        </a>
-        <a href="{{ url_for('sifirla_sayfasi') }}"
-           class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3
-                  text-rose-900 hover:bg-rose-100 transition">
-          <div class="text-lg">🧹</div>
-          <div class="font-black text-sm leading-tight">Genel Sıfırla</div>
-          <div class="text-[10px] text-rose-500 mt-0.5">Yönetici</div>
-        </a>
+    {% if aktif %}
+    <!-- Olumlu davranış özet -->
+    <div class="mx-3 mb-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-4 shadow-sm">
+      <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+        <div>
+          <h3 class="text-sm font-black text-emerald-900">Olumlu davranış (öğrenci tikleri)</h3>
+          <p class="text-[11px] text-emerald-800/80">Karttan “+ Olumlu” ile kaydedilir; her tik +5 XP ve sınıf ligine katkı. Her <strong>3</strong> olumlu tikte bir olumsuz tik silinir.</p>
+        </div>
+        <div class="flex gap-2">
+          <a href="{{ url_for('lig') }}" class="text-xs font-bold text-emerald-800 underline">Süper Lig →</a>
+          <a href="{{ url_for('rapor_haftalik', sinif_id=aktif.id) }}" class="text-xs font-bold text-emerald-700 underline">Haftalık özet →</a>
+        </div>
       </div>
+      {% if olumlu_satirlari %}
+      <ul class="text-xs text-slate-700 space-y-1 max-h-24 overflow-y-auto border-t border-emerald-100 pt-2">
+        {% for r in olumlu_satirlari[:8] %}
+        <li class="flex justify-between gap-2">
+          <span>{% if r.ogrenci %}<span class="font-semibold text-emerald-900">{{ r.ogrenci }}</span> · {% endif %}{{ r.kriter }}</span>
+          <span class="text-slate-400 shrink-0">{{ r.tarih[:16] }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-xs text-slate-500">Henüz olumlu tik yok — öğrenci kartından “+ Olumlu” ile ekleyin.</p>
+      {% endif %}
     </div>
+    {% endif %}
 
     <!-- Öğrenci Listesi -->
     <div id="ogrenci-listesi" class="p-3 space-y-2">
@@ -202,23 +186,24 @@
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh]
               flex flex-col overflow-hidden" onclick="event.stopPropagation()">
 
-    <div class="bg-okul-800 text-white px-5 py-4 flex justify-between items-center">
+    <div class="bg-red-800 text-white px-5 py-4 flex justify-between items-center">
       <div>
-        <p class="text-xs text-blue-300">İhlal Kriteri Seç</p>
+        <p class="text-xs text-red-200">Olumsuz (disiplin) tik — kriter seçin</p>
         <p class="font-bold text-sm" id="modal-ogrenci-adi">—</p>
       </div>
       <button onclick="document.getElementById('tik-modal').classList.add('hidden')"
               class="text-white/70 hover:text-white text-2xl leading-none">×</button>
     </div>
 
-    <form id="tik-form" method="POST" class="overflow-y-auto p-4">
+    <form id="tik-form" method="POST" class="overflow-y-auto p-4" onsubmit="return false;">
       <input type="hidden" name="sinif_id" value="{{ aktif.id if aktif else '' }}">
       <div class="grid grid-cols-2 gap-2">
         {% for emoji, ad in kriterler %}
-        <button type="submit" name="kriter" value="{{ emoji }} {{ ad }}"
-                class="flex items-center gap-2 text-left text-xs font-medium
-                       bg-blue-50 hover:bg-blue-100 active:bg-blue-200
-                       text-blue-900 border border-blue-200
+        <button type="button"
+                data-kriter="{{ (emoji ~ ' ' ~ ad)|e }}"
+                class="tik-kriter-btn flex items-center gap-2 text-left text-xs font-medium
+                       bg-red-50 hover:bg-red-100 active:bg-red-200
+                       text-red-950 border border-red-200
                        rounded-xl px-3 py-2.5 transition w-full">
           <span class="text-base flex-shrink-0">{{ emoji }}</span>
           <span>{{ ad }}</span>
@@ -287,6 +272,67 @@
 
 
 <!-- ══════════════════════════════════════════════════════════════
+     Olumlu tik modalı
+══════════════════════════════════════════════════════════════ -->
+<div id="olumlu-modal"
+     class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4"
+     onclick="modalKapat(event)">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh]
+              flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+    <div class="bg-teal-700 text-white px-5 py-4 flex justify-between items-center">
+      <div>
+        <p class="text-xs text-teal-200">Olumlu davranış tik</p>
+        <p class="font-bold text-sm" id="olumlu-ogrenci-adi">—</p>
+      </div>
+      <button type="button" onclick="document.getElementById('olumlu-modal').classList.add('hidden')"
+              class="text-white/70 hover:text-white text-2xl leading-none">×</button>
+    </div>
+    <form id="olumlu-form" method="POST" class="overflow-y-auto p-4" onsubmit="return false;">
+      <input type="hidden" name="ogrenci_id" id="olumlu-ogrenci-id" value="">
+      <input type="hidden" name="sinif_id" id="olumlu-sinif-id" value="{{ aktif.id if aktif else '' }}">
+      <p class="text-[11px] text-slate-500 mb-3">Her tik +5 XP ve sınıf ligine katkı. Her 3. tikte bir olumsuz tik düşer.</p>
+      <div class="grid grid-cols-2 gap-2">
+        {% for emoji, ad in olumlu_kriterler %}
+        <button type="button"
+                data-kriter="{{ (emoji ~ ' ' ~ ad)|e }}"
+                class="olumlu-kriter-btn flex items-center gap-2 text-left text-xs font-medium
+                       bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200
+                       text-emerald-900 border border-emerald-300
+                       rounded-xl px-3 py-2.5 transition w-full">
+          <span class="text-base flex-shrink-0">{{ emoji }}</span>
+          <span>{{ ad }}</span>
+        </button>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     Öğrenci özeti
+══════════════════════════════════════════════════════════════ -->
+<div id="ozet-modal"
+     class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4"
+     onclick="if(event.target===this) this.classList.add('hidden')">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+       onclick="event.stopPropagation()">
+    <div class="bg-slate-800 text-white px-5 py-4 flex justify-between items-center">
+      <div>
+        <p class="text-xs text-slate-300">Öğrenci özeti</p>
+        <p class="font-bold" id="ozet-baslik">—</p>
+      </div>
+      <button type="button" onclick="document.getElementById('ozet-modal').classList.add('hidden')"
+              class="text-white/70 hover:text-white text-2xl leading-none">×</button>
+    </div>
+    <div id="ozet-icerik" class="overflow-y-auto p-4 text-sm text-slate-700 space-y-3">
+      Yükleniyor...
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
      Uyarı Toast (3 tik)
 ══════════════════════════════════════════════════════════════ -->
 <div id="uyari-toast"
@@ -308,41 +354,45 @@
   'uyari':   'bg-amber-50    border-amber-300',
   'tehlike': 'bg-red-50      border-red-300 pulse-red',
 } %}
-{% set badge_cls = {
-  'temiz':   'bg-emerald-100 text-emerald-800',
-  'uyari':   'bg-amber-100   text-amber-800',
-  'tehlike': 'bg-red-100     text-red-800',
-} %}
-<div class="ogrenci-kart flex items-center gap-2 rounded-xl border px-3 py-2.5
+<div class="ogrenci-kart flex flex-wrap sm:flex-nowrap items-center gap-2 rounded-xl border px-3 py-2.5
             slide-in {{ durum_cls[o.durum] }}"
      data-ad="{{ o.ad_soyad }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}">
 
-  <!-- Emoji + Ad -->
+  <!-- Emoji + Ad + rozetler -->
   <div class="flex-1 min-w-0">
-    <div class="font-bold text-slate-800 text-sm flex items-center gap-1 min-w-0">
-      <span class="min-w-0 truncate"><span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}</span>
+    <div class="font-bold text-slate-800 text-sm break-words flex flex-wrap items-center gap-x-1 gap-y-0.5">
+      <button type="button" class="text-left hover:underline"
+              onclick="ogrenciOzetAc({{ o.id }})"
+              title="Öğrenci özeti">
+        <span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}
+      </button>
       {% if o.rozetler %}
-      <span class="flex-shrink-0 inline-flex align-middle gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5" title="{{ o.rozet_sayisi }} rozet · {{ o.xp }} XP">
-        {% for r in o.rozetler[:4] %}
-        <span class="text-base">{{ r.emoji }}</span>
+      <span class="inline-flex flex-wrap gap-0.5 items-center">
+        {% for rz in o.rozetler %}
+        <span class="text-base leading-none" title="{{ rz.ad }}">{{ rz.emoji }}</span>
         {% endfor %}
       </span>
       {% endif %}
     </div>
-    <div class="text-xs text-slate-500">No: {{ o.ogr_no }}{% if o.xp %} · {{ o.xp }} XP{% endif %}</div>
+    <div class="text-xs text-slate-500">No: {{ o.ogr_no }}</div>
   </div>
 
   <!-- Tik göstergesi -->
-  <div class="flex items-center gap-1.5 flex-shrink-0">
-    <span class="{{ badge_cls[o.durum] }} text-xs font-bold px-2 py-0.5 rounded-full
-                 min-w-[28px] text-center">
+  <div class="flex items-center gap-1.5 flex-shrink-0" title="Kırmızı: olumsuz (disiplin) · Yeşil: olumlu davranış">
+    <span class="text-[10px] font-black text-red-600 hidden sm:inline">−</span>
+    <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full
+                 min-w-[28px] text-center border border-red-200">
       {{ o.tik_sayisi }}
     </span>
-    <!-- Nokta göstergesi -->
-    <span class="text-xs hidden sm:block text-slate-400">
+    <span class="text-[10px] font-black text-emerald-600 hidden sm:inline">+</span>
+    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full
+                 min-w-[28px] text-center border border-emerald-200">
+      {{ o.olumlu_tik|default(0) }}
+    </span>
+    <span class="text-xs hidden md:block text-slate-400">
       {% for i in range(3) %}
         {% if i < o.tik_sayisi %}
-          <span class="{{ 'text-red-500' if o.tik_sayisi >= 3 else 'text-amber-400' }}">●</span>
+          <span class="{{ 'text-red-500' if o.tik_sayisi >= 3 else 'text-amber-500' }}">●</span>
         {% else %}○{% endif %}
       {% endfor %}
       {% if o.tik_sayisi > 3 %}+{{ o.tik_sayisi - 3 }}{% endif %}
@@ -350,21 +400,30 @@
   </div>
 
   <!-- Butonlar -->
-  <div class="flex gap-1 flex-shrink-0">
+  <div class="flex gap-1 flex-shrink-0 ml-auto flex-wrap justify-end">
+    <button type="button" title="Pozitif rozet"
+            onclick="pozitifRozet({{ o.id }})"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition">
+      💚
+    </button>
+    <button onclick="olumluModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
+            class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">
+      + Olumlu
+    </button>
     <button onclick="tikModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
-            class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800
+            class="bg-red-600 hover:bg-red-700 active:bg-red-800
                    text-white text-xs font-bold px-2.5 py-1.5 rounded-lg
                    transition whitespace-nowrap">
       + Tik
     </button>
     <button onclick="gecmisGoster({{ o.id }}, '{{ o.ad_soyad|e }}')"
             class="bg-slate-500 hover:bg-slate-600 text-white
-                   text-xs px-2 py-1.5 rounded-lg transition hidden sm:block">
+                   text-xs px-2 py-1.5 rounded-lg transition">
       📜
     </button>
     <form action="{{ url_for('sifirla_ogrenci', ogrenci_id=o.id) }}"
           method="POST" class="inline"
-          onsubmit="return confirm('{{ o.ad_soyad }} tiklerini sıfırla?')">
+          onsubmit="return confirm('{{ o.ad_soyad }} için sizin verdiğiniz olumlu ve olumsuz tikler silinsin mi?')">
       <input type="hidden" name="sinif_id" value="{{ sinif_id }}">
       <button type="submit"
               class="bg-amber-500 hover:bg-amber-600 text-white
@@ -379,6 +438,69 @@
 
 {% block scripts %}
 <script>
+async function pozitifRozet(ogrenciId) {
+  const r = await fetch('/api/pozitif-rozet/' + ogrenciId, {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}});
+  const j = await r.json();
+  if (j.ok) {
+    if (j.yeni) alert('Pozitif Yıldız rozeti verildi.');
+    else alert('Bu rozet bu öğrenciye daha önce verilmiş (benzersiz kayıt).');
+  } else alert(j.sebep || 'İşlem yapılamadı');
+  yenile();
+}
+
+function olumluModalAc(id, ad, sinifId) {
+  document.getElementById('olumlu-ogrenci-adi').textContent = ad;
+  document.getElementById('olumlu-ogrenci-id').value = id;
+  document.getElementById('olumlu-sinif-id').value = sinifId;
+  olumluFormKilit(false);
+  document.getElementById('olumlu-modal').classList.remove('hidden');
+}
+
+async function ogrenciOzetAc(id) {
+  document.getElementById('ozet-modal').classList.remove('hidden');
+  document.getElementById('ozet-icerik').innerHTML = 'Yükleniyor...';
+  try {
+    const res = await fetch('/api/ogretmen/ogrenci/' + id);
+    const j = await res.json();
+    if (!j.ok) {
+      document.getElementById('ozet-icerik').innerHTML =
+        '<p class="text-red-600 text-center py-4">Özet yüklenemedi.</p>';
+      return;
+    }
+    const o = j.ogrenci;
+    const st = j.istatistik || {};
+    const av = j.avatar_gelisim || {};
+    document.getElementById('ozet-baslik').textContent =
+      (o.ad_soyad || '') + ' · ' + (o.sinif_adi || '');
+    const rozHtml = (j.rozetler || []).length
+      ? (j.rozetler || []).map(r =>
+          '<span class="mr-1 text-lg" title="' + String(r.rozet_adi || '').replace(/"/g, '') + '">' +
+          (r.emoji || '') + '</span>').join('')
+      : '<span class="text-slate-400">Henüz rozet yok</span>';
+    const sez = (j.sezon && typeof j.sezon.puan !== 'undefined') ? j.sezon.puan : '—';
+    document.getElementById('ozet-icerik').innerHTML =
+      '<div class="grid grid-cols-2 gap-2 text-xs">' +
+        '<div class="rounded-xl bg-slate-50 p-3"><div class="text-slate-500">Olumsuz tik</div>' +
+        '<div class="text-lg font-black">' + (o.tik_sayisi ?? 0) + '</div></div>' +
+        '<div class="rounded-xl bg-emerald-50 p-3"><div class="text-emerald-700">Olumlu tik</div>' +
+        '<div class="text-lg font-black">' + (st.olumlu_tik ?? 0) + '</div></div>' +
+        '<div class="rounded-xl bg-indigo-50 p-3 col-span-2">' +
+        '<div class="text-indigo-700">Toplam XP (gelişim)</div>' +
+        '<div class="text-lg font-black">' + (j.xp ?? 0) + '</div>' +
+        '<div class="text-[10px] text-slate-500">' + (av.ad || '') + '</div></div>' +
+      '</div>' +
+      '<div class="border-t border-slate-100 pt-3 mt-3">' +
+        '<span class="font-bold text-slate-800">Rozetler</span>' +
+        '<div class="mt-1 flex flex-wrap gap-1">' + rozHtml + '</div></div>' +
+      '<p class="text-[11px] text-slate-500 mt-3">' +
+        'Sınıftaki disiplin sırası (düşük tik önce): <strong>' +
+        (j.disiplin_sira ?? '—') + '</strong> · Bu sınıfın sezon puanı: <strong>' + sez + '</strong>' +
+      '</p>';
+  } catch (e) {
+    document.getElementById('ozet-icerik').innerHTML =
+      '<p class="text-red-600 text-center py-4">Ağ hatası.</p>';
+  }
+}
 // ── Sidebar ──────────────────────────────────────────────────────────────
 function toggleSidebar() {
   const sb  = document.getElementById('sidebar');
@@ -410,26 +532,44 @@ function modalKapat(e) {
   if (e.target === e.currentTarget)
     e.currentTarget.classList.add('hidden');
 }
-// Form submit: AJAX ile tik at
-document.getElementById('tik-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn = e.submitter;
+// Form submit: AJAX ile tik at (butonlar type=button; tıklama burada yakalanır)
+document.getElementById('tik-form').addEventListener('click', async function(e) {
+  const btn = e.target.closest('.tik-kriter-btn');
   if (!btn) return;
-  const kriter = btn.value;
-  const sinifId = this.querySelector('[name=sinif_id]').value;
-  const url = this.action;
-
+  const kriter = btn.getAttribute('data-kriter');
+  const form = document.getElementById('tik-form');
+  const sinifId = form.querySelector('[name=sinif_id]').value;
+  const url = form.action;
+  if (!kriter || !url || url === '') {
+    alert('Kriter veya öğrenci eksik.');
+    return;
+  }
   const fd = new FormData();
   fd.append('kriter', kriter);
   fd.append('sinif_id', sinifId);
 
-  const res  = await fetch(url, {
-    method: 'POST', body: fd,
-    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-  });
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST', body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+  } catch (err) {
+    console.error(err);
+    alert('Ağ hatası.');
+    return;
+  }
+  let data = null;
+  const raw = await res.text();
+  try { data = raw ? JSON.parse(raw) : null; } catch (err) { console.warn(err); }
 
   document.getElementById('tik-modal').classList.add('hidden');
+
+  if (!res.ok || !data) {
+    alert((data && data.sebep) || 'Tik kaydedilemedi (' + res.status + ').');
+    yenile();
+    return;
+  }
 
   // Uyarı toast
   if (data.uyari) {
@@ -440,8 +580,60 @@ document.getElementById('tik-form').addEventListener('submit', async function(e)
     setTimeout(() => toast.classList.add('hidden'), 4000);
   }
 
-  // Sayfayı yenile
   yenile();
+});
+
+let olumluIslemde = false;
+function olumluFormKilit(kilitli) {
+  document.querySelectorAll('#olumlu-form .olumlu-kriter-btn').forEach(b => {
+    b.disabled = kilitli;
+    b.classList.toggle('opacity-60', kilitli);
+    b.classList.toggle('cursor-wait', kilitli);
+  });
+}
+
+document.getElementById('olumlu-form').addEventListener('click', async function(e) {
+  const btn = e.target.closest('.olumlu-kriter-btn');
+  if (!btn) return;
+  if (olumluIslemde) return;
+  const kriter = btn.getAttribute('data-kriter');
+  const oid = document.getElementById('olumlu-ogrenci-id').value;
+  let sinifId = document.getElementById('olumlu-sinif-id').value;
+  if (!kriter || !oid || !sinifId) {
+    console.warn('Eksik bilgi: öğrenci veya sınıf seçili değil.');
+    return;
+  }
+  olumluIslemde = true;
+  olumluFormKilit(true);
+  const fd = new FormData();
+  fd.append('kriter', kriter);
+  fd.append('ogrenci_id', oid);
+  fd.append('sinif_id', sinifId);
+  let res = null;
+  let data = null;
+  try {
+    res = await fetch('/olumlu/' + sinifId, {
+      method: 'POST',
+      body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const raw = await res.text();
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch (err) {
+      console.warn('JSON parse', err, raw.slice(0, 200));
+    }
+    if (!res.ok || !data || !data.ok) {
+      console.warn((data && data.sebep) || ('Olumlu tik işlenemedi (' + res.status + ')'));
+    }
+  } catch (err) {
+    console.error('Olumlu tik isteği gönderilemedi', err);
+  } finally {
+    document.getElementById('olumlu-modal').classList.add('hidden');
+    olumluIslemde = false;
+    olumluFormKilit(false);
+    yenile();
+  }
 });
 
 // ── Geçmiş Modalı ────────────────────────────────────────────────────────
@@ -450,8 +642,32 @@ async function gecmisGoster(ogrId, ogrAd) {
   document.getElementById('gecmis-icerik').textContent = 'Yükleniyor...';
   document.getElementById('gecmis-modal').classList.remove('hidden');
 
-  const res  = await fetch(`/gecmis/${ogrId}`);
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(`/gecmis/${ogrId}`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+  } catch (e) {
+    document.getElementById('gecmis-icerik').innerHTML =
+      '<p class="text-red-600 text-center py-4">Geçmiş alınamadı: ağ hatası.</p>';
+    return;
+  }
+
+  let data = null;
+  const raw = await res.text();
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    document.getElementById('gecmis-icerik').innerHTML =
+      '<p class="text-red-600 text-center py-4">Geçmiş alınamadı: oturum veya sunucu yanıtı geçersiz.</p>';
+    return;
+  }
+
+  if (!res.ok || !Array.isArray(data)) {
+    document.getElementById('gecmis-icerik').innerHTML =
+      `<p class="text-red-600 text-center py-4">${(data && data.sebep) || 'Geçmiş alınamadı.'}</p>`;
+    return;
+  }
 
   if (!data.length) {
     document.getElementById('gecmis-icerik').innerHTML =
@@ -478,14 +694,14 @@ function sifirlaModalAc(tip, sinifId) {
 
   if (tip === 'sinif') {
     form.action = `/sifirla/sinif/${sinifId}`;
-    acik.textContent = 'Bu sınıfın tüm tikleri silinecek.';
+    acik.textContent = 'Bu sınıfta sizin verdiğiniz olumlu ve olumsuz tikler silinecek.';
     // Sinif_id'yi forma ekle
     let inp = form.querySelector('[name=sinif_id]');
     if (!inp) { inp = document.createElement('input'); inp.name='sinif_id'; inp.type='hidden'; form.appendChild(inp); }
     inp.value = sinifId;
   } else {
     form.action = `/sifirla/hepsi`;
-    acik.textContent = 'TÜM sınıfların tüm tikleri silinecek!';
+    acik.textContent = 'TÜM sınıflardaki olumlu ve olumsuz tik kayıtları silinecek!';
   }
   modal.classList.remove('hidden');
 }
@@ -498,6 +714,7 @@ async function yenile() {
   try {
     const res  = await fetch(`/api/sinif/${SINIF_ID}`);
     const data = await res.json();
+    if (!Array.isArray(data)) return;
     const kont = document.getElementById('ogrenci-listesi');
     const ara  = document.getElementById('ara').value.toLowerCase();
 
@@ -524,48 +741,58 @@ function kartHTML(o, sinifId) {
     uyari:    'bg-amber-50 border-amber-300',
     tehlike:  'bg-red-50 border-red-300 pulse-red',
   }[o.durum] || '';
-  const badgeCls = {
-    temiz:    'bg-emerald-100 text-emerald-800',
-    uyari:    'bg-amber-100 text-amber-800',
-    tehlike:  'bg-red-100 text-red-800',
-  }[o.durum] || '';
+
+  const ol = Number(o.olumlu_tik ?? 0);
 
   let noktalar = '';
   for (let i = 0; i < 3; i++) {
     noktalar += i < o.tik_sayisi
-      ? `<span class="${o.tik_sayisi >= 3 ? 'text-red-500' : 'text-amber-400'}">●</span>`
+      ? `<span class="${o.tik_sayisi >= 3 ? 'text-red-500' : 'text-amber-500'}">●</span>`
       : '○';
   }
   if (o.tik_sayisi > 3) noktalar += `+${o.tik_sayisi - 3}`;
 
+  const adStr = typeof o.ad_soyad === 'string' ? o.ad_soyad : '';
+  const adJs = JSON.stringify(adStr);
+  const roz = (o.rozetler || []).map(r =>
+    `<span class="text-base leading-none" title="${String(r.ad || '').replace(/"/g, '&quot;')}">${r.emoji || ''}</span>`
+  ).join('');
+
   return `
-  <div class="ogrenci-kart flex items-center gap-2 rounded-xl border px-3 py-2.5
+  <div class="ogrenci-kart flex flex-wrap sm:flex-nowrap items-center gap-2 rounded-xl border px-3 py-2.5
               slide-in ${durumCls}"
-       data-ad="${o.ad_soyad}" data-id="${o.id}" data-sinif="${sinifId}">
+       data-ad="${adStr.replace(/"/g, '&quot;')}" data-id="${o.id}" data-sinif="${sinifId}">
     <div class="flex-1 min-w-0">
-      <div class="font-bold text-slate-800 text-sm flex items-center gap-1 min-w-0">
-        <span class="min-w-0 truncate"><span class="mr-1">${o.emoji}</span>${o.ad_soyad}</span>
-        ${rozetHTML(o)}
+      <div class="font-bold text-slate-800 text-sm break-words flex flex-wrap items-center gap-x-1 gap-y-0.5">
+        <button type="button" class="text-left hover:underline" onclick="ogrenciOzetAc(${o.id})" title="Özet">
+          <span class="mr-1">${o.emoji}</span>${adStr.replace(/</g, '&lt;')}
+        </button>
+        ${roz ? `<span class="inline-flex flex-wrap gap-0.5 items-center">${roz}</span>` : ''}
       </div>
-      <div class="text-xs text-slate-500">No: ${o.ogr_no}${o.xp ? ` · ${o.xp} XP` : ''}</div>
+      <div class="text-xs text-slate-500">No: ${o.ogr_no}</div>
     </div>
-    <div class="flex items-center gap-1.5 flex-shrink-0">
-      <span class="${badgeCls} text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center">
-        ${o.tik_sayisi}
-      </span>
-      <span class="text-xs hidden sm:block text-slate-400">${noktalar}</span>
+    <div class="flex items-center gap-1.5 flex-shrink-0" title="Kırmızı: olumsuz · Yeşil: olumlu">
+      <span class="text-[10px] font-black text-red-600 hidden sm:inline">−</span>
+      <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center border border-red-200">${o.tik_sayisi}</span>
+      <span class="text-[10px] font-black text-emerald-600 hidden sm:inline">+</span>
+      <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full min-w-[28px] text-center border border-emerald-200">${ol}</span>
+      <span class="text-xs hidden md:block text-slate-400">${noktalar}</span>
     </div>
-    <div class="flex gap-1 flex-shrink-0">
-      <button onclick="tikModalAc(${o.id},'${o.ad_soyad.replace(/'/g,"\\'")}',${sinifId})"
-              class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold
+    <div class="flex gap-1 flex-shrink-0 ml-auto flex-wrap justify-end">
+      <button type="button" title="Pozitif rozet" onclick="pozitifRozet(${o.id})"
+              class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition">💚</button>
+      <button type="button" onclick='olumluModalAc(${o.id}, ${adJs}, ${sinifId})'
+              class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">+ Olumlu</button>
+      <button type="button" onclick='tikModalAc(${o.id}, ${adJs}, ${sinifId})'
+              class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold
                      px-2.5 py-1.5 rounded-lg transition whitespace-nowrap">
         + Tik
       </button>
-      <button onclick="gecmisGoster(${o.id},'${o.ad_soyad.replace(/'/g,"\\'")}') "
+      <button type="button" onclick='gecmisGoster(${o.id}, ${adJs})'
               class="bg-slate-500 hover:bg-slate-600 text-white text-xs
-                     px-2 py-1.5 rounded-lg transition hidden sm:block">📜</button>
+                     px-2 py-1.5 rounded-lg transition">📜</button>
       <form action="/sifirla/ogrenci/${o.id}" method="POST" class="inline"
-            onsubmit="return confirm('${o.ad_soyad} tiklerini sıfırla?')">
+            onsubmit="return confirm(${JSON.stringify(adStr + ' için sizin verdiğiniz olumlu ve olumsuz tikler silinsin mi?')})">
         <input type="hidden" name="sinif_id" value="${sinifId}">
         <button type="submit"
                 class="bg-amber-500 hover:bg-amber-600 text-white text-xs
@@ -573,15 +800,6 @@ function kartHTML(o, sinifId) {
       </form>
     </div>
   </div>`;
-}
-
-function rozetHTML(o) {
-  const rozetler = Array.isArray(o.rozetler) ? o.rozetler.slice(0, 4) : [];
-  if (!rozetler.length) return '';
-  const baslik = `${o.rozet_sayisi || rozetler.length} rozet · ${o.xp || 0} XP`;
-  return `<span class="flex-shrink-0 inline-flex align-middle gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5" title="${baslik}">
-    ${rozetler.map(r => `<span class="text-base">${r.emoji || '🏅'}</span>`).join('')}
-  </span>`;
 }
 
 // İlk yükleme + periyodik güncelleme

@@ -9,13 +9,13 @@
     <!-- Logo Alanı -->
     <div class="text-center mb-8">
       <div class="text-6xl mb-3">🏫</div>
-      <h1 class="text-2xl font-bold text-white">Erenler Cumhuriyet Ortaokulu</h1>
+      <h1 class="text-2xl font-bold text-white leading-tight">Erenler Cumhuriyet Ortaokulu</h1>
       <p class="text-blue-300 text-sm mt-1">Öğrenci Takip ve Disiplin Paneli</p>
     </div>
 
     <!-- Kart -->
     <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
-      <a href="{{ url_for('ogrenci_panel') }}"
+      <a href="{{ url_for('ogrenci_giris') }}"
          class="block border-b border-emerald-100 bg-emerald-50 px-6 py-4
                 hover:bg-emerald-100 transition">
         <div class="flex items-center gap-3">
@@ -25,14 +25,30 @@
           </div>
           <div class="flex-1 min-w-0">
             <div class="font-black text-emerald-900 text-sm">Öğrenci Girişi</div>
-            <div class="text-xs text-emerald-700">
-              Maçları görüntüle, lig tablosunu izle ve ittifak talebi oluştur
+            <div class="text-xs text-emerald-700 break-words">
+              Yalnızca kendi tik kayıtlarınızı ve her tik için neden (kriter) bilgisini görürsünüz
             </div>
           </div>
           <div class="text-emerald-700 font-black text-lg">→</div>
         </div>
       </a>
-
+      <a href="{{ url_for('veli_giris') }}"
+         class="block border-b border-sky-100 bg-sky-50 px-6 py-4
+                hover:bg-sky-100 transition">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sky-600 text-white
+                      flex items-center justify-center text-xl flex-shrink-0">
+            👪
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-black text-sky-900 text-sm">Veli Girişi</div>
+            <div class="text-xs text-sky-700 break-words">
+              Öğrencinizin tik kayıtlarını ve her tik için neden (kriter) bilgisini görüntüleyin
+            </div>
+          </div>
+          <div class="text-sky-700 font-black text-lg">→</div>
+        </div>
+      </a>
       <div class="bg-okul-800 px-6 py-4">
         <h2 class="text-white font-semibold text-center">Öğretmen Girişi</h2>
       </div>
@@ -94,7 +110,7 @@
       </form>
 
       <!-- Alt bağlantı -->
-      <div class="border-t border-slate-100 px-6 py-4 flex justify-between items-center">
+      <div class="border-t border-slate-100 px-6 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <a href="{{ url_for('admin_sifreler') }}"
            class="text-xs text-slate-400 hover:text-slate-600 transition">
           🔑 Şifre Listesi (Yönetici)

@@ -9,6 +9,25 @@
       🔑 Yönetici — Öğretmen Şifre Listesi
     </div>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="mx-4 mt-4 rounded-lg px-3 py-2 text-sm {% if cat=='success' %}bg-emerald-50 text-emerald-900{% else %}bg-red-50 text-red-800{% endif %}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="px-6 pt-4 pb-2 border-b border-slate-100 bg-amber-50 text-xs text-amber-950">
+      <p class="font-bold mb-1">Veritabanı yedeği</p>
+      <p class="mb-2">sqlite dosyanızı düzenli kopyalayın. Yedek aldığınızda kayıt için:</p>
+      {% if son_yedek %}<p class="text-[11px] mb-2">Son onay: {{ son_yedek }}</p>{% endif %}
+      <form method="POST" action="{{ url_for('admin_yedek_onay') }}" class="flex flex-wrap gap-2 items-center">
+        <input type="password" name="admin_sifre" placeholder="Yönetici şifresi" class="rounded border px-2 py-1 text-xs font-mono flex-1 min-w-[120px]">
+        <button type="submit" class="bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Yedek aldım</button>
+      </form>
+      <p class="mt-2 text-[10px] text-amber-900/80">Öğretmen yetkisi: veritabanında <code class="bg-white/60 px-1 rounded">UPDATE ogretmenler SET yetki='rapor'</code> ile yalnızca rapor erişimi verilebilir.</p>
+    </div>
+
     {% if not liste %}
     <!-- Doğrulama formu -->
     <form method="POST" class="p-6 space-y-4">

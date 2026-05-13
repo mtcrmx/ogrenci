@@ -1,13 +1,21 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.db
-*.sqlite3
-*.xlsx
-.env
-venv/
+*.py[cod]
+*$py.class
+.Python
+*.so
 .venv/
-*.bat
-*.ps1
-ALAN_ADI_KURULUM.txt
-BULUT_KURULUM.txt
+venv/
+.env
+.env.*
+
+# Yerel DB (Render /data kullanır; repoda tutmak isteğe bağlı)
+# ogrenci_takip.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+_log_*.txt
+push_*.ps1
