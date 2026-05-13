@@ -6,7 +6,7 @@
   <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
     <div>
       <h1 class="text-2xl font-black text-slate-900">Ogrenci Mac Onaylari</h1>
-      <p class="text-sm text-slate-600">Ogrencilerin girdigi futbol sonuclari onaylaninca kazanan sinifa lig tablosunda +3 normal puan eklenir.</p>
+      <p class="text-sm text-slate-600">Ogrencilerin girdigi futbol ve voleybol sonuclari onaylaninca kazanan sinifa lig tablosunda +3 normal puan eklenir.</p>
     </div>
     <a href="{{ url_for('lig') }}" class="rounded-lg bg-amber-700 px-4 py-2 text-sm font-black text-white hover:bg-amber-800">Lig tablosu</a>
   </div>
@@ -29,7 +29,10 @@
       {% for mac in bekleyenler %}
         <div class="grid gap-3 px-4 py-3 md:grid-cols-[1fr_auto] md:items-center">
           <div>
-            <div class="text-lg font-black text-slate-900">{{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}</div>
+            <div class="text-lg font-black text-slate-900">
+              <span class="mr-1 rounded-full {{ 'bg-sky-100 text-sky-700' if mac.spor == 'voleybol' else 'bg-emerald-100 text-emerald-700' }} px-2 py-1 text-xs">{{ mac.spor_adi or 'Futbol' }}</span>
+              {{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}
+            </div>
             <div class="mt-1 text-sm text-slate-600">
               Gonderen: {{ mac.olusturan_adi }} · {{ mac.tarih }} · Kazanan: <b>{{ mac.kazanan_sinif_adi }}</b>
             </div>
@@ -70,7 +73,10 @@
         <tbody class="divide-y divide-slate-100">
           {% for mac in son_islenenler %}
             <tr>
-              <td class="px-4 py-3 font-bold text-slate-800">{{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}</td>
+              <td class="px-4 py-3 font-bold text-slate-800">
+                <span class="mr-1 rounded-full {{ 'bg-sky-100 text-sky-700' if mac.spor == 'voleybol' else 'bg-emerald-100 text-emerald-700' }} px-2 py-1 text-xs">{{ mac.spor_adi or 'Futbol' }}</span>
+                {{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}
+              </td>
               <td class="px-4 py-3">
                 {% if mac.durum == 'onaylandi' %}
                   <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-black text-emerald-700">Onaylandi</span>

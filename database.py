@@ -3269,6 +3269,15 @@ def _taktik_tablosu_olustur(con) -> None:
             veri TEXT NOT NULL DEFAULT '{}', tarih TEXT NOT NULL
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS taktik_spor_formasyonu (
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            spor TEXT NOT NULL DEFAULT 'voleybol',
+            veri TEXT NOT NULL DEFAULT '{}',
+            tarih TEXT NOT NULL,
+            PRIMARY KEY (sinif_id, spor)
+        )
+    """)
     con.commit()
 
 
@@ -3300,6 +3309,46 @@ def taktik_kaydet(sinif_id: int, veri_str: str) -> dict:
         (sinif_id, veri_str, datetime.now().strftime("%Y-%m-%d %H:%M"))
     )
     con.commit(); con.close()
+    return {"ok": True}
+
+
+def spor_taktik_yukle(sinif_id: int, spor: str) -> dict:
+    import json
+    spor = (spor or "").strip().lower()
+    if spor == "futbol":
+        return taktik_yukle(sinif_id)
+    con = _conn()
+    _taktik_tablosu_olustur(con)
+    row = con.execute(
+        "SELECT veri FROM taktik_spor_formasyonu WHERE sinif_id=? AND spor=?",
+        (sinif_id, spor),
+    ).fetchone()
+    con.close()
+    if row:
+        try:
+            return json.loads(row["veri"])
+        except Exception:
+            return {}
+    return {}
+
+
+def spor_taktik_kaydet(sinif_id: int, spor: str, veri_str: str) -> dict:
+    import json
+    spor = (spor or "").strip().lower()
+    try:
+        json.loads(veri_str)
+    except Exception:
+        return {"ok": False, "sebep": "Gecersiz veri"}
+    if spor == "futbol":
+        return taktik_kaydet(sinif_id, veri_str)
+    con = _conn()
+    _taktik_tablosu_olustur(con)
+    con.execute("""
+        INSERT OR REPLACE INTO taktik_spor_formasyonu (sinif_id, spor, veri, tarih)
+        VALUES (?, ?, ?, ?)
+    """, (sinif_id, spor, veri_str, datetime.now().strftime("%Y-%m-%d %H:%M")))
+    con.commit()
+    con.close()
     return {"ok": True}
 
 
@@ -3351,6 +3400,7 @@ def _ogrenci_maclari_init(con) -> None:
             olusturan_ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
             sinif1_id INTEGER NOT NULL REFERENCES siniflar(id),
             sinif2_id INTEGER NOT NULL REFERENCES siniflar(id),
+            spor TEXT NOT NULL DEFAULT 'futbol',
             skor1 INTEGER NOT NULL DEFAULT 0,
             skor2 INTEGER NOT NULL DEFAULT 0,
             aciklama TEXT NOT NULL DEFAULT '',
@@ -3361,16 +3411,25 @@ def _ogrenci_maclari_init(con) -> None:
             puan_isledi INTEGER NOT NULL DEFAULT 0
         )
     """)
+    try:
+        cols = {r[1] for r in con.execute("PRAGMA table_info(ogrenci_maclari)").fetchall()}
+    except Exception:
+        cols = set()
+    if cols and "spor" not in cols:
+        con.execute("ALTER TABLE ogrenci_maclari ADD COLUMN spor TEXT NOT NULL DEFAULT 'futbol'")
 
 
 def ogrenci_mac_olustur(ogrenci_id: int, rakip_sinif_id: int, skor1: int, skor2: int,
-                        aciklama: str = "") -> dict:
+                        aciklama: str = "", spor: str = "futbol") -> dict:
     try:
         skor1 = int(skor1)
         skor2 = int(skor2)
         rakip_sinif_id = int(rakip_sinif_id)
     except Exception:
         return {"ok": False, "sebep": "Skor ve rakip sinif gecersiz."}
+    spor = (spor or "futbol").strip().lower()
+    if spor not in {"futbol", "voleybol"}:
+        return {"ok": False, "sebep": "Spor turu gecersiz."}
     if skor1 < 0 or skor2 < 0:
         return {"ok": False, "sebep": "Skor negatif olamaz."}
     if skor1 == skor2:
@@ -3391,10 +3450,10 @@ def ogrenci_mac_olustur(ogrenci_id: int, rakip_sinif_id: int, skor1: int, skor2:
             return {"ok": False, "sebep": "Rakip sinif kendi sinifiniz olamaz."}
         con.execute("""
             INSERT INTO ogrenci_maclari
-                (olusturan_ogrenci_id, sinif1_id, sinif2_id, skor1, skor2, aciklama, tarih)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                (olusturan_ogrenci_id, sinif1_id, sinif2_id, spor, skor1, skor2, aciklama, tarih)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            ogrenci_id, sinif1_id, rakip_sinif_id, skor1, skor2,
+            ogrenci_id, sinif1_id, rakip_sinif_id, spor, skor1, skor2,
             (aciklama or "").strip()[:500],
             datetime.now().strftime("%Y-%m-%d %H:%M"),
         ))
@@ -3412,6 +3471,7 @@ def _ogrenci_mac_satirlari(con, where: str = "", params: tuple = (), limit: int 
                s1.sinif_adi AS sinif1_adi,
                s2.sinif_adi AS sinif2_adi,
                og.ad_soyad AS onaylayan_adi,
+               CASE WHEN COALESCE(m.spor, 'futbol') = 'voleybol' THEN 'Voleybol' ELSE 'Futbol' END AS spor_adi,
                CASE WHEN m.skor1 > m.skor2 THEN m.sinif1_id ELSE m.sinif2_id END AS kazanan_sinif_id,
                CASE WHEN m.skor1 > m.skor2 THEN s1.sinif_adi ELSE s2.sinif_adi END AS kazanan_sinif_adi
         FROM ogrenci_maclari m
@@ -3427,7 +3487,7 @@ def _ogrenci_mac_satirlari(con, where: str = "", params: tuple = (), limit: int 
 
 
 def ogrenci_mac_listesi(sinif_id: int | None = None, durum: str | None = None,
-                        limit: int = 50) -> list[dict]:
+                        limit: int = 50, spor: str | None = None) -> list[dict]:
     con = _conn()
     try:
         _ogrenci_maclari_init(con)
@@ -3439,6 +3499,9 @@ def ogrenci_mac_listesi(sinif_id: int | None = None, durum: str | None = None,
         if durum:
             kosullar.append("m.durum = ?")
             params.append(durum)
+        if spor:
+            kosullar.append("COALESCE(m.spor, 'futbol') = ?")
+            params.append(spor.strip().lower())
         where = "WHERE " + " AND ".join(kosullar) if kosullar else ""
         return _ogrenci_mac_satirlari(con, where, tuple(params), limit)
     finally:

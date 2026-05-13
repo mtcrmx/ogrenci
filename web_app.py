@@ -50,7 +50,7 @@ from database import (
     ogrenci_rozetleri_yayin_map, rozet_emojileri_ve_metin,
     envanter_listele, envanter_aktif_ayarla, ogrenci_aktif_envanter_map,
     oyun_puani_kaydet, GOREV_SABLONLARI,
-    MEVKILER, taktik_yukle, taktik_kaydet,
+    MEVKILER, taktik_yukle, taktik_kaydet, spor_taktik_yukle, spor_taktik_kaydet,
     ogrenci_mac_olustur, ogrenci_mac_listesi, ogrenci_mac_detay,
     ogretmen_onay_bekleyen_ogrenci_maclari, ogrenci_mac_onayla,
     bilgilendirme_ekle, bilgilendirme_listesi, bilgilendirme_yayinlayan_icin_sil,
@@ -518,7 +518,7 @@ def _bildirimleri_hazirla() -> list[dict]:
                 "tur": "Ogrenci maci",
                 "renk": "amber",
                 "baslik": f"{len(pending)} mac onay bekliyor",
-                "detay": "Ogrencilerin girdigi futbol sonucu ogretmen onayi bekliyor",
+                "detay": "Ogrencilerin girdigi spor sonucu ogretmen onayi bekliyor",
                 "hedef": url_for("ogretmen_ogrenci_maclari"),
             })
     for o in _ogrencilere_durum_ekle(tum_okul_ogrencileri()):
@@ -698,6 +698,7 @@ def ogrenci_mac_olustur_route():
         request.form.get("skor1", type=int),
         request.form.get("skor2", type=int),
         request.form.get("aciklama", ""),
+        request.form.get("spor", "futbol"),
     )
     if sonuc.get("ok"):
         flash("Mac sonucu ogretmen onayina gonderildi.", "success")
@@ -735,6 +736,36 @@ def api_ogrenci_taktik_kaydet():
         return jsonify({"ok": False, "sebep": "Ogrenci bulunamadi"}), 404
     veri = request.get_json(silent=True) or {}
     return jsonify(taktik_kaydet(int(o["sinif_id"]), json.dumps(veri, ensure_ascii=False)))
+
+
+@app.route("/ogrenci/voleybol-taktik")
+@ogrenci_giris_zorunlu
+def ogrenci_voleybol_taktik():
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        return redirect(url_for("ogrenci_giris"))
+    sinif_id = int(o["sinif_id"])
+    return render_template(
+        "voleybol_taktik.html",
+        sinif_id=sinif_id,
+        sinif_adi=o["sinif_adi"],
+        kadro=sinif_ogrencileri(sinif_id),
+        kayit=spor_taktik_yukle(sinif_id, "voleybol"),
+        ana_menu_url=url_for("ogrenci_mac_panel"),
+        kaydet_url=url_for("api_ogrenci_voleybol_taktik_kaydet"),
+    )
+
+
+@app.route("/api/ogrenci/voleybol-taktik/kaydet", methods=["POST"])
+@ogrenci_giris_zorunlu
+def api_ogrenci_voleybol_taktik_kaydet():
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        return jsonify({"ok": False, "sebep": "Ogrenci bulunamadi"}), 404
+    veri = request.get_json(silent=True) or {}
+    return jsonify(spor_taktik_kaydet(int(o["sinif_id"]), "voleybol", json.dumps(veri, ensure_ascii=False)))
 
 
 @app.route("/api/oyun/quiz-sorular")

@@ -36,17 +36,27 @@
 
     <section class="space-y-4">
       <div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
-        <div class="text-sm font-black text-slate-200">Taktik tahtasi</div>
-        <p class="mt-1 text-sm text-slate-400">Sinif kadronuzu sahaya yerlestirin, rollerini belirleyin ve kaydedin.</p>
+        <div class="text-sm font-black text-slate-200">Futbol taktik tahtasi</div>
+        <p class="mt-1 text-sm text-slate-400">Futbol kadronuzu sahaya yerlestirin, rollerini belirleyin ve kaydedin.</p>
         <a href="{{ url_for('ogrenci_taktik') }}"
            class="mt-4 inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-500">
-          Taktik hazirla
+          Futbol taktigi hazirla
+        </a>
+      </div>
+
+      <div class="rounded-lg border border-sky-800 bg-slate-900 p-4">
+        <div class="text-sm font-black text-slate-200">Voleybol taktik ekrani</div>
+        <p class="mt-1 text-sm text-slate-400">6 oyuncuyu voleybol sahasina yerlestirin, gorevlerini yazin ve kaydedin.</p>
+        <a href="{{ url_for('ogrenci_voleybol_taktik') }}"
+           class="mt-4 inline-flex rounded-lg bg-sky-600 px-4 py-2 text-sm font-black text-white hover:bg-sky-500">
+          Voleybol taktigi hazirla
         </a>
       </div>
 
       <form method="post" action="{{ url_for('ogrenci_mac_olustur_route') }}"
             class="rounded-lg border border-slate-800 bg-slate-900 p-4">
-        <div class="text-sm font-black text-slate-200">Mac sonucu gonder</div>
+        <input type="hidden" name="spor" value="futbol">
+        <div class="text-sm font-black text-slate-200">Futbol sonucu gonder</div>
         <div class="mt-4 space-y-3">
           <label class="block">
             <span class="text-xs font-bold text-slate-400">Rakip sinif</span>
@@ -74,6 +84,38 @@
           </button>
         </div>
       </form>
+
+      <form method="post" action="{{ url_for('ogrenci_mac_olustur_route') }}"
+            class="rounded-lg border border-sky-800 bg-slate-900 p-4">
+        <input type="hidden" name="spor" value="voleybol">
+        <div class="text-sm font-black text-slate-200">Voleybol sonucu gonder</div>
+        <div class="mt-4 space-y-3">
+          <label class="block">
+            <span class="text-xs font-bold text-slate-400">Rakip sinif</span>
+            <select name="rakip_sinif_id" required
+                    class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+              {% for sinif in siniflar %}
+                <option value="{{ sinif.id }}">{{ sinif.sinif_adi }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-xs font-bold text-slate-400">Bizim set</span>
+              <input name="skor1" type="number" min="0" max="3" required value="3"
+                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+            </label>
+            <label class="block">
+              <span class="text-xs font-bold text-slate-400">Rakip set</span>
+              <input name="skor2" type="number" min="0" max="3" required value="0"
+                     class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+            </label>
+          </div>
+          <button class="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-black hover:bg-sky-500">
+            Voleybol onayina gonder
+          </button>
+        </div>
+      </form>
     </section>
 
     <section class="rounded-lg border border-slate-800 bg-slate-900 p-4">
@@ -87,7 +129,10 @@
         {% for mac in maclar %}
           <div class="rounded-lg border border-slate-800 bg-slate-950 p-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="font-black">{{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}</div>
+              <div class="font-black">
+                <span class="mr-1 rounded-full {{ 'bg-sky-500/15 text-sky-300' if mac.spor == 'voleybol' else 'bg-emerald-500/15 text-emerald-300' }} px-2 py-0.5 text-[10px]">{{ mac.spor_adi or 'Futbol' }}</span>
+                {{ mac.sinif1_adi }} {{ mac.skor1 }} - {{ mac.skor2 }} {{ mac.sinif2_adi }}
+              </div>
               {% if mac.durum == 'onaylandi' %}
                 <span class="rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-black text-emerald-300">Onaylandi</span>
               {% elif mac.durum == 'reddedildi' %}
