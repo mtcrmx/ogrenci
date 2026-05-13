@@ -261,6 +261,9 @@ function update() {
             if (p === ball.owner) return; // taker stays at ball
             
             const isGK = Math.abs(p.baseY - p.team.defendY) < 60 || (p.rol && p.rol.includes("Kaleci"));
+            const rol = (p.rol || "").toLowerCase();
+            const isDefensiveRole = isGK || rol.includes("defans") || rol.includes("stoper") || rol.includes("bek");
+            const isForwardRole = rol.includes("forvet") || rol.includes("kanat") || rol.includes("hücum") || rol.includes("hucum");
             let targetX = p.baseX;
             let targetY = p.baseY;
             
@@ -288,6 +291,7 @@ function update() {
             } else if (setPieceType === "FRİKİK") {
                 const isDef = p.team !== setPieceTeam;
                 if (isDef) defCount++; else atkCount++;
+                const dirToGoal = normalize(GAME_WIDTH/2 - ball.x, defGoalY - ball.y);
                 
                 if (isGK && isDef) {
                     const goalCenterX = GAME_WIDTH/2;
@@ -299,7 +303,6 @@ function update() {
                     const wallSize = needsWall ? Math.max(2, Math.min(5, Math.floor((350 - distToGoal)/40))) : 0;
                     
                     if (defCount <= wallSize) {
-                        const dirToGoal = normalize(GAME_WIDTH/2 - ball.x, defGoalY - ball.y);
                         const perpX = -dirToGoal.y; const perpY = dirToGoal.x;
                         const wallCenterX = ball.x + dirToGoal.x * 80;
                         const wallCenterY = ball.y + dirToGoal.y * 80;
@@ -307,43 +310,54 @@ function update() {
                         targetX = wallCenterX + perpX * offset;
                         targetY = wallCenterY + perpY * offset;
                     } else {
-                        const lineY = Math.max(130, Math.min(GAME_HEIGHT-130, ball.y + atkDir * -120)); // offside line
-                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 1 : -1) * (20 + (defCount%4)*30);
-                        targetY = atkGoalY === 0 ? lineY : GAME_HEIGHT - lineY;
+                        // Kalan savunmacılar kaleyi boşaltmadan, top ile kale arasında doğal hat kurar.
+                        const holdDistance = isDefensiveRole ? 145 : 205;
+                        const holdX = ball.x + dirToGoal.x * holdDistance;
+                        const holdY = ball.y + dirToGoal.y * holdDistance;
+                        const spread = (defCount % 2 === 0 ? 1 : -1) * (35 + (defCount % 4) * 18);
+                        targetX = holdX + (-dirToGoal.y * spread);
+                        targetY = holdY + (dirToGoal.x * spread);
                     }
                 } else {
                     if (atkCount === 1) { // Short option
                         targetX = ball.x + (ball.x < GAME_WIDTH/2 ? 40 : -40);
                         targetY = ball.y + atkDir * 20;
-                    } else if (atkCount <= 5) { // Runs into box
+                    } else if (atkCount <= 5 && !isDefensiveRole) { // Runs into box
                         targetX = GAME_WIDTH/2 + (atkCount % 2 === 0 ? 1 : -1) * (10 + atkCount*15);
                         targetY = defGoalY === 0 ? 100 + atkCount*10 : GAME_HEIGHT - (100 + atkCount*10);
                     } else { // Stay back
-                        targetX = p.baseX; targetY = GAME_HEIGHT/2 + (atkDir * -100);
+                        targetX = p.baseX;
+                        targetY = Math.max(120, Math.min(GAME_HEIGHT - 120, p.baseY + p.team.dirY * 45));
                     }
                 }
             } else if (setPieceType === "KORNER") {
                 const isLeftCorner = ball.x < GAME_WIDTH/2;
                 const isDef = p.team !== setPieceTeam;
                 if (isDef) defCount++; else atkCount++;
+                const goalDir = defGoalY === 0 ? 1 : -1;
                 
                 if (isGK && isDef) {
                     targetX = isLeftCorner ? GAME_WIDTH/2 - 20 : GAME_WIDTH/2 + 20;
                     targetY = defGoalY === 0 ? 10 : GAME_HEIGHT - 10;
                 } else if (isDef) {
-                    if (defCount === 1) { targetX = isLeftCorner ? GAME_WIDTH/2 - 50 : GAME_WIDTH/2 + 50; targetY = defGoalY === 0 ? 10 : GAME_HEIGHT - 10; }
-                    else if (defCount === 2) { targetX = isLeftCorner ? GAME_WIDTH/2 + 50 : GAME_WIDTH/2 - 50; targetY = defGoalY === 0 ? 10 : GAME_HEIGHT - 10; }
-                    else if (defCount === 3) { targetX = GAME_WIDTH/2; targetY = defGoalY === 0 ? 130 : GAME_HEIGHT - 130; }
-                    else if (defCount === 4) { targetX = GAME_WIDTH/2; targetY = GAME_HEIGHT/2 + (atkDir * 100); }
-                    else { 
-                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 1 : -1) * (10 + defCount*10);
-                        targetY = defGoalY === 0 ? 40 + defCount*5 : GAME_HEIGHT - (40 + defCount*5);
+                    if (defCount <= 4) {
+                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 1 : -1) * (35 + defCount * 12);
+                        targetY = defGoalY + goalDir * (70 + defCount * 18);
+                    } else if (defCount <= 7) {
+                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 1 : -1) * (55 + (defCount - 4) * 22);
+                        targetY = defGoalY + goalDir * 165;
+                    } else {
+                        targetX = p.baseX;
+                        targetY = Math.max(130, Math.min(GAME_HEIGHT - 130, p.baseY));
                     }
                 } else {
                     if (atkCount === 1) { targetX = ball.x + (isLeftCorner ? 60 : -60); targetY = ball.y + (defGoalY === 0 ? 40 : -40); }
-                    else if (atkCount <= 5) { targetX = GAME_WIDTH/2 + (atkCount % 2 === 0 ? 1 : -1) * (20 + atkCount*12); targetY = defGoalY === 0 ? 50 + atkCount*10 : GAME_HEIGHT - (50 + atkCount*10); }
-                    else if (atkCount <= 7) { targetX = GAME_WIDTH/2 + (atkCount === 6 ? -50 : 50); targetY = defGoalY === 0 ? 140 : GAME_HEIGHT - 140; }
-                    else { targetX = GAME_WIDTH/2 + (atkCount === 8 ? -70 : 70); targetY = GAME_HEIGHT/2; }
+                    else if (atkCount <= 5 && !isDefensiveRole) { targetX = GAME_WIDTH/2 + (atkCount % 2 === 0 ? 1 : -1) * (20 + atkCount*12); targetY = defGoalY === 0 ? 65 + atkCount*12 : GAME_HEIGHT - (65 + atkCount*12); }
+                    else if (atkCount <= 7 && isForwardRole) { targetX = GAME_WIDTH/2 + (atkCount === 6 ? -50 : 50); targetY = defGoalY === 0 ? 155 : GAME_HEIGHT - 155; }
+                    else {
+                        targetX = p.baseX;
+                        targetY = Math.max(130, Math.min(GAME_HEIGHT - 130, p.baseY + p.team.dirY * 35));
+                    }
                 }
             } else if (setPieceType === "TAC") {
                 const isDef = p.team !== setPieceTeam;

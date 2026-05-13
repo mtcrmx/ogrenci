@@ -260,36 +260,38 @@ function update() {
             let p = ball.owner;
             if (p.actionCooldown > 0) { p.actionCooldown--; return; }
             
-            // Serve with spin
+            // Servis mutlaka rakip yarı sahayı hedefler; hata sadece hedefin yerini bozar.
             const errMargin = (100 - p.ozellikler.sut) / 100;
-            const errX = (Math.random() * 80 - 40) * errMargin;
-            const errY = (Math.random() * 80 - 40) * errMargin;
-            
-            const margin = 50;
-            const gX = Math.max(margin, Math.min(GAME_WIDTH - margin,
-                GAME_WIDTH/2 + (Math.random() * 240 - 120) + errX));
-            const gY = p.team === team1
-                ? Math.max(margin, Math.min(GAME_HEIGHT/2 - margin, 180 + errY))
-                : Math.max(GAME_HEIGHT/2 + margin, Math.min(GAME_HEIGHT - margin, GAME_HEIGHT - 180 + errY));
+            const errX = (Math.random() * 70 - 35) * errMargin;
+            const errY = (Math.random() * 55 - 25) * errMargin;
+            const courtMargin = 70;
+            const gX = Math.max(courtMargin, Math.min(GAME_WIDTH - courtMargin,
+                courtMargin + Math.random() * (GAME_WIDTH - courtMargin * 2) + errX));
+            const targetTop = p.team === team1;
+            const gY = targetTop
+                ? Math.max(80, Math.min(GAME_HEIGHT / 2 - 70, 175 + errY))
+                : Math.max(GAME_HEIGHT / 2 + 70, Math.min(GAME_HEIGHT - 80, GAME_HEIGHT - 175 + errY));
             
             const dir = normalize(gX - p.x, gY - p.y);
             const d = dist(p, {x:gX, y:gY});
             
-            ball.vz = 8 + Math.random() * 3;
-            const airTime = (ball.vz / GRAVITY) * 2;
-            const power = Math.max(2, d / airTime);
+            ball.vz = 12 + Math.random() * 2.5;
+            const airTime = Math.max(46, Math.min(72, d / 7.4));
+            const power = Math.max(5.5, d / airTime);
             
             ball.vx = dir.x * power;
             ball.vy = dir.y * power;
+            if (targetTop && ball.vy > -5.2) ball.vy = -5.2;
+            if (!targetTop && ball.vy < 5.2) ball.vy = 5.2;
             // Magnus spin: float serve vs jump serve
-            ball.spinX = (Math.random() - 0.5) * 0.15 * (1 - errMargin);
-            ball.spinY = (Math.random() - 0.5) * 0.1 * (1 - errMargin);
+            ball.spinX = (Math.random() - 0.5) * 0.08 * (1 - errMargin);
+            ball.spinY = (Math.random() - 0.5) * 0.05 * (1 - errMargin);
             
             ball.owner = null;
             ball.lastTouchedBy = null; // Reset so server can receive return
             ball.lastTeamTouched = p.team;
             lastNetSide = p.team;
-            teamTouches = 1;
+            teamTouches = 0;
             stateMachine = "PLAYING";
             showEvent("Servis!", 600);
         }
