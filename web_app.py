@@ -643,7 +643,8 @@ def ogrenci_gelisim_panel():
     sinif_sira = next((i for i, s in enumerate(gl, 1) if s["sinif_id"] == o["sinif_id"]), None)
     
     # Yeni eklendi: Özellikler
-    toplam_xp = int(ozet.get("puan", 0))
+    puan_dict = ozet.get("puan") or {}
+    toplam_xp = int(puan_dict.get("xp", 0))
     ozellikler = ogrenci_ozellikleri_getir(oid, toplam_xp)
     
     return render_template(
@@ -851,7 +852,8 @@ def api_ogrenci_mac_2d_data():
             for i, ogr in enumerate(kadro[:limit]):
                 pos = default_positions[i] if i < len(default_positions) else {"x": 50, "y": 50}
                 ozet = gelisim_ozeti(ogr["id"])
-                xp = int(ozet.get("puan", 0))
+                puan_dict = ozet.get("puan") or {}
+                xp = int(puan_dict.get("xp", 0))
                 ovr = min(99, 50 + int(xp * 0.8))
                 
                 oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
@@ -873,7 +875,8 @@ def api_ogrenci_mac_2d_data():
             ogr = next((x for x in kadro if str(x["id"]) == str(pid)), None)
             if ogr:
                 ozet = gelisim_ozeti(ogr["id"])
-                xp = int(ozet.get("puan", 0))
+                puan_dict = ozet.get("puan") or {}
+                xp = int(puan_dict.get("xp", 0))
                 ovr = min(99, 50 + int(xp * 0.8))
                 
                 oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
@@ -905,7 +908,8 @@ def api_ogrenci_mac_2d_data():
 def api_ogrenci_ozellik_artir():
     oid = int(session["ogrenci_id"])
     ozet = gelisim_ozeti(oid)
-    toplam_xp = int(ozet.get("puan", 0))
+    puan_dict = ozet.get("puan") or {}
+    toplam_xp = int(puan_dict.get("xp", 0))
     veri = request.get_json(silent=True) or {}
     ozellik = veri.get("ozellik")
     
