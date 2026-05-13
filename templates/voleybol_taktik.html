@@ -458,7 +458,7 @@ function sahaDrop(e) {
   const rect = document.getElementById('saha-wrap').getBoundingClientRect();
   const x = Math.max(4, Math.min(96, (e.clientX - rect.left) / rect.width * 100));
   const y = Math.max(4, Math.min(96, (e.clientY - rect.top)  / rect.height * 100));
-  yerleştir(id, x, y, true);
+  yerleştirVeyaDegistir(id, x, y, true);
   dragId = null;
 }
 
@@ -500,7 +500,7 @@ function listeTouchEnd(e) {
       t.clientY >= rect.top  && t.clientY <= rect.bottom) {
     const x = Math.max(4, Math.min(96, (t.clientX - rect.left) / rect.width  * 100));
     const y = Math.max(4, Math.min(96, (t.clientY - rect.top)  / rect.height * 100));
-    yerleştir(touchDragId, x, y, true);
+    yerleştirVeyaDegistir(touchDragId, x, y, true);
   }
   document.removeEventListener('touchmove', listeTouchMove);
   document.removeEventListener('touchend',  listeTouchEnd);
@@ -510,6 +510,25 @@ function listeTouchEnd(e) {
 // ════════════════════════════════════════════════════════════════════════
 // SAHAYA YERLEŞTIR
 // ════════════════════════════════════════════════════════════════════════
+function yerleştirVeyaDegistir(id, x, y, rolSorulsun) {
+  let swapped = false;
+  for (const [otherId, otherO] of Object.entries(oyuncular)) {
+       if (otherId === id) continue;
+       if (otherO.sahada) {
+            const diffX = Math.abs(otherO.x - x);
+            const diffY = Math.abs(otherO.y - y);
+            if (diffX < 7 && diffY < 7) {
+                sahadanCikar(otherId);
+                yerleştir(id, otherO.x, otherO.y, false);
+                swapped = true;
+                toast(oyuncular[otherId].ad.split(' ')[0] + ' ile ' + oyuncular[id].ad.split(' ')[0] + ' yer değiştirdi.');
+                break;
+            }
+       }
+  }
+  if (!swapped) yerleştir(id, x, y, rolSorulsun);
+}
+
 function yerleştir(id, x, y, rolSorulsun = false) {
   const o = oyuncular[id];
   if (!o) return;
@@ -578,6 +597,8 @@ function baslaDrag(cx, cy, id) {
   const saha = document.getElementById('saha-wrap');
   const rect = saha.getBoundingClientRect();
   const o = oyuncular[id];
+  let startX = o.x;
+  let startY = o.y;
   dragOfsX = cx - rect.left - (o.x / 100 * rect.width);
   dragOfsY = cy - rect.top  - (o.y / 100 * rect.height);
   const el = document.getElementById('tok-'+id);
@@ -591,7 +612,7 @@ function baslaDrag(cx, cy, id) {
     const r   = document.getElementById('saha-wrap').getBoundingClientRect();
     const nx  = Math.max(3, Math.min(97, (cx2 - dragOfsX - r.left) / r.width  * 100));
     const ny  = Math.max(3, Math.min(97, (cy2 - dragOfsY - r.top)  / r.height * 100));
-    const diff = Math.abs(nx - oyuncular[dragToken].x) + Math.abs(ny - oyuncular[dragToken].y);
+    const diff = Math.abs(nx - startX) + Math.abs(ny - startY);
     if (diff > .5) didMove = true;
     oyuncular[dragToken].x = nx;
     oyuncular[dragToken].y = ny;
@@ -599,11 +620,45 @@ function baslaDrag(cx, cy, id) {
     if (tok) { tok.style.left = nx+'%'; tok.style.top = ny+'%'; }
     if (didMove) degistiIsaretle();
   };
-  const upM = () => {
-    if (dragToken) {
-      const el2 = document.getElementById('tok-'+dragToken);
-      if (el2) { el2.style.zIndex = ''; el2.style.transition = ''; }
+  const upM = ev => {
+    if (!dragToken) return;
+    const cx2 = ev.changedTouches ? ev.changedTouches[0].clientX : ev.clientX;
+    const cy2 = ev.changedTouches ? ev.changedTouches[0].clientY : ev.clientY;
+
+    const el2 = document.getElementById('tok-'+dragToken);
+    if (el2) { el2.style.zIndex = ''; el2.style.transition = ''; }
+
+    if (didMove) {
+        const dropEl = document.elementFromPoint(cx2, cy2);
+        if (dropEl && dropEl.closest('aside.w-40')) {
+             sahadanCikar(dragToken);
+        } else {
+             let swapped = false;
+             for (const [otherId, otherO] of Object.entries(oyuncular)) {
+                  if (otherId === dragToken || !otherO.sahada) continue;
+                  const diffX = Math.abs(otherO.x - oyuncular[dragToken].x);
+                  const diffY = Math.abs(otherO.y - oyuncular[dragToken].y);
+                  if (diffX < 7 && diffY < 7) {
+                       const oldOtherX = otherO.x;
+                       const oldOtherY = otherO.y;
+                       otherO.x = startX;
+                       otherO.y = startY;
+                       oyuncular[dragToken].x = oldOtherX;
+                       oyuncular[dragToken].y = oldOtherY;
+
+                       const tokOther = document.getElementById('tok-'+otherId);
+                       if(tokOther) { tokOther.style.left = startX+'%'; tokOther.style.top = startY+'%'; }
+                       const tokMe = document.getElementById('tok-'+dragToken);
+                       if(tokMe) { tokMe.style.left = oldOtherX+'%'; tokMe.style.top = oldOtherY+'%'; }
+                       
+                       swapped = true;
+                       toast(oyuncular[otherId].ad.split(' ')[0] + ' ile ' + oyuncular[dragToken].ad.split(' ')[0] + ' yer değiştirdi.');
+                       break;
+                  }
+             }
+        }
     }
+    
     dragToken = null;
     document.removeEventListener('mousemove', mvM);
     document.removeEventListener('mouseup',   upM);
