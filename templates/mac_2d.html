@@ -178,13 +178,12 @@ function update() {
         timeTicks++;
         // Players reposition
         players.forEach(p => {
-            if (p === ball.owner) return; // throw-in taker stays
+            if (p === ball.owner) return; // taker stays
             
             let targetX = p.baseX;
             let targetY = p.baseY;
             
             if (setPieceType === "KORNER") {
-                // Crowd the penalty box
                 if (p.team === setPieceTeam) {
                     targetX = GAME_WIDTH/2 + (Math.random()*100 - 50);
                     targetY = setPieceTeam.dirY === -1 ? 100 : GAME_HEIGHT - 100; // Opponent goal
@@ -193,16 +192,37 @@ function update() {
                     targetY = setPieceTeam.dirY === -1 ? 80 : GAME_HEIGHT - 80; // Own goal
                 }
             } else if (setPieceType === "TAC") {
-                // Players move slightly towards ball
                 targetX = p.baseX * 0.5 + ball.x * 0.5 + (Math.random()*60-30);
                 targetY = p.baseY * 0.7 + ball.y * 0.3 + (Math.random()*60-30);
+            } else if (setPieceType === "PENALTI") {
+                const isGK = Math.abs(p.baseY - p.team.defendY) < 50;
+                if (isGK && p.team !== setPieceTeam) {
+                    targetX = GAME_WIDTH/2;
+                    targetY = p.team.defendY === 0 ? 10 : GAME_HEIGHT - 10;
+                } else {
+                    // Everyone else stands outside the box
+                    targetY = setPieceTeam.dirY === -1 ? 250 : GAME_HEIGHT - 250;
+                    targetX = GAME_WIDTH/2 + (Math.random()*200 - 100);
+                }
+            } else if (setPieceType === "FRİKİK") {
+                const isGK = Math.abs(p.baseY - p.team.defendY) < 50;
+                if (isGK && p.team !== setPieceTeam) {
+                    targetX = GAME_WIDTH/2; targetY = p.team.defendY === 0 ? 10 : GAME_HEIGHT - 10;
+                } else if (p.team !== setPieceTeam) {
+                    // Wall formation
+                    const dirToGoal = normalize(GAME_WIDTH/2 - ball.x, p.team.defendY - ball.y);
+                    targetX = ball.x + dirToGoal.x * 80 + (Math.random()*40-20);
+                    targetY = ball.y + dirToGoal.y * 80 + (Math.random()*40-20);
+                } else {
+                    // Attackers prepare for rebound
+                    targetX = GAME_WIDTH/2 + (Math.random()*100 - 50);
+                    targetY = ball.y + setPieceTeam.dirY * 50;
+                }
             }
 
             const dir = normalize(targetX - p.x, targetY - p.y);
             const d = dist(p, {x:targetX, y:targetY});
-            if (d > 5) {
-                p.x += dir.x * 2; p.y += dir.y * 2;
-            }
+            if (d > 5) { p.x += dir.x * 2; p.y += dir.y * 2; }
         });
 
         setPieceTimer--;
@@ -210,22 +230,31 @@ function update() {
             // Take the set piece
             if (ball.owner) {
                 const p = ball.owner;
-                // find teammate
-                let bestMate = null; let bestScore = -999;
-                players.forEach(m => {
-                    if (m.team === p.team && m !== p) {
-                        const score = -dist(p, m) + (setPieceType === "KORNER" ? -dist(m, {x:GAME_WIDTH/2, y:p.team.goalY}) : 0);
-                        if (score > bestScore) { bestScore = score; bestMate = m; }
-                    }
-                });
                 
-                if (bestMate) {
-                    const dir = normalize(bestMate.x - p.x, bestMate.y - p.y);
-                    const power = setPieceType === "KORNER" ? 18 : 12;
+                if (setPieceType === "PENALTI" || setPieceType === "FRİKİK") {
+                    // Shoot directly at goal
+                    const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
+                    const dir = normalize(gX - p.x, p.team.goalY - p.y);
+                    const power = setPieceType === "PENALTI" ? 22 : 18 + (p.ozellikler.sut / 12);
                     ball.vx = dir.x * power; ball.vy = dir.y * power;
-                    ball.targetPlayer = bestMate;
                 } else {
-                    ball.vx = (GAME_WIDTH/2 - p.x) * 0.05; ball.vy = (p.team.goalY - p.y) * 0.05;
+                    // find teammate for throw-in or corner
+                    let bestMate = null; let bestScore = -999;
+                    players.forEach(m => {
+                        if (m.team === p.team && m !== p) {
+                            const score = -dist(p, m) + (setPieceType === "KORNER" ? -dist(m, {x:GAME_WIDTH/2, y:p.team.goalY}) : 0);
+                            if (score > bestScore) { bestScore = score; bestMate = m; }
+                        }
+                    });
+                    
+                    if (bestMate) {
+                        const dir = normalize(bestMate.x - p.x, bestMate.y - p.y);
+                        const power = setPieceType === "KORNER" ? 18 : 12;
+                        ball.vx = dir.x * power; ball.vy = dir.y * power;
+                        ball.targetPlayer = bestMate;
+                    } else {
+                        ball.vx = (GAME_WIDTH/2 - p.x) * 0.05; ball.vy = (p.team.goalY - p.y) * 0.05;
+                    }
                 }
                 
                 ball.lastTouchedBy = p;
@@ -286,7 +315,6 @@ function update() {
         // Pick a player to take it
         let taker = null;
         if (setPieceType === "AUT") {
-            // Find GK
             taker = players.find(p => p.team === setPieceTeam && Math.abs(p.baseY - setPieceTeam.defendY) < 50);
         }
         if (!taker) {
@@ -314,27 +342,55 @@ function update() {
         ball.targetPlayer = null;
         ball.lastTouchedBy = ball.owner;
         
-        // Tackling: If an opponent is very close, calculate a duel
-        players.forEach(opp => {
+        // Tackling
+        for (let i = players.length - 1; i >= 0; i--) {
+            let opp = players[i];
             if (opp.team !== ball.owner.team && dist(opp, ball.owner) < 18 && opp.actionCooldown <= 0) {
-                // Duel! Attacker's Hız vs Defender's Defans
                 const atkPower = ball.owner.ozellikler.hiz + Math.random()*20;
                 const defPower = opp.ozellikler.defans + Math.random()*20;
                 
                 if (defPower > atkPower) {
-                    // Defender won the tackle
-                    showEvent("Kritik müdahale!", 500);
-                    ball.owner.actionCooldown = 30; // stunned
-                    ball.owner = opp;
-                    opp.state = 'WITH_BALL';
-                    opp.hasBallTime = 0;
-                    ball.lastTouchedBy = opp;
+                    // Check for foul
+                    if (Math.random() < 0.20) {
+                        // FAUL!
+                        ball.owner.actionCooldown = 40;
+                        opp.actionCooldown = 40;
+                        stateMachine = "SET_PIECE";
+                        setPieceTimer = 120;
+                        setPieceTeam = ball.owner.team; // fouled team gets the ball
+                        
+                        const inBox = Math.abs(ball.y - opp.team.defendY) < 150 && Math.abs(ball.x - GAME_WIDTH/2) < 120;
+                        setPieceType = inBox ? "PENALTI" : "FRİKİK";
+                        
+                        let eventMsg = `${setPieceType}! ${opp.ad} sert girdi.`;
+                        
+                        // Cards
+                        if (Math.random() < 0.3) {
+                            if (Math.random() < 0.1) {
+                                eventMsg += ` 🟥 KIRMIZI KART!`;
+                                players.splice(i, 1); // remove player
+                            } else {
+                                eventMsg += ` 🟨 SARI KART!`;
+                            }
+                        }
+                        
+                        showEvent(eventMsg, 3000);
+                        ball.owner = null;
+                        return; // break out
+                    } else {
+                        // Clean tackle
+                        showEvent("Kritik müdahale!", 500);
+                        ball.owner.actionCooldown = 30; // stunned
+                        ball.owner = opp;
+                        opp.state = 'WITH_BALL';
+                        opp.hasBallTime = 0;
+                        ball.lastTouchedBy = opp;
+                    }
                 } else {
-                    // Attacker dribbled past
                     opp.actionCooldown = 20; // left behind
                 }
             }
-        });
+        }
         
     } else {
         // Try to claim ball

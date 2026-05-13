@@ -643,8 +643,8 @@ def ogrenci_gelisim_panel():
     sinif_sira = next((i for i, s in enumerate(gl, 1) if s["sinif_id"] == o["sinif_id"]), None)
     
     # Yeni eklendi: Özellikler
-    tik_sayisi = ogrenci_tik_sayisi(oid)
-    ozellikler = ogrenci_ozellikleri_getir(oid, tik_sayisi)
+    toplam_xp = int(ozet.get("puan", 0))
+    ozellikler = ogrenci_ozellikleri_getir(oid, toplam_xp)
     
     return render_template(
         "ogrenci_xp_panel.html",
@@ -850,7 +850,8 @@ def api_ogrenci_mac_2d_data():
                 limit = 11
             for i, ogr in enumerate(kadro[:limit]):
                 pos = default_positions[i] if i < len(default_positions) else {"x": 50, "y": 50}
-                xp = ogr.get("tik_sayisi", 0)
+                ozet = gelisim_ozeti(ogr["id"])
+                xp = int(ozet.get("puan", 0))
                 ovr = min(99, 50 + int(xp * 0.8))
                 
                 oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
@@ -871,7 +872,8 @@ def api_ogrenci_mac_2d_data():
         for pid, p in taktik["oyuncular"].items():
             ogr = next((x for x in kadro if str(x["id"]) == str(pid)), None)
             if ogr:
-                xp = ogr.get("tik_sayisi", 0)
+                ozet = gelisim_ozeti(ogr["id"])
+                xp = int(ozet.get("puan", 0))
                 ovr = min(99, 50 + int(xp * 0.8))
                 
                 oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
@@ -902,11 +904,12 @@ def api_ogrenci_mac_2d_data():
 @ogrenci_giris_zorunlu
 def api_ogrenci_ozellik_artir():
     oid = int(session["ogrenci_id"])
-    tik_sayisi = ogrenci_tik_sayisi(oid)
+    ozet = gelisim_ozeti(oid)
+    toplam_xp = int(ozet.get("puan", 0))
     veri = request.get_json(silent=True) or {}
     ozellik = veri.get("ozellik")
     
-    sonuc = ogrenci_ozellik_artir(oid, ozellik, tik_sayisi)
+    sonuc = ogrenci_ozellik_artir(oid, ozellik, toplam_xp)
     return jsonify(sonuc)
 
 @app.route("/ogrenci/mac/2d")
