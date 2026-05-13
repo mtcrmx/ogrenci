@@ -366,6 +366,12 @@
               title="Öğrenci özeti">
         <span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}
       </button>
+      {% if o.aktif_envanter %}
+      <span class="inline-flex items-center rounded-full bg-cyan-100 px-1.5 py-0.5 text-[11px] font-black text-cyan-800"
+            title="{{ o.aktif_envanter.ad }}">
+        {{ o.aktif_envanter.emoji }}
+      </span>
+      {% endif %}
       {% if o.rozetler %}
       <span class="inline-flex flex-wrap gap-0.5 items-center">
         {% for rz in o.rozetler %}
@@ -400,11 +406,6 @@
 
   <!-- Butonlar -->
   <div class="flex gap-1 flex-shrink-0 ml-auto flex-wrap justify-end">
-    <button type="button" title="Pozitif rozet"
-            onclick="pozitifRozet({{ o.id }})"
-            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition">
-      💚
-    </button>
     <button onclick="olumluModalAc({{ o.id }}, '{{ o.ad_soyad|e }}', {{ sinif_id }})"
             {% if (o.olumlu_tik|default(0)) >= 36 %}disabled title="36/36 olumlu tik limiti doldu"{% endif %}
             class="{% if (o.olumlu_tik|default(0)) >= 36 %}bg-slate-400 cursor-not-allowed{% else %}bg-teal-600 hover:bg-teal-700{% endif %} text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">
@@ -757,6 +758,9 @@ function kartHTML(o, sinifId) {
   const roz = (o.rozetler || []).map(r =>
     `<span class="text-base leading-none" title="${String(r.ad || '').replace(/"/g, '&quot;')}">${r.emoji || ''}</span>`
   ).join('');
+  const env = o.aktif_envanter
+    ? `<span class="inline-flex items-center rounded-full bg-cyan-100 px-1.5 py-0.5 text-[11px] font-black text-cyan-800" title="${String(o.aktif_envanter.ad || '').replace(/"/g, '&quot;')}">${o.aktif_envanter.emoji || ''}</span>`
+    : '';
 
   return `
   <div class="ogrenci-kart flex flex-wrap sm:flex-nowrap items-center gap-2 rounded-xl border px-3 py-2.5
@@ -767,6 +771,7 @@ function kartHTML(o, sinifId) {
         <button type="button" class="text-left hover:underline" onclick="ogrenciOzetAc(${o.id})" title="Özet">
           <span class="mr-1">${o.emoji}</span>${adStr.replace(/</g, '&lt;')}
         </button>
+        ${env}
         ${roz ? `<span class="inline-flex flex-wrap gap-0.5 items-center">${roz}</span>` : ''}
       </div>
       <div class="text-xs text-slate-500">No: ${o.ogr_no}</div>
@@ -779,8 +784,6 @@ function kartHTML(o, sinifId) {
       <span class="text-xs hidden md:block text-slate-400">${noktalar}</span>
     </div>
     <div class="flex gap-1 flex-shrink-0 ml-auto flex-wrap justify-end">
-      <button type="button" title="Pozitif rozet" onclick="pozitifRozet(${o.id})"
-              class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition">💚</button>
       <button type="button" ${ol >= 36 ? 'disabled title="36/36 olumlu tik limiti doldu"' : ''} onclick='olumluModalAc(${o.id}, ${adJs}, ${sinifId})'
               class="${ol >= 36 ? 'bg-slate-400 cursor-not-allowed' : 'bg-teal-600 hover:bg-teal-700'} text-white text-xs font-bold px-2 py-1.5 rounded-lg transition whitespace-nowrap">+ Olumlu</button>
       <button type="button" ${Number(o.tik_sayisi || 0) >= 12 ? 'disabled title="12/12 olumsuz tik limiti doldu; idari işlem başlatılmalı"' : ''} onclick='tikModalAc(${o.id}, ${adJs}, ${sinifId})'

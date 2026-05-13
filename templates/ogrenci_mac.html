@@ -16,6 +16,7 @@
       <nav class="flex flex-wrap gap-2">
         <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold">XP Panel</a>
         <a href="{{ url_for('ogrenci_gorunum') }}" class="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold">Tik gecmisi</a>
+        <a href="{{ url_for('envanter') }}" class="rounded-lg bg-cyan-700 px-3 py-2 text-xs font-bold">Envanterim</a>
         <a href="{{ url_for('oyunlar') }}" class="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold">Oyunlar</a>
         <a href="{{ url_for('ogrenci_cikis') }}" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold">Cikis</a>
       </nav>
@@ -68,12 +69,6 @@
                      class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
             </label>
           </div>
-          <label class="block">
-            <span class="text-xs font-bold text-slate-400">Not</span>
-            <textarea name="aciklama" rows="3"
-                      class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
-                      placeholder="Mac ne zaman oynandi, kimler katildi?"></textarea>
-          </label>
           <button class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-black hover:bg-amber-500">
             Ogretmen onayina gonder
           </button>

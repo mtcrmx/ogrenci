@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Envanterim</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+<main class="mx-auto max-w-5xl px-4 py-5 space-y-5">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p class="text-xs font-black uppercase tracking-widest text-cyan-300">{{ ogrenci.sinif_adi }}</p>
+      <h1 class="text-2xl font-black">Envanterim</h1>
+      <p class="text-sm text-slate-400">{{ ogrenci.ad_soyad }} · Pazardan aldığın ürünü isminin yanında gösterebilirsin.</p>
+    </div>
+    <nav class="flex flex-wrap gap-2">
+      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="rounded-xl bg-indigo-700 px-4 py-2 text-xs font-black">XP Panel</a>
+      <a href="{{ url_for('pazar') }}" class="rounded-xl bg-amber-700 px-4 py-2 text-xs font-black">Pazar</a>
+      <a href="{{ url_for('oyunlar') }}" class="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-black">Oyunlar</a>
+    </nav>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+      {% for cat, msg in messages %}
+      <div class="rounded-xl border px-4 py-2 text-sm font-bold
+        {% if cat == 'success' %}border-emerald-500/40 bg-emerald-500/10 text-emerald-200{% else %}border-red-500/40 bg-red-500/10 text-red-200{% endif %}">
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <section class="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4">
+    <p class="text-xs font-black uppercase tracking-widest text-cyan-200">Herkese gorunen secim</p>
+    {% if envanter.aktif %}
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="text-5xl">{{ envanter.aktif.emoji }}</div>
+          <div>
+            <div class="font-black text-white">{{ envanter.aktif.ad }}</div>
+            <div class="text-xs text-cyan-100/80">{{ envanter.aktif.kategori }} · {{ envanter.aktif.nadirlik }}</div>
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('envanter_aktif_route') }}">
+          <input type="hidden" name="urun_kodu" value="">
+          <button class="rounded-xl bg-slate-800 px-4 py-2 text-xs font-black text-white hover:bg-slate-700">Gizle</button>
+        </form>
+      </div>
+    {% else %}
+      <div class="mt-3 rounded-xl border border-dashed border-cyan-500/30 p-4 text-sm text-cyan-100/80">
+        Su anda isminin yaninda gorunen bir pazar urunu yok.
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="space-y-3">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="text-xl font-black">Koleksiyon</h2>
+      <span class="text-xs text-slate-500">{{ envanter.urunler|length }} urun</span>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for u in envanter.urunler %}
+      <article class="rounded-2xl border {{ 'border-cyan-400 bg-cyan-500/10' if u.aktif else 'border-slate-800 bg-slate-900' }} p-4">
+        <div class="flex items-start justify-between gap-2">
+          <div class="text-5xl">{{ u.emoji }}</div>
+          <span class="rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-black text-slate-300">{{ u.nadirlik }}</span>
+        </div>
+        <div class="mt-3 font-black text-white">{{ u.ad }}</div>
+        <div class="text-xs text-slate-400">{{ u.kategori }}</div>
+        <form method="post" action="{{ url_for('envanter_aktif_route') }}" class="mt-4">
+          <input type="hidden" name="urun_kodu" value="{{ u.kod }}">
+          <button class="w-full rounded-xl {{ 'bg-cyan-700 text-white' if u.aktif else 'bg-slate-800 hover:bg-cyan-700 text-slate-100' }} px-3 py-2 text-sm font-black">
+            {{ 'Isminin yaninda gorunuyor' if u.aktif else 'Ismimin yaninda goster' }}
+          </button>
+        </form>
+      </article>
+      {% else %}
+      <div class="sm:col-span-2 lg:col-span-3 rounded-2xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-500">
+        Henuz pazar urunun yok. Pazardan bir urun satin alinca burada gorunecek.
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+</body>
+</html>

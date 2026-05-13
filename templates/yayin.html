@@ -107,6 +107,10 @@
                 <div class="min-w-0">
                   <div class="text-base sm:text-lg font-black text-white break-words flex flex-wrap items-center gap-x-1 gap-y-0">
                     <span>{{ loop.index }}. {{ o.emoji }} {{ o.ad_soyad }}</span>
+                    {% if o.aktif_envanter %}
+                    <span class="inline-flex items-center rounded-full bg-cyan-400/15 px-1.5 py-0.5 text-xs text-cyan-100"
+                          title="{{ o.aktif_envanter.ad }}">{{ o.aktif_envanter.emoji }}</span>
+                    {% endif %}
                     {% if o.rozetler %}
                     <span class="inline-flex flex-wrap gap-0.5 ml-1">
                       {% for rz in o.rozetler %}
@@ -140,6 +144,10 @@
                 <div class="min-w-0">
                   <div class="text-base sm:text-lg font-black text-emerald-100 break-words flex flex-wrap items-center gap-x-1 gap-y-0">
                     <span>{{ loop.index }}. {{ o.emoji }} {{ o.ad_soyad }}</span>
+                    {% if o.aktif_envanter %}
+                    <span class="inline-flex items-center rounded-full bg-cyan-400/15 px-1.5 py-0.5 text-xs text-cyan-100"
+                          title="{{ o.aktif_envanter.ad }}">{{ o.aktif_envanter.emoji }}</span>
+                    {% endif %}
                     {% if o.rozetler %}
                     <span class="inline-flex flex-wrap gap-0.5 ml-1">
                       {% for rz in o.rozetler %}
@@ -261,6 +269,9 @@ function kartHTML(o, sira, barRef) {
   const roz = (o.rozetler || []).map(r =>
     `<span class="inline-block text-base leading-none" title="${escapeHtml(r.ad)}">${r.emoji}</span>`
   ).join('');
+  const env = o.aktif_envanter
+    ? `<span class="inline-flex items-center rounded-full bg-cyan-400/15 px-1.5 py-0.5 text-xs text-cyan-100" title="${escapeHtml(o.aktif_envanter.ad)}">${escapeHtml(o.aktif_envanter.emoji)}</span>`
+    : '';
   let border, textCls, barCls, bg, durumText;
   if (tik === 0) {
     border = 'border-emerald-500/25'; bg = 'bg-emerald-500/10'; textCls = '#86efac'; barCls = '#22c55e'; durumText = 'Temiz';
@@ -278,7 +289,7 @@ function kartHTML(o, sira, barRef) {
       <div class="flex-1 min-w-0 px-4 py-3">
         <div class="flex items-center justify-between gap-2">
           <div class="min-w-0">
-            <div class="font-black text-base sm:text-lg leading-tight break-words flex flex-wrap items-center gap-x-1" style="color:${textCls}"><span>${emoji} ${ad}</span>${roz ? `<span class="inline-flex flex-wrap gap-0.5 ml-0.5">${roz}</span>` : ''}</div>
+            <div class="font-black text-base sm:text-lg leading-tight break-words flex flex-wrap items-center gap-x-1" style="color:${textCls}"><span>${emoji} ${ad}</span>${env}${roz ? `<span class="inline-flex flex-wrap gap-0.5 ml-0.5">${roz}</span>` : ''}</div>
             <div class="text-xs text-slate-300">${sinif} · ${durumText}</div>
           </div>
           <div class="text-right shrink-0">
@@ -302,6 +313,9 @@ function kartHTMLOlumlu(o, sira, barRef) {
   const roz = (o.rozetler || []).map(r =>
     `<span class="inline-block text-base leading-none" title="${escapeHtml(r.ad)}">${r.emoji}</span>`
   ).join('');
+  const env = o.aktif_envanter
+    ? `<span class="inline-flex items-center rounded-full bg-cyan-400/15 px-1.5 py-0.5 text-xs text-cyan-100" title="${escapeHtml(o.aktif_envanter.ad)}">${escapeHtml(o.aktif_envanter.emoji)}</span>`
+    : '';
   const muted = n === 0;
   const border = muted ? 'border-white/10' : 'border-emerald-500/35';
   const bg = muted ? 'bg-slate-950/60' : 'bg-emerald-500/10';
@@ -316,7 +330,7 @@ function kartHTMLOlumlu(o, sira, barRef) {
       <div class="flex-1 min-w-0 px-4 py-3">
         <div class="flex items-center justify-between gap-2">
           <div class="min-w-0">
-            <div class="font-black text-base sm:text-lg leading-tight break-words flex flex-wrap items-center gap-x-1" style="color:${textCls}"><span>${emoji} ${ad}</span>${roz ? `<span class="inline-flex flex-wrap gap-0.5 ml-0.5">${roz}</span>` : ''}</div>
+            <div class="font-black text-base sm:text-lg leading-tight break-words flex flex-wrap items-center gap-x-1" style="color:${textCls}"><span>${emoji} ${ad}</span>${env}${roz ? `<span class="inline-flex flex-wrap gap-0.5 ml-0.5">${roz}</span>` : ''}</div>
             <div class="text-xs text-slate-400">${sinif}</div>
           </div>
           <div class="text-right shrink-0">
@@ -351,7 +365,10 @@ function renderIlkBes(data) {
   el.innerHTML = data.map((o, idx) => `
     <div class="float-in flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 px-3 py-2" style="animation-delay:${idx*70}ms">
       <div class="min-w-0">
-        <div class="font-black text-sm break-words">${idx + 1}. ${o.ad_soyad}</div>
+        <div class="font-black text-sm break-words flex flex-wrap items-center gap-x-1">
+          <span>${idx + 1}. ${o.ad_soyad}</span>
+          ${o.aktif_envanter ? `<span class="inline-flex items-center rounded-full bg-cyan-400/15 px-1.5 py-0.5 text-xs text-cyan-100" title="${escapeHtml(o.aktif_envanter.ad)}">${escapeHtml(o.aktif_envanter.emoji)}</span>` : ''}
+        </div>
         <div class="text-[11px] text-slate-500">${o.sinif_adi} · ${o.etiket || 'Temiz'}</div>
       </div>
       <div class="text-2xl font-black text-red-300">${o.tik_sayisi}</div>

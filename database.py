@@ -2723,6 +2723,13 @@ def _gelisim_init(con) -> None:
         )
     """)
     con.execute("""
+        CREATE TABLE IF NOT EXISTS avatar_vitrin (
+            ogrenci_id INTEGER PRIMARY KEY REFERENCES ogrenciler(id),
+            urun_kodu TEXT NOT NULL,
+            tarih TEXT NOT NULL
+        )
+    """)
+    con.execute("""
         CREATE TABLE IF NOT EXISTS ogretmen_notlari (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
@@ -3117,8 +3124,101 @@ def pazar_urunleri_ogrenci(ogrenci_id: int) -> list[dict]:
     return sorted(urunler, key=lambda u: (u["nadirlik_sira"], u["fiyat"], u["ad"]))
 
 
+def _pazar_urun_bul(urun_kodu: str) -> dict | None:
+    return next((u for u in PAZAR_URUNLERI if u["kod"] == urun_kodu), None)
+
+
+def envanter_aktif_urun(ogrenci_id: int) -> dict | None:
+    con = _conn()
+    _gelisim_init(con)
+    row = con.execute(
+        "SELECT urun_kodu FROM avatar_vitrin WHERE ogrenci_id=?", (ogrenci_id,)
+    ).fetchone()
+    con.close()
+    if not row:
+        return None
+    urun = _pazar_urun_bul(row["urun_kodu"])
+    return {**urun, "aktif": True} if urun else None
+
+
+def envanter_listele(ogrenci_id: int) -> dict:
+    con = _conn()
+    _gelisim_init(con)
+    sahip = [dict(r) for r in con.execute("""
+        SELECT urun_kodu, tarih
+        FROM avatar_envanter
+        WHERE ogrenci_id=?
+        ORDER BY tarih DESC, id DESC
+    """, (ogrenci_id,)).fetchall()]
+    aktif = con.execute(
+        "SELECT urun_kodu FROM avatar_vitrin WHERE ogrenci_id=?", (ogrenci_id,)
+    ).fetchone()
+    con.close()
+    aktif_kod = aktif["urun_kodu"] if aktif else ""
+    urunler = []
+    for row in sahip:
+        urun = _pazar_urun_bul(row["urun_kodu"])
+        if not urun:
+            continue
+        urunler.append({**urun, "tarih": row["tarih"], "aktif": row["urun_kodu"] == aktif_kod})
+    return {"aktif_kod": aktif_kod, "aktif": envanter_aktif_urun(ogrenci_id), "urunler": urunler}
+
+
+def envanter_aktif_ayarla(ogrenci_id: int, urun_kodu: str) -> dict:
+    urun_kodu = (urun_kodu or "").strip()
+    con = _conn()
+    _gelisim_init(con)
+    try:
+        if not urun_kodu:
+            con.execute("DELETE FROM avatar_vitrin WHERE ogrenci_id=?", (ogrenci_id,))
+            con.commit()
+            return {"ok": True, "aktif": None}
+        urun = _pazar_urun_bul(urun_kodu)
+        if not urun:
+            return {"ok": False, "sebep": "Urun bulunamadi"}
+        sahip = con.execute("""
+            SELECT id FROM avatar_envanter WHERE ogrenci_id=? AND urun_kodu=?
+        """, (ogrenci_id, urun_kodu)).fetchone()
+        if not sahip:
+            return {"ok": False, "sebep": "Bu urun envanterinde yok"}
+        con.execute("""
+            INSERT INTO avatar_vitrin (ogrenci_id, urun_kodu, tarih)
+            VALUES (?, ?, ?)
+            ON CONFLICT(ogrenci_id) DO UPDATE SET urun_kodu=excluded.urun_kodu, tarih=excluded.tarih
+        """, (ogrenci_id, urun_kodu, datetime.now().strftime("%Y-%m-%d %H:%M")))
+        con.commit()
+        return {"ok": True, "aktif": urun}
+    finally:
+        con.close()
+
+
+def ogrenci_aktif_envanter_map(ogrenci_ids: list[int]) -> dict[int, dict]:
+    if not ogrenci_ids:
+        return {}
+    con = _conn()
+    _gelisim_init(con)
+    q = ",".join("?" * len(ogrenci_ids))
+    rows = [dict(r) for r in con.execute(
+        f"SELECT ogrenci_id, urun_kodu FROM avatar_vitrin WHERE ogrenci_id IN ({q})",
+        ogrenci_ids,
+    ).fetchall()]
+    con.close()
+    out: dict[int, dict] = {}
+    for r in rows:
+        urun = _pazar_urun_bul(r["urun_kodu"])
+        if urun:
+            out[int(r["ogrenci_id"])] = {
+                "kod": urun["kod"],
+                "ad": urun["ad"],
+                "emoji": urun["emoji"],
+                "kategori": urun["kategori"],
+                "nadirlik": urun["nadirlik"],
+            }
+    return out
+
+
 def pazar_satin_al(ogrenci_id: int, urun_kodu: str) -> dict:
-    urun = next((u for u in PAZAR_URUNLERI if u["kod"] == urun_kodu), None)
+    urun = _pazar_urun_bul(urun_kodu)
     if not urun:
         return {"ok": False, "sebep": "Urun bulunamadi"}
     con = _conn()

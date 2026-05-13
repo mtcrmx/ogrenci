@@ -48,6 +48,7 @@ from database import (
     akilli_ogrenci_karnesi, ogretmen_bildirim_merkezi, gelisim_ligi,
     hikaye_modu, pazar_urunleri_ogrenci, pazar_satin_al, ogretmen_notu_ekle,
     ogrenci_rozetleri_yayin_map, rozet_emojileri_ve_metin,
+    envanter_listele, envanter_aktif_ayarla, ogrenci_aktif_envanter_map,
     oyun_puani_kaydet, GOREV_SABLONLARI,
     MEVKILER, taktik_yukle, taktik_kaydet,
     ogrenci_mac_olustur, ogrenci_mac_listesi, ogrenci_mac_detay,
@@ -881,6 +882,35 @@ def pazar_satin_al_route():
     return redirect(url_for("pazar"))
 
 
+@app.route("/envanter")
+@ogrenci_giris_zorunlu
+def envanter():
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        session.pop("ogrenci_giris", None)
+        session.pop("ogrenci_id", None)
+        return redirect(url_for("ogrenci_giris"))
+    return render_template(
+        "envanter.html",
+        ogrenci=o,
+        envanter=envanter_listele(oid),
+    )
+
+
+@app.route("/envanter/aktif", methods=["POST"])
+@ogrenci_giris_zorunlu
+def envanter_aktif_route():
+    oid = int(session["ogrenci_id"])
+    kod = request.form.get("urun_kodu", "").strip()
+    sonuc = envanter_aktif_ayarla(oid, kod)
+    if sonuc.get("ok"):
+        flash("Gorunen envanter guncellendi.", "success")
+    else:
+        flash(sonuc.get("sebep", "Islem yapilamadi"), "error")
+    return redirect(url_for("envanter"))
+
+
 @app.route("/karne")
 @ogrenci_giris_zorunlu
 def ogrenci_karne():
@@ -1112,8 +1142,10 @@ def dashboard():
     ids_ogr = [o["id"] for o in ogrenciler]
     olumlu_h = ogrenci_olumlu_tik_sayilari(ids_ogr)
     roz_harita = ogrenci_rozetleri_yayin_map(ids_ogr, limit=6)
+    env_harita = ogrenci_aktif_envanter_map(ids_ogr)
     for o in ogrenciler:
         o["rozetler"] = roz_harita.get(o["id"], [])
+        o["aktif_envanter"] = env_harita.get(o["id"])
         o["olumlu_tik"] = olumlu_h.get(o["id"], 0)
 
     return render_template("dashboard.html",
@@ -1138,8 +1170,10 @@ def api_sinif(sinif_id):
     ids = [o["id"] for o in liste]
     olumlu_h = ogrenci_olumlu_tik_sayilari(ids)
     roz_harita = ogrenci_rozetleri_yayin_map(ids, limit=6)
+    env_harita = ogrenci_aktif_envanter_map(ids)
     for o in liste:
         o["rozetler"] = roz_harita.get(o["id"], [])
+        o["aktif_envanter"] = env_harita.get(o["id"])
         o["olumlu_tik"] = olumlu_h.get(o["id"], 0)
     return jsonify(liste)
 
@@ -1643,10 +1677,12 @@ def _yayin_verisi_hazirla():
     ogrenciler = _ogrencilere_durum_ekle(tum_okul_ogrencileri())
     ids = [o["id"] for o in ogrenciler]
     rozet_haritasi = ogrenci_rozetleri_yayin_map(ids, limit=8)
+    env_haritasi = ogrenci_aktif_envanter_map(ids)
     olumlu_h = ogrenci_olumlu_tik_sayilari(ids)
     for o in ogrenciler:
         o["risk_yuzde"] = min(100, o["tik_sayisi"] * 8)
         o["rozetler"] = rozet_haritasi.get(o["id"], [])
+        o["aktif_envanter"] = env_haritasi.get(o["id"])
         o["olumlu_tik"] = olumlu_h.get(o["id"], 0)
     en_cok_olumsuz = sorted(
         ogrenciler,
