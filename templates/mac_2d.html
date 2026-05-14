@@ -47,6 +47,7 @@
     <div id="score-board"><span id="score1">0</span> - <span id="score2">0</span></div>
     <div class="text-red-400 font-bold" id="team2-name">Rakip Sınıf</div>
     <div class="absolute top-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-mono" id="timer">00:00</div>
+    <button onclick="enableMatchAudio()" class="absolute right-24 top-14 mt-2 px-3 py-1 bg-emerald-600 rounded text-xs font-bold hover:bg-emerald-500 z-50 hidden" id="sound-btn">Sesi Aç</button>
     <button onclick="window.close()" class="absolute right-4 top-14 mt-2 px-3 py-1 bg-red-600 rounded text-xs font-bold hover:bg-red-500 z-50 hidden" id="close-btn">Pencereyi Kapat</button>
   </div>
   <div id="canvas-wrap">
@@ -100,8 +101,68 @@ const canvas = document.getElementById('pitch');
 const ctx = canvas.getContext('2d');
 const debugPanel = document.getElementById('debug-panel');
 if (debugMode && debugPanel) debugPanel.style.display = 'block';
+const soundBtn = document.getElementById('sound-btn');
+const audio = {
+    stadium: new Audio("{{ url_for('static', filename='audio/ortamstadium.mp3') }}"),
+    goal: new Audio("{{ url_for('static', filename='audio/gol.mp3') }}"),
+    kick: new Audio("{{ url_for('static', filename='audio/topavurus.mp3') }}"),
+};
+audio.stadium.loop = true;
+audio.stadium.volume = 0.32;
+audio.goal.volume = 0.9;
+audio.kick.volume = 0.55;
+let audioUnlocked = false;
+let lastKickSoundAt = 0;
 canvas.width = GAME_WIDTH;
 canvas.height = GAME_HEIGHT;
+
+function updateSoundButton() {
+    if (!soundBtn) return;
+    soundBtn.style.display = audioUnlocked ? 'none' : 'block';
+}
+async function enableMatchAudio() {
+    audioUnlocked = true;
+    updateSoundButton();
+    try {
+        if (isPlaying && audio.stadium.paused) {
+            audio.stadium.currentTime = audio.stadium.currentTime || 0;
+            await audio.stadium.play();
+        }
+    } catch (e) {
+        audioUnlocked = false;
+        updateSoundButton();
+    }
+}
+function tryStartStadium() {
+    if (!isPlaying) return;
+    audio.stadium.play().then(() => {
+        audioUnlocked = true;
+        updateSoundButton();
+    }).catch(() => {
+        updateSoundButton();
+    });
+}
+function stopStadium() {
+    audio.stadium.pause();
+}
+function playOneShot(baseAudio, volume = 1) {
+    if (!audioUnlocked) return;
+    const sound = baseAudio.cloneNode();
+    sound.volume = volume;
+    sound.play().catch(() => {});
+}
+function playKickSound(force = false) {
+    const now = performance.now();
+    if (!force && now - lastKickSoundAt < 120) return;
+    lastKickSoundAt = now;
+    playOneShot(audio.kick, 0.55);
+}
+function playGoalSound() {
+    playOneShot(audio.goal, 0.9);
+}
+['pointerdown', 'keydown', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, enableMatchAudio, { once: true, passive: true });
+});
 
 function resizeCanvas() {
   const wrap = document.getElementById('canvas-wrap');
@@ -204,6 +265,7 @@ function sendPass(p, target, power, leadFrames = 4) {
     ball.targetPlayer = target.team ? target : null;
     ball.owner = null;
     ball.lastTouchedBy = p;
+    playKickSound(true);
 }
 function goalkeeperDistribute(p) {
     let bestMate = null;
@@ -282,6 +344,7 @@ async function loadData() {
     resetPositions();
     showEvent("Hakem düdüğü çaldı, taktiksel maç başladı!", 3000);
     isPlaying = true;
+    tryStartStadium();
     requestAnimationFrame(gameLoop);
   } catch(e) {
     showEvent("JS Hatası: " + e.message, 10000);
@@ -359,6 +422,62 @@ function normalizeTeamShape(team) {
     });
 }
 
+function clampPlayerToPitch(p) {
+    const safe = clampPitch(p.x, p.y, 15);
+    p.x = safe.x;
+    p.y = safe.y;
+    if (isGoalkeeper(p)) {
+        const gkSafe = clampGoalkeeperArea(p, p.x, p.y);
+        p.x = gkSafe.x;
+        p.y = gkSafe.y;
+    }
+}
+
+function separatePlayers() {
+    for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < players.length; i++) {
+            for (let j = i + 1; j < players.length; j++) {
+                const a = players[i];
+                const b = players[j];
+                const sameTeam = a.team === b.team;
+                const minGap = sameTeam ? 28 : 25;
+                let dx = b.x - a.x;
+                let dy = b.y - a.y;
+                let d = Math.hypot(dx, dy);
+                if (d >= minGap) continue;
+                if (d < 0.01) {
+                    const angle = (i + j + pass) * 1.7;
+                    dx = Math.cos(angle);
+                    dy = Math.sin(angle);
+                    d = 1;
+                }
+                const nx = dx / d;
+                const ny = dy / d;
+                const overlap = minGap - d;
+                let aWeight = isGoalkeeper(a) ? 0.4 : 1;
+                let bWeight = isGoalkeeper(b) ? 0.4 : 1;
+                if (a === ball.owner) aWeight *= 0.45;
+                if (b === ball.owner) bWeight *= 0.45;
+                if (stateMachine === "SET_PIECE") {
+                    if (a === ball.owner) aWeight = 0;
+                    if (b === ball.owner) bWeight = 0;
+                }
+                const total = aWeight + bWeight || 1;
+                a.x -= nx * overlap * (bWeight / total);
+                a.y -= ny * overlap * (bWeight / total);
+                b.x += nx * overlap * (aWeight / total);
+                b.y += ny * overlap * (aWeight / total);
+                clampPlayerToPitch(a);
+                clampPlayerToPitch(b);
+            }
+        }
+    }
+    if (ball.owner) {
+        ball.x = ball.owner.x;
+        ball.y = ball.owner.y;
+    }
+}
+
 function resetPositions() {
     players.forEach(p => {
         p.x = p.baseX; p.y = p.baseY; p.vx = 0; p.vy = 0;
@@ -427,6 +546,7 @@ function update() {
     
     if (timeTicks >= TOTAL_TICKS) {
         isPlaying = false; showEvent("Maç Sona Erdi!", 5000);
+        stopStadium();
         document.getElementById('close-btn').style.display = 'block';
         
         // Auto-submit result
@@ -613,6 +733,7 @@ function update() {
             const d = dist(p, {x:targetX, y:targetY});
             if (d > 5) { p.x += dir.x * 3; p.y += dir.y * 3; }
         });
+        separatePlayers();
 
         setPieceTimer--;
         if (setPieceTimer <= 0) {
@@ -654,6 +775,7 @@ function update() {
                     }
                 }
                 
+                playKickSound(true);
                 ball.lastTouchedBy = p;
                 ball.owner = null;
                 p.actionCooldown = 30;
@@ -728,6 +850,7 @@ function update() {
                 ball.vy = pushDir.y * 10;
                 ball.owner = null;
                 ball.lastTouchedBy = gk;
+                playKickSound(true);
                 return false;
             }
         }
@@ -737,6 +860,7 @@ function update() {
     if (ball.y <= 10 && ball.x > goalLeft && ball.x < goalRight) {
         if (tryGoal(team1, team2, 'score1', 0)) {
             score1++; document.getElementById('score1').textContent = score1;
+            playGoalSound();
             showEvent(`⚽ GOOOL! ${team1.name} yazdı!`, 4000);
             stateMachine = "GOAL_CELEBRATION";
             setTimeout(resetPositions, 4000);
@@ -746,6 +870,7 @@ function update() {
     if (ball.y >= GAME_HEIGHT-10 && ball.x > goalLeft && ball.x < goalRight) {
         if (tryGoal(team2, team1, 'score2', GAME_HEIGHT)) {
             score2++; document.getElementById('score2').textContent = score2;
+            playGoalSound();
             showEvent(`⚽ GOOOL! ${team2.name} yazdı!`, 4000);
             stateMachine = "GOAL_CELEBRATION";
             setTimeout(resetPositions, 4000);
@@ -975,6 +1100,7 @@ function update() {
                             else { ball.vz = 0; ball.spinX = (Math.random()-0.5) * 0.3; }
                             showEvent(distToGoal < 120 ? '🦵 Sert Şut!' : '🦵 Uzak Şut!', 800);
                         }
+                        playKickSound(true);
                         ball.owner = null; p.actionCooldown = 40;
                         return;
                     }
@@ -1039,6 +1165,7 @@ function update() {
                         ball.vx = dir.x * pw; ball.vy = dir.y * pw;
                         ball.z = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0;
                         ball.targetPlayer = bestMate;
+                        playKickSound(true);
                         ball.owner = null; p.actionCooldown = 20;
                         return;
                     }
@@ -1211,6 +1338,7 @@ function update() {
             p.y = gkSafe.y;
         }
     });
+    separatePlayers();
     updateDebugPanel();
 }
 
