@@ -42,7 +42,7 @@ from database import (
     quiz_sorular_getir, quiz_sonuc_kaydet, quiz_gunluk_dersleri,
     quiz_sinif_istatistik, quiz_sorulari_yukle,
     tik_dondur,
-    odev_ekle, sinif_odevleri, odev_detay, odev_tamamla,
+    odev_ekle, sinif_odevleri, odev_detay as odev_detay_db, odev_tamamla,
     odev_tamamlandi_kaldir, ogrenci_odevleri,
     gelisim_ozeti, gelisim_gorev_tamamla, sandik_ac, telafi_gorevi_olustur,
     tebrik_gonder, haftalik_veli_ozeti,
@@ -1639,7 +1639,7 @@ def yoklama():
     ogrenciler = sinif_ogrencileri(aktif["id"]) if aktif else []
     odevler = sinif_odevleri(aktif["id"]) if aktif else []
     secili_odev_id = request.args.get("odev", type=int) or (odevler[0]["id"] if odevler else 0)
-    secili_odev = odev_detay(secili_odev_id) if secili_odev_id else None
+    secili_odev = odev_detay_db(secili_odev_id) if secili_odev_id else None
     if secili_odev and aktif and secili_odev["sinif_id"] != aktif["id"]:
         secili_odev = None
     return render_template("yoklama.html", siniflar=siniflar, aktif=aktif,
@@ -1676,11 +1676,60 @@ def odev_tamamla_route(odev_id, ogrenci_id):
         odev_tamamla(odev_id, ogrenci_id, session["ogretmen_id"])
     else:
         odev_tamamlandi_kaldir(odev_id, ogrenci_id)
-    detay = odev_detay(odev_id)
+    detay = odev_detay_db(odev_id)
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True})
     sinif_id = detay["sinif_id"] if detay else request.form.get("sinif_id", "")
     return redirect(url_for("yoklama", sinif=sinif_id, odev=odev_id))
+
+
+@app.route("/odevler", methods=["GET", "POST"])
+@giris_zorunlu
+def odevler():
+    oid = session["ogretmen_id"]
+    from database import odev_olustur, odevleri_getir
+
+    if request.method == "POST":
+        sinif_id = request.form.get("sinif_id", type=int)
+        ders_adi = request.form.get("ders_adi", "").strip()
+        tema_adi = request.form.get("tema_adi", "").strip()
+
+        if sinif_id and ders_adi and tema_adi:
+            odev_id = odev_olustur(oid, sinif_id, ders_adi, tema_adi)
+            return redirect(url_for("odev_tema_detay", odev_id=odev_id))
+
+    odev_listesi = odevleri_getir(oid)
+    return render_template(
+        "odevler.html",
+        odevler=odev_listesi,
+        siniflar=ogretmen_siniflari(oid),
+        yetki=session.get("ogretmen_yetki"),
+    )
+
+
+@app.route("/odev/<int:odev_id>", methods=["GET", "POST"])
+@giris_zorunlu
+def odev_tema_detay(odev_id):
+    oid = session["ogretmen_id"]
+    from database import odev_detay_getir, odev_durum_guncelle
+
+    detay = odev_detay_getir(odev_id, oid)
+    if not detay:
+        return redirect(url_for("odevler"))
+
+    if request.method == "POST":
+        for key, val in request.form.items():
+            if key.startswith("durum_"):
+                ogr_id = int(key.split("_")[1])
+                odev_durum_guncelle(odev_id, ogr_id, val)
+        return redirect(url_for("odev_tema_detay", odev_id=odev_id))
+
+    return render_template(
+        "odev_detay.html",
+        odev=detay["odev"],
+        ogrenciler=detay["ogrenciler"],
+        yetki=session.get("ogretmen_yetki"),
+    )
 
 
 @app.route("/manifest.json")
@@ -2972,43 +3021,3 @@ if __name__ == "__main__":
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
 
-# ══════════════════════════════════════════════════════════════════════════
-# ÖDEV TAKİBİ EKRANLARI
-# ══════════════════════════════════════════════════════════════════════════
-
-@app.route("/odevler", methods=["GET", "POST"])
-@giris_zorunlu
-def odevler():
-    oid = session["ogretmen_id"]
-    from database import odev_olustur, odevleri_getir
-    
-    if request.method == "POST":
-        sinif_id = int(request.form.get("sinif_id", 0))
-        ders_adi = request.form.get("ders_adi", "").strip()
-        tema_adi = request.form.get("tema_adi", "").strip()
-        
-        if sinif_id and ders_adi and tema_adi:
-            odev_id = odev_olustur(oid, sinif_id, ders_adi, tema_adi)
-            return redirect(url_for('odev_detay', odev_id=odev_id))
-            
-    odev_listesi = odevleri_getir(oid)
-    return render_template("odevler.html", odevler=odev_listesi, siniflar=ogretmen_siniflari(oid), yetki=session.get('ogretmen_yetki'))
-
-@app.route("/odev/<int:odev_id>", methods=["GET", "POST"])
-@giris_zorunlu
-def odev_detay(odev_id):
-    oid = session["ogretmen_id"]
-    from database import odev_detay_getir, odev_durum_guncelle
-    
-    detay = odev_detay_getir(odev_id, oid)
-    if not detay:
-        return redirect(url_for('odevler'))
-        
-    if request.method == "POST":
-        for key, val in request.form.items():
-            if key.startswith("durum_"):
-                ogr_id = int(key.split("_")[1])
-                odev_durum_guncelle(odev_id, ogr_id, val)
-        return redirect(url_for('odev_detay', odev_id=odev_id))
-        
-    return render_template("odev_detay.html", odev=detay["odev"], ogrenciler=detay["ogrenciler"], yetki=session.get('ogretmen_yetki'))
