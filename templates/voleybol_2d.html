@@ -56,6 +56,55 @@
 const urlParams = new URLSearchParams(window.location.search);
 const rakip_id = urlParams.get('rakip_id');
 
+// ========== SES SİSTEMİ (en üste taşındı — tüm fonksiyonlar kullanabilsin) ==========
+const volSes = {
+    ortam: new Audio("{{ url_for('static', filename='audio/ortamstadium.mp3') }}"),
+    top:   new Audio("{{ url_for('static', filename='audio/topavurus.mp3') }}"),
+};
+volSes.ortam.loop   = true;
+volSes.ortam.volume = 0.22;
+volSes.top.volume   = 0.55;
+let volSesAcik    = false;
+let lastTopSesiAt = 0;
+
+function sesAc() {
+    volSesAcik = true;
+    const banner = document.getElementById('audio-banner');
+    if (banner) banner.style.display = 'none';
+    volSes.ortam.play().catch(() => {});
+}
+
+function topVurusSesi() {
+    if (!volSesAcik) return;
+    const now = performance.now();
+    if (now - lastTopSesiAt < 110) return;
+    lastTopSesiAt = now;
+    const klon = volSes.top.cloneNode();
+    klon.volume = 0.45 + Math.random() * 0.3;
+    klon.play().catch(() => {});
+}
+
+// Ortam sesi kesilmez — 3sn kontrol
+setInterval(() => {
+    if (volSesAcik && volSes.ortam.paused) {
+        volSes.ortam.play().catch(() => {});
+    }
+}, 3000);
+
+// Sayfa yüklenince otomatik aç — başarısız olursa banner göster
+volSes.ortam.play().then(() => {
+    volSesAcik = true;
+}).catch(() => {
+    const banner = document.getElementById('audio-banner');
+    if (banner) banner.style.display = 'block';
+});
+
+// Herhangi bir etkileşimde sesi aç
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
+    window.addEventListener(ev, () => { if (!volSesAcik) sesAc(); }, { once: true, passive: true });
+});
+// ==========================================================================
+
 const FPS = 60;
 const GAME_WIDTH = 450;
 const GAME_HEIGHT = 900;
@@ -332,7 +381,7 @@ function givePoint(team, reason) {
     stateMachine = "POINT_CELEBRATION";
     goalTimer = 120;
     showEvent(reason + "<br>Sayı: " + team.name, 2000);
-    golSesi();
+    // Ortam sesi zaten çalıyor; ek bir sayı sesi yok
     
     if (team === team1) score1++; else score2++;
     document.getElementById('score1').textContent = score1;
@@ -835,63 +884,6 @@ function gameLoop() {
     } catch(e) { console.error(e); }
     requestAnimationFrame(gameLoop);
 }
-
-// ========== SES SİSTEMİ ==========
-const volSes = {
-    ortam: new Audio("{{ url_for('static', filename='audio/ortamstadium.mp3') }}"),
-    top:   new Audio("{{ url_for('static', filename='audio/topavurus.mp3') }}"),
-    gol:   new Audio("{{ url_for('static', filename='audio/gol.mp3') }}"),
-};
-volSes.ortam.loop   = true;
-volSes.ortam.volume = 0.22;
-volSes.top.volume   = 0.55;
-volSes.gol.volume   = 0.85;
-let volSesAcik      = false;
-let lastTopSesiAt   = 0;
-
-function sesAc() {
-    volSesAcik = true;
-    const banner = document.getElementById('audio-banner');
-    if (banner) banner.style.display = 'none';
-    volSes.ortam.play().catch(() => {});
-}
-
-// Ortam sesi kesilmez — 3sn kontrol
-setInterval(() => {
-    if (volSesAcik && volSes.ortam.paused && isPlaying) {
-        volSes.ortam.play().catch(() => {});
-    }
-}, 3000);
-
-function topVurusSesi() {
-    if (!volSesAcik) return;
-    const now = performance.now();
-    if (now - lastTopSesiAt < 110) return;
-    lastTopSesiAt = now;
-    const klon = volSes.top.cloneNode();
-    klon.volume = 0.45 + Math.random() * 0.3;
-    klon.play().catch(() => {});
-}
-
-function golSesi() {
-    if (!volSesAcik) return;
-    const klon = volSes.gol.cloneNode();
-    klon.volume = 0.85;
-    klon.play().catch(() => {});
-}
-
-// Sayfa yüklenince otomatik aç — başarısız olursa banner göster
-volSes.ortam.play().then(() => {
-    volSesAcik = true;
-}).catch(() => {
-    const banner = document.getElementById('audio-banner');
-    if (banner) banner.style.display = 'block';
-});
-
-// Herhangi bir etkileşimde sesi aç
-['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
-    window.addEventListener(ev, () => { if (!volSesAcik) sesAc(); }, { once: true, passive: true });
-});
 
 loadData();
 </script>

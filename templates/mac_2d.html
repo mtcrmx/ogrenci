@@ -1140,10 +1140,39 @@ function update() {
                     if (opp.team !== p.team && dist(p, opp) < 58) closeOpponents++;
                 });
 
+                // === 0. 1'E 1 TESPİTİ: Kaleci dışında araya giren defansör yok mu? ===
+                // Oyuncu ile rakip kale arasındaki şerit içinde sadece kaleci varsa → anında şut
+                const oppGK = players.find(op =>
+                    op.team !== p.team && isGoalkeeper(op)
+                );
+                let isOneOnOne = false;
+                if (oppGK && distToGoal < 700 && !playerIsGK) {
+                    // Oyuncunun kaleye doğru gittiğini kontrol et
+                    const movingToGoal = (p.team.dirY === -1 && (p.vy < -0.3 || distToGoal < 220))
+                                      || (p.team.dirY ===  1 && (p.vy >  0.3 || distToGoal < 220));
+                    if (movingToGoal) {
+                        // Oyuncu ile kaleci arasında başka rakip savunucu var mı?
+                        const minY = Math.min(p.y, oppGK.y);
+                        const maxY = Math.max(p.y, oppGK.y);
+                        let blockerCount = 0;
+                        players.forEach(opp => {
+                            if (opp.team === p.team || opp === oppGK) return;
+                            if (!isGoalkeeper(opp) &&
+                                opp.y > minY && opp.y < maxY &&
+                                Math.abs(opp.x - p.x) < 55) {
+                                blockerCount++;
+                            }
+                        });
+                        isOneOnOne = (blockerCount === 0);
+                    }
+                }
+
                 // 1. Shoot?
-                if (distToGoal < 300) {
+                // 1'e 1 durumunda mesafeden bağımsız, hemen şut çek
+                const forceShot = isOneOnOne;
+                if (forceShot || distToGoal < 300) {
                     let pathClear = true;
-                    if (distToGoal > 80) {
+                    if (!forceShot && distToGoal > 80) {
                         players.forEach(opp => {
                             if (opp.team !== p.team && dist(opp, p) < distToGoal && 
                                 Math.abs(opp.x - p.x) < 40 && opp.y > Math.min(p.y, p.team.goalY) && opp.y < Math.max(p.y, p.team.goalY)) {
@@ -1154,21 +1183,26 @@ function update() {
                     
                     // High probability to shoot if in box and clear, or just very close
                     const shotChance = distToGoal < 140 ? 0.75 : (distToGoal < 220 ? 0.35 : 0.10);
-                    if (distToGoal < 115 || (pathClear && Math.random() < shotChance)) {
+                    if (forceShot || distToGoal < 115 || (pathClear && Math.random() < shotChance)) {
                         const errSut = (100 - p.ozellikler.sut) / 100;
                         const distFactor = distToGoal / 250;
-                        const usePlase = distToGoal < 150 && Math.random() < 0.5;
+                        // 1'e 1'de plase/köşe şansı yüksek
+                        const usePlase = (distToGoal < 150 || forceShot) && Math.random() < (forceShot ? 0.72 : 0.5);
                         
                         if (usePlase) {
-                            const gX = GAME_WIDTH/2 + (Math.random() * 100 - 50);
+                            // Kaleciyi bul, ondan uzak köşeye gönder
+                            const gkOffsetX = oppGK ? (oppGK.x - GAME_WIDTH/2) : 0;
+                            // Kaleciyle zıt köşeye at
+                            const cornerSide = gkOffsetX > 0 ? -1 : 1;
+                            const gX = GAME_WIDTH/2 + cornerSide * (38 + Math.random() * 28);
                             const errX = (Math.random() * 150 - 75) * errSut;
                             const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
                             const power = 10 + (p.ozellikler.sut / 18);
                             ball.vx = dir.x * power; ball.vy = dir.y * power;
-                            ball.vz = 2 + Math.random() * 2;
+                            ball.vz = 1 + Math.random() * 2;
                             ball.spinX = (Math.random() - 0.5) * 0.8;
                             ball.spinY = 0;
-                            showEvent('🎯 Plase!', 800);
+                            showEvent(forceShot ? '🎯 1\'e 1 — Plase!' : '🎯 Plase!', 800);
                         } else {
                             const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
                             const totalErr = errSut + distFactor * 0.5;
@@ -1180,7 +1214,7 @@ function update() {
                             if (strikePoint < 0.3) { ball.vz = 4 + Math.random() * 3; } 
                             else if (strikePoint < 0.6) { ball.vz = 1 + Math.random(); } 
                             else { ball.vz = 0; ball.spinX = (Math.random()-0.5) * 0.3; }
-                            showEvent(distToGoal < 120 ? '🦵 Sert Şut!' : '🦵 Uzak Şut!', 800);
+                            showEvent(forceShot ? '🦵 1\'e 1 — Şut!' : (distToGoal < 120 ? '🦵 Sert Şut!' : '🦵 Uzak Şut!'), 800);
                         }
                         playKickSound(true);
                         ball.owner = null; p.actionCooldown = 40;
