@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ odev.sinif_adi }} - Ödev Detayı</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .radio-tamamladi:checked + label { background-color: #16a34a; color: white; border-color: #16a34a; }
+        .radio-tamamlamadi:checked + label { background-color: #dc2626; color: white; border-color: #dc2626; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="flex items-center gap-4 mb-4">
+            <a href="/odevler" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition text-slate-300">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <h1 class="text-2xl font-black text-white flex-1">Ödev Sonuçları</h1>
+        </div>
+
+        <!-- Ödev Bilgisi -->
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700 shadow-xl">
+            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="px-3 py-1 bg-blue-600/20 text-blue-400 font-black rounded-lg text-lg">{{ odev.sinif_adi }}</span>
+                        <span class="text-sm font-bold text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>{{ odev.tarih[:10] }}</span>
+                    </div>
+                    <div class="text-xl font-bold text-white mb-1">{{ odev.ders_adi }}</div>
+                    <div class="text-slate-400">{{ odev.tema_adi }}</div>
+                </div>
+                
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center min-w-[120px]">
+                    <div class="text-xs font-bold text-slate-500 mb-1">Tamamlanma Oranı</div>
+                    {% set completed = ogrenciler | selectattr('durum', 'equalto', 'tamamladi') | list | length %}
+                    {% set total = ogrenciler | length %}
+                    {% set percent = (completed / total * 100) | round | int if total > 0 else 0 %}
+                    <div class="text-3xl font-black {{ 'text-green-400' if percent >= 80 else ('text-amber-400' if percent >= 50 else 'text-red-400') }}">
+                        %{{ percent }}
+                    </div>
+                    <div class="text-xs text-slate-400 mt-1">{{ completed }} / {{ total }} Öğrenci</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Öğrenci Listesi -->
+        <form method="POST" class="bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800/80">
+                <h3 class="font-bold text-white"><i class="fa-solid fa-users mr-2 text-blue-400"></i>Sınıf Listesi</h3>
+                <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg shadow-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-save"></i> Değişiklikleri Kaydet
+                </button>
+            </div>
+            
+            <div class="divide-y divide-slate-700/50">
+                {% for ogr in ogrenciler %}
+                <div class="flex items-center justify-between p-3 hover:bg-slate-700/30 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-black text-slate-300">
+                            {{ ogr.ogr_no }}
+                        </div>
+                        <div class="font-bold text-slate-200">{{ ogr.ad_soyad }}</div>
+                    </div>
+                    
+                    <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+                        <!-- Tamamlamadı -->
+                        <div class="relative">
+                            <input type="radio" name="durum_{{ ogr.id }}" id="no_{{ ogr.id }}" value="tamamlamadi" class="hidden radio-tamamlamadi" {{ 'checked' if ogr.durum == 'tamamlamadi' else '' }}>
+                            <label for="no_{{ ogr.id }}" class="cursor-pointer px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 transition hover:bg-slate-800 inline-block">
+                                <i class="fa-solid fa-xmark mr-1"></i> Yapmadı
+                            </label>
+                        </div>
+                        <!-- Tamamladı -->
+                        <div class="relative">
+                            <input type="radio" name="durum_{{ ogr.id }}" id="yes_{{ ogr.id }}" value="tamamladi" class="hidden radio-tamamladi" {{ 'checked' if ogr.durum == 'tamamladi' else '' }}>
+                            <label for="yes_{{ ogr.id }}" class="cursor-pointer px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 transition hover:bg-slate-800 inline-block">
+                                <i class="fa-solid fa-check mr-1"></i> Yaptı
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="p-4 border-t border-slate-700 bg-slate-800/80 flex justify-end">
+                <button type="submit" class="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg transition">
+                    <i class="fa-solid fa-save mr-2"></i>Kaydet
+                </button>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>

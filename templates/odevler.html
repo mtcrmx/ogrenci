@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ödev Takibi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
+                <i class="fa-solid fa-book-open mr-2"></i>Ödev Takibi
+            </h1>
+            <a href="/" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition">Ana Menü</a>
+        </div>
+
+        <!-- Yeni Ödev Ekle -->
+        <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+            <h2 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-plus mr-2 text-green-400"></i>Yeni Ödev Ver</h2>
+            <form method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Sınıf</label>
+                    <select name="sinif_id" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                        <option value="">Seçiniz...</option>
+                        {% for s in siniflar %}
+                        <option value="{{ s.id }}">{{ s.sinif_adi }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Ders (Branş)</label>
+                    <select name="ders_adi" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                        <option value="">Seçiniz...</option>
+                        <option value="Müzik">Müzik</option>
+                        <option value="Türkçe">Türkçe</option>
+                        <option value="Matematik">Matematik</option>
+                        <option value="Fen Bilimleri">Fen Bilimleri</option>
+                        <option value="Sosyal Bilgiler">Sosyal Bilgiler</option>
+                        <option value="İngilizce">İngilizce</option>
+                        <option value="Görsel Sanatlar">Görsel Sanatlar</option>
+                        <option value="Beden Eğitimi">Beden Eğitimi</option>
+                        <option value="Bilişim">Bilişim Teknolojileri</option>
+                        <option value="Din Kültürü">Din Kültürü</option>
+                        <option value="Diğer">Diğer</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Tema / Konu</label>
+                    <input type="text" name="tema_adi" required placeholder="Örn: 1. Tema Müzik Dili" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                </div>
+                <div>
+                    <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg transition">Oluştur</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Ödev Listesi -->
+        <div class="space-y-4">
+            <h2 class="text-xl font-bold text-slate-300"><i class="fa-solid fa-list-check mr-2 text-indigo-400"></i>Verilen Ödevler</h2>
+            
+            {% if odevler %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for odev in odevler %}
+                <a href="/odev/{{ odev.id }}" class="block bg-slate-800 hover:bg-slate-700 p-5 rounded-2xl border border-slate-700 hover:border-blue-500 transition shadow-lg group">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-xl font-black text-white">{{ odev.sinif_adi }}</div>
+                        <div class="text-xs font-bold text-slate-400">{{ odev.tarih[:10] }}</div>
+                    </div>
+                    <div class="text-blue-400 font-bold mb-1">{{ odev.ders_adi }}</div>
+                    <div class="text-slate-300 text-sm mb-4 truncate">{{ odev.tema_adi }}</div>
+                    
+                    <div class="flex items-center justify-between mt-auto">
+                        <div class="w-full bg-slate-900 rounded-full h-2.5 mr-3">
+                            <div class="bg-green-500 h-2.5 rounded-full" style="width: {{ (odev.tamamlayanlar / odev.toplam_ogrenci * 100) if odev.toplam_ogrenci > 0 else 0 }}%"></div>
+                        </div>
+                        <div class="text-xs font-bold whitespace-nowrap text-slate-400">
+                            <span class="text-green-400">{{ odev.tamamlayanlar }}</span> / {{ odev.toplam_ogrenci }}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-10 text-slate-500 bg-slate-800/30 rounded-2xl border border-slate-700 border-dashed">
+                Henüz ödev oluşturmadınız.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</body>
+</html>

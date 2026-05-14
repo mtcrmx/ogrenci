@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}{{ aktif.sinif_adi if aktif else 'Panel' }}{% endblock %}
 
 {% block body %}
@@ -38,10 +38,10 @@
       <p class="text-[10px] font-bold text-slate-400 tracking-widest px-1 mb-2">
         ÖDEV VE YAYIN
       </p>
-      <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
+      <a href="{{ url_for('odevler') }}"
          class="block w-full text-center text-xs font-bold py-2 rounded-lg
                 bg-emerald-600 text-white hover:bg-emerald-700 transition">
-        Ödev ver
+        Ödev Takibi
       </a>
       <a href="{{ url_for('yayin') }}"
          class="block w-full text-center text-xs font-bold py-2 rounded-lg
