@@ -2425,6 +2425,13 @@ def _odev_init(con) -> None:
             UNIQUE(odev_id, ogrenci_id)
         )
     """)
+    try:
+        con.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_odev_sonuclari_odev_ogrenci "
+            "ON odev_sonuclari(odev_id, ogrenci_id)"
+        )
+    except Exception:
+        pass
     cols = {r[1] for r in con.execute("PRAGMA table_info(odevler)").fetchall()}
     eksik = {
         "baslik": "TEXT NOT NULL DEFAULT ''",
@@ -4366,10 +4373,11 @@ def odev_olustur(ogretmen_id: int, sinif_id: int, ders_adi: str, tema_adi: str) 
     
     # Tüm sınıf öğrencilerine varsayılan olarak 'tamamlamadi' ekle
     ogrenciler = con.execute("SELECT id FROM ogrenciler WHERE sinif_id = ?", (sinif_id,)).fetchall()
-    for (ogr_id,) in ogrenciler:
+    for row in ogrenciler:
+        rid = int(row["id"])
         cur.execute(
             "INSERT INTO odev_sonuclari (odev_id, ogrenci_id, durum) VALUES (?, ?, 'tamamlamadi')",
-            (odev_id, ogr_id['id'])
+            (odev_id, rid),
         )
     con.commit()
     con.close()
@@ -4401,7 +4409,7 @@ def odev_detay_getir(odev_id: int, ogretmen_id: int):
     _odev_init(con)
     odev = con.execute(
         """
-        SELECT o.*,
+        SELECT o.id, o.sinif_id, o.ogretmen_id, o.tarih,
                COALESCE(NULLIF(o.ders_adi, ''), o.ders, 'Genel') AS ders_adi,
                COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
                s.sinif_adi
@@ -4434,14 +4442,15 @@ def odev_detay_getir(odev_id: int, ogretmen_id: int):
 def odev_durum_guncelle(odev_id: int, ogrenci_id: int, durum: str):
     con = _conn()
     _odev_init(con)
-    con.execute(
-        """
-        INSERT INTO odev_sonuclari (odev_id, ogrenci_id, durum)
-        VALUES (?, ?, ?)
-        ON CONFLICT(odev_id, ogrenci_id) DO UPDATE SET durum = excluded.durum
-        """,
-        (odev_id, ogrenci_id, durum),
+    cur = con.execute(
+        "UPDATE odev_sonuclari SET durum = ? WHERE odev_id = ? AND ogrenci_id = ?",
+        (durum, odev_id, ogrenci_id),
     )
+    if cur.rowcount == 0:
+        con.execute(
+            "INSERT INTO odev_sonuclari (odev_id, ogrenci_id, durum) VALUES (?, ?, ?)",
+            (odev_id, ogrenci_id, durum),
+        )
     if durum == "tamamladi":
         row = con.execute("SELECT ogretmen_id FROM odevler WHERE id = ?", (odev_id,)).fetchone()
         con.execute(
