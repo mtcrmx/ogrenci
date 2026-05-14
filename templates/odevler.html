@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ödev Takibi</title>
+    <title>Ödev Takibi ve Tema Raporları</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -12,17 +12,17 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <div class="max-w-4xl mx-auto space-y-6">
+    <div class="max-w-5xl mx-auto space-y-6">
         <div class="flex items-center justify-between mb-8">
             <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
-                <i class="fa-solid fa-book-open mr-2"></i>Ödev Takibi
+                <i class="fa-solid fa-book-open mr-2"></i>Ödev ve Tema Takibi (Maarif Modeli)
             </h1>
             <a href="/" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition">Ana Menü</a>
         </div>
 
         <!-- Yeni Ödev Ekle -->
         <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-            <h2 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-plus mr-2 text-green-400"></i>Yeni Ödev Ver</h2>
+            <h2 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-plus mr-2 text-green-400"></i>Yeni Görev / Ödev Ver</h2>
             <form method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 mb-1">Sınıf</label>
@@ -35,7 +35,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-400 mb-1">Ders (Branş)</label>
-                    <select name="ders_adi" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                    <select id="ders_secim" name="ders_adi" required onchange="temaGuncelle()" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
                         <option value="">Seçiniz...</option>
                         <option value="Müzik">Müzik</option>
                         <option value="Türkçe">Türkçe</option>
@@ -43,16 +43,16 @@
                         <option value="Fen Bilimleri">Fen Bilimleri</option>
                         <option value="Sosyal Bilgiler">Sosyal Bilgiler</option>
                         <option value="İngilizce">İngilizce</option>
+                        <option value="Din Kültürü">Din Kültürü ve Ahlak B.</option>
                         <option value="Görsel Sanatlar">Görsel Sanatlar</option>
-                        <option value="Beden Eğitimi">Beden Eğitimi</option>
-                        <option value="Bilişim">Bilişim Teknolojileri</option>
-                        <option value="Din Kültürü">Din Kültürü</option>
-                        <option value="Diğer">Diğer</option>
+                        <option value="Bilişim Teknolojileri">Bilişim Teknolojileri</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 mb-1">Tema / Konu</label>
-                    <input type="text" name="tema_adi" required placeholder="Örn: 1. Tema Müzik Dili" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Tema / Öğrenme Alanı</label>
+                    <select id="tema_secim" name="tema_adi" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                        <option value="">Önce ders seçiniz...</option>
+                    </select>
                 </div>
                 <div>
                     <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg transition">Oluştur</button>
@@ -62,37 +62,124 @@
 
         <!-- Ödev Listesi -->
         <div class="space-y-4">
-            <h2 class="text-xl font-bold text-slate-300"><i class="fa-solid fa-list-check mr-2 text-indigo-400"></i>Verilen Ödevler</h2>
+            <h2 class="text-xl font-bold text-slate-300"><i class="fa-solid fa-list-check mr-2 text-indigo-400"></i>Tema Takip Raporları</h2>
             
             {% if odevler %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% for odev in odevler %}
-                <a href="/odev/{{ odev.id }}" class="block bg-slate-800 hover:bg-slate-700 p-5 rounded-2xl border border-slate-700 hover:border-blue-500 transition shadow-lg group">
+                <a href="/odev/{{ odev.id }}" class="block bg-slate-800 hover:bg-slate-700 p-5 rounded-2xl border border-slate-700 hover:border-blue-500 transition shadow-lg group relative overflow-hidden">
                     <div class="flex justify-between items-start mb-2">
-                        <div class="text-xl font-black text-white">{{ odev.sinif_adi }}</div>
+                        <div class="text-xl font-black text-white"><i class="fa-solid fa-users mr-2 text-slate-500"></i>{{ odev.sinif_adi }}</div>
                         <div class="text-xs font-bold text-slate-400">{{ odev.tarih[:10] }}</div>
                     </div>
                     <div class="text-blue-400 font-bold mb-1">{{ odev.ders_adi }}</div>
-                    <div class="text-slate-300 text-sm mb-4 truncate">{{ odev.tema_adi }}</div>
+                    <div class="text-slate-200 font-medium mb-4">{{ odev.tema_adi }}</div>
                     
                     <div class="flex items-center justify-between mt-auto">
-                        <div class="w-full bg-slate-900 rounded-full h-2.5 mr-3">
-                            <div class="bg-green-500 h-2.5 rounded-full" style="width: {{ (odev.tamamlayanlar / odev.toplam_ogrenci * 100) if odev.toplam_ogrenci > 0 else 0 }}%"></div>
+                        <div class="w-full bg-slate-900 rounded-full h-3 mr-3 overflow-hidden">
+                            {% set pct = (odev.tamamlayanlar / odev.toplam_ogrenci * 100)|round|int if odev.toplam_ogrenci > 0 else 0 %}
+                            <div class="{{ 'bg-green-500' if pct >= 80 else ('bg-yellow-500' if pct >= 50 else 'bg-red-500') }} h-3 rounded-full transition-all duration-500" style="width: {{ pct }}%"></div>
                         </div>
                         <div class="text-xs font-bold whitespace-nowrap text-slate-400">
-                            <span class="text-green-400">{{ odev.tamamlayanlar }}</span> / {{ odev.toplam_ogrenci }}
+                            <span class="{{ 'text-green-400' if pct >= 80 else ('text-yellow-400' if pct >= 50 else 'text-red-400') }}">{{ odev.tamamlayanlar }}</span> / {{ odev.toplam_ogrenci }}
                         </div>
+                    </div>
+                    <div class="absolute -right-4 -bottom-4 opacity-5 text-6xl group-hover:opacity-10 transition duration-300">
+                        <i class="fa-solid fa-chart-pie"></i>
                     </div>
                 </a>
                 {% endfor %}
             </div>
             {% else %}
             <div class="text-center py-10 text-slate-500 bg-slate-800/30 rounded-2xl border border-slate-700 border-dashed">
-                Henüz ödev oluşturmadınız.
+                Henüz hiçbir temadan ödev oluşturmadınız. Lütfen yukarıdan ders ve tema seçerek oluşturun.
             </div>
             {% endif %}
         </div>
     </div>
 
+    <script>
+        // MEB Türkiye Yüzyılı Maarif Modeli Temaları
+        const mufredat = {
+            "Müzik": [
+                "1. Tema: Müzik Dili",
+                "2. Tema: Müzik Kültürü"
+            ],
+            "Türkçe": [
+                "1. Tema: Sözlü İletişim",
+                "2. Tema: Okuma",
+                "3. Tema: Yazma"
+            ],
+            "Matematik": [
+                "1. Tema: Sayılar ve İşlemler",
+                "2. Tema: Cebirsel İfadeler",
+                "3. Tema: Geometri ve Ölçme",
+                "4. Tema: Veri İşleme"
+            ],
+            "Fen Bilimleri": [
+                "1. Tema: Dünya ve Evren",
+                "2. Tema: Canlılar ve Yaşam",
+                "3. Tema: Fiziksel Olaylar",
+                "4. Tema: Madde ve Doğası"
+            ],
+            "Sosyal Bilgiler": [
+                "1. Tema: Birey ve Toplum",
+                "2. Tema: Kültür ve Miras",
+                "3. Tema: İnsanlar, Yerler ve Çevreler",
+                "4. Tema: Üretim, Dağıtım ve Tüketim"
+            ],
+            "İngilizce": [
+                "Theme 1: Hello!",
+                "Theme 2: My Town",
+                "Theme 3: Games and Hobbies",
+                "Theme 4: My Daily Routine",
+                "Theme 5: Health",
+                "Theme 6: Movies",
+                "Theme 7: Party Time",
+                "Theme 8: Fitness",
+                "Theme 9: The Animal Shelter",
+                "Theme 10: Festivals"
+            ],
+            "Din Kültürü": [
+                "1. Tema: İnanç",
+                "2. Tema: İbadet",
+                "3. Tema: Ahlak",
+                "4. Tema: Din ve Kültür"
+            ],
+            "Görsel Sanatlar": [
+                "1. Tema: Görsel İletişim ve Biçimlendirme",
+                "2. Tema: Kültürel Miras",
+                "3. Tema: Sanat Eleştirisi ve Estetik"
+            ],
+            "Bilişim Teknolojileri": [
+                "1. Tema: Bilişim Teknolojileri",
+                "2. Tema: Etik ve Güvenlik",
+                "3. Tema: İletişim, Araştırma ve İş Birliği",
+                "4. Tema: Ürün Oluşturma",
+                "5. Tema: Bilgi İşlemsel Düşünme"
+            ]
+        };
+
+        function temaGuncelle() {
+            const ders = document.getElementById("ders_secim").value;
+            const temaSelect = document.getElementById("tema_secim");
+            
+            // Temizle
+            temaSelect.innerHTML = "";
+            
+            if (!ders || !mufredat[ders]) {
+                temaSelect.innerHTML = '<option value="">Önce ders seçiniz...</option>';
+                return;
+            }
+            
+            // Yeni temaları ekle
+            mufredat[ders].forEach(tema => {
+                const opt = document.createElement("option");
+                opt.value = tema;
+                opt.textContent = tema;
+                temaSelect.appendChild(opt);
+            });
+        }
+    </script>
 </body>
 </html>
