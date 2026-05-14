@@ -143,6 +143,8 @@ function chooseReceiver(team, target) {
     let bestScore = Infinity;
     players.forEach(p => {
         if (p.team !== team) return;
+        // Çift vuruş kuralı: son topa vuran oyuncu receiver olamaz
+        if (p === ball.lastTouchedBy) return;
         let score = dist(p, target);
         if (p.isLibero) score -= 22;
         if (p.currentRow === 'back') score -= 10;
@@ -153,6 +155,15 @@ function chooseReceiver(team, target) {
             best = p;
         }
     });
+    // Fallback: eğer herkes lastTouchedBy ise (1 kişilik takım gibi uç durum)
+    // normal seçime dön
+    if (!best) {
+        players.forEach(p => {
+            if (p.team !== team) return;
+            const score = dist(p, target) + (p.actionCooldown > 0 ? 35 : 0);
+            if (score < bestScore) { bestScore = score; best = p; }
+        });
+    }
     return best;
 }
 
@@ -555,15 +566,13 @@ function update() {
         const zOK = ball.z > 0 && ball.z < 30; // reachable height
         const nearNet = Math.abs(p.y - NET_Y) < 80;
         const isBlockAttempt = nearNet && ball.vz < 0 && ball.z > 12 && ballMovingTowardTeam(p.team);
-        const canPlayThisBall = !receivePlan || receivePlan.player === p || isBlockAttempt;
+        // Çift vuruş önlemi: son topa vuran oyuncu hitbox'ı tetikleyemez
+        const isLastToucher = (p === ball.lastTouchedBy);
+        const canPlayThisBall = !isLastToucher &&
+            (!receivePlan || receivePlan.player === p || isBlockAttempt);
         
         if (!contactResolvedThisFrame && canPlayThisBall && ballOnMySide && !servingTeamLocked && zOK && hitDist < HITBOX_RADIUS && p.actionCooldown <= 0) {
-            // === RULE: Double Hit ===
-            if (ball.lastTouchedBy === p) {
-                contactResolvedThisFrame = true;
-                givePoint(p.team === team1 ? team2 : team1, "Çift Vuruş Hatası!");
-                return;
-            }
+            // Double-hit burada artık asla oluşmaz (yukarıdaki isLastToucher kontrolü sayesinde)
             // === RULE: 4th touch ===
             if (ball.lastTeamTouched === p.team && teamTouches >= 3) {
                 contactResolvedThisFrame = true;
