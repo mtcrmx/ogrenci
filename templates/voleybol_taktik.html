@@ -166,6 +166,11 @@
           class="px-3 py-1 rounded-lg text-xs font-bold bg-green-700 hover:bg-green-600 text-white transition flex-shrink-0">
     💾 Kaydet
   </button>
+  <!-- Ses butonu -->
+  <button id="btn-ses" onclick="sesAc()"
+          class="px-2.5 py-1 rounded-lg text-xs font-bold bg-violet-700 hover:bg-violet-600 text-white transition flex-shrink-0">
+    🔊 Sesi Aç
+  </button>
 </header>
 
 <!-- ═══ ANA ALAN ═══════════════════════════════════════════════════════ -->
@@ -543,6 +548,7 @@ function yerleştir(id, x, y, rolSorulsun = false) {
   }
   o.x = x; o.y = y; o.sahada = true;
   tokenOlustur(o);
+  topSesiCal();   // oyuncu sahaya gelince top vurma sesi
   // Kadro listesi güncelle
   const ki = document.getElementById('ki-'+id);
   if (ki) {
@@ -753,6 +759,10 @@ function formasyonUygula(ad) {
     b.classList.toggle('aktif', b.textContent.trim() === ad));
   degistiIsaretle();
   durum('✅ Formasyon: ' + ad);
+  // Formasyon uygulanınca top vuruş sesleri
+  setTimeout(() => topSesiCal(), 80);
+  setTimeout(() => topSesiCal(), 280);
+  setTimeout(() => topSesiCal(), 480);
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -840,6 +850,50 @@ function toast(m) {
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 2800);
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// SES SİSTEMİ
+// ════════════════════════════════════════════════════════════════════════
+const volAudio = {
+  ortam: new Audio("{{ url_for('static', filename='audio/ortamstadium.mp3') }}"),
+  top:   new Audio("{{ url_for('static', filename='audio/topavurus.mp3') }}"),
+};
+volAudio.ortam.loop   = true;
+volAudio.ortam.volume = 0.22;   // salon sesi biraz kısık
+volAudio.top.volume   = 0.5;
+let volAudioUnlocked  = false;
+let lastTopSesiAt     = 0;
+
+function sesAc() {
+  volAudioUnlocked = true;
+  const btn = document.getElementById('btn-ses');
+  if (btn) btn.style.display = 'none';
+  volAudio.ortam.play().catch(() => {});
+}
+
+// Her 3 saniyede bir ortam sesi kesilmemişse kontrol et
+setInterval(() => {
+  if (volAudioUnlocked && volAudio.ortam.paused) {
+    volAudio.ortam.play().catch(() => {});
+  }
+}, 3000);
+
+function topSesiCal() {
+  if (!volAudioUnlocked) return;
+  const now = performance.now();
+  if (now - lastTopSesiAt < 120) return;
+  lastTopSesiAt = now;
+  const klon = volAudio.top.cloneNode();
+  klon.volume = 0.5 + Math.random() * 0.25;  // hafif varyasyon
+  klon.play().catch(() => {});
+}
+
+// İlk etkileşimde sesi otomatik başlat
+['pointerdown','keydown','touchstart'].forEach(ev => {
+  window.addEventListener(ev, () => {
+    if (!volAudioUnlocked) sesAc();
+  }, { once: true, passive: true });
+});
 
 // ════════════════════════════════════════════════════════════════════════
 // BAŞLAT

@@ -145,15 +145,23 @@ function tryStartStadium() {
 function stopStadium() {
     audio.stadium.pause();
 }
+// Stadyum sesi kesilmez — her 3 saniyede bir kontrol et
+setInterval(() => {
+    if (audioUnlocked && isPlaying && !stateMachine.includes('HALFTIME') && audio.stadium.paused) {
+        audio.stadium.play().catch(() => {});
+    }
+}, 3000);
 function playOneShot(baseAudio, volume = 1) {
     if (!audioUnlocked) return;
+    // Her seferinde yeni klonla — önceki ses kesilmez, çakışabilir
     const sound = baseAudio.cloneNode();
     sound.volume = volume;
     sound.play().catch(() => {});
+    return sound;
 }
 function playKickSound(force = false) {
     const now = performance.now();
-    if (!force && now - lastKickSoundAt < 120) return;
+    if (!force && now - lastKickSoundAt < 110) return;
     lastKickSoundAt = now;
     playOneShot(audio.kick, 0.55);
 }
