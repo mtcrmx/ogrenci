@@ -2977,7 +2977,7 @@ if __name__ == "__main__":
 # ══════════════════════════════════════════════════════════════════════════
 
 @app.route("/odevler", methods=["GET", "POST"])
-@login_required
+@giris_zorunlu
 def odevler():
     oid = session["ogretmen_id"]
     from database import odev_olustur, odevleri_getir
@@ -2995,7 +2995,7 @@ def odevler():
     return render_template("odevler.html", odevler=odev_listesi, siniflar=ogretmen_siniflari(oid), yetki=session.get('ogretmen_yetki'))
 
 @app.route("/odev/<int:odev_id>", methods=["GET", "POST"])
-@login_required
+@giris_zorunlu
 def odev_detay(odev_id):
     oid = session["ogretmen_id"]
     from database import odev_detay_getir, odev_durum_guncelle
