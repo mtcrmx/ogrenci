@@ -613,7 +613,7 @@ function update() {
         const moveDir = normalize(targetX - p.x, targetY - p.y);
         const d = dist(p, {x:targetX, y:targetY});
         if (d > 5) {
-            const speedMult = (p.ozellikler.hiz / 100) * 5.5;
+            const speedMult = (p.ozellikler.hiz / 100) * 7.5; // Artırıldı: Oyuncular topa daha hızlı yetişecek
             p.vx = moveDir.x * speedMult;
             p.vy = moveDir.y * speedMult;
         } else {
@@ -625,9 +625,9 @@ function update() {
         clampPlayerToOwnCourt(p);
         
         // ========== HITBOX & CONTACT DETECTION ==========
-        const HITBOX_RADIUS = 22; // arm reach
+        const HITBOX_RADIUS = 35; // Artırıldı: Top karşılama daha kolay
         const hitDist = dist(p, ball);
-        const zOK = ball.z > 0 && ball.z < 30; // reachable height
+        const zOK = ball.z > 0 && ball.z < 45; // Artırıldı: Daha yüksekten top çıkarabilirler
         const nearNet = Math.abs(p.y - NET_Y) < 80;
         const isBlockAttempt = nearNet && ball.vz < 0 && ball.z > 12 && ballMovingTowardTeam(p.team);
         // Çift vuruş önlemi: son topa vuran oyuncu hitbox'ı tetikleyemez
@@ -689,12 +689,11 @@ function update() {
                 const tgtDist = dist(p, tgt);
                 const bDir = normalize(tgt.x - p.x, tgt.y - p.y);
                 
-                // Manşet absorbs incoming energy, sends high
-                const incomingSpeed = Math.hypot(ball.vx, ball.vy, ball.vz);
-                const absorbed = FLOOR_RESTITUTION; // energy absorption
-                ball.vz = 9 + Math.random() * 3; // high pop-up
+                // Manşet sends high to the setter
+                ball.vz = 10 + Math.random() * 3; // Biraz daha yüksek pas
                 const airT = (ball.vz / GRAVITY) * 2;
-                const pw = Math.max(1.5, tgtDist / airT) * absorbed;
+                // Artık absorbed ile çarpmıyoruz, pas doğrudan hedefe ulaşacak güce sahip olacak
+                const pw = Math.max(2.0, tgtDist / airT);
                 ball.vx = bDir.x * pw;
                 ball.vy = bDir.y * pw;
                 ball.spinX = (Math.random() - 0.5) * 0.05; // minimal spin
