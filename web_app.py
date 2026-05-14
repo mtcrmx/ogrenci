@@ -1706,9 +1706,19 @@ def odevler():
         except Exception:
             og_json = "[]"
 
+        sev = request.form.get("sinif_seviyesi", type=int)
+        if sev not in (5, 6, 7, 8):
+            sev = None
+
         if sinif_id and ders_adi and tema_adi:
             odev_id = odev_olustur(
-                oid, sinif_id, ders_adi, tema_adi, konu_adi, og_json
+                oid,
+                sinif_id,
+                ders_adi,
+                tema_adi,
+                konu_adi,
+                og_json,
+                sinif_seviyesi=sev,
             )
             return redirect(url_for("odev_tema_detay", odev_id=odev_id))
 
@@ -1737,6 +1747,12 @@ def odev_tema_detay(odev_id):
         )
     except Exception:
         detay["odev"]["ogrenme_ciktilari"] = []
+    try:
+        detay["odev"]["ogrenme_cikti_kodlari"] = json.loads(
+            detay["odev"].get("ogrenme_cikti_kodlari_json") or "[]"
+        )
+    except Exception:
+        detay["odev"]["ogrenme_cikti_kodlari"] = []
 
     if request.method == "POST":
         for key, val in request.form.items():

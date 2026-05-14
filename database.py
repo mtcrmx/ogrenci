@@ -9,6 +9,7 @@ import sqlite3
 import os
 import uuid
 import json
+import re
 from datetime import datetime, timedelta
 
 # Render.com gibi bulut ortamlarında /data klasörü kalıcıdır;
@@ -2442,6 +2443,8 @@ def _odev_init(con) -> None:
         "tema_adi": "TEXT NOT NULL DEFAULT ''",
         "konu_adi": "TEXT NOT NULL DEFAULT ''",
         "ogrenme_ciktilari_json": "TEXT NOT NULL DEFAULT '[]'",
+        "sinif_seviyesi": "INTEGER NOT NULL DEFAULT 0",
+        "ogrenme_cikti_kodlari_json": "TEXT NOT NULL DEFAULT '[]'",
     }
     for ad, decl in eksik.items():
         if ad not in cols:
@@ -4350,6 +4353,27 @@ def ogrenci_ozellik_artir(ogrenci_id: int, ozellik: str, tik_sayisi: int) -> dic
 # ÖDEV TAKİBİ
 # ══════════════════════════════════════════════════════════════════════════
 
+_OYKOD_RE = re.compile(
+    r"[A-ZĞÜŞÖÇİÜ][A-Za-zĞÜŞÖÇİÜğüşöçıü]*(?:\.[0-9]+)+",
+    re.UNICODE,
+)
+
+
+def ogrenme_cikti_kodlari_cikar(metinler: list[str]) -> list[str]:
+    """TYMM tarzi kodlari metinden ayiklar (orn. MAT.6.1.1, FEN.7.2.3)."""
+    gordu: set[str] = set()
+    sirali: list[str] = []
+    for satir in metinler:
+        if not isinstance(satir, str):
+            continue
+        for m in _OYKOD_RE.finditer(satir):
+            kod = m.group(0).rstrip(".")
+            if kod not in gordu:
+                gordu.add(kod)
+                sirali.append(kod)
+    return sirali
+
+
 def odev_olustur(
     ogretmen_id: int,
     sinif_id: int,
@@ -4357,12 +4381,22 @@ def odev_olustur(
     tema_adi: str,
     konu_adi: str = "",
     ogrenme_ciktilari_json: str = "[]",
+    sinif_seviyesi: int | None = None,
 ) -> int:
     konu_adi = (konu_adi or "").strip()
     try:
-        json.loads(ogrenme_ciktilari_json or "[]")
+        oc_list = json.loads(ogrenme_ciktilari_json or "[]")
+        if not isinstance(oc_list, list):
+            oc_list = []
+        ogrenme_ciktilari_json = json.dumps(oc_list, ensure_ascii=False)
     except Exception:
+        oc_list = []
         ogrenme_ciktilari_json = "[]"
+    kodlar = ogrenme_cikti_kodlari_cikar([str(x) for x in oc_list])
+    kod_json = json.dumps(kodlar, ensure_ascii=False)
+    sev = int(sinif_seviyesi) if sinif_seviyesi is not None else 0
+    if sev < 0 or sev > 12:
+        sev = 0
     con = _conn()
     _odev_init(con)
     cur = con.cursor()
@@ -4370,8 +4404,9 @@ def odev_olustur(
         """
         INSERT INTO odevler
             (ogretmen_id, sinif_id, ders_adi, tema_adi, konu_adi, ogrenme_ciktilari_json,
+             ogrenme_cikti_kodlari_json, sinif_seviyesi,
              baslik, aciklama, son_tarih, ders, tarih)
-        VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?)
         """,
         (
             ogretmen_id,
@@ -4380,6 +4415,8 @@ def odev_olustur(
             tema_adi,
             konu_adi,
             ogrenme_ciktilari_json,
+            kod_json,
+            sev,
             tema_adi,
             datetime.now().strftime("%Y-%m-%d"),
             ders_adi,
@@ -4408,6 +4445,8 @@ def odevleri_getir(ogretmen_id: int):
                   COALESCE(NULLIF(o.ders_adi, ''), o.ders, 'Genel') AS ders_adi,
                   COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
                   COALESCE(NULLIF(o.konu_adi, ''), '') AS konu_adi,
+                  COALESCE(o.sinif_seviyesi, 0) AS sinif_seviyesi,
+                  COALESCE(NULLIF(o.ogrenme_cikti_kodlari_json, ''), '[]') AS ogrenme_cikti_kodlari_json,
                   o.tarih,
                   (SELECT count(*) FROM odev_tamamlayanlar WHERE odev_id = o.id)
                     + (SELECT count(*) FROM odev_sonuclari WHERE odev_id = o.id AND durum = 'tamamladi') as tamamlayanlar,
@@ -4432,6 +4471,8 @@ def odev_detay_getir(odev_id: int, ogretmen_id: int):
                COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
                COALESCE(NULLIF(o.konu_adi, ''), '') AS konu_adi,
                COALESCE(NULLIF(o.ogrenme_ciktilari_json, ''), '[]') AS ogrenme_ciktilari_json,
+               COALESCE(NULLIF(o.ogrenme_cikti_kodlari_json, ''), '[]') AS ogrenme_cikti_kodlari_json,
+               COALESCE(o.sinif_seviyesi, 0) AS sinif_seviyesi,
                s.sinif_adi
         FROM odevler o
         JOIN siniflar s ON o.sinif_id = s.id
@@ -4460,14 +4501,26 @@ def odev_detay_getir(odev_id: int, ogretmen_id: int):
     return {"odev": dict(odev), "ogrenciler": [dict(r) for r in ogrenciler]}
 
 
+def _odev_iso_hafta(tarih_raw: str) -> str:
+    s = (tarih_raw or "")[:10]
+    try:
+        d = datetime.strptime(s, "%Y-%m-%d")
+        y, w, _ = d.isocalendar()
+        return f"{y}-W{w:02d}"
+    except Exception:
+        return "bilinmeyen"
+
+
 def odev_mufredat_ozeti(ogretmen_id: int) -> dict:
-    """Ders / tema / konu bazinda odev sayisi ve ortalama tamamlanma yuzdesi."""
+    """Ders / tema / konu / sinif seviyesi / hafta bazinda odev ozeti."""
     from collections import defaultdict
 
     liste = odevleri_getir(ogretmen_id)
     by_ders: dict[str, list[int]] = defaultdict(list)
     by_tema: dict[tuple[str, str], list[int]] = defaultdict(list)
     by_konu: dict[tuple[str, str, str], list[int]] = defaultdict(list)
+    by_seviye: dict[tuple[str, int], list[int]] = defaultdict(list)
+    by_hafta: dict[str, list[int]] = defaultdict(list)
     for r in liste:
         t = int(r["tamamlayanlar"] or 0)
         n = int(r["toplam_ogrenci"] or 0)
@@ -4479,6 +4532,12 @@ def odev_mufredat_ozeti(ogretmen_id: int) -> dict:
         by_tema[(d, tm)].append(p)
         if k:
             by_konu[(d, tm, k)].append(p)
+        sev = int(r.get("sinif_seviyesi") or 0)
+        if 5 <= sev <= 8:
+            by_seviye[(d, sev)].append(p)
+        hw = _odev_iso_hafta(str(r.get("tarih") or ""))
+        if hw != "bilinmeyen":
+            by_hafta[hw].append(p)
 
     def _avg(vals: list[int]) -> int:
         return round(sum(vals) / len(vals)) if vals else 0
@@ -4509,6 +4568,19 @@ def odev_mufredat_ozeti(ogretmen_id: int) -> dict:
             for (a, b, c), v in sorted(
                 by_konu.items(), key=lambda x: (x[0][0], x[0][1], x[0][2])
             )
+        ],
+        "ortaokul_seviye": [
+            {
+                "ders_adi": a,
+                "sinif_seviyesi": b,
+                "odev_sayisi": len(v),
+                "ort_tamamlama": _avg(v),
+            }
+            for (a, b), v in sorted(by_seviye.items(), key=lambda x: (x[0][0], x[0][1]))
+        ],
+        "haftalar": [
+            {"hafta": h, "odev_sayisi": len(v), "ort_tamamlama": _avg(v)}
+            for h, v in sorted(by_hafta.items(), key=lambda x: x[0], reverse=True)[:24]
         ],
     }
 

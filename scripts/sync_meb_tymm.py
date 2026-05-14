@@ -41,6 +41,15 @@ DEFAULT_SLUG_MAP: dict[str, dict[str, Any]] = {
     "Görsel Sanatlar": {"slug": "gorsel-sanatlar-dersi-temel-egitim", "sinif_path": 7},
     "Bilişim Teknolojileri": {"slug": "bilisim-teknolojileri-ve-yazilim-dersi", "sinif_path": 7},
     "Müzik": {"slug": "muzik-dersi-temel-egitim", "sinif_path": 7},
+    "T.C. İnkılap Tarihi ve Atatürkçülük": {
+        "slug": "t-c-inkilap-tarihi-ve-ataturkculuk-dersi",
+        "sinif_path": 7,
+    },
+    "İnsan Hakları ve Vatandaşlık": {
+        "slug": "insan-haklari-vatandaslik-ve-demokrasi-dersi",
+        "sinif_path": 7,
+    },
+    "Trafik Güvenliği": {"slug": "trafik-guvenligi-dersi", "sinif_path": 7},
 }
 
 USER_AGENT = (

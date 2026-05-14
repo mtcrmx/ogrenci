@@ -35,7 +35,7 @@
         <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
             <h2 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-plus mr-2 text-green-400"></i>Yeni Görev / Ödev Ver</h2>
             <form id="odev_form" method="POST" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-1">Sınıf</label>
                         <select name="sinif_id" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
@@ -43,6 +43,16 @@
                             {% for s in siniflar %}
                             <option value="{{ s.id }}">{{ s.sinif_adi }}</option>
                             {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">TYMM sınıf düzeyi (5–8)</label>
+                        <select name="sinif_seviyesi" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                            <option value="">Belirtmeyin</option>
+                            <option value="5">5. sınıf</option>
+                            <option value="6">6. sınıf</option>
+                            <option value="7">7. sınıf</option>
+                            <option value="8">8. sınıf</option>
                         </select>
                     </div>
                     <div>
@@ -58,6 +68,9 @@
                             <option value="Din Kültürü" title="Din Kültürü ve Ahlak Bilgisi">Din Kültürü ve Ahlak B.</option>
                             <option value="Görsel Sanatlar">Görsel Sanatlar</option>
                             <option value="Bilişim Teknolojileri">Bilişim Teknolojileri</option>
+                            <option value="T.C. İnkılap Tarihi ve Atatürkçülük">T.C. İnkılap ve Ata.</option>
+                            <option value="İnsan Hakları ve Vatandaşlık">İ.H.V. ve Demokrasi</option>
+                            <option value="Trafik Güvenliği">Trafik Güvenliği</option>
                         </select>
                     </div>
                     <div>
@@ -92,7 +105,7 @@
         <!-- Özet analiz -->
         <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
             <h2 class="text-xl font-bold text-white mb-1"><i class="fa-solid fa-chart-column mr-2 text-amber-400"></i>Müfredat özeti</h2>
-            <p class="text-slate-500 text-sm mb-4">Kayıtlı ödevleriniz için ders, tema ve konu bazında ortalama tamamlanma oranı.</p>
+            <p class="text-slate-500 text-sm mb-4">Ders, tema, konu; TYMM 5–8 düzeyi; son haftalara göre ortalama tamamlanma.</p>
             <div id="mufredat_ozet" class="space-y-4 text-sm"></div>
         </div>
 
@@ -105,7 +118,12 @@
                 {% for odev in odevler %}
                 <a href="/odev/{{ odev.id }}" class="block bg-slate-800 hover:bg-slate-700 p-5 rounded-2xl border border-slate-700 hover:border-blue-500 transition shadow-lg group relative overflow-hidden">
                     <div class="flex justify-between items-start mb-2">
-                        <div class="text-xl font-black text-white"><i class="fa-solid fa-users mr-2 text-slate-500"></i>{{ odev.sinif_adi }}</div>
+                        <div class="text-xl font-black text-white flex flex-wrap items-center gap-2">
+                            <span><i class="fa-solid fa-users mr-2 text-slate-500"></i>{{ odev.sinif_adi }}</span>
+                            {% if odev.sinif_seviyesi and odev.sinif_seviyesi >= 5 and odev.sinif_seviyesi <= 8 %}
+                            <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-600/40 text-indigo-200 border border-indigo-500/50">{{ odev.sinif_seviyesi }}. sınıf (TYMM)</span>
+                            {% endif %}
+                        </div>
                         <div class="text-xs font-bold text-slate-400">{{ odev.tarih[:10] }}</div>
                     </div>
                     <div class="text-blue-400 font-bold mb-1">{{ odev.ders_adi }}</div>
@@ -149,7 +167,10 @@
             "İngilizce": ["Theme 1: Hello!", "Theme 2: My Town", "Theme 3: Games and Hobbies", "Theme 4: My Daily Routine", "Theme 5: Health", "Theme 6: Movies", "Theme 7: Party Time", "Theme 8: Fitness", "Theme 9: The Animal Shelter", "Theme 10: Festivals"],
             "Din Kültürü": ["1. Tema: İnanç", "2. Tema: İbadet", "3. Tema: Ahlak", "4. Tema: Din ve Kültür"],
             "Görsel Sanatlar": ["1. Tema: Görsel İletişim ve Biçimlendirme", "2. Tema: Kültürel Miras", "3. Tema: Sanat Eleştirisi ve Estetik"],
-            "Bilişim Teknolojileri": ["1. Tema: Bilişim Teknolojileri", "2. Tema: Etik ve Güvenlik", "3. Tema: İletişim, Araştırma ve İş Birliği", "4. Tema: Ürün Oluşturma", "5. Tema: Bilgi İşlemsel Düşünme"]
+            "Bilişim Teknolojileri": ["1. Tema: Bilişim Teknolojileri", "2. Tema: Etik ve Güvenlik", "3. Tema: İletişim, Araştırma ve İş Birliği", "4. Tema: Ürün Oluşturma", "5. Tema: Bilgi İşlemsel Düşünme"],
+            "T.C. İnkılap Tarihi ve Atatürkçülük": ["TYMM senkronu sonrası üniteler"],
+            "İnsan Hakları ve Vatandaşlık": ["TYMM senkronu sonrası üniteler"],
+            "Trafik Güvenliği": ["TYMM senkronu sonrası üniteler"]
         };
 
         let curriculumByDers = null;
@@ -269,10 +290,13 @@
         }
 
         function barHtml(yuzde, etiket, alt) {
+            function esc(s) {
+                return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
             const renk = yuzde >= 80 ? "bg-green-500" : (yuzde >= 50 ? "bg-amber-500" : "bg-red-500");
             return '<div class="rounded-lg border border-slate-700 bg-slate-900/40 p-3">' +
-                '<div class="flex justify-between text-slate-300 mb-1"><span>' + etiket + '</span><span class="font-mono font-bold">' + yuzde + '%</span></div>' +
-                (alt ? '<div class="text-xs text-slate-500 mb-2">' + alt + '</div>' : '') +
+                '<div class="flex justify-between text-slate-300 mb-1"><span>' + esc(etiket) + '</span><span class="font-mono font-bold">' + yuzde + '%</span></div>' +
+                (alt ? '<div class="text-xs text-slate-500 mb-2">' + esc(alt) + '</div>' : '') +
                 '<div class="h-2 bg-slate-800 rounded-full overflow-hidden">' +
                 '<div class="' + renk + ' h-2 rounded-full transition-all" style="width:' + yuzde + '%"></div></div></div>';
         }
@@ -299,6 +323,21 @@
                         html += barHtml(x.ort_tamamlama, etik, x.tema_adi + " · " + x.odev_sayisi + " ödev");
                     });
                     if (d.konular.length > 24) html += '<p class="text-slate-500 text-xs">+' + (d.konular.length - 24) + " konu daha...</p>";
+                    html += "</div></div>";
+                }
+                if ((d.ortaokul_seviye || []).length) {
+                    html += '<div><div class="font-bold text-slate-300 mb-2">TYMM sınıf düzeyi (5–8) × ders</div><div class="space-y-2 max-h-48 overflow-y-auto pr-1">';
+                    d.ortaokul_seviye.forEach(x => {
+                        const etik = x.ders_adi + " · " + x.sinif_seviyesi + ". sınıf";
+                        html += barHtml(x.ort_tamamlama, etik, x.odev_sayisi + " ödev");
+                    });
+                    html += "</div></div>";
+                }
+                if ((d.haftalar || []).length) {
+                    html += '<div><div class="font-bold text-slate-300 mb-2">Son haftalar (ISO hafta)</div><div class="space-y-2 max-h-40 overflow-y-auto pr-1">';
+                    d.haftalar.forEach(x => {
+                        html += barHtml(x.ort_tamamlama, x.hafta, x.odev_sayisi + " ödev");
+                    });
                     html += "</div></div>";
                 }
                 el.innerHTML = html || '<p class="text-slate-500">Henüz analiz için yeterli veri yok.</p>';

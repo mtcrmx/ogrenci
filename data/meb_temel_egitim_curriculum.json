@@ -467,6 +467,45 @@
           }
         ]
       }
+    ],
+    "T.C. İnkılap Tarihi ve Atatürkçülük": [
+      {
+        "tema": "TYMM ile doldurulacak",
+        "konular": [
+          {
+            "baslik": "Senkron",
+            "ciktilar": [
+              "python scripts/sync_meb_tymm.py --ders T.C. İnkılap Tarihi ve Atatürkçülük"
+            ]
+          }
+        ]
+      }
+    ],
+    "İnsan Hakları ve Vatandaşlık": [
+      {
+        "tema": "TYMM ile doldurulacak",
+        "konular": [
+          {
+            "baslik": "Senkron",
+            "ciktilar": [
+              "python scripts/sync_meb_tymm.py --ders İnsan Hakları ve Vatandaşlık"
+            ]
+          }
+        ]
+      }
+    ],
+    "Trafik Güvenliği": [
+      {
+        "tema": "TYMM ile doldurulacak",
+        "konular": [
+          {
+            "baslik": "Senkron",
+            "ciktilar": [
+              "python scripts/sync_meb_tymm.py --ders Trafik Güvenliği"
+            ]
+          }
+        ]
+      }
     ]
   }
 }
