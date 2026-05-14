@@ -105,7 +105,6 @@ let isPlaying = false;
 let score1 = 0, score2 = 0;
 let stateMachine = "PLAYING"; // PLAYING, GOAL_CELEBRATION, SET_PIECE, HALFTIME
 let isSecondHalf = false;
-let htCountdown = 0; // halftime countdown in frames (2 min = 120*60)
 let htTeamReady = false; // player confirmed tactics
 
 // Canvas
@@ -429,9 +428,11 @@ function addPlayer(p, team, mirror) {
         ty = GAME_HEIGHT - ty;
     }
     
+    const baseOzellikler = p.ozellikler ? { ...p.ozellikler } : {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr};
     players.push({
-        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, rol: p.rol || "", team: team,
-        ozellikler: p.ozellikler || {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr},
+        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, baseOvr: p.ovr, rol: p.rol || "", team: team,
+        ozellikler: { ...baseOzellikler },
+        baseOzellikler: baseOzellikler,
         baseX: tx, baseY: ty,
         x: tx, y: ty, vx: 0, vy: 0,
         mass: PLAYER_MASS + (Math.random()*20 - 10), // slight variation
@@ -1106,9 +1107,19 @@ function update() {
         
         // Stamina logic
         if (p.stamina < 100 && p.state !== 'CHASE' && p.state !== 'WITH_BALL') {
-            p.stamina += 0.05 + (p.ovr / 2000); // recover
+            p.stamina += 0.05 + (p.baseOvr / 2000); // recover
         }
+        if (p.stamina > 100) p.stamina = 100;
         
+        // Yorgunluk etkisi: Özellikleri düşür (Kondisyon %100'den düştükçe)
+        const staminaDrop = 100 - p.stamina;
+        p.ovr = Math.round(Math.max(1, p.baseOvr - staminaDrop * (p.baseOvr / 50)));
+        p.ozellikler.hiz = Math.round(Math.max(1, p.baseOzellikler.hiz - staminaDrop * (p.baseOzellikler.hiz / 50)));
+        p.ozellikler.sut = Math.round(Math.max(1, p.baseOzellikler.sut - staminaDrop * (p.baseOzellikler.sut / 50)));
+        p.ozellikler.pas = Math.round(Math.max(1, p.baseOzellikler.pas - staminaDrop * (p.baseOzellikler.pas / 50)));
+        p.ozellikler.defans = Math.round(Math.max(1, p.baseOzellikler.defans - staminaDrop * (p.baseOzellikler.defans / 50)));
+        p.ozellikler.kaleci = Math.round(Math.max(1, p.baseOzellikler.kaleci - staminaDrop * (p.baseOzellikler.kaleci / 50)));
+
         let speedMult = (p.ozellikler.hiz / 100) * 4.0; // Base speed based on 'hiz'
         // Fatigue effect: drop to 50% speed if exhausted
         speedMult *= Math.max(0.5, p.stamina / 100); 
@@ -1585,13 +1596,10 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 // ========== HALFTIME SYSTEM ==========
-let htInterval = null;
-let htSecondsLeft = 120; // 2 minutes
 
 function startHalftime() {
     stateMachine = "HALFTIME";
     htTeamReady = false;
-    htSecondsLeft = 120;
     
     // Show overlay
     const overlay = document.getElementById('halftime-overlay');
@@ -1599,26 +1607,11 @@ function startHalftime() {
     document.getElementById('ht-score').textContent = `${score1} - ${score2}`;
     document.getElementById('ht-ready-btn').style.display = '';
     document.getElementById('ht-ready-btn').textContent = '✅ Taktikleri Onayla (2. Yarıya Hazırım)';
-    document.getElementById('ht-status').textContent = 'Taktik değişikliklerinizi yapın, süre dolunca 2. yarı başlar.';
-    updateHtTimer();
+    document.getElementById('ht-status').textContent = 'Taktik değişikliklerinizi yapın. Onayladığınızda 2. yarı başlayacaktır.';
     
-    // Start countdown
-    htInterval = setInterval(() => {
-        htSecondsLeft--;
-        updateHtTimer();
-        if (htSecondsLeft <= 0) {
-            endHalftime();
-        }
-    }, 1000);
-}
-
-function updateHtTimer() {
-    const min = Math.floor(htSecondsLeft / 60);
-    const sec = htSecondsLeft % 60;
-    document.getElementById('ht-countdown').textContent = `${min}:${sec.toString().padStart(2,'0')}`;
-    // Change color as time runs out
-    const el = document.getElementById('ht-countdown');
-    el.style.color = htSecondsLeft <= 10 ? '#ef4444' : (htSecondsLeft <= 30 ? '#f59e0b' : '#22c55e');
+    // Hide countdown
+    const countdownEl = document.getElementById('ht-countdown');
+    if (countdownEl) countdownEl.style.display = 'none';
 }
 
 function openTaktik() {
@@ -1630,17 +1623,12 @@ function openTaktik() {
 function htReady() {
     htTeamReady = true;
     document.getElementById('ht-ready-btn').style.display = 'none';
-    document.getElementById('ht-status').textContent = `✅ Hazırsınız! Süre dolmasını bekliyorsunuz... (${htSecondsLeft}s)`;
+    document.getElementById('ht-status').textContent = `✅ Hazırsınız! 2. Yarı başlıyor...`;
     
-    // If less than 10 seconds left, start immediately
-    if (htSecondsLeft <= 10) {
-        endHalftime();
-    }
+    endHalftime();
 }
 
 function endHalftime() {
-    clearInterval(htInterval);
-    htInterval = null;
     
     // Hide overlay
     document.getElementById('halftime-overlay').classList.remove('active');
