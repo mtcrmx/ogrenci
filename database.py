@@ -2416,6 +2416,39 @@ def _odev_init(con) -> None:
             UNIQUE(odev_id, ogrenci_id)
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS odev_sonuclari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            odev_id INTEGER NOT NULL REFERENCES odevler(id) ON DELETE CASCADE,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            durum TEXT NOT NULL DEFAULT 'tamamlamadi',
+            UNIQUE(odev_id, ogrenci_id)
+        )
+    """)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(odevler)").fetchall()}
+    eksik = {
+        "baslik": "TEXT NOT NULL DEFAULT ''",
+        "aciklama": "TEXT NOT NULL DEFAULT ''",
+        "son_tarih": "TEXT NOT NULL DEFAULT ''",
+        "ders": "TEXT NOT NULL DEFAULT 'Genel'",
+        "ders_adi": "TEXT NOT NULL DEFAULT ''",
+        "tema_adi": "TEXT NOT NULL DEFAULT ''",
+    }
+    for ad, decl in eksik.items():
+        if ad not in cols:
+            try:
+                con.execute(f"ALTER TABLE odevler ADD COLUMN {ad} {decl}")
+            except Exception:
+                pass
+            cols.add(ad)
+    if "ders_adi" in cols and "ders" in cols:
+        con.execute("UPDATE odevler SET ders_adi = ders WHERE (ders_adi IS NULL OR ders_adi = '') AND ders IS NOT NULL")
+        con.execute("UPDATE odevler SET ders = ders_adi WHERE (ders IS NULL OR ders = '') AND ders_adi IS NOT NULL")
+    if "tema_adi" in cols and "baslik" in cols:
+        con.execute("UPDATE odevler SET tema_adi = baslik WHERE (tema_adi IS NULL OR tema_adi = '') AND baslik IS NOT NULL")
+        con.execute("UPDATE odevler SET baslik = tema_adi WHERE (baslik IS NULL OR baslik = '') AND tema_adi IS NOT NULL")
+    if "son_tarih" in cols:
+        con.execute("UPDATE odevler SET son_tarih = substr(tarih, 1, 10) WHERE son_tarih IS NULL OR son_tarih = ''")
     con.commit()
 
 
@@ -4310,10 +4343,24 @@ def ogrenci_ozellik_artir(ogrenci_id: int, ozellik: str, tik_sayisi: int) -> dic
 
 def odev_olustur(ogretmen_id: int, sinif_id: int, ders_adi: str, tema_adi: str) -> int:
     con = _conn()
+    _odev_init(con)
     cur = con.cursor()
     cur.execute(
-        "INSERT INTO odevler (ogretmen_id, sinif_id, ders_adi, tema_adi, tarih) VALUES (?, ?, ?, ?, ?)",
-        (ogretmen_id, sinif_id, ders_adi, tema_adi, datetime.now().isoformat())
+        """
+        INSERT INTO odevler
+            (ogretmen_id, sinif_id, ders_adi, tema_adi, baslik, aciklama, son_tarih, ders, tarih)
+        VALUES (?, ?, ?, ?, ?, '', ?, ?, ?)
+        """,
+        (
+            ogretmen_id,
+            sinif_id,
+            ders_adi,
+            tema_adi,
+            tema_adi,
+            datetime.now().strftime("%Y-%m-%d"),
+            ders_adi,
+            datetime.now().isoformat(),
+        )
     )
     odev_id = cur.lastrowid
     
@@ -4330,10 +4377,16 @@ def odev_olustur(ogretmen_id: int, sinif_id: int, ders_adi: str, tema_adi: str) 
 
 def odevleri_getir(ogretmen_id: int):
     con = _conn()
+    _odev_init(con)
     rows = con.execute(
-        '''SELECT o.id, s.sinif_adi, o.ders_adi, o.tema_adi, o.tarih,
-                  (SELECT count(*) FROM odev_sonuclari WHERE odev_id = o.id AND durum = 'tamamladi') as tamamlayanlar,
-                  (SELECT count(*) FROM odev_sonuclari WHERE odev_id = o.id) as toplam_ogrenci
+        '''SELECT o.id, s.sinif_adi,
+                  COALESCE(NULLIF(o.ders_adi, ''), o.ders, 'Genel') AS ders_adi,
+                  COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
+                  o.tarih,
+                  (SELECT count(*) FROM odev_tamamlayanlar WHERE odev_id = o.id)
+                    + (SELECT count(*) FROM odev_sonuclari WHERE odev_id = o.id AND durum = 'tamamladi') as tamamlayanlar,
+                  COALESCE(NULLIF((SELECT count(*) FROM odev_sonuclari WHERE odev_id = o.id), 0),
+                           (SELECT count(*) FROM ogrenciler WHERE sinif_id = o.sinif_id)) as toplam_ogrenci
            FROM odevler o
            JOIN siniflar s ON o.sinif_id = s.id
            WHERE o.ogretmen_id = ?
@@ -4345,8 +4398,17 @@ def odevleri_getir(ogretmen_id: int):
 
 def odev_detay_getir(odev_id: int, ogretmen_id: int):
     con = _conn()
+    _odev_init(con)
     odev = con.execute(
-        "SELECT o.*, s.sinif_adi FROM odevler o JOIN siniflar s ON o.sinif_id = s.id WHERE o.id = ? AND o.ogretmen_id = ?",
+        """
+        SELECT o.*,
+               COALESCE(NULLIF(o.ders_adi, ''), o.ders, 'Genel') AS ders_adi,
+               COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
+               s.sinif_adi
+        FROM odevler o
+        JOIN siniflar s ON o.sinif_id = s.id
+        WHERE o.id = ? AND o.ogretmen_id = ?
+        """,
         (odev_id, ogretmen_id)
     ).fetchone()
     if not odev:
@@ -4354,21 +4416,42 @@ def odev_detay_getir(odev_id: int, ogretmen_id: int):
         return None
         
     ogrenciler = con.execute(
-        '''SELECT og.id, og.ad_soyad, og.ogr_no, os.durum
-           FROM odev_sonuclari os
-           JOIN ogrenciler og ON os.ogrenci_id = og.id
-           WHERE os.odev_id = ?
+        '''SELECT og.id, og.ad_soyad, og.ogr_no,
+                  CASE
+                    WHEN ot.id IS NOT NULL THEN 'tamamladi'
+                    ELSE COALESCE(os.durum, 'tamamlamadi')
+                  END AS durum
+           FROM ogrenciler og
+           LEFT JOIN odev_sonuclari os ON os.ogrenci_id = og.id AND os.odev_id = ?
+           LEFT JOIN odev_tamamlayanlar ot ON ot.ogrenci_id = og.id AND ot.odev_id = ?
+           WHERE og.sinif_id = ?
            ORDER BY og.ogr_no ASC''' ,
-        (odev_id,)
+        (odev_id, odev_id, dict(odev)["sinif_id"])
     ).fetchall()
     con.close()
     return {"odev": dict(odev), "ogrenciler": [dict(r) for r in ogrenciler]}
 
 def odev_durum_guncelle(odev_id: int, ogrenci_id: int, durum: str):
     con = _conn()
+    _odev_init(con)
     con.execute(
-        "UPDATE odev_sonuclari SET durum = ? WHERE odev_id = ? AND ogrenci_id = ?",
-        (durum, odev_id, ogrenci_id)
+        """
+        INSERT INTO odev_sonuclari (odev_id, ogrenci_id, durum)
+        VALUES (?, ?, ?)
+        ON CONFLICT(odev_id, ogrenci_id) DO UPDATE SET durum = excluded.durum
+        """,
+        (odev_id, ogrenci_id, durum),
     )
+    if durum == "tamamladi":
+        row = con.execute("SELECT ogretmen_id FROM odevler WHERE id = ?", (odev_id,)).fetchone()
+        con.execute(
+            """
+            INSERT OR IGNORE INTO odev_tamamlayanlar (odev_id, ogrenci_id, ogretmen_id, tarih)
+            VALUES (?, ?, ?, ?)
+            """,
+            (odev_id, ogrenci_id, row["ogretmen_id"] if row else 0, datetime.now().strftime("%Y-%m-%d %H:%M")),
+        )
+    else:
+        con.execute("DELETE FROM odev_tamamlayanlar WHERE odev_id = ? AND ogrenci_id = ?", (odev_id, ogrenci_id))
     con.commit()
     con.close()
