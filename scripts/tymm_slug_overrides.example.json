@@ -1,0 +1,7 @@
+{
+  "_yorum": "Kopyalayip scripts/tymm_slug_overrides.json yapin ve --config ile verin.",
+  "Matematik": {
+    "slug": "ortaokul-matematik-dersi",
+    "sinif_path": 7
+  }
+}

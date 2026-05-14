@@ -21,9 +21,14 @@
         </div>
 
         <p class="text-slate-400 text-sm -mt-4">
-            Müfredat verisi TYMM temel eğitim programıyla uyumlu özet dosyadan gelir
+            Müfredat verisi TYMM temel eğitim programıyla uyumlu JSON dosyasından gelir
             (<code class="text-slate-500">data/meb_temel_egitim_curriculum.json</code>).
-            Resmi siteden canlı çekim yapılmaz; dosyayı güncelleyerek genişletebilirsiniz.
+            Güncellemek için (ağ gerekir):
+            <code class="text-slate-500">python scripts/sync_meb_tymm.py</code>
+            — tüm dersler veya
+            <code class="text-slate-500">python scripts/sync_meb_tymm.py --ders Matematik</code>
+            — tek ders. İstekler arası bekleme için
+            <code class="text-slate-500">--delay 0.5</code> kullanın.
         </p>
 
         <!-- Yeni Ödev Ekle -->
