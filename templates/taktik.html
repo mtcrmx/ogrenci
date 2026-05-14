@@ -351,23 +351,23 @@ if (KAYIT && KAYIT.oyuncular) {
 // ════════════════════════════════════════════════════════════════════════
 const katman = document.getElementById('oyuncular-katmani');
 
-function soyadiAl(ad) {
+function ilkAdiAl(ad) {
   const p = (ad || '').trim().split(' ');
-  // Soyad genellikle son kelime — ama tam görünsün (max 10 char)
-  return p.length > 1 ? p[p.length - 1].substring(0, 10) : (p[0] || '?').substring(0, 10);
+  // Ad genellikle ilk kelimedir (max 10 char)
+  return (p[0] || '?').substring(0, 10);
 }
 
 function tokenHTML(o) {
   const goIsim = document.getElementById('cb-isim')?.checked !== false;
   const goRol  = document.getElementById('cb-rol')?.checked  !== false;
   const em     = EMOJI[o.rol] || '⚽';
-  const soyad  = o.ad.length <= 10 ? o.ad : soyadiAl(o.ad);
+  const kisaAd = o.ad.length <= 10 ? o.ad : ilkAdiAl(o.ad);
   return `
     <div class="daire" style="background:${takimRengi}">
       <span class="emoji">${em}</span>
       <span class="jer">${o.numara}</span>
     </div>
-    ${goIsim ? `<div class="oyuncu-isim">${soyad}</div>` : ''}
+    ${goIsim ? `<div class="oyuncu-isim">${kisaAd}</div>` : ''}
     ${goRol  ? `<div class="oyuncu-rol">${(o.rol||'').split('(')[0].trim().substring(0,12)}</div>` : ''}
   `;
 }
