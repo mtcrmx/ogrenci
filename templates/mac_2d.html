@@ -302,6 +302,49 @@ function goalkeeperDistribute(p) {
     return true;
 }
 
+function threatScoreFor(defTeam, opp) {
+    const goalDistance = Math.abs(opp.y - defTeam.defendY);
+    let score = 1000 - goalDistance;
+    if (isForward(opp)) score += 180;
+    if (isMidfielder(opp)) score += 80;
+    if (ball.owner === opp) score += 260;
+    score += Math.max(0, 150 - Math.abs(opp.x - GAME_WIDTH / 2)) * 0.35;
+    return score;
+}
+
+function buildMarkAssignments(defTeam, atkTeam) {
+    const assignments = new Map();
+    const defenders = players
+        .filter(p => p.team === defTeam && !isGoalkeeper(p))
+        .sort((a, b) => {
+            const roleA = isDefender(a) ? 0 : (isMidfielder(a) ? 1 : 2);
+            const roleB = isDefender(b) ? 0 : (isMidfielder(b) ? 1 : 2);
+            return roleA - roleB || Math.abs(a.baseY - defTeam.defendY) - Math.abs(b.baseY - defTeam.defendY);
+        });
+    const threats = players
+        .filter(p => p.team === atkTeam && !isGoalkeeper(p))
+        .sort((a, b) => threatScoreFor(defTeam, b) - threatScoreFor(defTeam, a));
+
+    threats.forEach(threat => {
+        let bestDef = null;
+        let bestScore = Infinity;
+        defenders.forEach(def => {
+            if (assignments.has(def)) return;
+            let score = dist(def, threat);
+            if (isDefender(def) && isForward(threat)) score -= 45;
+            if (isMidfielder(def) && isMidfielder(threat)) score -= 25;
+            if (!isDefender(def) && isForward(threat)) score += 25;
+            score += Math.abs(def.baseX - threat.x) * 0.15;
+            if (score < bestScore) {
+                bestScore = score;
+                bestDef = def;
+            }
+        });
+        if (bestDef) assignments.set(bestDef, threat);
+    });
+    return assignments;
+}
+
 // Entities
 let ball = {
     x: GAME_WIDTH/2, y: GAME_HEIGHT/2, z: 0,
@@ -1023,6 +1066,13 @@ function update() {
     }
 
     const teamPossession = getTeamWithBall();
+    const markingAssignments = new Map();
+    if (teamPossession) {
+        const defendingTeam = teamPossession === team1 ? team2 : team1;
+        buildMarkAssignments(defendingTeam, teamPossession).forEach((mark, defender) => {
+            markingAssignments.set(defender, mark);
+        });
+    }
 
     // Player AI
     players.forEach(p => {
@@ -1059,8 +1109,13 @@ function update() {
             }
 
             if (p.actionCooldown <= 0) {
+                let closeOpponents = 0;
+                players.forEach(opp => {
+                    if (opp.team !== p.team && dist(p, opp) < 58) closeOpponents++;
+                });
+
                 // 1. Shoot?
-                if (distToGoal < 220) {
+                if (distToGoal < 300) {
                     let pathClear = true;
                     if (distToGoal > 80) {
                         players.forEach(opp => {
@@ -1072,7 +1127,8 @@ function update() {
                     }
                     
                     // High probability to shoot if in box and clear, or just very close
-                    if (distToGoal < 120 || (pathClear && Math.random() < 0.15)) {
+                    const shotChance = distToGoal < 140 ? 0.75 : (distToGoal < 220 ? 0.35 : 0.10);
+                    if (distToGoal < 115 || (pathClear && Math.random() < shotChance)) {
                         const errSut = (100 - p.ozellikler.sut) / 100;
                         const distFactor = distToGoal / 250;
                         const usePlase = distToGoal < 150 && Math.random() < 0.5;
@@ -1107,7 +1163,7 @@ function update() {
                 }
                 
                 // 2. Pass Evaluation (Intelligent FM style)
-                if (p.hasBallTime > 10) {
+                if (p.hasBallTime > 22) {
                     let bestMate = null; let bestScore = -999;
                     players.forEach(m => {
                         if (m.team === p.team && m !== p) {
@@ -1147,7 +1203,8 @@ function update() {
                     let oppPressing = false;
                     players.forEach(opp => { if (opp.team !== p.team && dist(p, opp) < 40) oppPressing = true; });
                     
-                    if (bestMate && (bestScore > 10 || (oppPressing && bestScore > -50) || p.hasBallTime > 60)) {
+                    const shouldKeepDribbling = closeOpponents < 2 && distToGoal > 105 && p.hasBallTime < 95;
+                    if (bestMate && !shouldKeepDribbling && (bestScore > 28 || (oppPressing && bestScore > -45) || p.hasBallTime > 95)) {
                         const errPas = (100 - p.ozellikler.pas) / 100;
                         const passDist = dist(p, bestMate);
                         const passSpeed = 12 + (p.ozellikler.pas / 20);
@@ -1172,8 +1229,9 @@ function update() {
                 }
             }
             
-            // 3. Dribbling (Look for space)
-            let dribbleDir = { x: 0, y: p.team.dirY }; // Default forward
+            // 3. Dribbling: first thought is to carry the ball toward goal.
+            const goalDrive = normalize(GAME_WIDTH/2 - p.x, p.team.goalY - p.y);
+            let dribbleDir = goalDrive;
             
             // Avoid nearby opponents
             let avoidVec = { x: 0, y: 0 };
@@ -1188,14 +1246,14 @@ function update() {
             });
             
             if (Math.hypot(avoidVec.x, avoidVec.y) > 0.1) {
-                dribbleDir = normalize(dribbleDir.x + avoidVec.x*2, dribbleDir.y + avoidVec.y*2);
+                dribbleDir = normalize(goalDrive.x * 1.45 + avoidVec.x * 1.35, goalDrive.y * 1.45 + avoidVec.y * 1.35);
             } else {
-                // Drift slightly towards center if wide, or look for gap
-                dribbleDir = normalize((GAME_WIDTH/2 - p.x)*0.01, p.team.dirY);
+                // Drive at goal, with a slight center lane correction.
+                dribbleDir = normalize(goalDrive.x + (GAME_WIDTH/2 - p.x)*0.006, goalDrive.y);
             }
             
-            p.vx = dribbleDir.x * speedMult * 0.75;
-            p.vy = dribbleDir.y * speedMult * 0.75;
+            p.vx = dribbleDir.x * speedMult * 0.92;
+            p.vy = dribbleDir.y * speedMult * 0.92;
             
         } else {
             // NOT BALL OWNER
@@ -1248,13 +1306,13 @@ function update() {
                     }
                 } else if (teamPossession && !isAttacking) {
                     const dToBall = dist(p, ball);
+                    const markedOpp = markingAssignments.get(p);
                     const teamDistances = players
                         .filter(m => m.team === p.team && !isGoalkeeper(m))
                         .map(m => ({ m, d: dist(m, ball) }))
                         .sort((a,b)=>a.d-b.d);
                     const pressRank = teamDistances.findIndex(entry => entry.m === p) + 1;
-                    const maxPressers = ballInMyHalf ? 2 : 1;
-                    const canPress = pressRank > 0 && pressRank <= maxPressers
+                    const canPress = pressRank === 1
                         && (ballInMyHalf || (!isDefender(p) && dToBall < 185));
                     
                     if (canPress) {
@@ -1274,15 +1332,24 @@ function update() {
                         }
                         targetY = Math.max(ownHalf.minY, Math.min(ownHalf.maxY, targetY));
 
-                        let nearestOpp = null; let dOpp = 999;
-                        players.forEach(opp => {
-                            if (opp.team !== p.team && dist(opp, p) < dOpp) { dOpp = dist(opp,p); nearestOpp = opp; }
-                        });
-                        if (nearestOpp && dOpp < 160) {
+                        if (markedOpp) {
                             const goalCenter = {x: GAME_WIDTH/2, y: p.team.defendY};
-                            const blockDir = normalize(nearestOpp.x - goalCenter.x, nearestOpp.y - goalCenter.y);
-                            targetX = nearestOpp.x - blockDir.x * 42;
-                            targetY = Math.max(ownHalf.minY, Math.min(ownHalf.maxY, nearestOpp.y - blockDir.y * 42));
+                            const blockDir = normalize(markedOpp.x - goalCenter.x, markedOpp.y - goalCenter.y);
+                            const markGap = isDefender(p) ? 34 : 44;
+                            targetX = markedOpp.x - blockDir.x * markGap;
+                            targetY = markedOpp.y - blockDir.y * markGap;
+                            targetY = Math.max(ownHalf.minY, Math.min(ownHalf.maxY, targetY));
+                        } else {
+                            let nearestOpp = null; let dOpp = 999;
+                            players.forEach(opp => {
+                                if (opp.team !== p.team && dist(opp, p) < dOpp) { dOpp = dist(opp,p); nearestOpp = opp; }
+                            });
+                            if (nearestOpp && dOpp < 160) {
+                                const goalCenter = {x: GAME_WIDTH/2, y: p.team.defendY};
+                                const blockDir = normalize(nearestOpp.x - goalCenter.x, nearestOpp.y - goalCenter.y);
+                                targetX = nearestOpp.x - blockDir.x * 42;
+                                targetY = Math.max(ownHalf.minY, Math.min(ownHalf.maxY, nearestOpp.y - blockDir.y * 42));
+                            }
                         }
                     }
                 } else {

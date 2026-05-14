@@ -123,6 +123,84 @@ function ballMovingTowardTeam(team) {
     return team.side === 1 ? ball.vy > 0 : ball.vy < 0;
 }
 
+function predictBallLanding() {
+    let predX = ball.x;
+    let predY = ball.y;
+    let predVz = ball.vz;
+    let predTime = 0;
+    while (predVz > -20 && predTime < 120) {
+        predVz -= GRAVITY;
+        predX += ball.vx * (1 - AIR_DRAG * 0.5);
+        predY += ball.vy * (1 - AIR_DRAG * 0.5);
+        predTime++;
+        if (predVz + predTime * -GRAVITY < 0) break;
+    }
+    return { x: predX, y: predY, time: predTime };
+}
+
+function chooseReceiver(team, target) {
+    let best = null;
+    let bestScore = Infinity;
+    players.forEach(p => {
+        if (p.team !== team) return;
+        let score = dist(p, target);
+        if (p.isLibero) score -= 22;
+        if (p.currentRow === 'back') score -= 10;
+        if (Math.abs(ball.y - NET_Y) < 90 && p.currentRow === 'front') score -= 12;
+        if (p.actionCooldown > 0) score += 35;
+        if (score < bestScore) {
+            bestScore = score;
+            best = p;
+        }
+    });
+    return best;
+}
+
+function coverageTarget(p, receivePlan) {
+    const pressure = p.currentRow === 'front' ? 0.18 : 0.12;
+    let targetX = p.baseX + (receivePlan.x - p.baseX) * pressure;
+    let targetY = p.baseY + (receivePlan.y - p.baseY) * pressure;
+
+    if (dist({x: targetX, y: targetY}, receivePlan) < 55) {
+        targetX += targetX < receivePlan.x ? -42 : 42;
+        targetY += p.team.side === 1 ? 26 : -26;
+    }
+
+    return clampPointToTeamCourt(p.team, targetX, targetY, 22);
+}
+
+function separatePlayers() {
+    for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < players.length; i++) {
+            for (let j = i + 1; j < players.length; j++) {
+                const a = players[i];
+                const b = players[j];
+                if (a.team !== b.team) continue;
+                let dx = b.x - a.x;
+                let dy = b.y - a.y;
+                let d = Math.hypot(dx, dy);
+                const minGap = 28;
+                if (d >= minGap) continue;
+                if (d < 0.01) {
+                    const angle = (i + j + pass) * 1.9;
+                    dx = Math.cos(angle);
+                    dy = Math.sin(angle);
+                    d = 1;
+                }
+                const overlap = minGap - d;
+                const nx = dx / d;
+                const ny = dy / d;
+                a.x -= nx * overlap * 0.5;
+                a.y -= ny * overlap * 0.5;
+                b.x += nx * overlap * 0.5;
+                b.y += ny * overlap * 0.5;
+                clampPlayerToOwnCourt(a);
+                clampPlayerToOwnCourt(b);
+            }
+        }
+    }
+}
+
 async function loadData() {
   try {
     const res = await fetch("{{ url_for('api_ogrenci_mac_2d_data') }}", {
@@ -416,6 +494,25 @@ function update() {
     }
 
     // ========== PLAYER AI + HITBOX SYSTEM ==========
+    const receiveTeam = teamForBallY(ball.y);
+    const receiveTeamLocked = ball.serveFlight && receiveTeam === ball.lastTeamTouched;
+    let receivePlan = null;
+    if (ball.z > 0 && !receiveTeamLocked) {
+        const predicted = predictBallLanding();
+        const plannedTarget = clampPointToTeamCourt(receiveTeam, predicted.x, predicted.y, 22);
+        const receiver = chooseReceiver(receiveTeam, plannedTarget);
+        if (receiver) {
+            receivePlan = {
+                team: receiveTeam,
+                player: receiver,
+                x: plannedTarget.x,
+                y: plannedTarget.y,
+                time: predicted.time,
+            };
+        }
+    }
+    let contactResolvedThisFrame = false;
+
     players.forEach(p => {
         if (p.actionCooldown > 0) p.actionCooldown--;
         
@@ -425,30 +522,15 @@ function update() {
         const ballOnMySide = ballOnTeamSide(p.team, ball.y);
         const servingTeamLocked = ball.serveFlight && p.team === ball.lastTeamTouched;
         
-        // Movement AI: predict ball landing spot
-        if (ballOnMySide && ball.z > 0 && !servingTeamLocked) {
-            // Predict where ball will land
-            let predX = ball.x, predY = ball.y, predVz = ball.vz;
-            let predTime = 0;
-            while (predVz > -20 && predTime < 120) { // max 2 seconds lookahead
-                predVz -= GRAVITY;
-                predX += ball.vx * (1 - AIR_DRAG * 0.5);
-                predY += ball.vy * (1 - AIR_DRAG * 0.5);
-                predTime++;
-                if (predVz + predTime * -GRAVITY < 0) break; // ball descending
-            }
-            
-            // Only closest 2 players chase
-            let dToBall = dist(p, {x: predX, y: predY});
-            let closerCount = 0;
-            players.forEach(m => {
-                if (m.team === p.team && m !== p && dist(m, {x:predX, y:predY}) < dToBall) closerCount++;
-            });
-            
-            if (closerCount < 2) {
-                const ownCourtTarget = clampPointToTeamCourt(p.team, predX, predY, 22);
-                targetX = ownCourtTarget.x;
-                targetY = ownCourtTarget.y;
+        // Movement AI: one clear receiver goes to the ball, teammates cover space.
+        if (receivePlan && receivePlan.team === p.team && ballOnMySide && ball.z > 0 && !servingTeamLocked) {
+            if (receivePlan.player === p) {
+                targetX = receivePlan.x;
+                targetY = receivePlan.y;
+            } else {
+                const cover = coverageTarget(p, receivePlan);
+                targetX = cover.x;
+                targetY = cover.y;
             }
         }
         
@@ -471,15 +553,20 @@ function update() {
         const HITBOX_RADIUS = 22; // arm reach
         const hitDist = dist(p, ball);
         const zOK = ball.z > 0 && ball.z < 30; // reachable height
+        const nearNet = Math.abs(p.y - NET_Y) < 80;
+        const isBlockAttempt = nearNet && ball.vz < 0 && ball.z > 12 && ballMovingTowardTeam(p.team);
+        const canPlayThisBall = !receivePlan || receivePlan.player === p || isBlockAttempt;
         
-        if (ballOnMySide && !servingTeamLocked && zOK && hitDist < HITBOX_RADIUS && p.actionCooldown <= 0) {
+        if (!contactResolvedThisFrame && canPlayThisBall && ballOnMySide && !servingTeamLocked && zOK && hitDist < HITBOX_RADIUS && p.actionCooldown <= 0) {
             // === RULE: Double Hit ===
             if (ball.lastTouchedBy === p) {
+                contactResolvedThisFrame = true;
                 givePoint(p.team === team1 ? team2 : team1, "Çift Vuruş Hatası!");
                 return;
             }
             // === RULE: 4th touch ===
             if (ball.lastTeamTouched === p.team && teamTouches >= 3) {
+                contactResolvedThisFrame = true;
                 givePoint(p.team === team1 ? team2 : team1, "4 Vuruş Hatası!");
                 return;
             }
@@ -497,12 +584,12 @@ function update() {
             const contactAngle = Math.atan2(ball.y - p.y, ball.x - p.x);
             
             // Check if opponent is near net for BLOCK
-            const nearNet = Math.abs(p.y - NET_Y) < 80;
-            const isBlock = nearNet && ball.vz < 0 && ball.z > 12 && ballMovingTowardTeam(p.team);
+            const isBlock = isBlockAttempt;
             
             if (isBlock && p.ozellikler.defans > 30) {
                 // RULE: Libero cannot block
                 if (p.isLibero) {
+                    contactResolvedThisFrame = true;
                     givePoint(p.team === team1 ? team2 : team1, "Libero Blok Hatası!");
                     return;
                 }
@@ -565,10 +652,12 @@ function update() {
                 // RULE: Back row attack violation (including Libero from anywhere)
                 if (Math.abs(p.y - NET_Y) < 150) {
                     if (p.isLibero) {
+                        contactResolvedThisFrame = true;
                         givePoint(p.team === team1 ? team2 : team1, "Libero Hücum İhlali!");
                         return;
                     }
                     if (p.currentRow === 'back') {
+                        contactResolvedThisFrame = true;
                         givePoint(p.team === team1 ? team2 : team1, "Arka Hat Hücum İhlali (3 Metre)!");
                         return;
                     }
@@ -602,8 +691,10 @@ function update() {
                 ball.spinX = (Math.random() - 0.5) * 0.2;
                 ball.spinY = (p.team.side === 1 ? -0.15 : 0.15) * (1 - sutErr); // topspin toward opponent
             }
+            contactResolvedThisFrame = true;
         }
     });
+    separatePlayers();
 }
 
 function draw() {
