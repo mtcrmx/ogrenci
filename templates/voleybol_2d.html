@@ -7,6 +7,18 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background: #000; color: #fff; margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
+    @keyframes pulse-banner {
+      0%,100% { opacity:1; transform:translateX(-50%) scale(1); }
+      50%      { opacity:.85; transform:translateX(-50%) scale(1.04); }
+    }
+    #audio-banner {
+      position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+      background:rgba(16,185,129,0.93); color:#fff; padding:9px 22px;
+      border-radius:22px; font-weight:800; font-size:13px; cursor:pointer;
+      z-index:9999; box-shadow:0 4px 18px rgba(0,0,0,.55);
+      animation:pulse-banner 1.3s ease-in-out infinite;
+      display:none;
+    }
     #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
     #header { height: 60px; background: #111; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 2px solid #333; }
     #score-board { font-size: 20px; font-weight: 900; letter-spacing: 1px; text-align: center; }
@@ -21,6 +33,8 @@
   </style>
 </head>
 <body>
+<!-- Ses kilidi bannerı -->
+<div id="audio-banner" onclick="sesAc()">🔊 Sesi açmak için tıkla</div>
 
 <div id="game-container">
   <div id="header">
@@ -318,6 +332,7 @@ function givePoint(team, reason) {
     stateMachine = "POINT_CELEBRATION";
     goalTimer = 120;
     showEvent(reason + "<br>Sayı: " + team.name, 2000);
+    golSesi();
     
     if (team === team1) score1++; else score2++;
     document.getElementById('score1').textContent = score1;
@@ -604,6 +619,7 @@ function update() {
                 }
                 // === BLOCK: reverse velocity ===
                 showEvent("BLOK! 🖐️", 600);
+                topVurusSesi();
                 const blockPower = 0.6 + (p.ozellikler.defans / 200);
                 ball.vx = -ball.vx * blockPower + (Math.random() - 0.5) * 2;
                 ball.vy = -ball.vy * blockPower;
@@ -614,6 +630,7 @@ function update() {
             } else if (teamTouches === 1) {
                 // === MANŞET (Dig/Bump): absorb speed, redirect up ===
                 showEvent("Manşet!", 400);
+                topVurusSesi();
                 let setter = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - NET_Y) < 120);
                 if (!setter) setter = players.find(m => m.team === p.team && m !== p);
                 
@@ -637,6 +654,7 @@ function update() {
             } else if (teamTouches === 2) {
                 // === PARMAK PAS (Finger Set): precise placement ===
                 showEvent("Parmak Pas! 🤲", 400);
+                topVurusSesi();
                 let spiker = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - NET_Y) < 100);
                 if (!spiker) spiker = players.find(m => m.team === p.team && m !== p);
                 
@@ -673,6 +691,7 @@ function update() {
                 }
                 
                 showEvent("SMAÇ! 💥", 600);
+                topVurusSesi();
                 const sutErr = (100 - p.ozellikler.sut) / 100;
                 
                 const margin = 40;
@@ -816,6 +835,63 @@ function gameLoop() {
     } catch(e) { console.error(e); }
     requestAnimationFrame(gameLoop);
 }
+
+// ========== SES SİSTEMİ ==========
+const volSes = {
+    ortam: new Audio("{{ url_for('static', filename='audio/ortamstadium.mp3') }}"),
+    top:   new Audio("{{ url_for('static', filename='audio/topavurus.mp3') }}"),
+    gol:   new Audio("{{ url_for('static', filename='audio/gol.mp3') }}"),
+};
+volSes.ortam.loop   = true;
+volSes.ortam.volume = 0.22;
+volSes.top.volume   = 0.55;
+volSes.gol.volume   = 0.85;
+let volSesAcik      = false;
+let lastTopSesiAt   = 0;
+
+function sesAc() {
+    volSesAcik = true;
+    const banner = document.getElementById('audio-banner');
+    if (banner) banner.style.display = 'none';
+    volSes.ortam.play().catch(() => {});
+}
+
+// Ortam sesi kesilmez — 3sn kontrol
+setInterval(() => {
+    if (volSesAcik && volSes.ortam.paused && isPlaying) {
+        volSes.ortam.play().catch(() => {});
+    }
+}, 3000);
+
+function topVurusSesi() {
+    if (!volSesAcik) return;
+    const now = performance.now();
+    if (now - lastTopSesiAt < 110) return;
+    lastTopSesiAt = now;
+    const klon = volSes.top.cloneNode();
+    klon.volume = 0.45 + Math.random() * 0.3;
+    klon.play().catch(() => {});
+}
+
+function golSesi() {
+    if (!volSesAcik) return;
+    const klon = volSes.gol.cloneNode();
+    klon.volume = 0.85;
+    klon.play().catch(() => {});
+}
+
+// Sayfa yüklenince otomatik aç — başarısız olursa banner göster
+volSes.ortam.play().then(() => {
+    volSesAcik = true;
+}).catch(() => {
+    const banner = document.getElementById('audio-banner');
+    if (banner) banner.style.display = 'block';
+});
+
+// Herhangi bir etkileşimde sesi aç
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
+    window.addEventListener(ev, () => { if (!volSesAcik) sesAc(); }, { once: true, passive: true });
+});
 
 loadData();
 </script>

@@ -9,6 +9,18 @@
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
     body{background:#05090f;font-family:'Segoe UI',system-ui,sans-serif;
          height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+    @keyframes pulse-banner{
+      0%,100%{opacity:1;transform:translateX(-50%) scale(1);}
+      50%{opacity:.8;transform:translateX(-50%) scale(1.05);}
+    }
+    #ses-banner{
+      position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+      background:rgba(124,58,237,0.93);color:#fff;padding:9px 22px;
+      border-radius:22px;font-weight:800;font-size:13px;cursor:pointer;
+      z-index:9999;box-shadow:0 4px 18px rgba(0,0,0,.55);
+      animation:pulse-banner 1.3s ease-in-out infinite;
+      display:none;
+    }
 
     /* ── Saha ── */
     #saha-wrap{
@@ -135,6 +147,8 @@
   </style>
 </head>
 <body>
+<!-- Ses kilidi bannerı -->
+<div id="ses-banner" onclick="sesAc()">🔊 Sesi açmak için tıkla</div>
 
 <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
 <header class="flex-shrink-0 border-b border-slate-800 px-2 py-1.5 flex items-center gap-1.5 flex-wrap"
@@ -165,11 +179,6 @@
   <button id="btn-kaydet" onclick="kaydet()"
           class="px-3 py-1 rounded-lg text-xs font-bold bg-green-700 hover:bg-green-600 text-white transition flex-shrink-0">
     💾 Kaydet
-  </button>
-  <!-- Ses butonu -->
-  <button id="btn-ses" onclick="sesAc()"
-          class="px-2.5 py-1 rounded-lg text-xs font-bold bg-violet-700 hover:bg-violet-600 text-white transition flex-shrink-0">
-    🔊 Sesi Aç
   </button>
 </header>
 
@@ -866,8 +875,8 @@ let lastTopSesiAt     = 0;
 
 function sesAc() {
   volAudioUnlocked = true;
-  const btn = document.getElementById('btn-ses');
-  if (btn) btn.style.display = 'none';
+  const banner = document.getElementById('ses-banner');
+  if (banner) banner.style.display = 'none';
   volAudio.ortam.play().catch(() => {});
 }
 
@@ -884,15 +893,21 @@ function topSesiCal() {
   if (now - lastTopSesiAt < 120) return;
   lastTopSesiAt = now;
   const klon = volAudio.top.cloneNode();
-  klon.volume = 0.5 + Math.random() * 0.25;  // hafif varyasyon
+  klon.volume = 0.5 + Math.random() * 0.25;
   klon.play().catch(() => {});
 }
 
-// İlk etkileşimde sesi otomatik başlat
+// Sayfa yüklenince otomatik aç — başarısız olursa banner göster
+volAudio.ortam.play().then(() => {
+  volAudioUnlocked = true;
+}).catch(() => {
+  const banner = document.getElementById('ses-banner');
+  if (banner) banner.style.display = 'block';
+});
+
+// Herhangi bir etkileşimde sesi aç
 ['pointerdown','keydown','touchstart'].forEach(ev => {
-  window.addEventListener(ev, () => {
-    if (!volAudioUnlocked) sesAc();
-  }, { once: true, passive: true });
+  window.addEventListener(ev, () => { if (!volAudioUnlocked) sesAc(); }, { once: true, passive: true });
 });
 
 // ════════════════════════════════════════════════════════════════════════

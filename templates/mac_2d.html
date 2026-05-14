@@ -7,6 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background: #000; color: #fff; margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
+    @keyframes pulse-banner {
+      0%,100% { opacity:1; transform:translateX(-50%) scale(1); }
+      50%      { opacity:.85; transform:translateX(-50%) scale(1.04); }
+    }
     #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
     #header { height: 60px; background: #111; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 2px solid #333; }
     #score-board { font-size: 24px; font-weight: 900; letter-spacing: 2px; }
@@ -54,6 +58,14 @@
     <canvas id="pitch"></canvas>
     <div id="debug-panel"></div>
     <div id="event-overlay">Maç Başlıyor!</div>
+    <!-- Ses kilidi bannerı -->
+    <div id="audio-banner" onclick="enableMatchAudio()" style="
+      position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+      background:rgba(16,185,129,0.92);color:#fff;padding:8px 20px;border-radius:20px;
+      font-weight:800;font-size:13px;cursor:pointer;z-index:200;
+      display:none;box-shadow:0 4px 16px rgba(0,0,0,0.5);
+      animation:pulse-banner 1.4s ease-in-out infinite;
+    ">🔊 Sesi açmak için tıkla</div>
   </div>
   <!-- Halftime Overlay -->
   <div id="halftime-overlay">
@@ -116,15 +128,20 @@ let lastKickSoundAt = 0;
 canvas.width = GAME_WIDTH;
 canvas.height = GAME_HEIGHT;
 
+const audioBanner = document.getElementById('audio-banner');
+function hideBanner() {
+    if (audioBanner) audioBanner.style.display = 'none';
+    if (soundBtn) soundBtn.style.display = 'none';
+}
 function updateSoundButton() {
-    if (!soundBtn) return;
-    soundBtn.style.display = audioUnlocked ? 'none' : 'block';
+    // Banner göster/gizle
+    if (audioBanner) audioBanner.style.display = audioUnlocked ? 'none' : 'block';
 }
 async function enableMatchAudio() {
     audioUnlocked = true;
-    updateSoundButton();
+    hideBanner();
     try {
-        if (isPlaying && audio.stadium.paused) {
+        if (audio.stadium.paused) {
             audio.stadium.currentTime = audio.stadium.currentTime || 0;
             await audio.stadium.play();
         }
@@ -134,12 +151,13 @@ async function enableMatchAudio() {
     }
 }
 function tryStartStadium() {
-    if (!isPlaying) return;
+    // Otomatik başlatmayı dene; başarısız olursa banner göster
     audio.stadium.play().then(() => {
         audioUnlocked = true;
-        updateSoundButton();
+        hideBanner();
     }).catch(() => {
-        updateSoundButton();
+        // Autoplay engellendi — banner göster
+        if (audioBanner) audioBanner.style.display = 'block';
     });
 }
 function stopStadium() {
@@ -153,7 +171,6 @@ setInterval(() => {
 }, 3000);
 function playOneShot(baseAudio, volume = 1) {
     if (!audioUnlocked) return;
-    // Her seferinde yeni klonla — önceki ses kesilmez, çakışabilir
     const sound = baseAudio.cloneNode();
     sound.volume = volume;
     sound.play().catch(() => {});
@@ -168,8 +185,9 @@ function playKickSound(force = false) {
 function playGoalSound() {
     playOneShot(audio.goal, 0.9);
 }
+// Herhangi bir etkileşimde sesi aç (ilk tıklama / tuş)
 ['pointerdown', 'keydown', 'touchstart'].forEach(evt => {
-    window.addEventListener(evt, enableMatchAudio, { once: true, passive: true });
+    window.addEventListener(evt, () => { if (!audioUnlocked) enableMatchAudio(); }, { once: true, passive: true });
 });
 
 function resizeCanvas() {
