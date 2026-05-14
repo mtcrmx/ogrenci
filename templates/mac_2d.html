@@ -1296,7 +1296,9 @@ function update() {
                 // === FM-STYLE TACTICAL ZONAL AI ===
                 const ballRelativeX = (ball.x - GAME_WIDTH/2) / (GAME_WIDTH/2);
                 const ballRelativeY = ball.y / GAME_HEIGHT;
-                const shiftX = ballRelativeX * (isForward(p) ? 45 : 62);
+                // Lateral kayma: defans daha az, forvet biraz daha fazla
+                const lateralFactor = isDefender(p) ? 28 : (isMidfielder(p) ? 42 : 52);
+                const shiftX = ballRelativeX * lateralFactor;
                 targetX = p.baseX + shiftX;
 
                 const isAttacking = teamPossession === p.team;
@@ -1319,15 +1321,17 @@ function update() {
                                 ? Math.min(MID_Y + 45, Math.max(ownHalf.minY, behindBallY - 55))
                                 : Math.max(MID_Y - 45, Math.min(ownHalf.maxY, behindBallY + 55));
                         } else if (isMidfielder(p)) {
-                            targetY = (p.baseY * 0.45) + (behindBallY * 0.55);
+                            targetY = (p.baseY * 0.55) + (behindBallY * 0.45);
                             targetY = Math.max(90, Math.min(GAME_HEIGHT - 90, targetY));
                         } else {
-                            targetY = aheadBallY;
-                            const offsideY = p.team.goalY - p.team.dirY * 55;
+                            // Forvet: base'in ilerisine atıl fakat çok ileri gitme
+                            targetY = p.baseY + p.team.dirY * 60;
+                            const offsideLimit = p.team.goalY - p.team.dirY * 55;
+                            const baseLimit    = p.baseY + p.team.dirY * 120;
                             targetY = p.team.dirY === -1
-                                ? Math.max(offsideY, targetY)
-                                : Math.min(offsideY, targetY);
-                            targetX += (Math.random()-0.5) * 26;
+                                ? Math.max(Math.min(offsideLimit, baseLimit), targetY)
+                                : Math.min(Math.max(offsideLimit, baseLimit), targetY);
+                            targetX += (Math.random()-0.5) * 20;
                         }
                     }
                 } else if (teamPossession && !isAttacking) {
@@ -1379,6 +1383,7 @@ function update() {
                         }
                     }
                 } else {
+                    // Top sahipsiz — en yakın 2 oyuncu kovar, geri kalanlar zone'unda bekler
                     let myTeamDist = [];
                     players.forEach(m => { if(m.team === p.team) myTeamDist.push({m:m, d:dist(m,ball)}); });
                     myTeamDist.sort((a,b)=>a.d - b.d);
@@ -1389,7 +1394,10 @@ function update() {
                         targetY = ball.y + ball.vy * 3;
                         p.state = 'CHASE';
                     } else {
-                        targetY = p.baseY + ((ballRelativeY - 0.5) * 150);
+                        // Base pozisyonuna yumuşak dön + topun konumuna göre hafif kayma
+                        const yShift = (ballRelativeY - 0.5) * 80;
+                        targetX = p.baseX + ballRelativeX * (isDefender(p) ? 20 : 35);
+                        targetY = p.baseY + (isDefender(p) ? yShift * 0.3 : yShift * 0.55);
                         if (isDefender(p)) {
                             targetY = Math.max(ownHalf.minY, Math.min(ownHalf.maxY, targetY));
                         }
@@ -1400,6 +1408,25 @@ function update() {
                 const target = clampPitch(targetX, targetY, 18);
                 targetX = target.x;
                 targetY = target.y;
+            }
+
+            // === ZONE ANCHOR (Elastik bağ) ===
+            // Rol bazlı maksimum base'den uzaklaşma mesafesi
+            const zoneRadius = playerIsGK ? 90
+                : isDefender(p)    ? 115
+                : isMidfielder(p)  ? 175
+                : /* forvet */       230;
+
+            const dxFromBase = targetX - p.baseX;
+            const dyFromBase = targetY - p.baseY;
+            const distFromBase = Math.hypot(dxFromBase, dyFromBase);
+
+            if (distFromBase > zoneRadius) {
+                // Base'e doğru elastik çekme — ne kadar uzak, o kadar güçlü
+                const excess = distFromBase - zoneRadius;
+                const pullStrength = Math.min(0.72, excess / (zoneRadius * 1.8));
+                targetX = targetX - dxFromBase * pullStrength;
+                targetY = targetY - dyFromBase * pullStrength;
             }
 
             // Move towards target
