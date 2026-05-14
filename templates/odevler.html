@@ -20,50 +20,81 @@
             <a href="/" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition">Ana Menü</a>
         </div>
 
+        <p class="text-slate-400 text-sm -mt-4">
+            Müfredat verisi TYMM temel eğitim programıyla uyumlu özet dosyadan gelir
+            (<code class="text-slate-500">data/meb_temel_egitim_curriculum.json</code>).
+            Resmi siteden canlı çekim yapılmaz; dosyayı güncelleyerek genişletebilirsiniz.
+        </p>
+
         <!-- Yeni Ödev Ekle -->
         <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
             <h2 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-plus mr-2 text-green-400"></i>Yeni Görev / Ödev Ver</h2>
-            <form method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 mb-1">Sınıf</label>
-                    <select name="sinif_id" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
-                        <option value="">Seçiniz...</option>
-                        {% for s in siniflar %}
-                        <option value="{{ s.id }}">{{ s.sinif_adi }}</option>
-                        {% endfor %}
-                    </select>
+            <form id="odev_form" method="POST" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Sınıf</label>
+                        <select name="sinif_id" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                            <option value="">Seçiniz...</option>
+                            {% for s in siniflar %}
+                            <option value="{{ s.id }}">{{ s.sinif_adi }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Ders (Branş)</label>
+                        <select id="ders_secim" name="ders_adi" required onchange="dersDegisti()" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                            <option value="">Seçiniz...</option>
+                            <option value="Müzik">Müzik</option>
+                            <option value="Türkçe">Türkçe</option>
+                            <option value="Matematik">Matematik</option>
+                            <option value="Fen Bilimleri">Fen Bilimleri</option>
+                            <option value="Sosyal Bilgiler">Sosyal Bilgiler</option>
+                            <option value="İngilizce">İngilizce</option>
+                            <option value="Din Kültürü" title="Din Kültürü ve Ahlak Bilgisi">Din Kültürü ve Ahlak B.</option>
+                            <option value="Görsel Sanatlar">Görsel Sanatlar</option>
+                            <option value="Bilişim Teknolojileri">Bilişim Teknolojileri</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Tema / Öğrenme Alanı</label>
+                        <select id="tema_secim" name="tema_adi" required onchange="temaDegisti()" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                            <option value="">Önce ders seçiniz...</option>
+                        </select>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 mb-1">Ders (Branş)</label>
-                    <select id="ders_secim" name="ders_adi" required onchange="temaGuncelle()" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
-                        <option value="">Seçiniz...</option>
-                        <option value="Müzik">Müzik</option>
-                        <option value="Türkçe">Türkçe</option>
-                        <option value="Matematik">Matematik</option>
-                        <option value="Fen Bilimleri">Fen Bilimleri</option>
-                        <option value="Sosyal Bilgiler">Sosyal Bilgiler</option>
-                        <option value="İngilizce">İngilizce</option>
-                        <option value="Din Kültürü">Din Kültürü ve Ahlak B.</option>
-                        <option value="Görsel Sanatlar">Görsel Sanatlar</option>
-                        <option value="Bilişim Teknolojileri">Bilişim Teknolojileri</option>
-                    </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Konu</label>
+                        <select id="konu_secim" name="konu_adi" onchange="ciktiGuncelle()" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                            <option value="">(İsteğe bağlı) Önce tema seçiniz...</option>
+                        </select>
+                        <input type="text" name="konu_adi_ek" maxlength="200" placeholder="Listede yoksa serbest konu yazın (isteğe bağlı)" class="mt-2 w-full bg-slate-900/80 border border-slate-700 text-slate-200 rounded-lg p-2 text-sm placeholder:text-slate-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Öğrenme çıktıları</label>
+                        <div id="cikti_listesi" class="max-h-44 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm text-slate-300 space-y-2">
+                            <span class="text-slate-500">Konu seçince ilgili çıktılar listelenir.</span>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 mb-1">Tema / Öğrenme Alanı</label>
-                    <select id="tema_secim" name="tema_adi" required class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
-                        <option value="">Önce ders seçiniz...</option>
-                    </select>
-                </div>
-                <div>
-                    <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg transition">Oluştur</button>
+                <input type="hidden" name="ogrenme_ciktilari_json" id="ogrenme_ciktilari_json" value="[]">
+                <div class="flex justify-end">
+                    <button type="submit" class="px-8 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg transition">Oluştur</button>
                 </div>
             </form>
+        </div>
+
+        <!-- Özet analiz -->
+        <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+            <h2 class="text-xl font-bold text-white mb-1"><i class="fa-solid fa-chart-column mr-2 text-amber-400"></i>Müfredat özeti</h2>
+            <p class="text-slate-500 text-sm mb-4">Kayıtlı ödevleriniz için ders, tema ve konu bazında ortalama tamamlanma oranı.</p>
+            <div id="mufredat_ozet" class="space-y-4 text-sm"></div>
         </div>
 
         <!-- Ödev Listesi -->
         <div class="space-y-4">
             <h2 class="text-xl font-bold text-slate-300"><i class="fa-solid fa-list-check mr-2 text-indigo-400"></i>Tema Takip Raporları</h2>
-            
+
             {% if odevler %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% for odev in odevler %}
@@ -73,8 +104,13 @@
                         <div class="text-xs font-bold text-slate-400">{{ odev.tarih[:10] }}</div>
                     </div>
                     <div class="text-blue-400 font-bold mb-1">{{ odev.ders_adi }}</div>
-                    <div class="text-slate-200 font-medium mb-4">{{ odev.tema_adi }}</div>
-                    
+                    <div class="text-slate-200 font-medium mb-1">{{ odev.tema_adi }}</div>
+                    {% if odev.konu_adi %}
+                    <div class="text-slate-400 text-sm mb-3 line-clamp-2">{{ odev.konu_adi }}</div>
+                    {% else %}
+                    <div class="mb-3"></div>
+                    {% endif %}
+
                     <div class="flex items-center justify-between mt-auto">
                         <div class="w-full bg-slate-900 rounded-full h-3 mr-3 overflow-hidden">
                             {% set pct = (odev.tamamlayanlar / odev.toplam_ogrenci * 100)|round|int if odev.toplam_ogrenci > 0 else 0 %}
@@ -99,87 +135,188 @@
     </div>
 
     <script>
-        // MEB Türkiye Yüzyılı Maarif Modeli Temaları
-        const mufredat = {
-            "Müzik": [
-                "1. Tema: Müzik Dili",
-                "2. Tema: Müzik Kültürü"
-            ],
-            "Türkçe": [
-                "1. Tema: Sözlü İletişim",
-                "2. Tema: Okuma",
-                "3. Tema: Yazma"
-            ],
-            "Matematik": [
-                "1. Tema: Sayılar ve İşlemler",
-                "2. Tema: Cebirsel İfadeler",
-                "3. Tema: Geometri ve Ölçme",
-                "4. Tema: Veri İşleme"
-            ],
-            "Fen Bilimleri": [
-                "1. Tema: Dünya ve Evren",
-                "2. Tema: Canlılar ve Yaşam",
-                "3. Tema: Fiziksel Olaylar",
-                "4. Tema: Madde ve Doğası"
-            ],
-            "Sosyal Bilgiler": [
-                "1. Tema: Birey ve Toplum",
-                "2. Tema: Kültür ve Miras",
-                "3. Tema: İnsanlar, Yerler ve Çevreler",
-                "4. Tema: Üretim, Dağıtım ve Tüketim"
-            ],
-            "İngilizce": [
-                "Theme 1: Hello!",
-                "Theme 2: My Town",
-                "Theme 3: Games and Hobbies",
-                "Theme 4: My Daily Routine",
-                "Theme 5: Health",
-                "Theme 6: Movies",
-                "Theme 7: Party Time",
-                "Theme 8: Fitness",
-                "Theme 9: The Animal Shelter",
-                "Theme 10: Festivals"
-            ],
-            "Din Kültürü": [
-                "1. Tema: İnanç",
-                "2. Tema: İbadet",
-                "3. Tema: Ahlak",
-                "4. Tema: Din ve Kültür"
-            ],
-            "Görsel Sanatlar": [
-                "1. Tema: Görsel İletişim ve Biçimlendirme",
-                "2. Tema: Kültürel Miras",
-                "3. Tema: Sanat Eleştirisi ve Estetik"
-            ],
-            "Bilişim Teknolojileri": [
-                "1. Tema: Bilişim Teknolojileri",
-                "2. Tema: Etik ve Güvenlik",
-                "3. Tema: İletişim, Araştırma ve İş Birliği",
-                "4. Tema: Ürün Oluşturma",
-                "5. Tema: Bilgi İşlemsel Düşünme"
-            ]
+        const mufredatFallback = {
+            "Müzik": ["1. Tema: Müzik Dili", "2. Tema: Müzik Kültürü"],
+            "Türkçe": ["1. Tema: Sözlü İletişim", "2. Tema: Okuma", "3. Tema: Yazma"],
+            "Matematik": ["1. Tema: Sayılar ve İşlemler", "2. Tema: Cebirsel İfadeler", "3. Tema: Geometri ve Ölçme", "4. Tema: Veri İşleme"],
+            "Fen Bilimleri": ["1. Tema: Dünya ve Evren", "2. Tema: Canlılar ve Yaşam", "3. Tema: Fiziksel Olaylar", "4. Tema: Madde ve Doğası"],
+            "Sosyal Bilgiler": ["1. Tema: Birey ve Toplum", "2. Tema: Kültür ve Miras", "3. Tema: İnsanlar, Yerler ve Çevreler", "4. Tema: Üretim, Dağıtım ve Tüketim"],
+            "İngilizce": ["Theme 1: Hello!", "Theme 2: My Town", "Theme 3: Games and Hobbies", "Theme 4: My Daily Routine", "Theme 5: Health", "Theme 6: Movies", "Theme 7: Party Time", "Theme 8: Fitness", "Theme 9: The Animal Shelter", "Theme 10: Festivals"],
+            "Din Kültürü": ["1. Tema: İnanç", "2. Tema: İbadet", "3. Tema: Ahlak", "4. Tema: Din ve Kültür"],
+            "Görsel Sanatlar": ["1. Tema: Görsel İletişim ve Biçimlendirme", "2. Tema: Kültürel Miras", "3. Tema: Sanat Eleştirisi ve Estetik"],
+            "Bilişim Teknolojileri": ["1. Tema: Bilişim Teknolojileri", "2. Tema: Etik ve Güvenlik", "3. Tema: İletişim, Araştırma ve İş Birliği", "4. Tema: Ürün Oluşturma", "5. Tema: Bilgi İşlemsel Düşünme"]
         };
 
-        function temaGuncelle() {
-            const ders = document.getElementById("ders_secim").value;
+        let curriculumByDers = null;
+        let currentCiktilar = [];
+
+        async function yukleMufredat() {
+            try {
+                const r = await fetch("/api/curriculum/temel-egitim", { credentials: "same-origin" });
+                if (!r.ok) throw new Error("api");
+                const data = await r.json();
+                curriculumByDers = data.dersler || null;
+            } catch (e) {
+                curriculumByDers = null;
+            }
+        }
+
+        function dersAdiFormdan() {
+            return document.getElementById("ders_secim").value;
+        }
+
+        function dersDegisti() {
+            const dersKey = dersAdiFormdan();
             const temaSelect = document.getElementById("tema_secim");
-            
-            // Temizle
+            const konuSelect = document.getElementById("konu_secim");
             temaSelect.innerHTML = "";
-            
-            if (!ders || !mufredat[ders]) {
+            konuSelect.innerHTML = '<option value="">(İsteğe bağlı) Konu seçiniz...</option>';
+            document.getElementById("cikti_listesi").innerHTML = '<span class="text-slate-500">Konu seçince çıktılar listelenir.</span>';
+            currentCiktilar = [];
+
+            if (!dersKey) {
                 temaSelect.innerHTML = '<option value="">Önce ders seçiniz...</option>';
                 return;
             }
-            
-            // Yeni temaları ekle
-            mufredat[ders].forEach(tema => {
+
+            const yapi = curriculumByDers && curriculumByDers[dersKey];
+            if (yapi && Array.isArray(yapi)) {
+                yapi.forEach(entry => {
+                    const opt = document.createElement("option");
+                    opt.value = entry.tema;
+                    opt.textContent = entry.tema;
+                    temaSelect.appendChild(opt);
+                });
+            } else if (mufredatFallback[dersKey]) {
+                mufredatFallback[dersKey].forEach(tema => {
+                    const opt = document.createElement("option");
+                    opt.value = tema;
+                    opt.textContent = tema;
+                    temaSelect.appendChild(opt);
+                });
+            } else {
+                temaSelect.innerHTML = '<option value="">Bu ders için tanım yok</option>';
+            }
+            temaDegisti();
+        }
+
+        function temaDegisti() {
+            const dersKey = dersAdiFormdan();
+            const tema = document.getElementById("tema_secim").value;
+            const konuSelect = document.getElementById("konu_secim");
+            konuSelect.innerHTML = '<option value="">(İsteğe bağlı) Konu seçiniz...</option>';
+            document.getElementById("cikti_listesi").innerHTML = '<span class="text-slate-500">Konu seçince çıktılar listelenir.</span>';
+            currentCiktilar = [];
+
+            const yapi = curriculumByDers && curriculumByDers[dersKey];
+            if (!yapi || !tema) {
+                ciktiGuncelle();
+                return;
+            }
+            const entry = yapi.find(x => x.tema === tema);
+            if (!entry || !entry.konular) {
+                ciktiGuncelle();
+                return;
+            }
+            entry.konular.forEach(k => {
                 const opt = document.createElement("option");
-                opt.value = tema;
-                opt.textContent = tema;
-                temaSelect.appendChild(opt);
+                opt.value = k.baslik;
+                opt.textContent = k.baslik;
+                konuSelect.appendChild(opt);
+            });
+            ciktiGuncelle();
+        }
+
+        function ciktiGuncelle() {
+            const dersKey = dersAdiFormdan();
+            const tema = document.getElementById("tema_secim").value;
+            const baslik = document.getElementById("konu_secim").value;
+            const div = document.getElementById("cikti_listesi");
+            div.innerHTML = "";
+            currentCiktilar = [];
+
+            const yapi = curriculumByDers && curriculumByDers[dersKey];
+            if (!yapi || !tema || !baslik) {
+                div.innerHTML = '<span class="text-slate-500">Çıktı seçmek için önce konu seçin.</span>';
+                return;
+            }
+            const entry = yapi.find(x => x.tema === tema);
+            const kn = entry && entry.konular ? entry.konular.find(k => k.baslik === baslik) : null;
+            const liste = (kn && kn.ciktilar) ? kn.ciktilar : [];
+            if (!liste.length) {
+                div.innerHTML = '<span class="text-slate-500">Bu konu için çıktı listesi tanımlı değil.</span>';
+                return;
+            }
+            currentCiktilar = liste.slice();
+            liste.forEach((text, i) => {
+                const lab = document.createElement("label");
+                lab.className = "flex items-start gap-2 cursor-pointer py-1 rounded hover:bg-slate-800/80 px-1";
+                const cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.className = "oc_cb mt-1 shrink-0 rounded border-slate-600";
+                cb.dataset.i = String(i);
+                const span = document.createElement("span");
+                span.textContent = text;
+                lab.appendChild(cb);
+                lab.appendChild(span);
+                div.appendChild(lab);
             });
         }
+
+        function barHtml(yuzde, etiket, alt) {
+            const renk = yuzde >= 80 ? "bg-green-500" : (yuzde >= 50 ? "bg-amber-500" : "bg-red-500");
+            return '<div class="rounded-lg border border-slate-700 bg-slate-900/40 p-3">' +
+                '<div class="flex justify-between text-slate-300 mb-1"><span>' + etiket + '</span><span class="font-mono font-bold">' + yuzde + '%</span></div>' +
+                (alt ? '<div class="text-xs text-slate-500 mb-2">' + alt + '</div>' : '') +
+                '<div class="h-2 bg-slate-800 rounded-full overflow-hidden">' +
+                '<div class="' + renk + ' h-2 rounded-full transition-all" style="width:' + yuzde + '%"></div></div></div>';
+        }
+
+        async function mufredatOzetYukle() {
+            const el = document.getElementById("mufredat_ozet");
+            try {
+                const r = await fetch("/api/odev/mufredat-ozet", { credentials: "same-origin" });
+                if (!r.ok) throw new Error();
+                const d = await r.json();
+                let html = "";
+                html += '<div class="text-slate-400">Toplam <strong class="text-white">' + (d.toplam_odev || 0) + '</strong> ödev kaydı.</div>';
+                if ((d.dersler || []).length) {
+                    html += '<div><div class="font-bold text-slate-300 mb-2">Ders bazında ortalama tamamlanma</div><div class="space-y-2">';
+                    d.dersler.forEach(x => {
+                        html += barHtml(x.ort_tamamlama, x.ders_adi, x.odev_sayisi + " ödev");
+                    });
+                    html += "</div></div>";
+                }
+                if ((d.konular || []).length) {
+                    html += '<div><div class="font-bold text-slate-300 mb-2">Konu bazında (seçilmiş kayıtlar)</div><div class="space-y-2 max-h-56 overflow-y-auto pr-1">';
+                    d.konular.slice(0, 24).forEach(x => {
+                        const etik = x.ders_adi + " · " + (x.konu_adi || "");
+                        html += barHtml(x.ort_tamamlama, etik, x.tema_adi + " · " + x.odev_sayisi + " ödev");
+                    });
+                    if (d.konular.length > 24) html += '<p class="text-slate-500 text-xs">+' + (d.konular.length - 24) + " konu daha...</p>";
+                    html += "</div></div>";
+                }
+                el.innerHTML = html || '<p class="text-slate-500">Henüz analiz için yeterli veri yok.</p>';
+            } catch (e) {
+                el.innerHTML = '<p class="text-red-400">Özet yüklenemedi.</p>';
+            }
+        }
+
+        document.getElementById("odev_form").addEventListener("submit", function () {
+            const secilen = [];
+            document.querySelectorAll(".oc_cb:checked").forEach(cb => {
+                const i = parseInt(cb.dataset.i, 10);
+                if (!isNaN(i) && currentCiktilar[i] !== undefined) secilen.push(currentCiktilar[i]);
+            });
+            document.getElementById("ogrenme_ciktilari_json").value = JSON.stringify(secilen);
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            yukleMufredat().then(function () {
+                dersDegisti();
+            });
+            mufredatOzetYukle();
+        });
     </script>
 </body>
 </html>

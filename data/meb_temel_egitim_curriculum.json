@@ -1,0 +1,472 @@
+{
+  "kaynakUrl": "https://tymm.meb.gov.tr/ogretim-programlari/temel-egitim",
+  "aciklama": "TYMM temel egitim ogretim programi ile uyumlu ozet hiyerarsi (tema > konu > ogrenme ciktisi). Genisletmek icin bu dosyayi guncelleyin; canli site yerine surum dosyasi kullanilir.",
+  "surum": "2026-01-ozet",
+  "dersler": {
+    "Matematik": [
+      {
+        "tema": "1. Tema: Sayılar ve İşlemler",
+        "konular": [
+          {
+            "baslik": "Doğal sayılar ve basamak kavramı",
+            "ciktilar": [
+              "Üç basamaklı doğal sayıları okur ve yazar.",
+              "Basamak değerini açıklar.",
+              "Yuvarlama ve tahmin etme stratejileri kullanır."
+            ]
+          },
+          {
+            "baslik": "Doğal sayılarla işlemler",
+            "ciktilar": [
+              "Toplama ve çıkarma işlemlerini zihinden veya kısa yoldan yapar.",
+              "Çarpma ve bölme ile ilgili problem kurar ve çözer."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "2. Tema: Cebirsel İfadeler",
+        "konular": [
+          {
+            "baslik": "Örüntü ve ilişkiler",
+            "ciktilar": [
+              "Sayı örüntülerini analiz eder ve geneller.",
+              "Bilinmeyen miktarı sembolle temsil eder."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "3. Tema: Geometri ve Ölçme",
+        "konular": [
+          {
+            "baslik": "Temel geometrik şekiller",
+            "ciktilar": [
+              "Üçgen, dörtgen ve çemberin özelliklerini karşılaştırır.",
+              "Çevre ve alan kavramlarını günlük hayat örnekleriyle ilişkilendirir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "4. Tema: Veri İşleme",
+        "konular": [
+          {
+            "baslik": "Veri toplama ve grafik",
+            "ciktilar": [
+              "Frekans tablosu oluşturur.",
+              "Sütun ve çizgi grafiğini yorumlar."
+            ]
+          }
+        ]
+      }
+    ],
+    "Türkçe": [
+      {
+        "tema": "1. Tema: Sözlü İletişim",
+        "konular": [
+          {
+            "baslik": "Dinleme ve konuşma",
+            "ciktilar": [
+              "Dinlediği metnin ana fikrini belirler.",
+              "Konuşmasında ton ve vurguyu amaca uygun kullanır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "2. Tema: Okuma",
+        "konular": [
+          {
+            "baslik": "Anlama stratejileri",
+            "ciktilar": [
+              "Tahmin etme, sorgulama ve özetleme stratejilerini uygular.",
+              "Sözcük anlamını bağlamdan çıkarır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "3. Tema: Yazma",
+        "konular": [
+          {
+            "baslik": "Yazılı anlatım",
+            "ciktilar": [
+              "Paragraf yapısına uygun metin yazar.",
+              "Yazım ve noktalama kurallarını kontrol eder."
+            ]
+          }
+        ]
+      }
+    ],
+    "Fen Bilimleri": [
+      {
+        "tema": "1. Tema: Dünya ve Evren",
+        "konular": [
+          {
+            "baslik": "Dünya’nın hareketleri",
+            "ciktilar": [
+              "Gece-gündüz ve mevsimleri Dünya’nın hareketleriyle ilişkilendirir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "2. Tema: Canlılar ve Yaşam",
+        "konular": [
+          {
+            "baslik": "Canlıların ortak özellikleri",
+            "ciktilar": [
+              "Hücre ve dokulara dair temel kavramları açıklar."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "3. Tema: Fiziksel Olaylar",
+        "konular": [
+          {
+            "baslik": "Kuvvet ve hareket",
+            "ciktilar": [
+              "Sürtünme ve yer çekiminin etkilerini günlük hayattan örneklendirir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "4. Tema: Madde ve Doğası",
+        "konular": [
+          {
+            "baslik": "Maddenin halleri",
+            "ciktilar": [
+              "Katı, sıvı ve gazın tanecik modeliyle ilişkisini kurar."
+            ]
+          }
+        ]
+      }
+    ],
+    "Sosyal Bilgiler": [
+      {
+        "tema": "1. Tema: Birey ve Toplum",
+        "konular": [
+          {
+            "baslik": "Hak ve sorumluluklar",
+            "ciktilar": [
+              "Demokratik katılım ve hakların korunmasıyla ilgili örnekler verir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "2. Tema: Kültür ve Miras",
+        "konular": [
+          {
+            "baslik": "Kültürel çeşitlilik",
+            "ciktilar": [
+              "Yerel ve evrensel kültür unsurlarını karşılaştırır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "3. Tema: İnsanlar, Yerler ve Çevreler",
+        "konular": [
+          {
+            "baslik": "Harita becerileri",
+            "ciktilar": [
+              "Temel harita öğelerini kullanır ve yön bulur."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "4. Tema: Üretim, Dağıtım ve Tüketim",
+        "konular": [
+          {
+            "baslik": "Ekonomik faaliyetler",
+            "ciktilar": [
+              "İhtiyaç ve istekleri ayırt eder; bütçe kavramına örnek verir."
+            ]
+          }
+        ]
+      }
+    ],
+    "İngilizce": [
+      {
+        "tema": "Theme 1: Hello!",
+        "konular": [
+          {
+            "baslik": "Greetings and introductions",
+            "ciktilar": [
+              "Uses simple greetings and farewells.",
+              "Introduces self and others with basic phrases."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 2: My Town",
+        "konular": [
+          {
+            "baslik": "Places in town",
+            "ciktilar": [
+              "Names common places and gives simple directions."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 3: Games and Hobbies",
+        "konular": [
+          {
+            "baslik": "Free time activities",
+            "ciktilar": [
+              "Talks about hobbies using simple present tense."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 4: My Daily Routine",
+        "konular": [
+          {
+            "baslik": "Daily life",
+            "ciktilar": [
+              "Describes a typical day with time expressions."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 5: Health",
+        "konular": [
+          {
+            "baslik": "Healthy habits",
+            "ciktilar": [
+              "Gives simple advice about healthy living."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 6: Movies",
+        "konular": [
+          {
+            "baslik": "Film preferences",
+            "ciktilar": [
+              "Expresses likes and dislikes about film types."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 7: Party Time",
+        "konular": [
+          {
+            "baslik": "Invitations",
+            "ciktilar": [
+              "Makes and responds to simple invitations."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 8: Fitness",
+        "konular": [
+          {
+            "baslik": "Sports",
+            "ciktilar": [
+              "Names sports and links them to ability (can/can’t)."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 9: The Animal Shelter",
+        "konular": [
+          {
+            "baslik": "Animals and care",
+            "ciktilar": [
+              "Describes animals and simple rules for caring for them."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Theme 10: Festivals",
+        "konular": [
+          {
+            "baslik": "Celebrations",
+            "ciktilar": [
+              "Compares festivals using simple adjectives."
+            ]
+          }
+        ]
+      }
+    ],
+    "Din Kültürü": [
+      {
+        "tema": "1. Tema: İnanç",
+        "konular": [
+          {
+            "baslik": "İnanç ve güven",
+            "ciktilar": [
+              "İnanç kavramını günlük hayatla ilişkilendirir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "2. Tema: İbadet",
+        "konular": [
+          {
+            "baslik": "İbadetin bireysel ve toplumsal boyutu",
+            "ciktilar": [
+              "İbadet çeşitlerine örnek verir ve anlamlandırır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "3. Tema: Ahlak",
+        "konular": [
+          {
+            "baslik": "Erdemli davranışlar",
+            "ciktilar": [
+              "Dürüstlük ve sorumluluk üzerine örnekler tartışır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "4. Tema: Din ve Kültür",
+        "konular": [
+          {
+            "baslik": "Kültürel çeşitlilik ve hoşgörü",
+            "ciktilar": [
+              "Farklı kültürlerde dinin rolüne dair gözlemler paylaşır."
+            ]
+          }
+        ]
+      }
+    ],
+    "Görsel Sanatlar": [
+      {
+        "tema": "1. Tema: Görsel İletişim ve Biçimlendirme",
+        "konular": [
+          {
+            "baslik": "Öğe ve ilkeler",
+            "ciktilar": [
+              "Çizgi, renk ve doku ile duygu ifade eder.",
+              "Denge ve ritim kavramlarını örneklerle açıklar."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "2. Tema: Kültürel Miras",
+        "konular": [
+          {
+            "baslik": "Yerel sanat mirası",
+            "ciktilar": [
+              "Çevresindeki kültürel miras öğelerini tanımlar."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "3. Tema: Sanat Eleştirisi ve Estetik",
+        "konular": [
+          {
+            "baslik": "Sanat eserini inceleme",
+            "ciktilar": [
+              "Basit eleştiri sorularıyla eseri yorumlar."
+            ]
+          }
+        ]
+      }
+    ],
+    "Bilişim Teknolojileri": [
+      {
+        "tema": "1. Tema: Bilişim Teknolojileri",
+        "konular": [
+          {
+            "baslik": "Donanım ve yazılım",
+            "ciktilar": [
+              "Bilgisayar bileşenlerini ve işletim sisteminin rolünü açıklar."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "2. Tema: Etik ve Güvenlik",
+        "konular": [
+          {
+            "baslik": "Dijital vatandaşlık",
+            "ciktilar": [
+              "Kişisel veri ve siber güvenlik için temel kuralları listeler."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "3. Tema: İletişim, Araştırma ve İş Birliği",
+        "konular": [
+          {
+            "baslik": "İnternetle araştırma",
+            "ciktilar": [
+              "Güvenilir kaynak seçimi ve kaynak gösterme alışkanlığı kazanır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "4. Tema: Ürün Oluşturma",
+        "konular": [
+          {
+            "baslik": "Dijital üretim",
+            "ciktilar": [
+              "Metin, görsel ve sunum araçlarıyla basit ürün oluşturur."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. Tema: Bilgi İşlemsel Düşünme",
+        "konular": [
+          {
+            "baslik": "Algoritmik düşünme",
+            "ciktilar": [
+              "Problemi adımlara ayırır ve akış diyagramı önerir."
+            ]
+          }
+        ]
+      }
+    ],
+    "Müzik": [
+      {
+        "tema": "1. Tema: Müzik Dili",
+        "konular": [
+          {
+            "baslik": "Ses ve ritim",
+            "ciktilar": [
+              "Ritim kalıplarını tekrarlar ve grupla uyum sağlar.",
+              "Temel nota ve süre değerlerini tanır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "2. Tema: Müzik Kültürü",
+        "konular": [
+          {
+            "baslik": "Yerel ve evrensel müzik",
+            "ciktilar": [
+              "Farklı kültürlerden örnekleri dinler ve karşılaştırır."
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

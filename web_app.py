@@ -1693,9 +1693,23 @@ def odevler():
         sinif_id = request.form.get("sinif_id", type=int)
         ders_adi = request.form.get("ders_adi", "").strip()
         tema_adi = request.form.get("tema_adi", "").strip()
+        konu_adi = request.form.get("konu_adi", "").strip()
+        if not konu_adi:
+            konu_adi = request.form.get("konu_adi_ek", "").strip()
+        else:
+            ek = request.form.get("konu_adi_ek", "").strip()
+            if ek and ek != konu_adi:
+                konu_adi = konu_adi + " — " + ek
+        og_json = (request.form.get("ogrenme_ciktilari_json") or "").strip() or "[]"
+        try:
+            json.loads(og_json)
+        except Exception:
+            og_json = "[]"
 
         if sinif_id and ders_adi and tema_adi:
-            odev_id = odev_olustur(oid, sinif_id, ders_adi, tema_adi)
+            odev_id = odev_olustur(
+                oid, sinif_id, ders_adi, tema_adi, konu_adi, og_json
+            )
             return redirect(url_for("odev_tema_detay", odev_id=odev_id))
 
     odev_listesi = odevleri_getir(oid)
@@ -1717,6 +1731,13 @@ def odev_tema_detay(odev_id):
     if not detay:
         return redirect(url_for("odevler"))
 
+    try:
+        detay["odev"]["ogrenme_ciktilari"] = json.loads(
+            detay["odev"].get("ogrenme_ciktilari_json") or "[]"
+        )
+    except Exception:
+        detay["odev"]["ogrenme_ciktilari"] = []
+
     if request.method == "POST":
         for key, val in request.form.items():
             if key.startswith("durum_"):
@@ -1730,6 +1751,26 @@ def odev_tema_detay(odev_id):
         ogrenciler=detay["ogrenciler"],
         yetki=session.get("ogretmen_yetki"),
     )
+
+
+@app.route("/api/curriculum/temel-egitim")
+@giris_zorunlu
+def api_curriculum_temel_egitim():
+    """TYMM temel egitim ozeti: tema > konu > ogrenme ciktisi (data/meb_temel_egitim_curriculum.json)."""
+    path = os.path.join(app.root_path, "data", "meb_temel_egitim_curriculum.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    except OSError:
+        return jsonify({"hata": "Mufredat dosyasi bulunamadi", "dersler": {}}), 404
+
+
+@app.route("/api/odev/mufredat-ozet")
+@giris_zorunlu
+def api_odev_mufredat_ozet():
+    from database import odev_mufredat_ozeti
+
+    return jsonify(odev_mufredat_ozeti(session["ogretmen_id"]))
 
 
 @app.route("/manifest.json")

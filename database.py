@@ -2440,6 +2440,8 @@ def _odev_init(con) -> None:
         "ders": "TEXT NOT NULL DEFAULT 'Genel'",
         "ders_adi": "TEXT NOT NULL DEFAULT ''",
         "tema_adi": "TEXT NOT NULL DEFAULT ''",
+        "konu_adi": "TEXT NOT NULL DEFAULT ''",
+        "ogrenme_ciktilari_json": "TEXT NOT NULL DEFAULT '[]'",
     }
     for ad, decl in eksik.items():
         if ad not in cols:
@@ -4348,21 +4350,36 @@ def ogrenci_ozellik_artir(ogrenci_id: int, ozellik: str, tik_sayisi: int) -> dic
 # ÖDEV TAKİBİ
 # ══════════════════════════════════════════════════════════════════════════
 
-def odev_olustur(ogretmen_id: int, sinif_id: int, ders_adi: str, tema_adi: str) -> int:
+def odev_olustur(
+    ogretmen_id: int,
+    sinif_id: int,
+    ders_adi: str,
+    tema_adi: str,
+    konu_adi: str = "",
+    ogrenme_ciktilari_json: str = "[]",
+) -> int:
+    konu_adi = (konu_adi or "").strip()
+    try:
+        json.loads(ogrenme_ciktilari_json or "[]")
+    except Exception:
+        ogrenme_ciktilari_json = "[]"
     con = _conn()
     _odev_init(con)
     cur = con.cursor()
     cur.execute(
         """
         INSERT INTO odevler
-            (ogretmen_id, sinif_id, ders_adi, tema_adi, baslik, aciklama, son_tarih, ders, tarih)
-        VALUES (?, ?, ?, ?, ?, '', ?, ?, ?)
+            (ogretmen_id, sinif_id, ders_adi, tema_adi, konu_adi, ogrenme_ciktilari_json,
+             baslik, aciklama, son_tarih, ders, tarih)
+        VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?)
         """,
         (
             ogretmen_id,
             sinif_id,
             ders_adi,
             tema_adi,
+            konu_adi,
+            ogrenme_ciktilari_json,
             tema_adi,
             datetime.now().strftime("%Y-%m-%d"),
             ders_adi,
@@ -4390,6 +4407,7 @@ def odevleri_getir(ogretmen_id: int):
         '''SELECT o.id, s.sinif_adi,
                   COALESCE(NULLIF(o.ders_adi, ''), o.ders, 'Genel') AS ders_adi,
                   COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
+                  COALESCE(NULLIF(o.konu_adi, ''), '') AS konu_adi,
                   o.tarih,
                   (SELECT count(*) FROM odev_tamamlayanlar WHERE odev_id = o.id)
                     + (SELECT count(*) FROM odev_sonuclari WHERE odev_id = o.id AND durum = 'tamamladi') as tamamlayanlar,
@@ -4412,6 +4430,8 @@ def odev_detay_getir(odev_id: int, ogretmen_id: int):
         SELECT o.id, o.sinif_id, o.ogretmen_id, o.tarih,
                COALESCE(NULLIF(o.ders_adi, ''), o.ders, 'Genel') AS ders_adi,
                COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
+               COALESCE(NULLIF(o.konu_adi, ''), '') AS konu_adi,
+               COALESCE(NULLIF(o.ogrenme_ciktilari_json, ''), '[]') AS ogrenme_ciktilari_json,
                s.sinif_adi
         FROM odevler o
         JOIN siniflar s ON o.sinif_id = s.id
@@ -4438,6 +4458,60 @@ def odev_detay_getir(odev_id: int, ogretmen_id: int):
     ).fetchall()
     con.close()
     return {"odev": dict(odev), "ogrenciler": [dict(r) for r in ogrenciler]}
+
+
+def odev_mufredat_ozeti(ogretmen_id: int) -> dict:
+    """Ders / tema / konu bazinda odev sayisi ve ortalama tamamlanma yuzdesi."""
+    from collections import defaultdict
+
+    liste = odevleri_getir(ogretmen_id)
+    by_ders: dict[str, list[int]] = defaultdict(list)
+    by_tema: dict[tuple[str, str], list[int]] = defaultdict(list)
+    by_konu: dict[tuple[str, str, str], list[int]] = defaultdict(list)
+    for r in liste:
+        t = int(r["tamamlayanlar"] or 0)
+        n = int(r["toplam_ogrenci"] or 0)
+        p = round((t / n * 100) if n else 0)
+        d = r["ders_adi"]
+        tm = r["tema_adi"]
+        k = (r.get("konu_adi") or "").strip()
+        by_ders[d].append(p)
+        by_tema[(d, tm)].append(p)
+        if k:
+            by_konu[(d, tm, k)].append(p)
+
+    def _avg(vals: list[int]) -> int:
+        return round(sum(vals) / len(vals)) if vals else 0
+
+    return {
+        "toplam_odev": len(liste),
+        "dersler": [
+            {"ders_adi": k, "odev_sayisi": len(v), "ort_tamamlama": _avg(v)}
+            for k, v in sorted(by_ders.items(), key=lambda x: x[0])
+        ],
+        "temalar": [
+            {
+                "ders_adi": a,
+                "tema_adi": b,
+                "odev_sayisi": len(v),
+                "ort_tamamlama": _avg(v),
+            }
+            for (a, b), v in sorted(by_tema.items(), key=lambda x: (x[0][0], x[0][1]))
+        ],
+        "konular": [
+            {
+                "ders_adi": a,
+                "tema_adi": b,
+                "konu_adi": c,
+                "odev_sayisi": len(v),
+                "ort_tamamlama": _avg(v),
+            }
+            for (a, b, c), v in sorted(
+                by_konu.items(), key=lambda x: (x[0][0], x[0][1], x[0][2])
+            )
+        ],
+    }
+
 
 def odev_durum_guncelle(odev_id: int, ogrenci_id: int, durum: str):
     con = _conn()
