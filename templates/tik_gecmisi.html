@@ -14,12 +14,14 @@
     <div class="flex flex-wrap gap-2">
       {% if not veli_modu %}
       <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="text-xs font-black bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg">XP · Görev · Oyun</a>
+      <a href="{{ url_for('paylasim_tema_odevler_sayfa') }}" target="_blank" rel="noopener" class="text-xs font-black bg-amber-700 hover:bg-amber-600 px-3 py-1.5 rounded-lg">Ödevler (yeni pencere)</a>
       <a href="{{ url_for('ogrenci_yansima') }}" class="text-xs font-bold bg-cyan-700 hover:bg-cyan-600 px-3 py-1.5 rounded-lg">Günlük yansıma</a>
       <a href="{{ url_for('envanter') }}" class="text-xs font-bold bg-cyan-800 hover:bg-cyan-700 px-3 py-1.5 rounded-lg">Envanterim</a>
       <a href="{{ url_for('ogrenci_mac_panel') }}" class="text-xs font-bold bg-green-700 hover:bg-green-600 px-3 py-1.5 rounded-lg">Mac/Taktik</a>
       {% endif %}
       {% if veli_modu %}
       <a href="{{ url_for('veli_ozet_sayfa') }}" class="text-xs font-black bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg">30 günlük özet</a>
+      <a href="{{ url_for('paylasim_tema_odevler_sayfa') }}" target="_blank" rel="noopener" class="text-xs font-black bg-amber-700 hover:bg-amber-600 px-3 py-1.5 rounded-lg">Ödevler (yeni pencere)</a>
       <a href="{{ url_for('veli_cikis') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Çıkış</a>
       {% else %}
       <a href="{{ url_for('ogrenci_cikis') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Çıkış</a>
@@ -58,10 +60,16 @@
   </div>
 
   <section id="odev-panel" class="rounded-2xl bg-slate-900 border border-amber-500/30 overflow-hidden">
-    <div class="px-4 py-3 border-b border-slate-800 bg-amber-500/10">
-      <h2 class="font-black text-sm text-amber-100">Ödevler</h2>
-      <p class="text-[10px] text-slate-500 mt-1">
-        Öğretmenin sınıfa verdiği ödevler burada listelenir; yeni ödev ana ekranda bildirim kutusu olarak da açılır.
+    <div class="px-4 py-3 border-b border-slate-800 bg-amber-500/10 space-y-2">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="font-black text-sm text-amber-100">Ödevler</h2>
+        <a href="{{ url_for('paylasim_tema_odevler_sayfa') }}" target="_blank" rel="noopener"
+           class="text-[10px] font-black uppercase tracking-wide rounded-lg bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 shrink-0">
+          Tam liste · yeni pencere
+        </a>
+      </div>
+      <p class="text-[10px] text-slate-500">
+        Öğretmenin sınıfa verdiği ödevler burada da özetlenir; tam liste ve veli/öğrenci PDF özeti için yeni pencereyi kullanın.
       </p>
     </div>
     <div id="odev-liste" class="divide-y divide-slate-800">
@@ -79,6 +87,12 @@
         <p class="text-xs text-slate-300 whitespace-pre-line">{{ od.aciklama }}</p>
         {% endif %}
         <div class="text-[10px] text-slate-500">{{ od.ogretmen }}{% if od.tamamlanma_tarihi %} · İşaret: {{ od.tamamlanma_tarihi }}{% endif %}</div>
+        {% if pdf_ok|default(false) %}
+        <div class="pt-1">
+          <a href="{{ url_for('paylasim_odev_rapor_pdf', odev_id=od.id) }}" target="_blank" rel="noopener"
+             class="inline-flex text-[10px] font-black text-rose-300 hover:text-rose-200 underline decoration-rose-500/50">Bireysel rapor PDF</a>
+        </div>
+        {% endif %}
       </div>
       {% else %}
       <p class="px-4 py-8 text-center text-sm text-slate-500 odev-bos">Henüz öğretmen tarafından ödev girilmedi.</p>
@@ -137,6 +151,12 @@
 </div>
 
 <script>
+window.__PDF_OK__ = {{ pdf_ok|default(false)|tojson }};
+const _paylasimOdevPdfTpl = {{ url_for('paylasim_odev_rapor_pdf', odev_id=0)|tojson }};
+function paylasimOdevPdfUrl(id) {
+  return String(_paylasimOdevPdfTpl).replace(/\/0\//, '/' + id + '/');
+}
+
 const API = "{{ url_for('api_kendi_tik_gecmisi') }}";
 
 function satirHtml(i, g) {
@@ -164,6 +184,9 @@ function odevSatirHtml(od) {
   const isaret = od.tamamlanma_tarihi
     ? ' · İşaret: ' + escapeHtml(od.tamamlanma_tarihi)
     : '';
+  const pdfLn = (window.__PDF_OK__ && od.id)
+    ? `<div class="pt-1"><a href="${paylasimOdevPdfUrl(od.id)}" target="_blank" rel="noopener" class="inline-flex text-[10px] font-black text-rose-300 hover:text-rose-200 underline decoration-rose-500/50">Bireysel rapor PDF</a></div>`
+    : '';
   return `<div class="px-4 py-3 space-y-1 odev-satir">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <span class="font-bold text-white text-sm break-words">${escapeHtml(od.baslik)}</span>
@@ -172,6 +195,7 @@ function odevSatirHtml(od) {
     <div class="text-xs text-slate-400">${escapeHtml(od.ders)} · Son teslim: ${escapeHtml(od.son_tarih)}</div>
     ${ac}
     <div class="text-[10px] text-slate-500">${escapeHtml(od.ogretmen || '')}${isaret}</div>
+    ${pdfLn}
   </div>`;
 }
 

@@ -4488,6 +4488,31 @@ def odevleri_getir(ogretmen_id: int):
     con.close()
     return [dict(r) for r in rows]
 
+def odevleri_sinif_icin_getir(ogretmen_id: int, sinif_id: int, limit: int = 36) -> list[dict]:
+    """Belirli sınıftaki tema/ödev kayıtları (öğretmen analiz / PDF bağlantıları için)."""
+    con = _conn()
+    _odev_init(con)
+    rows = con.execute(
+        """SELECT o.id, s.sinif_adi,
+                  COALESCE(NULLIF(o.ders_adi, ''), o.ders, 'Genel') AS ders_adi,
+                  COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
+                  COALESCE(NULLIF(o.konu_adi, ''), '') AS konu_kisa,
+                  COALESCE(o.sinif_seviyesi, 0) AS sinif_seviyesi,
+                  o.tarih,
+                  (SELECT count(*) FROM odev_tamamlayanlar WHERE odev_id = o.id)
+                    + (SELECT count(*) FROM odev_sonuclari WHERE odev_id = o.id AND durum = 'tamamladi') AS tamamlayanlar,
+                  COALESCE(NULLIF((SELECT count(*) FROM odev_sonuclari WHERE odev_id = o.id), 0),
+                           (SELECT count(*) FROM ogrenciler WHERE sinif_id = o.sinif_id)) AS toplam_ogrenci
+           FROM odevler o
+           JOIN siniflar s ON o.sinif_id = s.id
+           WHERE o.ogretmen_id = ? AND o.sinif_id = ?
+           ORDER BY o.id DESC
+           LIMIT ?""",
+        (ogretmen_id, sinif_id, limit),
+    ).fetchall()
+    con.close()
+    return [dict(r) for r in rows]
+
 def odev_detay_getir(odev_id: int, ogretmen_id: int):
     con = _conn()
     _odev_init(con)
@@ -4526,6 +4551,64 @@ def odev_detay_getir(odev_id: int, ogretmen_id: int):
     ).fetchall()
     con.close()
     return {"odev": dict(odev), "ogrenciler": [dict(r) for r in ogrenciler]}
+
+
+def odev_detay_ogrenci_paylasim(odev_id: int, ogrenci_id: int) -> dict | None:
+    """Öğrenci / veli: ödev kendi sınıfındaysa öğretmen doğrulaması olmadan detay (PDF üretimi için)."""
+    con = _conn()
+    _odev_init(con)
+    ogr = con.execute(
+        "SELECT id, sinif_id FROM ogrenciler WHERE id = ?",
+        (ogrenci_id,),
+    ).fetchone()
+    if not ogr:
+        con.close()
+        return None
+    sinif_ogr = dict(ogr)["sinif_id"]
+    odev = con.execute(
+        """
+        SELECT o.id, o.sinif_id, o.ogretmen_id, o.tarih,
+               COALESCE(NULLIF(o.ders_adi, ''), o.ders, 'Genel') AS ders_adi,
+               COALESCE(NULLIF(o.tema_adi, ''), o.baslik, 'Ödev') AS tema_adi,
+               COALESCE(NULLIF(o.konu_adi, ''), '') AS konu_adi,
+               COALESCE(NULLIF(o.ogrenme_ciktilari_json, ''), '[]') AS ogrenme_ciktilari_json,
+               COALESCE(NULLIF(o.ogrenme_cikti_kodlari_json, ''), '[]') AS ogrenme_cikti_kodlari_json,
+               COALESCE(o.sinif_seviyesi, 0) AS sinif_seviyesi,
+               s.sinif_adi
+        FROM odevler o
+        JOIN siniflar s ON o.sinif_id = s.id
+        WHERE o.id = ?
+        """,
+        (odev_id,),
+    ).fetchone()
+    if not odev or dict(odev)["sinif_id"] != sinif_ogr:
+        con.close()
+        return None
+    ogret_row = con.execute(
+        "SELECT ad_soyad FROM ogretmenler WHERE id = ?",
+        (dict(odev)["ogretmen_id"],),
+    ).fetchone()
+    ogretmen_adi = (dict(ogret_row)["ad_soyad"] if ogret_row else "") or ""
+
+    ogrenciler = con.execute(
+        """SELECT og.id, og.ad_soyad, og.ogr_no,
+                  CASE
+                    WHEN ot.id IS NOT NULL THEN 'tamamladi'
+                    ELSE COALESCE(os.durum, 'tamamlamadi')
+                  END AS durum
+           FROM ogrenciler og
+           LEFT JOIN odev_sonuclari os ON os.ogrenci_id = og.id AND os.odev_id = ?
+           LEFT JOIN odev_tamamlayanlar ot ON ot.ogrenci_id = og.id AND ot.odev_id = ?
+           WHERE og.sinif_id = ?
+           ORDER BY og.ogr_no ASC""",
+        (odev_id, odev_id, dict(odev)["sinif_id"]),
+    ).fetchall()
+    con.close()
+    return {
+        "odev": dict(odev),
+        "ogrenciler": [dict(r) for r in ogrenciler],
+        "ogretmen_adi": ogretmen_adi,
+    }
 
 
 def _odev_iso_hafta(tarih_raw: str) -> str:

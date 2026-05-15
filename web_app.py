@@ -44,6 +44,7 @@ from database import (
     tik_dondur,
     odev_ekle, sinif_odevleri, odev_detay as odev_detay_db, odev_tamamla,
     odev_tamamlandi_kaldir, ogrenci_odevleri,
+    odev_detay_ogrenci_paylasim, odevleri_sinif_icin_getir,
     gelisim_ozeti, gelisim_gorev_tamamla, sandik_ac, telafi_gorevi_olustur,
     tebrik_gonder, haftalik_veli_ozeti,
     akilli_ogrenci_karnesi, ogretmen_bildirim_merkezi, gelisim_ligi,
@@ -1286,6 +1287,7 @@ def veli_panel():
         avatar=_avatar(o),
         veli_modu=True,
         odevler=odevler,
+        pdf_ok=PDF_OK,
     )
 
 
@@ -1795,6 +1797,76 @@ def odev_rapor_pdf(odev_id):
     )
 
 
+@app.route("/paylasim/odev/<int:odev_id>/rapor.pdf")
+def paylasim_odev_rapor_pdf(odev_id):
+    """Öğrenci veya veli oturumu: yalnızca kendi çocukları için bireysel özet PDF (sınıf listesi verilmez)."""
+    oid = _kendi_ogrenci_id_veli_veya_ogrenci()
+    if not oid:
+        flash("Bu belgeyi görmek için öğrenci veya veli girişi yapın.", "error")
+        return redirect(url_for("login"))
+    if not PDF_OK:
+        flash("PDF için sunucuda reportlab gerekir.", "error")
+        if session.get("veli_ogrenci_id"):
+            return redirect(url_for("veli_panel"))
+        return redirect(url_for("ogrenci_gorunum"))
+    detay = odev_detay_ogrenci_paylasim(odev_id, int(oid))
+    if not detay:
+        flash("Bu ödev kaydına erişilemiyor veya sınıfınıza ait değil.", "error")
+        if session.get("veli_ogrenci_id"):
+            return redirect(url_for("veli_panel"))
+        return redirect(url_for("ogrenci_gorunum"))
+    ogretmen_adi = (detay.get("ogretmen_adi") or "").strip() or "—"
+    try:
+        pdf_bytes = pdf_odev_raporu_bytes(
+            detay,
+            ogretmen_adi,
+            rapor_turu="tek_ogrenci",
+            ogrenci_id=int(oid),
+        )
+    except Exception as e:
+        flash("PDF oluşturulamadı: %s" % (e,), "error")
+        if session.get("veli_ogrenci_id"):
+            return redirect(url_for("veli_panel"))
+        return redirect(url_for("ogrenci_gorunum"))
+    odev = detay.get("odev") or {}
+    sinif_k = "".join(
+        c for c in str(odev.get("sinif_adi") or "sinif") if c.isalnum() or c in "-_"
+    )[:48] or "sinif"
+    fname = f"Odev_veli_ogrenci_{odev_id}_{oid}_{sinif_k}.pdf"
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        download_name=fname,
+        as_attachment=False,
+    )
+
+
+@app.route("/paylasim/tema-odevler")
+def paylasim_tema_odevler_sayfa():
+    """Öğrenci veya veli: tema/ödev listesi ayrı sayfa (yeni pencerede açılabilir)."""
+    oid = _kendi_ogrenci_id_veli_veya_ogrenci()
+    if not oid:
+        flash("Bu sayfa için öğrenci veya veli girişi gerekir.", "error")
+        return redirect(url_for("login"))
+    o = _ogrenci_bul(int(oid))
+    if not o:
+        session.pop("veli_ogrenci_id", None)
+        session.pop("ogrenci_id", None)
+        session.pop("ogrenci_giris", None)
+        flash("Oturum geçersiz.", "error")
+        return redirect(url_for("login"))
+    odevler = ogrenci_odevleri(int(oid), 60)
+    veli_modu = bool(session.get("veli_ogrenci_id"))
+    return render_template(
+        "paylasim_tema_odevler.html",
+        ogrenci=o,
+        odevler=odevler,
+        veli_modu=veli_modu,
+        pdf_ok=PDF_OK,
+        avatar=_avatar(o),
+    )
+
+
 @app.route("/odev/<int:odev_id>", methods=["GET", "POST"])
 @giris_zorunlu
 def odev_tema_detay(odev_id):
@@ -2130,6 +2202,7 @@ def ogrenci_gorunum():
         avatar=_avatar(o),
         veli_modu=False,
         odevler=odevler,
+        pdf_ok=PDF_OK,
     )
 
 
@@ -2301,11 +2374,17 @@ def analiz_merkezi():
     secili_sinif_id = request.args.get("sinif_id", type=int)
     if secili_sinif_id and secili_sinif_id not in {s["id"] for s in siniflar}:
         secili_sinif_id = None
+    if not secili_sinif_id and siniflar:
+        secili_sinif_id = siniflar[0]["id"]
+    odev_rapor_sinif = []
+    if secili_sinif_id:
+        odev_rapor_sinif = odevleri_sinif_icin_getir(ogretmen_id, secili_sinif_id, 40)
     admin_mi = _toplu_sifirlamaya_izinli_mi(ogretmen_id)
     return render_template(
         "analiz_merkezi.html",
         siniflar=siniflar,
         secili_sinif_id=secili_sinif_id,
+        odev_rapor_sinif=odev_rapor_sinif,
         pdf_ok=PDF_OK,
         arsiv=rapor_arsiv_listesi(ogretmen_id, 12),
         sistem_yedekleri=sistem_yedek_listesi(10) if admin_mi else [],
