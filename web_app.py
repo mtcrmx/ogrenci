@@ -1290,6 +1290,7 @@ def ogretmen_sinav_analiz():
         dersler=[
             "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler",
             "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü",
+            "Müzik", "Bilişim Teknolojileri ve Yazılım",
         ],
     )
 
@@ -2007,6 +2008,7 @@ def api_curriculum_temel_egitim():
     """
     path = os.path.join(app.root_path, "data", "meb_temel_egitim_curriculum.json")
     kanit_path = os.path.join(app.root_path, "data", "ogrenme_kanitlari_excel.json")
+    drive_path = os.path.join(app.root_path, "data", "drive_kazanimlari.json")
     try:
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
@@ -2015,8 +2017,18 @@ def api_curriculum_temel_egitim():
                 kan_doc = json.load(fk)
         except OSError:
             kan_doc = {}
+        try:
+            with open(drive_path, encoding="utf-8") as fd:
+                drive_doc = json.load(fd)
+        except OSError:
+            drive_doc = {}
         dersler = doc.setdefault("dersler", {})
         for ders, bloklar in (kan_doc.get("dersler") or {}).items():
+            if not bloklar:
+                continue
+            mevcut = list(dersler.get(ders) or [])
+            dersler[ders] = list(bloklar) + mevcut
+        for ders, bloklar in (drive_doc.get("dersler") or {}).items():
             if not bloklar:
                 continue
             mevcut = list(dersler.get(ders) or [])
