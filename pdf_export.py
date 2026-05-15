@@ -622,7 +622,7 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
 
 
 def pdf_odev_raporu_bytes(detay: dict[str, Any], ogretmen_adi: str) -> bytes:
-    """Yeni oluşturulan veya mevcut ödev için ayrıntılı PDF rapor (TYMM / öğrenci listesi)."""
+    """Ödev / tema kaydı için tablolarla düzenlenmiş detaylı PDF rapor."""
     if not REPORTLAB_OK:
         raise ImportError("reportlab kurulu degil (pip install reportlab)")
     fn = _register_font()
@@ -649,8 +649,10 @@ def pdf_odev_raporu_bytes(detay: dict[str, Any], ogretmen_adi: str) -> bytes:
     tam_s = sum(
         1 for o in ogrenciler if (o.get("durum") or "") == "tamamladi"
     )
+    yap_mad = max(0, len(ogrenciler) - tam_s)
     top = len(ogrenciler)
     pct = round((tam_s / top * 100) if top else 0)
+    pct_y = round((yap_mad / top * 100) if top else 0)
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -658,8 +660,8 @@ def pdf_odev_raporu_bytes(detay: dict[str, Any], ogretmen_adi: str) -> bytes:
         pagesize=A4,
         rightMargin=margin_x,
         leftMargin=margin_x,
-        topMargin=1.5 * cm,
-        bottomMargin=1.5 * cm,
+        topMargin=1.4 * cm,
+        bottomMargin=1.4 * cm,
         title=f"OdevRaporu_{odev.get('id', '')}",
     )
     styles = getSampleStyleSheet()
@@ -667,15 +669,17 @@ def pdf_odev_raporu_bytes(detay: dict[str, Any], ogretmen_adi: str) -> bytes:
         name="OdevTtl",
         parent=styles["Heading1"],
         fontName=fn,
-        fontSize=15,
-        spaceAfter=8,
+        fontSize=14,
+        spaceAfter=6,
     )
     h2 = ParagraphStyle(
         name="OdevH2",
         parent=styles["Heading2"],
         fontName=fn,
-        fontSize=11,
+        fontSize=10.5,
+        spaceBefore=8,
         spaceAfter=5,
+        textColor=colors.HexColor("#0f172a"),
     )
     body = ParagraphStyle(name="OdevBd", parent=styles["Normal"], fontName=fn, fontSize=9)
     small = ParagraphStyle(name="OdevSm", parent=styles["Normal"], fontName=fn, fontSize=7.5)
@@ -689,89 +693,338 @@ def pdf_odev_raporu_bytes(detay: dict[str, Any], ogretmen_adi: str) -> bytes:
         spaceBefore=0,
         spaceAfter=0,
     )
-    th_w = ParagraphStyle("odev_th", parent=td8, textColor=colors.whitesmoke)
+    td8b = ParagraphStyle(
+        "odev_td8b",
+        parent=td8,
+        fontName=fn,
+        fontSize=8,
+    )
+    th_st = ParagraphStyle(
+        "odev_th",
+        parent=td8,
+        textColor=colors.whitesmoke,
+        fontName=fn,
+    )
+    th_st_acc = ParagraphStyle(
+        "odev_th_acc",
+        parent=td8,
+        textColor=colors.white,
+        fontName=fn,
+    )
 
-    def tbl_pad():
+    def tbl_base():
         return [
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ]
 
     story: list = []
     now_s = datetime.now().strftime("%Y-%m-%d %H:%M")
+    h_okul = colors.HexColor("#0f172a")
     story.append(Paragraph("Erenler Cumhuriyet Ortaokulu", title_style))
-    story.append(Paragraph("Ödev / tema takibi — Detaylı rapor", title_style))
     story.append(
         Paragraph(
-            f"Öğretmen: {html_escape(str(ogretmen_adi or '—'))}<br/>"
-            f"Rapor tarihi: {html_escape(now_s)}<br/>"
-            f"Ödev kayıt no: {html_escape(str(odev.get('id', '—')))}",
-            body,
+            "<b>Ödev ve tema takibi — Rapor</b>",
+            ParagraphStyle(
+                "subttl",
+                parent=title_style,
+                fontSize=11,
+                textColor=h_okul,
+                spaceAfter=10,
+            ),
         )
     )
+
+    # — Bölüm numarası: koşullu tablolar arasında sıralı ilerler
+    bolum = 1
+
+    # — Tablo 1: Rapor üst bilgileri
+    story.append(Paragraph(f"{bolum}. Rapor üst bilgileri", h2))
+    bolum += 1
+    t1_data = [
+        [
+            _pdf_paragraph("Öğretmen", th_st),
+            _pdf_paragraph(str(ogretmen_adi or "—"), td8),
+        ],
+        [
+            _pdf_paragraph("Rapor tarihi / saati", th_st),
+            _pdf_paragraph(now_s, td8),
+        ],
+        [
+            _pdf_paragraph("Ödev kayıt numarası", th_st),
+            _pdf_paragraph(str(odev.get("id", "—")), td8),
+        ],
+    ]
+    w_kv = [usable_w * 0.32, usable_w * 0.68]
+    tt1 = Table(t1_data, colWidths=w_kv)
+    tt1.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#334155")),
+                ("BACKGROUND", (1, 0), (1, -1), colors.white),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+                ("FONTNAME", (0, 0), (-1, -1), fn),
+            ]
+            + tbl_base()
+        )
+    )
+    story.append(tt1)
     story.append(Spacer(1, 0.35 * cm))
 
-    meta_lines = [
-        f"<b>Sınıf:</b> {html_escape(str(odev.get('sinif_adi', '—')))}",
-        f"<b>Ders (branş):</b> {html_escape(str(odev.get('ders_adi', '—')))}",
-        f"<b>Tema / ünite / öğrenme alanı:</b> {html_escape(str(odev.get('tema_adi', '—')))}",
-    ]
-    konu = (odev.get("konu_adi") or "").strip()
-    if konu:
-        meta_lines.append(f"<b>Öğrenme kanıtları:</b> {html_escape(konu)}")
-    if 5 <= sev <= 8:
-        meta_lines.append(f"<b>TYMM sınıf düzeyi:</b> {sev}")
-    meta_lines.append(
-        f"<b>Ödev oluşturma (kayıt tarihi):</b> {html_escape(str(odev.get('tarih', '—'))[:19])}"
+    # — Tablo 2: Ödev tanımı
+    story.append(
+        Paragraph(f"{bolum}. Ödev tanımı ve müfredat bağlantısı", h2)
     )
-    story.append(Paragraph("<br/>".join(meta_lines), body))
-    story.append(Spacer(1, 0.4 * cm))
+    bolum += 1
+    konu = (odev.get("konu_adi") or "").strip()
+    t2_data = [
+        [
+            _pdf_paragraph("Alan", th_st_acc),
+            _pdf_paragraph("İçerik", th_st_acc),
+        ],
+        [
+            _pdf_paragraph("Sınıf", td8b),
+            _pdf_paragraph(str(odev.get("sinif_adi", "—")), td8),
+        ],
+        [
+            _pdf_paragraph("Ders (branş)", td8b),
+            _pdf_paragraph(str(odev.get("ders_adi", "—")), td8),
+        ],
+        [
+            _pdf_paragraph("Tema / ünite / öğrenme alanı", td8b),
+            _pdf_paragraph(str(odev.get("tema_adi", "—")), td8),
+        ],
+    ]
+    if konu:
+        t2_data.append(
+            [
+                _pdf_paragraph("Öğrenme kanıtları", td8b),
+                _pdf_paragraph(konu, td8),
+            ]
+        )
+    if 5 <= sev <= 8:
+        t2_data.append(
+            [
+                _pdf_paragraph("TYMM sınıf düzeyi", td8b),
+                _pdf_paragraph(str(sev), td8),
+            ]
+        )
+    t2_data.append(
+        [
+            _pdf_paragraph("Kayıt tarihi", td8b),
+            _pdf_paragraph(str(odev.get("tarih", "—"))[:19], td8),
+        ]
+    )
+    w_def = [usable_w * 0.30, usable_w * 0.70]
+    tt2 = Table(t2_data, colWidths=w_def, repeatRows=1)
+    tt2.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), fn),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+            ]
+            + tbl_base()
+        )
+    )
+    story.append(tt2)
+    story.append(Spacer(1, 0.35 * cm))
 
-    if kodlar:
-        story.append(Paragraph("Öğrenme çıktısı kodları (varsa)", h2))
-        story.append(
-            Paragraph(
-                html_escape(", ".join(str(k) for k in kodlar)),
-                body,
+    # — Tablo 3: Tamamlanma özeti
+    story.append(Paragraph(f"{bolum}. Tamamlanma özeti", h2))
+    bolum += 1
+    t3_data = [
+        [
+            _pdf_paragraph("Gösterge", th_st_acc),
+            _pdf_paragraph("Değer", th_st_acc),
+            _pdf_paragraph("Açıklama", th_st_acc),
+        ],
+        [
+            _pdf_paragraph("Toplam öğrenci", td8b),
+            _pdf_paragraph(str(top), td8),
+            _pdf_paragraph("Sınıfa kayıtlı öğrenci sayısı", td8),
+        ],
+        [
+            _pdf_paragraph("Ödevi yapan", td8b),
+            _pdf_paragraph(str(tam_s), td8),
+            _pdf_paragraph("“Yaptı” işaretli öğrenciler (rapor anı)", td8),
+        ],
+        [
+            _pdf_paragraph("Ödevi yapmayan", td8b),
+            _pdf_paragraph(str(yap_mad), td8),
+            _pdf_paragraph("“Yapmadı” işaretli öğrenciler (rapor anı)", td8),
+        ],
+        [
+            _pdf_paragraph("Tamamlanma oranı", td8b),
+            _pdf_paragraph(f"%{pct}", td8),
+            _pdf_paragraph(f"Yapanların sınıf içindeki payı ({tam_s}/{top})", td8),
+        ],
+    ]
+    w3 = [usable_w * 0.28, usable_w * 0.14, usable_w * 0.58]
+    tt3 = Table(t3_data, colWidths=w3, repeatRows=1)
+    tt3.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1d4ed8")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), fn),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#eff6ff")]),
+            ]
+            + tbl_base()
+        )
+    )
+    story.append(tt3)
+    story.append(Spacer(1, 0.35 * cm))
+
+    # — Tablo 4: Durum dağılımı (yüzde)
+    if top > 0:
+        story.append(Paragraph(f"{bolum}. Durum dağılımı (yüzde)", h2))
+        bolum += 1
+        t4_data = [
+            [
+                _pdf_paragraph("Durum", th_st_acc),
+                _pdf_paragraph("Öğrenci", th_st_acc),
+                _pdf_paragraph("Oran (%)", th_st_acc),
+            ],
+            [
+                _pdf_paragraph("Yaptı", td8),
+                _pdf_paragraph(str(tam_s), td8),
+                _pdf_paragraph(str(round(tam_s / top * 100)) if top else "0", td8),
+            ],
+            [
+                _pdf_paragraph("Yapmadı", td8),
+                _pdf_paragraph(str(yap_mad), td8),
+                _pdf_paragraph(str(pct_y), td8),
+            ],
+        ]
+        w4 = [usable_w * 0.34, usable_w * 0.18, usable_w * 0.48]
+        tt4 = Table(t4_data, colWidths=w4, repeatRows=1)
+        tt4.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#7c3aed")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#faf5ff")]),
+                ]
+                + tbl_base()
             )
         )
-        story.append(Spacer(1, 0.25 * cm))
+        story.append(tt4)
+        story.append(Spacer(1, 0.35 * cm))
 
+    # — Tablo 5: Öğrenme çıktısı kodları
+    if kodlar:
+        story.append(Paragraph(f"{bolum}. Öğrenme çıktısı kodları", h2))
+        bolum += 1
+        t5 = [[_pdf_paragraph("#", th_st_acc), _pdf_paragraph("Kod", th_st_acc)]]
+        for i, k in enumerate(kodlar, 1):
+            t5.append(
+                [
+                    _pdf_paragraph(str(i), td8),
+                    _pdf_paragraph(str(k), td8),
+                ]
+            )
+        w5 = [usable_w * 0.12, usable_w * 0.88]
+        tt5 = Table(t5, colWidths=w5, repeatRows=1)
+        tt5.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#b45309")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fffbeb")]),
+                ]
+                + tbl_base()
+            )
+        )
+        story.append(tt5)
+        story.append(Spacer(1, 0.35 * cm))
+
+    # — Tablo 6: Seçilen öğrenme çıktıları / maddeler
     if ciktilar:
-        story.append(Paragraph("Seçilen öğrenme çıktıları / ölçme-değerlendirme öğeleri", h2))
+        story.append(
+            Paragraph(
+                f"{bolum}. Seçilen öğrenme çıktıları ve ölçme-değerlendirme maddeleri",
+                h2,
+            )
+        )
+        bolum += 1
+        t6 = [
+            [
+                _pdf_paragraph("Sıra", th_st_acc),
+                _pdf_paragraph("Madde", th_st_acc),
+            ]
+        ]
         for i, sat in enumerate(ciktilar, 1):
-            t = html_escape(str(sat).strip()) or "—"
-            story.append(Paragraph(f"{i}. {t}", body))
+            t6.append(
+                [
+                    _pdf_paragraph(str(i), td8),
+                    _pdf_paragraph(str(sat).strip() or "—", td8),
+                ]
+            )
+        w6 = [usable_w * 0.10, usable_w * 0.90]
+        tt6 = Table(t6, colWidths=w6, repeatRows=1)
+        tt6.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#047857")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#ecfdf5")]),
+                ]
+                + tbl_base()
+            )
+        )
+        story.append(tt6)
         story.append(Spacer(1, 0.35 * cm))
     else:
         story.append(
             Paragraph(
-                "<i>Formda öğrenme çıktısı / kanıt seçilmediyse bu bölüm boştur.</i>",
-                small,
+                f"{bolum}. Seçilen öğrenme çıktıları",
+                h2,
             )
         )
-        story.append(Spacer(1, 0.25 * cm))
+        bolum += 1
+        t_bos = Table(
+            [
+                [
+                    _pdf_paragraph("Not", th_st_acc),
+                    _pdf_paragraph("Kayıtta işaretlenen madde yok.", td8),
+                ],
+            ],
+            colWidths=[usable_w * 0.22, usable_w * 0.78],
+        )
+        t_bos.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#64748b")),
+                    ("TEXTCOLOR", (0, 0), (0, 0), colors.white),
+                    ("BACKGROUND", (1, 0), (1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+                    ("FONTNAME", (0, 0), (-1, -1), fn),
+                ]
+                + tbl_base()
+            )
+        )
+        story.append(t_bos)
+        story.append(Spacer(1, 0.3 * cm))
 
-    story.append(Paragraph("Özet (anlık durum)", h2))
-    oz_txt = (
-        f"Toplam öğrenci: <b>{top}</b> · "
-        f"Tamamlayan (Yaptı): <b>{tam_s}</b> · "
-        f"Tamamlamayan (Yapmadı): <b>{top - tam_s}</b> · "
-        f"Oran: <b>%{pct}</b>"
-    )
-    story.append(Paragraph(oz_txt, body))
-    story.append(Spacer(1, 0.35 * cm))
+    # — Tablo 7: Öğrenci listesi (tekrarlayan satır başlığı, zebra)
+    story.append(Paragraph(f"{bolum}. Öğrenci listesi — bireysel durum", h2))
 
-    story.append(Paragraph("Sınıf listesi — öğrenci bazında durum", h2))
     rows_tbl = [
         [
-            _pdf_paragraph("#", th_w),
-            _pdf_paragraph("Öğr. no", th_w),
-            _pdf_paragraph("Ad Soyad", th_w),
-            _pdf_paragraph("Ödev durumu", th_w),
+            _pdf_paragraph("Sıra", th_st_acc),
+            _pdf_paragraph("Öğr. no", th_st_acc),
+            _pdf_paragraph("Ad Soyad", th_st_acc),
+            _pdf_paragraph("Ödev durumu", th_st_acc),
         ]
     ]
     for i, ogr in enumerate(ogrenciler, 1):
@@ -785,36 +1038,64 @@ def pdf_odev_raporu_bytes(detay: dict[str, Any], ogretmen_adi: str) -> bytes:
                 _pdf_paragraph(durum_etik, td8),
             ]
         )
+    foot_i: int | None = None
     if len(rows_tbl) == 1:
         rows_tbl.append(
             [
                 _pdf_paragraph("—", td8),
                 _pdf_paragraph("—", td8),
-                _pdf_paragraph("Öğrenci kaydı yok", td8),
+                _pdf_paragraph("Öğrenci kaydı bulunamadı", td8),
                 _pdf_paragraph("—", td8),
             ]
         )
-    wn = usable_w * 0.07
-    wo = usable_w * 0.11
-    wa = usable_w * 0.48
-    wd = usable_w * 0.34
-    t = Table(rows_tbl, colWidths=[wn, wo, wa, wd], repeatRows=1)
-    t.setStyle(
-        TableStyle(
+    else:
+        rows_tbl.append(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e40af")),
-                ("GRID", (0, 0), (-1, -1), 0.2, colors.lightgrey),
+                _pdf_paragraph("TOPLAM", td8b),
+                Paragraph("", td8),
+                _pdf_paragraph(f"{tam_s} yaptı · {yap_mad} yapmadı ({top} öğr.)", td8),
+                _pdf_paragraph(f"%{pct}", td8),
             ]
-            + tbl_pad()
         )
-    )
-    story.append(t)
+        foot_i = len(rows_tbl) - 1
 
-    story.append(Spacer(1, 0.55 * cm))
+    wn = usable_w * 0.09
+    wo = usable_w * 0.11
+    wa = usable_w * 0.50
+    wd = usable_w * 0.30
+    t_ogr = Table(rows_tbl, colWidths=[wn, wo, wa, wd], repeatRows=1)
+    last_zebra = (foot_i - 1) if foot_i is not None else len(rows_tbl) - 1
+    st_ogr = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e3a8a")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), fn),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#94a3b8")),
+    ]
+    if last_zebra >= 1:
+        st_ogr.append(
+            (
+                "ROWBACKGROUNDS",
+                (0, 1),
+                (-1, last_zebra),
+                [colors.white, colors.HexColor("#f8fafc")],
+            )
+        )
+    if foot_i is not None:
+        st_ogr.append(
+            ("BACKGROUND", (0, foot_i), (-1, foot_i), colors.HexColor("#cbd5e1"))
+        )
+        st_ogr.append(("SPAN", (0, foot_i), (1, foot_i)))
+        st_ogr.append(("ALIGN", (0, foot_i), (0, foot_i), "LEFT"))
+        st_ogr.append(("FONTNAME", (0, foot_i), (-1, foot_i), fn))
+    st_ogr.extend(tbl_base())
+    t_ogr.setStyle(TableStyle(st_ogr))
+    story.append(t_ogr)
+
+    story.append(Spacer(1, 0.5 * cm))
     story.append(
         Paragraph(
-            "Bu PDF, ödev kaydı için özet ve sınıf listesini içerir. Öğrenci işaretlemelerini "
-            "güncelledikten sonra raporu tekrar indirerek güncel tabloyu alabilirsiniz.",
+            "Bu belge, sistemdeki ödev kaydının rapor anındaki görünümünü tablolar halinde özetler. "
+            "Öğrenci işaretlemelerini güncelledikten sonra PDF’yi yeniden oluşturduğunuzda sayılar güncellenir.",
             small,
         )
     )
