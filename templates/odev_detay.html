@@ -9,10 +9,17 @@
     <style>
         body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
         .radio-tamamladi:checked + label { background-color: #16a34a; color: white; border-color: #16a34a; }
-        .radio-tamamlamadi:checked + label { background-color: #dc2626; color: white; border-color: #dc2626; }
+        .btn-seg {
+            cursor: pointer;
+            padding: 0.5rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            transition: background .15s, color .15s;
+        }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-8 pb-24 md:pb-8">
 
     {% with msgs = get_flashed_messages(with_categories=true) %}
     {% if msgs %}
@@ -27,19 +34,22 @@
     {% endwith %}
 
     <div class="max-w-4xl mx-auto space-y-6">
-        <div class="flex items-center gap-4 mb-4 flex-wrap">
-            <a href="/odevler" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition text-slate-300 shrink-0">
-                <i class="fa-solid fa-arrow-left"></i>
-            </a>
-            <h1 class="text-2xl font-black text-white flex-1 min-w-[200px]">Ödev Sonuçları</h1>
-            {% if pdf_ok %}
-            <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 text-white text-sm font-bold transition shadow-lg">
-                <i class="fa-solid fa-file-pdf"></i> PDF rapor
-            </a>
-            {% else %}
-            <span class="text-xs text-slate-500" title="pip install reportlab">PDF için reportlab gerekli</span>
-            {% endif %}
+        <div class="flex flex-col gap-4 mb-6">
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="/odevler" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition shrink-0">
+                    <i class="fa-solid fa-arrow-left"></i> Ödev listesi
+                </a>
+                {% if pdf_ok %}
+                <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition shadow-lg shadow-rose-900/30">
+                    <i class="fa-solid fa-file-pdf"></i> PDF raporu aç
+                </a>
+                {% else %}
+                <span class="text-xs text-slate-500 px-2" title="pip install reportlab">PDF için reportlab</span>
+                {% endif %}
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-white">Ödev takibi</h1>
+            <p class="text-slate-500 text-sm -mt-2">Öğrenci yanıtlarını işaretleyip kaydedin; PDF raporu güncel listeyi yansıtır.</p>
         </div>
 
         <!-- Ödev Bilgisi -->
@@ -56,7 +66,7 @@
                     <div class="text-xl font-bold text-white mb-1">{{ odev.ders_adi }}</div>
                     <div class="text-slate-400">{{ odev.tema_adi }}</div>
                     {% if odev.konu_adi %}
-                    <div class="mt-3 text-sm text-slate-300"><span class="text-slate-500 font-bold">Konu:</span> {{ odev.konu_adi }}</div>
+                    <div class="mt-3 text-sm text-slate-300"><span class="text-slate-500 font-bold">Öğrenme kanıtları:</span> {{ odev.konu_adi }}</div>
                     {% endif %}
                     {% if odev.ogrenme_cikti_kodlari and odev.ogrenme_cikti_kodlari|length > 0 %}
                     <div class="mt-3 flex flex-wrap gap-2 items-center">
@@ -93,36 +103,32 @@
 
         <!-- Öğrenci Listesi -->
         <form method="POST" class="bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
-            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800/80">
-                <h3 class="font-bold text-white"><i class="fa-solid fa-users mr-2 text-blue-400"></i>Sınıf Listesi</h3>
-                <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg shadow-lg transition flex items-center gap-2">
-                    <i class="fa-solid fa-save"></i> Değişiklikleri Kaydet
-                </button>
+            <div class="p-4 border-b border-slate-700 bg-slate-800/80">
+                <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-users mr-2 text-blue-400"></i>Sınıftaki öğrenciler</h3>
+                <p class="text-slate-500 text-xs mt-1">Her satırda ödevi yaptı mı, yapmadı mı işaretleyin.</p>
             </div>
             
             <div class="divide-y divide-slate-700/50">
                 {% for ogr in ogrenciler %}
-                <div class="flex items-center justify-between p-3 hover:bg-slate-700/30 transition">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-black text-slate-300">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 hover:bg-slate-700/20 transition">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-xs font-black text-slate-300 shrink-0">
                             {{ ogr.ogr_no }}
                         </div>
-                        <div class="font-bold text-slate-200">{{ ogr.ad_soyad }}</div>
+                        <div class="font-bold text-slate-200 truncate">{{ ogr.ad_soyad }}</div>
                     </div>
                     
-                    <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
-                        <!-- Tamamlamadı -->
+                    <div class="flex bg-slate-900 rounded-xl p-1 border border-slate-600 shrink-0 self-start sm:self-center">
                         <div class="relative">
                             <input type="radio" name="durum_{{ ogr.id }}" id="no_{{ ogr.id }}" value="tamamlamadi" class="hidden radio-tamamlamadi" {{ 'checked' if ogr.durum == 'tamamlamadi' else '' }}>
-                            <label for="no_{{ ogr.id }}" class="cursor-pointer px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 transition hover:bg-slate-800 inline-block">
-                                <i class="fa-solid fa-xmark mr-1"></i> Yapmadı
+                            <label for="no_{{ ogr.id }}" class="btn-seg text-slate-400 hover:bg-slate-800 inline-flex items-center gap-1.5">
+                                <i class="fa-solid fa-xmark"></i> Yapmadı
                             </label>
                         </div>
-                        <!-- Tamamladı -->
                         <div class="relative">
                             <input type="radio" name="durum_{{ ogr.id }}" id="yes_{{ ogr.id }}" value="tamamladi" class="hidden radio-tamamladi" {{ 'checked' if ogr.durum == 'tamamladi' else '' }}>
-                            <label for="yes_{{ ogr.id }}" class="cursor-pointer px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 transition hover:bg-slate-800 inline-block">
-                                <i class="fa-solid fa-check mr-1"></i> Yaptı
+                            <label for="yes_{{ ogr.id }}" class="btn-seg text-slate-400 hover:bg-slate-800 inline-flex items-center gap-1.5">
+                                <i class="fa-solid fa-check"></i> Yaptı
                             </label>
                         </div>
                     </div>
@@ -130,9 +136,10 @@
                 {% endfor %}
             </div>
             
-            <div class="p-4 border-t border-slate-700 bg-slate-800/80 flex justify-end">
-                <button type="submit" class="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-lg transition">
-                    <i class="fa-solid fa-save mr-2"></i>Kaydet
+            <div class="p-4 border-t border-slate-700 bg-slate-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p class="text-xs text-slate-500 order-2 sm:order-1">Değişiklikler kaydedilene kadar uygulanmaz.</p>
+                <button type="submit" class="order-1 sm:order-2 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-base shadow-lg shadow-green-900/25 transition">
+                    <i class="fa-solid fa-floppy-disk"></i> Kaydet
                 </button>
             </div>
         </form>

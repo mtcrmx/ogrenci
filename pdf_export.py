@@ -721,7 +721,7 @@ def pdf_odev_raporu_bytes(detay: dict[str, Any], ogretmen_adi: str) -> bytes:
     ]
     konu = (odev.get("konu_adi") or "").strip()
     if konu:
-        meta_lines.append(f"<b>Konu:</b> {html_escape(konu)}")
+        meta_lines.append(f"<b>Öğrenme kanıtları:</b> {html_escape(konu)}")
     if 5 <= sev <= 8:
         meta_lines.append(f"<b>TYMM sınıf düzeyi:</b> {sev}")
     meta_lines.append(
