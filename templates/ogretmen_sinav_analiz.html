@@ -1,0 +1,684 @@
+{% extends "base.html" %}
+{% block title %}Sınav Analizi{% endblock %}
+
+{% block body %}
+<main class="max-w-7xl mx-auto px-3 sm:px-4 py-4 pb-24 text-slate-800">
+  <header class="mb-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black text-amber-900 tracking-tight">ECO Sınav Analiz</h1>
+        <p class="text-xs sm:text-sm text-slate-600 mt-1 max-w-3xl">
+          Cebirci Sınav Analiz akışına benzer: sınav bilgisi, sınıf listesi, soru/kazanımlar, yazılı–dinleme–konuşma puanları ve özet rapor.
+          <span class="font-semibold text-amber-800">Veriler yalnızca bu tarayıcıda saklanır</span> (yedek indirip geri yükleyebilirsiniz).
+        </p>
+        <p class="text-[10px] text-slate-400 mt-2">Yöntem ilhamı: <a href="https://www.cebirci.com.tr/p/cebirci-sinav-analiz.html" class="underline text-indigo-600" target="_blank" rel="noopener">Cebirci.com.tr</a> — Erenler Cumhuriyet Ortaokulu için uyarlanmıştır.</p>
+      </div>
+      <a href="{{ url_for('dashboard') }}" class="shrink-0 inline-flex items-center justify-center rounded-xl bg-okul-800 text-white text-xs font-bold px-4 py-2 hover:bg-okul-900">← Ana menü</a>
+    </div>
+  </header>
+
+  <nav class="flex flex-wrap gap-1 mb-3 sticky top-14 z-20 bg-slate-100/95 backdrop-blur py-2 -mx-1 px-1 border-b border-slate-200" id="tabs"></nav>
+
+  <section id="panel-bilgi" class="panel space-y-3"></section>
+  <section id="panel-tur" class="panel hidden space-y-3"></section>
+  <section id="panel-sinif" class="panel hidden space-y-3"></section>
+  <section id="panel-soru" class="panel hidden space-y-3"></section>
+  <section id="panel-not" class="panel hidden space-y-3"></section>
+  <section id="panel-rapor" class="panel hidden space-y-3"></section>
+  <section id="panel-yedek" class="panel hidden space-y-3"></section>
+</main>
+
+<script>
+(function () {
+  const LS_KEY = "eco_sinav_analiz_v2";
+  const API_SINIF = (id) => "/api/sinav-analiz/sinif/" + id;
+  const SINIFLAR = {{ siniflar | default([]) | tojson }};
+  const DEFAULT_OKUL = "Erenler Cumhuriyet Ortaokulu";
+  const OGRETMEN_ADI = {{ (ogretmen_adi or "") | tojson }};
+
+  const TAB_DEF = [
+    { id: "bilgi", icon: "🏠", label: "Bilgi girişi" },
+    { id: "tur", icon: "⚙️", label: "Analiz türü" },
+    { id: "sinif", icon: "🏫", label: "Sınıf listesi" },
+    { id: "soru", icon: "📝", label: "Sorular / kazanımlar" },
+    { id: "not", icon: "🎓", label: "Öğrenci notları" },
+    { id: "rapor", icon: "🖨️", label: "Rapor" },
+    { id: "yedek", icon: "💾", label: "Veri / yedek" },
+  ];
+
+  const ANALIZ_LABEL = {
+    genel: "1. Genel dersler analizi",
+    tde: "2. TDE analizi",
+    yabanci: "3. Yabancı dil",
+    turkce: "4. Türkçe",
+  };
+
+  function uid(prefix) {
+    return (prefix || "x") + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function defaultState() {
+    return {
+      _v: 2,
+      meta: {
+        okulAdi: DEFAULT_OKUL,
+        ders: "",
+        ogretmen: OGRETMEN_ADI,
+        mudur: "",
+        sinavAdi: "",
+        egitimYili: "2025-2026",
+        analizTuru: "genel",
+        sinifId: SINIFLAR[0] ? SINIFLAR[0].id : null,
+        sinifAdi: SINIFLAR[0] ? SINIFLAR[0].sinif_adi : "",
+      },
+      ogrenciler: [],
+      sorular: { yazili: [], dinleme: [], konusma: [] },
+      notlar: {},
+    };
+  }
+
+  let state = defaultState();
+  let saveTid = null;
+  let activeTab = "bilgi";
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      const o = JSON.parse(raw);
+      if (!o || typeof o !== "object") return;
+      state = Object.assign(defaultState(), o);
+      if (!state.sorular) state.sorular = { yazili: [], dinleme: [], konusma: [] };
+      ["yazili", "dinleme", "konusma"].forEach((k) => {
+        if (!Array.isArray(state.sorular[k])) state.sorular[k] = [];
+      });
+      if (!state.notlar || typeof state.notlar !== "object") state.notlar = {};
+    } catch (e) {
+      console.warn(e);
+      state = defaultState();
+    }
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTid);
+    saveTid = setTimeout(() => {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+        const hist = JSON.parse(localStorage.getItem(LS_KEY + "_hist") || "[]");
+        hist.unshift({ t: new Date().toISOString(), sinav: state.meta.sinavAdi || "—" });
+        localStorage.setItem(LS_KEY + "_hist", JSON.stringify(hist.slice(0, 12)));
+      } catch (e) {
+        alert("Kaydedilemedi: " + e.message);
+      }
+    }, 350);
+  }
+
+  function studentKey(o) {
+    if (o.dbId != null) return "id_" + o.dbId;
+    return "m_" + (o.sira || 0) + "_" + String(o.adSoyad || "").slice(0, 12);
+  }
+
+  function ensureNotlar(key) {
+    if (!state.notlar[key]) state.notlar[key] = {};
+    return state.notlar[key];
+  }
+
+  function flatQuestions() {
+    const out = [];
+    ["yazili", "dinleme", "konusma"].forEach((tur) => {
+      (state.sorular[tur] || []).forEach((q, idx) => {
+        out.push({ tur, q, idx, colId: tur[0] + "_" + q.id });
+      });
+    });
+    return out;
+  }
+
+  function renderTabs() {
+    const el = document.getElementById("tabs");
+    el.innerHTML = TAB_DEF.map((t) => {
+      const on = t.id === activeTab;
+      return `<button type="button" data-tab="${t.id}" class="rounded-lg px-2.5 py-1.5 text-[11px] sm:text-xs font-bold border transition ${on ? "bg-amber-600 text-white border-amber-700 shadow" : "bg-white border-slate-200 text-slate-700 hover:bg-amber-50"}">${t.icon} ${t.label}</button>`;
+    }).join("");
+    el.querySelectorAll("[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeTab = btn.getAttribute("data-tab");
+        renderTabs();
+        renderAllPanels();
+      });
+    });
+  }
+
+  function showPanel(id) {
+    TAB_DEF.forEach((t) => {
+      const sec = document.getElementById("panel-" + t.id);
+      if (sec) sec.classList.toggle("hidden", t.id !== id);
+    });
+  }
+
+  function renderAllPanels() {
+    showPanel(activeTab);
+    renderBilgi();
+    renderTur();
+    renderSinif();
+    renderSoru();
+    renderNot();
+    renderRapor();
+    renderYedek();
+  }
+
+  function renderBilgi() {
+    const m = state.meta;
+    document.getElementById("panel-bilgi").innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 class="font-black text-slate-800 mb-3 flex items-center gap-2">📄 Sınav bilgileri</h2>
+        <div class="grid sm:grid-cols-2 gap-3 text-sm">
+          <label class="block">Okul adı<input data-meta="okulAdi" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.okulAdi)}"/></label>
+          <label class="block">Ders<input data-meta="ders" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.ders)}"/></label>
+          <label class="block">Öğretmen<input data-meta="ogretmen" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.ogretmen)}"/></label>
+          <label class="block">Okul müdürü<input data-meta="mudur" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.mudur)}"/></label>
+          <label class="block">Aktif sınıf (etiket)<input data-meta="sinifAdi" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.sinifAdi)}"/></label>
+          <label class="block">Sınav adı<input data-meta="sinavAdi" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.sinavAdi)}"/></label>
+          <label class="block sm:col-span-2">Eğitim-öğretim yılı<input data-meta="egitimYili" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.egitimYili)}"/></label>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">Bu alanlar yazdırılan raporda üst bilgi olarak kullanılır.</p>
+      </div>`;
+    bindMetaInputs();
+  }
+
+  function esc(s) {
+    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  }
+
+  function bindMetaInputs() {
+    document.querySelectorAll("#panel-bilgi [data-meta]").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        state.meta[inp.getAttribute("data-meta")] = inp.value;
+        scheduleSave();
+      });
+    });
+  }
+
+  function renderTur() {
+    const m = state.meta;
+    document.getElementById("panel-tur").innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 class="font-black text-slate-800 mb-3">⚙️ Analiz türü seçimi</h2>
+        <div class="grid sm:grid-cols-2 gap-2">
+          ${Object.entries(ANALIZ_LABEL).map(([k, lab]) => `
+            <label class="flex items-center gap-2 rounded-xl border p-3 cursor-pointer hover:bg-amber-50 ${m.analizTuru === k ? "border-amber-500 bg-amber-50" : "border-slate-200"}">
+              <input type="radio" name="analizTuru" value="${k}" ${m.analizTuru === k ? "checked" : ""} class="accent-amber-600"/>
+              <span class="text-sm font-semibold">${lab}</span>
+            </label>`).join("")}
+        </div>
+      </div>`;
+    document.querySelectorAll("#panel-tur [name=analizTuru]").forEach((r) => {
+      r.addEventListener("change", () => {
+        state.meta.analizTuru = r.value;
+        scheduleSave();
+      });
+    });
+  }
+
+  function renderSinif() {
+    const opts = (SINIFLAR || []).map((s) => `<option value="${s.id}" ${Number(state.meta.sinifId) === Number(s.id) ? "selected" : ""}>${esc(s.sinif_adi)}</option>`).join("");
+    const rows = state.ogrenciler.map((o, i) => {
+      const k = studentKey(o);
+      return `<tr class="border-t border-slate-100 text-sm">
+        <td class="py-1.5 px-2">${i + 1}</td>
+        <td class="py-1.5 px-2 font-mono">${esc(o.ogrNo)}</td>
+        <td class="py-1.5 px-2">${esc(o.adSoyad)}</td>
+        <td class="py-1.5 px-2"><button type="button" data-del-idx="${i}" class="text-rose-600 font-bold text-xs">Sil</button></td>
+      </tr>`;
+    }).join("");
+
+    document.getElementById("panel-sinif").innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <h2 class="font-black text-slate-800">🏫 Sınıf listesi</h2>
+        <div class="flex flex-wrap gap-2 items-end">
+          <label class="text-sm">Şube (veritabanı)
+            <select id="sa-sinif-select" class="mt-1 block border rounded-lg px-2 py-1.5 min-w-[8rem]">${opts || '<option value="">—</option>'}</select>
+          </label>
+          <button type="button" id="sa-sinif-yukle" class="rounded-lg bg-emerald-600 text-white text-xs font-bold px-3 py-2 hover:bg-emerald-500">Öğrencileri yükle</button>
+          <button type="button" id="sa-ogr-yeni" class="rounded-lg bg-slate-200 text-slate-800 text-xs font-bold px-3 py-2">+ Manuel öğrenci</button>
+        </div>
+        <details class="text-sm border rounded-xl p-3 bg-slate-50">
+          <summary class="font-bold cursor-pointer">📋 E-Okul / Excel satırları yapıştır</summary>
+          <p class="text-xs text-slate-500 mt-2">Her satır: <code>numara[TAB veya virgül]ad soyad</code></p>
+          <textarea id="sa-excel-ogr" rows="4" class="mt-2 w-full border rounded-lg text-xs font-mono p-2" placeholder="101\tAHMET YILMAZ&#10;102\tAYŞE KAYA"></textarea>
+          <button type="button" id="sa-excel-ogr-btn" class="mt-2 rounded-lg bg-indigo-600 text-white text-xs font-bold px-3 py-1.5">Listeye ekle</button>
+        </details>
+        <div class="overflow-x-auto border rounded-xl">
+          <table class="min-w-full text-left">
+            <thead><tr class="bg-slate-100 text-xs uppercase text-slate-500"><th class="py-2 px-2">S.No</th><th class="py-2 px-2">Okul no</th><th class="py-2 px-2">Ad soyad</th><th class="py-2 px-2"></th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="4" class="py-6 text-center text-slate-400 text-sm">Henüz öğrenci yok — şube seçip yükleyin veya yapıştırın.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>`;
+
+    const sel = document.getElementById("sa-sinif-select");
+    if (sel) {
+      sel.addEventListener("change", () => {
+        state.meta.sinifId = sel.value ? Number(sel.value) : null;
+        const s = (SINIFLAR || []).find((x) => Number(x.id) === state.meta.sinifId);
+        state.meta.sinifAdi = s ? s.sinif_adi : "";
+        scheduleSave();
+      });
+    }
+    document.getElementById("sa-sinif-yukle").addEventListener("click", async () => {
+      const id = state.meta.sinifId;
+      if (!id) {
+        alert("Önce şube seçin.");
+        return;
+      }
+      try {
+        const r = await fetch(API_SINIF(id));
+        const data = await r.json();
+        if (!data.ok) {
+          alert(data.sebep || "Yüklenemedi");
+          return;
+        }
+        state.ogrenciler = data.ogrenciler.map((o, i) => ({
+          dbId: o.id,
+          sira: i + 1,
+          ogrNo: o.ogr_no,
+          adSoyad: o.ad_soyad,
+        }));
+        const s = (SINIFLAR || []).find((x) => Number(x.id) === id);
+        if (s) state.meta.sinifAdi = s.sinif_adi;
+        scheduleSave();
+        renderSinif();
+      } catch (e) {
+        alert("Bağlantı hatası: " + e.message);
+      }
+    });
+    document.getElementById("sa-ogr-yeni").addEventListener("click", () => {
+      const ad = prompt("Ad soyad:");
+      if (!ad) return;
+      const no = parseInt(prompt("Okul numarası:", "0"), 10) || 0;
+      state.ogrenciler.push({ dbId: null, sira: state.ogrenciler.length + 1, ogrNo: no, adSoyad: ad.trim() });
+      scheduleSave();
+      renderSinif();
+    });
+    document.getElementById("sa-excel-ogr-btn").addEventListener("click", () => {
+      const raw = document.getElementById("sa-excel-ogr").value.trim();
+      if (!raw) return;
+      raw.split(/\r?\n/).forEach((line, i) => {
+        const t = line.split(/\t|,|;/).map((x) => x.trim()).filter(Boolean);
+        if (t.length < 2) return;
+        const no = parseInt(t[0], 10) || 0;
+        const ad = t.slice(1).join(" ");
+        state.ogrenciler.push({ dbId: null, sira: state.ogrenciler.length + 1, ogrNo: no, adSoyad: ad });
+      });
+      scheduleSave();
+      renderSinif();
+    });
+    document.querySelectorAll("#panel-sinif [data-del-idx]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const idx = parseInt(b.getAttribute("data-del-idx"), 10);
+        if (isNaN(idx) || idx < 0 || idx >= state.ogrenciler.length) return;
+        const dead = state.ogrenciler[idx];
+        const k = studentKey(dead);
+        state.ogrenciler.splice(idx, 1);
+        delete state.notlar[k];
+        state.ogrenciler.forEach((o, i) => { o.sira = i + 1; });
+        scheduleSave();
+        renderSinif();
+      });
+    });
+  }
+
+  function renderQuestionTable(tur, label, emoji) {
+    const list = state.sorular[tur];
+    const rows = list.map((q, i) => `
+      <tr class="border-t border-slate-100 text-sm">
+        <td class="py-1 px-2 w-10">${i + 1}</td>
+        <td class="py-1 px-2"><input data-q-tur="${tur}" data-q-id="${q.id}" data-f="metin" class="w-full border rounded px-1.5 py-1 text-xs" value="${esc(q.metin)}"/></td>
+        <td class="py-1 px-2 w-20"><input data-q-tur="${tur}" data-q-id="${q.id}" data-f="puan" type="number" min="1" class="w-full border rounded px-1 py-1 text-xs" value="${q.puan}"/></td>
+        <td class="py-1 px-2 w-12"><button type="button" data-q-del="${tur}:${q.id}" class="text-rose-600 font-bold text-xs">Sil</button></td>
+      </tr>`).join("");
+
+    return `
+      <div class="rounded-xl border border-slate-200 bg-white p-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <h3 class="font-bold text-slate-800">${emoji} ${label}</h3>
+          <div class="flex gap-1">
+            <button type="button" data-q-add="${tur}" class="rounded-lg bg-amber-600 text-white text-[11px] font-bold px-2 py-1">+ Soru</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full">
+            <thead><tr class="text-left text-[10px] uppercase text-slate-500 bg-slate-50"><th class="py-1 px-2">No</th><th class="py-1 px-2">Soru / kazanım / öğrenme çıktısı</th><th class="py-1 px-2">Puan</th><th></th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="4" class="py-3 text-center text-slate-400 text-xs">Soru ekleyin</td></tr>'}</tbody>
+          </table>
+        </div>
+        <details class="mt-2 text-xs">
+          <summary class="font-bold cursor-pointer text-indigo-700">📋 Toplu yapıştır (her satır bir soru; isteğe bağlı TAB sonra puan)</summary>
+          <textarea data-q-bulk="${tur}" rows="3" class="mt-1 w-full border rounded font-mono p-2" placeholder="Doğal sayılar&#10;Fonksiyonlar	10"></textarea>
+          <button type="button" data-q-bulk-go="${tur}" class="mt-1 rounded bg-slate-800 text-white px-2 py-1 text-[11px] font-bold">Yükle</button>
+        </details>
+      </div>`;
+  }
+
+  function renderSoru() {
+    document.getElementById("panel-soru").innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+        <h2 class="font-black text-slate-800">📝 Sorular, kazanımlar ve öğrenme çıktıları</h2>
+        ${renderQuestionTable("yazili", "Yazılı", "📝")}
+        ${renderQuestionTable("dinleme", "Dinleme", "🎧")}
+        ${renderQuestionTable("konusma", "Konuşma", "🗣️")}
+        <p class="text-xs text-slate-500">Cebirci arayüzündeki gibi üç oturum tipi ayrı tutulur; not girişi ekranında tüm sorular birleşik tabloda görünür.</p>
+      </div>`;
+
+    document.querySelectorAll("#panel-soru [data-q-add]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const tur = b.getAttribute("data-q-add");
+        state.sorular[tur].push({ id: uid("q"), metin: "", puan: 10 });
+        scheduleSave();
+        renderSoru();
+      });
+    });
+    document.querySelectorAll("#panel-soru [data-q-del]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const [tur, id] = b.getAttribute("data-q-del").split(":");
+        state.sorular[tur] = state.sorular[tur].filter((q) => q.id !== id);
+        Object.keys(state.notlar).forEach((sk) => {
+          if (state.notlar[sk][tur[0] + "_" + id] != null) delete state.notlar[sk][tur[0] + "_" + id];
+        });
+        scheduleSave();
+        renderSoru();
+      });
+    });
+    document.querySelectorAll("#panel-soru [data-q-tur]").forEach((inp) => {
+      const tur = inp.getAttribute("data-q-tur");
+      const id = inp.getAttribute("data-q-id");
+      const f = inp.getAttribute("data-f");
+      inp.addEventListener("input", () => {
+        const q = state.sorular[tur].find((x) => x.id === id);
+        if (!q) return;
+        if (f === "puan") q.puan = Math.max(1, parseInt(inp.value, 10) || 1);
+        else q.metin = inp.value;
+        scheduleSave();
+      });
+    });
+    document.querySelectorAll("#panel-soru [data-q-bulk-go]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const tur = b.getAttribute("data-q-bulk-go");
+        const ta = document.querySelector(`#panel-soru [data-q-bulk="${tur}"]`);
+        const raw = (ta && ta.value) || "";
+        raw.split(/\r?\n/).forEach((line) => {
+          const p = line.split(/\t/).map((x) => x.trim());
+          const metin = p[0] || "";
+          if (!metin) return;
+          const puan = p[1] ? Math.max(1, parseInt(p[1], 10) || 10) : 10;
+          state.sorular[tur].push({ id: uid("q"), metin, puan });
+        });
+        if (ta) ta.value = "";
+        scheduleSave();
+        renderSoru();
+      });
+    });
+  }
+
+  function renderNot() {
+    const fq = flatQuestions();
+    if (state.ogrenciler.length === 0) {
+      document.getElementById("panel-not").innerHTML = `<div class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Önce <b>Sınıf listesi</b> sekmesinden öğrenci ekleyin veya veritabanından yükleyin.</div>`;
+      return;
+    }
+    if (fq.length === 0) {
+      document.getElementById("panel-not").innerHTML = `<div class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Önce <b>Sorular</b> sekmesinden en az bir soru tanımlayın.</div>`;
+      return;
+    }
+
+    const head = `<tr class="bg-slate-100 text-[10px] uppercase text-slate-600">
+      <th class="py-2 px-1 sticky left-0 bg-slate-100 z-10 border-r">Öğrenci</th>
+      ${fq.map((c) => `<th class="py-2 px-1 min-w-[3.2rem] text-center" title="${esc(c.q.metin)}"><span class="inline-block max-w-[4rem] truncate align-middle">${c.tur[0].toUpperCase()}${c.idx + 1}</span><br/><span class="text-[9px] text-slate-400">/${c.q.puan}</span></th>`).join("")}
+      <th class="py-2 px-1">Σ</th>
+    </tr>`;
+
+    const body = state.ogrenciler.map((o, oi) => {
+      const sk = studentKey(o);
+      const rowCells = fq.map((c) => {
+        const cid = c.colId;
+        const rawVal = state.notlar[sk] && Object.prototype.hasOwnProperty.call(state.notlar[sk], cid)
+          ? state.notlar[sk][cid]
+          : "";
+        const v = rawVal === null || rawVal === undefined ? "" : String(rawVal);
+        return `<td class="py-0.5 px-0.5 border-l border-slate-100"><input type="number" step="0.5" min="0" max="${c.q.puan}" class="sa-sc w-14 text-center text-xs border rounded py-0.5" data-sk="${sk.replace(/"/g, "&quot;")}" data-cid="${cid.replace(/"/g, "&quot;")}" data-max="${c.q.puan}" value="${esc(v)}"/></td>`;
+      }).join("");
+      return `<tr class="border-t border-slate-100 text-xs">
+        <td class="py-1 px-2 sticky left-0 bg-white z-10 border-r font-medium max-w-[10rem] truncate" title="${esc(o.adSoyad)}">${esc(o.adSoyad)}</td>
+        ${rowCells}
+        <td class="py-1 px-1 text-center font-mono font-bold text-emerald-700" data-sum-idx="${oi}">0</td>
+      </tr>`;
+    }).join("");
+
+    document.getElementById("panel-not").innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h2 class="font-black text-slate-800">🎓 Öğrenci notları</h2>
+          <div class="flex flex-wrap gap-2">
+            <details class="text-xs border rounded-lg px-2 py-1 bg-slate-50">
+              <summary class="font-bold cursor-pointer">📋 Excel puan yapıştır</summary>
+              <p class="text-slate-500 mt-1">Her satır: <code>okul_no puan1 puan2 ...</code> (boşluk veya TAB)</p>
+              <textarea id="sa-paste-not" rows="3" class="mt-1 w-full max-w-md border rounded font-mono p-1"></textarea>
+              <button type="button" id="sa-paste-not-btn" class="mt-1 rounded bg-indigo-600 text-white px-2 py-1 font-bold">İşle</button>
+            </details>
+          </div>
+        </div>
+        <div class="overflow-auto max-h-[70vh] border rounded-xl">
+          <table class="min-w-max text-left text-sm">${head}<tbody>${body}</tbody></table>
+        </div>
+      </div>`;
+
+    function recalcSums() {
+      state.ogrenciler.forEach((o, oi) => {
+        const sk = studentKey(o);
+        let sum = 0;
+        fq.forEach((c) => {
+          const v = state.notlar[sk] && state.notlar[sk][c.colId];
+          if (v != null && v !== "" && !isNaN(Number(v))) sum += Number(v);
+        });
+        const el = document.querySelector(`[data-sum-idx="${oi}"]`);
+        if (el) el.textContent = sum ? String(sum % 1 === 0 ? sum : Math.round(sum * 10) / 10) : "—";
+      });
+    }
+
+    document.querySelectorAll(".sa-sc").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        const sk = inp.getAttribute("data-sk");
+        const cid = inp.getAttribute("data-cid");
+        const max = parseFloat(inp.getAttribute("data-max")) || 100;
+        let v = inp.value.trim();
+        ensureNotlar(sk);
+        if (v === "") delete state.notlar[sk][cid];
+        else {
+          let n = parseFloat(v);
+          if (n > max) {
+            n = max;
+            inp.value = n;
+          }
+          state.notlar[sk][cid] = n;
+        }
+        scheduleSave();
+        recalcSums();
+      });
+    });
+    recalcSums();
+
+    document.getElementById("sa-paste-not-btn").addEventListener("click", () => {
+      const raw = document.getElementById("sa-paste-not").value.trim();
+      if (!raw) return;
+      const lines = raw.split(/\r?\n/);
+      lines.forEach((line) => {
+        const p = line.trim().split(/\s+|\t+/);
+        if (p.length < 2) return;
+        const no = parseInt(p[0], 10);
+        const o = state.ogrenciler.find((x) => Number(x.ogrNo) === no);
+        if (!o) return;
+        const sk = studentKey(o);
+        ensureNotlar(sk);
+        fq.forEach((c, i) => {
+          const cell = p[i + 1];
+          if (cell == null || cell === "") return;
+          let n = parseFloat(cell.replace(",", "."));
+          if (isNaN(n)) return;
+          n = Math.min(n, c.q.puan);
+          state.notlar[sk][c.colId] = n;
+        });
+      });
+      scheduleSave();
+      renderNot();
+    });
+  }
+
+  function analizTurBaslik() {
+    return ANALIZ_LABEL[state.meta.analizTuru] || state.meta.analizTuru;
+  }
+
+  function renderRapor() {
+    const fq = flatQuestions();
+    let maxTop = 0;
+    fq.forEach((c) => {
+      maxTop += c.q.puan;
+    });
+    const rows = state.ogrenciler.map((o) => {
+      const sk = studentKey(o);
+      let alinan = 0;
+      fq.forEach((c) => {
+        const v = state.notlar[sk] && state.notlar[sk][c.colId];
+        if (v != null && !isNaN(Number(v))) alinan += Number(v);
+      });
+      const pct = maxTop > 0 ? Math.round((alinan / maxTop) * 1000) / 10 : null;
+      return { o, sk, alinan, pct };
+    });
+
+    const ortRows = fq.map((c) => {
+      let s = 0;
+      let n = 0;
+      state.ogrenciler.forEach((o) => {
+        const sk = studentKey(o);
+        const v = state.notlar[sk] && state.notlar[sk][c.colId];
+        if (v != null && !isNaN(Number(v))) {
+          s += Number(v);
+          n++;
+        }
+      });
+      const ort = n ? Math.round((s / n) * 10) / 10 : "—";
+      return `<tr class="border-t text-sm"><td class="py-1">${c.tur} #${c.idx + 1}</td><td class="py-1">${ort} <span class="text-slate-400">/ ${c.q.puan}</span></td></tr>`;
+    }).join("");
+
+    document.getElementById("panel-rapor").innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-black text-slate-800">🖨️ Özet rapor</h2>
+          <button type="button" id="sa-print" class="rounded-xl bg-slate-900 text-white text-xs font-bold px-4 py-2">Yazdır / PDF</button>
+        </div>
+        <div id="sa-rapor-ozet" class="rounded-xl border border-slate-100 p-4 bg-slate-50 text-sm space-y-2">
+          <p><b>Okul:</b> ${esc(state.meta.okulAdi)} · <b>Sınıf:</b> ${esc(state.meta.sinifAdi)} · <b>Sınav:</b> ${esc(state.meta.sinavAdi)}</p>
+          <p><b>Ders:</b> ${esc(state.meta.ders)} · <b>Öğretmen:</b> ${esc(state.meta.ogretmen)} · <b>Yıl:</b> ${esc(state.meta.egitimYili)}</p>
+          <p><b>Analiz türü:</b> ${esc(analizTurBaslik())}</p>
+          <p class="text-slate-500 text-xs">Toplam soru puanı (teorik): ${maxTop}</p>
+        </div>
+        <div class="overflow-x-auto border rounded-xl">
+          <table class="min-w-full text-sm">
+            <thead><tr class="bg-slate-100"><th class="py-2 px-2 text-left">Öğrenci</th><th class="py-2 px-2">No</th><th class="py-2 px-2">Aldığı</th><th class="py-2 px-2">%</th></tr></thead>
+            <tbody>
+              ${rows.map((r) => `<tr class="border-t"><td class="py-1.5 px-2">${esc(r.o.adSoyad)}</td><td class="py-1.5 px-2 font-mono">${r.o.ogrNo}</td><td class="py-1.5 px-2 text-center font-bold">${r.alinan || "—"}</td><td class="py-1.5 px-2 text-center">${r.pct != null ? r.pct + "%" : "—"}</td></tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+        <div class="rounded-xl border border-slate-100 p-3">
+          <h3 class="font-bold text-sm mb-2">Soru ortalamaları</h3>
+          <table class="w-full">${ortRows || '<tr><td class="text-slate-400 text-sm">Not girilmedi</td></tr>'}</table>
+        </div>
+      </div>`;
+
+    document.getElementById("sa-print").addEventListener("click", () => {
+      const w = window.open("", "_blank");
+      const qcols = fq.map((c, i) => `<th>${c.tur[0].toUpperCase()}${i + 1}</th>`).join("");
+      const body = state.ogrenciler.map((o) => {
+        const sk = studentKey(o);
+        const tds = fq.map((c) => {
+          const v = state.notlar[sk] && state.notlar[sk][c.colId];
+          return `<td style="text-align:center">${v != null ? v : "—"}</td>`;
+        }).join("");
+        let sum = 0;
+        fq.forEach((c) => {
+          const v = state.notlar[sk] && state.notlar[sk][c.colId];
+          if (v != null && !isNaN(Number(v))) sum += Number(v);
+        });
+        return `<tr><td>${esc(o.adSoyad)}</td><td>${o.ogrNo}</td>${tds}<td><b>${sum || "—"}</b></td></tr>`;
+      }).join("");
+      w.document.write(`<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"/><title>Sınav Analiz Raporu</title>
+        <style>body{font-family:Segoe UI,sans-serif;padding:16px;color:#111}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ccc;padding:4px 6px}th{background:#f3f4f6}h1{font-size:18px} .muted{color:#666;font-size:12px}</style></head><body>
+        <h1>${esc(state.meta.okulAdi)}</h1>
+        <p class="muted">${esc(state.meta.sinifAdi)} · ${esc(state.meta.sinavAdi)} · ${esc(analizTurBaslik())}</p>
+        <p class="muted">Ders: ${esc(state.meta.ders)} · Öğretmen: ${esc(state.meta.ogretmen)} · ${esc(state.meta.egitimYili)}</p>
+        <table><thead><tr><th>Öğrenci</th><th>No</th>${qcols}<th>Toplam</th></tr></thead><tbody>${body}</tbody></table>
+        <script>window.onload=function(){window.print();}<\/script>
+        </body></html>`);
+      w.document.close();
+    });
+  }
+
+  function renderYedek() {
+    const hist = JSON.parse(localStorage.getItem(LS_KEY + "_hist") || "[]");
+    document.getElementById("panel-yedek").innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <h2 class="font-black text-slate-800">💾 Veri yönetimi</h2>
+        <p class="text-xs text-slate-600">Tüm çalışmanız tarayıcı <code>localStorage</code> içinde tutulur. Tarayıcı verisini silerseniz kaybolur — düzenli yedek indirin.</p>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="sa-dl" class="rounded-lg bg-emerald-600 text-white text-xs font-bold px-3 py-2">⬇ Yedek indir (.json)</button>
+          <label class="rounded-lg bg-indigo-600 text-white text-xs font-bold px-3 py-2 cursor-pointer">⬆ Yedekten yükle<input type="file" id="sa-ul" accept="application/json,.json" class="hidden"/></label>
+          <button type="button" id="sa-reset" class="rounded-lg bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold px-3 py-2">🗑 Sıfırla</button>
+        </div>
+        <div class="rounded-xl border border-slate-100 p-3 text-xs">
+          <p class="font-bold mb-2">Son kayıtlar</p>
+          <ul class="list-disc pl-4 text-slate-600 space-y-1">${hist.length ? hist.map((h) => `<li>${esc(h.t)} — ${esc(h.sinav)}</li>`).join("") : "<li>Henüz yedek geçmişi yok.</li>"}</ul>
+        </div>
+      </div>`;
+
+    document.getElementById("sa-dl").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "eco_sinav_analiz_yedek_" + (state.meta.sinavAdi || "sinav").replace(/\s+/g, "_") + ".json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    document.getElementById("sa-ul").addEventListener("change", (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const o = JSON.parse(r.result);
+          if (!o.meta || !o.sorular) throw new Error("Geçersiz dosya");
+          state = Object.assign(defaultState(), o);
+          scheduleSave();
+          renderAllPanels();
+          alert("Yedek yüklendi.");
+        } catch (e) {
+          alert("Dosya okunamadı: " + e.message);
+        }
+      };
+      r.readAsText(f);
+      ev.target.value = "";
+    });
+    document.getElementById("sa-reset").addEventListener("click", () => {
+      if (!confirm("Tüm sınav analiz verisi silinsin mi?")) return;
+      localStorage.removeItem(LS_KEY);
+      state = defaultState();
+      scheduleSave();
+      renderAllPanels();
+    });
+  }
+
+  loadState();
+  if (!state.meta.ogretmen && OGRETMEN_ADI) state.meta.ogretmen = OGRETMEN_ADI;
+  renderTabs();
+  renderAllPanels();
+})();
+</script>
+{% endblock %}

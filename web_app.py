@@ -145,6 +145,8 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "analiz_merkezi",
     "rapor_haftalik", "rapor_karsilastir", "rapor_anonim_sinif",
     "manifest", "service_worker",
+    "ogretmen_sinav_analiz",
+    "api_sinav_analiz_sinif",
 })
 
 
@@ -1270,6 +1272,38 @@ def ogrenci_karne():
 @app.route("/veli/karne")
 def veli_karne():
     return redirect(url_for("veli_panel"))
+
+
+@app.route("/ogretmen/sinav-analiz")
+@giris_zorunlu
+def ogretmen_sinav_analiz():
+    """Cebirci tarzı sınav/kazanım analizi (tarayıcıda saklanır; ECO sınıf listesiyle entegre)."""
+    oid = session["ogretmen_id"]
+    siniflar = ogretmen_siniflari(oid)
+    return render_template(
+        "ogretmen_sinav_analiz.html",
+        siniflar=siniflar,
+        ogretmen_adi=session.get("ogretmen_adi", "") or "",
+    )
+
+
+@app.route("/api/sinav-analiz/sinif/<int:sinif_id>")
+@giris_zorunlu
+def api_sinav_analiz_sinif(sinif_id: int):
+    if not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
+        return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
+    rows = sinif_ogrencileri(sinif_id)
+    def _ogr_row(r):
+        try:
+            no = int(r["ogr_no"])
+        except (KeyError, TypeError, ValueError):
+            no = 0
+        return {"id": int(r["id"]), "ogr_no": no, "ad_soyad": r["ad_soyad"]}
+
+    return jsonify({
+        "ok": True,
+        "ogrenciler": [_ogr_row(r) for r in rows],
+    })
 
 
 @app.route("/ogretmen/merkez")

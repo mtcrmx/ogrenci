@@ -108,6 +108,12 @@
            title="Analiz PDF, yedek ve sıfırlama">
           Analiz
         </a>
+        <a href="{{ url_for('ogretmen_sinav_analiz') }}"
+           class="bg-amber-600 hover:bg-amber-800 text-white text-xs font-bold
+                  px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+           title="Cebirci tarzı sınav / kazanım analizi">
+          Sınav analizi
+        </a>
       </nav>
 
       <span class="hidden sm:block text-xs text-blue-200">👤 {{ session.ogretmen_adi }}</span>
@@ -142,6 +148,7 @@
     <a href="{{ url_for('ogretmen_ogrenci_maclari') }}" class="shrink-0 rounded-lg bg-green-700 px-2.5 py-1 text-[11px] font-bold">Mac</a>
     <a href="{{ url_for('bilgilendirme_yonetimi') }}" class="shrink-0 rounded-lg bg-sky-700 px-2.5 py-1 text-[11px] font-bold">Duyuru</a>
     <a href="{{ url_for('analiz_merkezi') }}" class="shrink-0 rounded-lg bg-rose-900 px-2.5 py-1 text-[11px] font-bold">Analiz</a>
+    <a href="{{ url_for('ogretmen_sinav_analiz') }}" class="shrink-0 rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-bold">Sınav</a>
   </nav>
 </header>
 {% endif %}

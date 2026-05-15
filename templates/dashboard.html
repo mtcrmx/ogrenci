@@ -61,6 +61,10 @@
          class="block w-full text-center text-xs font-bold py-2 rounded-lg bg-cyan-100 text-cyan-900 hover:bg-cyan-200 transition">
         Günlük yansımalar
       </a>
+      <a href="{{ url_for('ogretmen_sinav_analiz') }}"
+         class="block w-full text-center text-xs font-bold py-2 rounded-lg border-2 border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 transition">
+        📊 Sınav analizi
+      </a>
     </div>
     <div class="px-2 pb-4 mt-2 border-t border-slate-200 pt-3 space-y-1.5">
       <p class="text-[10px] font-bold text-slate-400 tracking-widest px-1 mb-2">
@@ -119,6 +123,10 @@
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}"
            class="flex-1 min-w-[40%] text-center bg-rose-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
           📑 Analiz
+        </a>
+        <a href="{{ url_for('ogretmen_sinav_analiz') }}"
+           class="flex-1 min-w-[40%] text-center bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg border-2 border-amber-500">
+          📈 Sınav
         </a>
       </div>
     </div>
