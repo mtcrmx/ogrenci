@@ -630,6 +630,33 @@ def ogretmen_siniflari(ogretmen_id: int) -> list[dict]:
     return rows
 
 
+def sinif_adi_tymm_seviyesi(sinif_adi: str) -> int | None:
+    """5/A, 8-B vb. adların başındaki TYMM (5–8) düzeyini döndürür; yoksa None."""
+    if not sinif_adi:
+        return None
+    s = sinif_adi.strip()
+    m = re.match(r"^([5-8])(?:\s*[/\-.]|$)", s)
+    if m:
+        return int(m.group(1))
+    m = re.match(r"^(\d{1,2})\b", s)
+    if m:
+        n = int(m.group(1))
+        if 5 <= n <= 8:
+            return n
+    return None
+
+
+def sinif_tymm_seviyesi(sinif_id: int) -> int | None:
+    con = _conn()
+    row = con.execute(
+        "SELECT sinif_adi FROM siniflar WHERE id = ?", (sinif_id,)
+    ).fetchone()
+    con.close()
+    if not row:
+        return None
+    return sinif_adi_tymm_seviyesi(row[0])
+
+
 def sinif_ogrencileri(sinif_id: int) -> list[dict]:
     """
     Sınıftaki öğrencileri tik sayısıyla birlikte döndürür.

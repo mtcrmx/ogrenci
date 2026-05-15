@@ -1709,6 +1709,10 @@ def odevler():
         sev = request.form.get("sinif_seviyesi", type=int)
         if sev not in (5, 6, 7, 8):
             sev = None
+        if sinif_id and sev is None:
+            from database import sinif_tymm_seviyesi
+
+            sev = sinif_tymm_seviyesi(sinif_id)
 
         if sinif_id and ders_adi and tema_adi:
             odev_id = odev_olustur(
@@ -1723,10 +1727,15 @@ def odevler():
             return redirect(url_for("odev_tema_detay", odev_id=odev_id))
 
     odev_listesi = odevleri_getir(oid)
+    from database import sinif_adi_tymm_seviyesi
+
+    siniflar = ogretmen_siniflari(oid)
+    for s in siniflar:
+        s["tymm_seviye"] = sinif_adi_tymm_seviyesi(s.get("sinif_adi") or "")
     return render_template(
         "odevler.html",
         odevler=odev_listesi,
-        siniflar=ogretmen_siniflari(oid),
+        siniflar=siniflar,
         yetki=session.get("ogretmen_yetki"),
     )
 

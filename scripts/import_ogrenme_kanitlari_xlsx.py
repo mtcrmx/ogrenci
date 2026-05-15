@@ -110,7 +110,7 @@ def _parse_tema_title(s: str) -> str:
         return inner
     m = TEMA_RE.match(s)
     if m:
-        return f"{m.group(1)}. Tema: {m.group(2).strip()}"
+        return f"{m.group(1)}. TEMA: {m.group(2).strip()}"
     m = THEME_EN_RE.match(s)
     if m:
         return f"Theme {m.group(1)}: {m.group(2).strip()}"
