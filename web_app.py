@@ -147,6 +147,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "manifest", "service_worker",
     "ogretmen_sinav_analiz",
     "api_sinav_analiz_sinif",
+    "api_curriculum_temel_egitim",
 })
 
 

@@ -8,10 +8,10 @@
       <div>
         <h1 class="text-xl sm:text-2xl font-black text-amber-900 tracking-tight">ECO Sınav Analiz</h1>
         <p class="text-xs sm:text-sm text-slate-600 mt-1 max-w-3xl">
-          Cebirci Sınav Analiz akışına benzer: sınav bilgisi, sınıf listesi, soru/kazanımlar, yazılı–dinleme–konuşma puanları ve özet rapor.
-          <span class="font-semibold text-amber-800">Veriler yalnızca bu tarayıcıda saklanır</span> (yedek indirip geri yükleyebilirsiniz).
+          Cebirci tarzı akış + <strong>Funda öğretmen PDF raporu</strong> düzeninde yazdırılabilir çıktı.
+          Öğrenme çıktılarını <strong>TYMM temel eğitim</strong> özet müfredatından (ders seçerek) ekleyebilirsiniz.
         </p>
-        <p class="text-[10px] text-slate-400 mt-2">Yöntem ilhamı: <a href="https://www.cebirci.com.tr/p/cebirci-sinav-analiz.html" class="underline text-indigo-600" target="_blank" rel="noopener">Cebirci.com.tr</a> — Erenler Cumhuriyet Ortaokulu için uyarlanmıştır.</p>
+        <p class="text-[10px] text-slate-400 mt-2">Yöntem ilhamı: <a href="https://www.cebirci.com.tr/p/cebirci-sinav-analiz.html" class="underline text-indigo-600" target="_blank" rel="noopener">Cebirci.com.tr</a></p>
       </div>
       <a href="{{ url_for('dashboard') }}" class="shrink-0 inline-flex items-center justify-center rounded-xl bg-okul-800 text-white text-xs font-bold px-4 py-2 hover:bg-okul-900">← Ana menü</a>
     </div>
@@ -32,9 +32,17 @@
 (function () {
   const LS_KEY = "eco_sinav_analiz_v2";
   const API_SINIF = (id) => "/api/sinav-analiz/sinif/" + id;
+  const API_MUFREDAT = "/api/curriculum/temel-egitim";
   const SINIFLAR = {{ siniflar | default([]) | tojson }};
   const DEFAULT_OKUL = "Erenler Cumhuriyet Ortaokulu";
+  const DEFAULT_MUDUR = "Adem Akgül";
   const OGRETMEN_ADI = {{ (ogretmen_adi or "") | tojson }};
+
+  const TUR_RAPOR_BASLIK = {
+    yazili: "YAZILI SINAV KAZANIM ANALİZİ",
+    dinleme: "DİNLEME SINAVI KAZANIM ANALİZİ",
+    konusma: "KONUŞMA SINAVI KAZANIM ANALİZİ",
+  };
 
   const TAB_DEF = [
     { id: "bilgi", icon: "🏠", label: "Bilgi girişi" },
@@ -53,23 +61,30 @@
     turkce: "4. Türkçe",
   };
 
+  let curriculumCache = null;
+
   function uid(prefix) {
     return (prefix || "x") + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
   }
 
   function defaultState() {
     return {
-      _v: 2,
+      _v: 3,
       meta: {
         okulAdi: DEFAULT_OKUL,
         ders: "",
         ogretmen: OGRETMEN_ADI,
-        mudur: "",
+        mudur: DEFAULT_MUDUR,
         sinavAdi: "",
         egitimYili: "2025-2026",
         analizTuru: "genel",
         sinifId: SINIFLAR[0] ? SINIFLAR[0].id : null,
         sinifAdi: SINIFLAR[0] ? SINIFLAR[0].sinif_adi : "",
+        sinifMevcudu: "",
+        sinavaKatilan: "",
+        basariEsik: "50",
+        zayifKazanimEsik: "60",
+        degerlendirmeEk: "",
       },
       ogrenciler: [],
       sorular: { yazili: [], dinleme: [], konusma: [] },
@@ -80,6 +95,13 @@
   let state = defaultState();
   let saveTid = null;
   let activeTab = "bilgi";
+
+  function mergeMetaDefaults() {
+    const d = defaultState().meta;
+    Object.keys(d).forEach((k) => {
+      if (state.meta[k] === undefined || state.meta[k] === null) state.meta[k] = d[k];
+    });
+  }
 
   function loadState() {
     try {
@@ -93,6 +115,10 @@
         if (!Array.isArray(state.sorular[k])) state.sorular[k] = [];
       });
       if (!state.notlar || typeof state.notlar !== "object") state.notlar = {};
+      mergeMetaDefaults();
+      state.ogrenciler.forEach((ogr) => {
+        if (ogr.katilmadi == null) ogr.katilmadi = false;
+      });
     } catch (e) {
       console.warn(e);
       state = defaultState();
@@ -133,552 +159,820 @@
     return out;
   }
 
-  function renderTabs() {
-    const el = document.getElementById("tabs");
-    el.innerHTML = TAB_DEF.map((t) => {
-      const on = t.id === activeTab;
-      return `<button type="button" data-tab="${t.id}" class="rounded-lg px-2.5 py-1.5 text-[11px] sm:text-xs font-bold border transition ${on ? "bg-amber-600 text-white border-amber-700 shadow" : "bg-white border-slate-200 text-slate-700 hover:bg-amber-50"}">${t.icon} ${t.label}</button>`;
-    }).join("");
-    el.querySelectorAll("[data-tab]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeTab = btn.getAttribute("data-tab");
-        renderTabs();
-        renderAllPanels();
+  function hesapDetay() {
+    const fq = flatQuestions();
+    const maxTop = fq.reduce((s, c) => s + c.q.puan, 0);
+    const basEsik = parseFloat(state.meta.basariEsik) || 50;
+    const zayifEsik = parseFloat(state.meta.zayifKazanimEsik) || 60;
+
+    const katilmayan = state.ogrenciler.filter((o) => o.katilmadi).length;
+    const mevcutAuto = state.ogrenciler.length;
+    const mevcut = parseInt(state.meta.sinifMevcudu, 10) || mevcutAuto;
+
+    const aktifOgr = state.ogrenciler.filter((o) => !o.katilmadi);
+    const totListe = [];
+    aktifOgr.forEach((o) => {
+      const sk = studentKey(o);
+      let tot = 0;
+      let any = false;
+      fq.forEach((c) => {
+        const v = state.notlar[sk] && state.notlar[sk][c.colId];
+        if (v != null && v !== "" && !isNaN(Number(v))) {
+          tot += Number(v);
+          any = true;
+        }
       });
+      totListe.push({ o, sk, tot, any });
     });
-  }
 
-  function showPanel(id) {
-    TAB_DEF.forEach((t) => {
-      const sec = document.getElementById("panel-" + t.id);
-      if (sec) sec.classList.toggle("hidden", t.id !== id);
+    let katSay = parseInt(state.meta.sinavaKatilan, 10);
+    if (!katSay || katSay < 1) katSay = totListe.filter((x) => x.any).length || aktifOgr.length || 1;
+
+    const puanlar = totListe.filter((x) => x.any).map((x) => x.tot);
+    const ortPuan = puanlar.length ? puanlar.reduce((a, b) => a + b, 0) / puanlar.length : 0;
+    const basarililar = totListe.filter((x) => x.any && x.tot >= basEsik).length;
+    const basarisiz = Math.max(0, totListe.filter((x) => x.any).length - basarililar);
+    const basariYuzde = katSay > 0 ? Math.round((basarililar / katSay) * 1000) / 10 : 0;
+
+    let std = 0;
+    if (puanlar.length > 1) {
+      const m = ortPuan;
+      const v = puanlar.reduce((s, t) => s + (t - m) * (t - m), 0) / (puanlar.length - 1);
+      std = Math.sqrt(v);
+    }
+
+    const qStats = fq.map((c) => {
+      const vals = [];
+      aktifOgr.forEach((o) => {
+        const sk = studentKey(o);
+        const v = state.notlar[sk] && state.notlar[sk][c.colId];
+        if (v != null && v !== "" && !isNaN(Number(v))) vals.push(Number(v));
+      });
+      const ort = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      const basariSoru = c.q.puan > 0 ? Math.round((ort / c.q.puan) * 1000) / 10 : 0;
+      return Object.assign({}, c, { ort, basariSoru, n: vals.length });
     });
+
+    const zayifListe = qStats.filter((q) => q.n > 0 && q.basariSoru < zayifEsik);
+
+    const ogrenciZayif = state.ogrenciler.map((o) => {
+      const sk = studentKey(o);
+      const counts = new Map();
+      if (o.katilmadi) return { o, sk, items: [], toplam: null };
+      fq.forEach((c) => {
+        const max = c.q.puan;
+        const v = state.notlar[sk] && state.notlar[sk][c.colId];
+        const got = v != null && v !== "" && !isNaN(Number(v)) ? Number(v) : null;
+        if (got === null || got < max) {
+          const m = (c.q.metin || "").trim() || "(Tanımsız soru)";
+          counts.set(m, (counts.get(m) || 0) + 1);
+        }
+      });
+      const items = [...counts.entries()].map(([metin, cnt]) => ({ metin, cnt }));
+      let toplam = 0;
+      fq.forEach((c) => {
+        const v = state.notlar[sk] && state.notlar[sk][c.colId];
+        if (v != null && v !== "" && !isNaN(Number(v))) toplam += Number(v);
+      });
+      return { o, sk, items, toplam: aktifOgr.includes(o) ? toplam : null };
+    });
+
+    const minP = puanlar.length ? Math.min(...puanlar) : 0;
+    const maxP = puanlar.length ? Math.max(...puanlar) : 0;
+
+    return {
+      fq,
+      maxTop,
+      mevcut,
+      katSay,
+      katilmayan,
+      ortPuan,
+      basariYuzde,
+      std,
+      basEsik,
+      zayifEsik,
+      basarililar,
+      basarisiz,
+      qStats,
+      zayifListe,
+      ogrenciZayif,
+      minP,
+      maxP,
+    };
   }
 
-  function renderAllPanels() {
-    showPanel(activeTab);
-    renderBilgi();
-    renderTur();
-    renderSinif();
-    renderSoru();
-    renderNot();
-    renderRapor();
-    renderYedek();
-  }
-
-  function renderBilgi() {
-    const m = state.meta;
-    document.getElementById("panel-bilgi").innerHTML = `
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 class="font-black text-slate-800 mb-3 flex items-center gap-2">📄 Sınav bilgileri</h2>
-        <div class="grid sm:grid-cols-2 gap-3 text-sm">
-          <label class="block">Okul adı<input data-meta="okulAdi" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.okulAdi)}"/></label>
-          <label class="block">Ders<input data-meta="ders" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.ders)}"/></label>
-          <label class="block">Öğretmen<input data-meta="ogretmen" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.ogretmen)}"/></label>
-          <label class="block">Okul müdürü<input data-meta="mudur" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.mudur)}"/></label>
-          <label class="block">Aktif sınıf (etiket)<input data-meta="sinifAdi" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.sinifAdi)}"/></label>
-          <label class="block">Sınav adı<input data-meta="sinavAdi" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.sinavAdi)}"/></label>
-          <label class="block sm:col-span-2">Eğitim-öğretim yılı<input data-meta="egitimYili" class="mt-1 w-full border rounded-lg px-2 py-1.5" value="${esc(m.egitimYili)}"/></label>
-        </div>
-        <p class="text-xs text-slate-500 mt-3">Bu alanlar yazdırılan raporda üst bilgi olarak kullanılır.</p>
-      </div>`;
-    bindMetaInputs();
+  function kisaMetin(s, n) {
+    s = (s || "").trim();
+    if (s.length <= n) return s;
+    return s.slice(0, Math.max(0, n - 1)) + "…";
   }
 
   function esc(s) {
-    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
-  function bindMetaInputs() {
-    document.querySelectorAll("#panel-bilgi [data-meta]").forEach((inp) => {
-      inp.addEventListener("input", () => {
-        state.meta[inp.getAttribute("data-meta")] = inp.value;
-        scheduleSave();
+  function escAttr(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function buildFormalRaporHtml() {
+    const H = hesapDetay();
+    const m = state.meta;
+    const okulUst = String(m.okulAdi || "").toUpperCase();
+    const turEtiket = {
+      yazili: "YAZILI SINAV",
+      dinleme: "DİNLEME",
+      konusma: "KONUŞMA",
+    };
+
+    function notGirildiMi() {
+      const aktif = state.ogrenciler.filter((o) => !o.katilmadi);
+      const fq2 = flatQuestions();
+      return aktif.some((o) => {
+        const sk = studentKey(o);
+        return fq2.some((c) => {
+          const v = state.notlar[sk] && state.notlar[sk][c.colId];
+          return v != null && v !== "" && !isNaN(Number(v));
+        });
+      });
+    }
+    const hasSoru = H.fq.length > 0;
+    const hasNot = notGirildiMi();
+    const enYuksekStr = hasSoru && hasNot ? String(H.maxP) : "—";
+    const enDusukStr = hasSoru && hasNot ? String(H.minP) : "—";
+    const istatHtml = `
+      <tr><td>Sınıf Mevcudu</td><td>${H.mevcut}</td></tr>
+      <tr><td>Sınava Katılan</td><td>${H.katSay}</td></tr>
+      <tr><td>Ort. Puan</td><td>${hasSoru && hasNot ? H.ortPuan.toFixed(2) : "—"}</td></tr>
+      <tr><td>Başarı %</td><td>${hasSoru ? "%" + H.basariYuzde : "—"}</td></tr>
+      <tr><td>Std. Sapma</td><td>${hasSoru && hasNot ? (H.std ? H.std.toFixed(2) : "0.00") : "—"}</td></tr>
+      <tr><td>En Yüksek Puan</td><td>${enYuksekStr}</td></tr>
+      <tr><td>En Düşük Puan</td><td>${enDusukStr}</td></tr>
+      <tr><td>Sınav Üst Sınırı (Toplam)</td><td>${H.maxTop || "—"}</td></tr>
+    `;
+
+    const kazanimBloklar = ["yazili", "dinleme", "konusma"].map((tur) => {
+      const sorular = H.qStats.filter((x) => x.tur === tur);
+      if (!sorular.length) return "";
+      let no = 0;
+      const satirlar = sorular.map((q) => {
+        no++;
+        return `<tr>
+          <td style="text-align:center">${no}</td>
+          <td>${esc(q.q.metin || "")}</td>
+          <td style="text-align:center">${q.q.puan}</td>
+          <td style="text-align:center">${q.n ? q.ort.toFixed(2) : "—"}</td>
+          <td style="text-align:center">${q.n ? "%" + q.basariSoru : "—"}</td>
+        </tr>`;
+      }).join("");
+      return `<h2 style="font-size:13pt;margin:16px 0 8px">${TUR_RAPOR_BASLIK[tur] || tur}</h2>
+        <table><thead><tr><th>No</th><th>Soru/Kazanım/Öğrenme Çıktısı</th><th>Puan</th><th>Ort.</th><th>Başarı %</th></tr></thead>
+        <tbody>${satirlar}</tbody></table>`;
+    }).join("");
+
+    const zayifTekil = [];
+    const gordu = new Set();
+    H.zayifListe.forEach((q) => {
+      const metin = (q.q.metin || "").trim();
+      const anahtar = metin + "_" + q.basariSoru;
+      if (gordu.has(anahtar)) return;
+      gordu.add(anahtar);
+      zayifTekil.push(`- [${turEtiket[q.tur] || q.tur}] ${metin} (%${q.basariSoru})`);
+    });
+
+    const degerParagraf = `Yapılan ortak sınav sonucu ${esc(m.sinifAdi || "—")} sınıfının (Sınava katılan ${H.katSay} öğrenci üzerinden) genel ortalaması ${H.ortPuan ? H.ortPuan.toFixed(2) : "—"} olarak hesaplanmıştır. Sınavda ${H.basarililar} öğrenci başarılı olurken, ${H.basarisiz} öğrenci başarısız olmuştur.`;
+
+    const zayifBlock = zayifTekil.length
+      ? `<p><b>Eksik Kazanım / Öğrenme Çıktıları:</b></p><ul>${zayifTekil.map((l) => "<li>" + esc(l) + "</li>").join("")}</ul><p>olarak tespit edilmiştir.</p>`
+      : "<p><b>Eksik kazanım:</b> Belirlenen eşiğin altında soru bulunmuyor veya not girilmemiş.</p>";
+
+    const ek = (m.degerlendirmeEk || "").trim()
+      ? `<p style="margin-top:10px;white-space:pre-wrap">${esc(m.degerlendirmeEk)}</p>`
+      : `<p style="margin-top:10px">Eksiklerin giderilmesi için tekrar ve ödevlendirme planlanmıştır.</p>`;
+
+    const sayfa1 = `
+      <div class="sayfa">
+        <h1 style="text-align:center;font-size:15pt;margin-bottom:12px">SINAV ANALİZİ VE DEĞERLENDİRME RAPORU</h1>
+        <table class="ust">
+          <tr><td><b>Okul:</b> ${esc(okulUst)}</td><td><b>Sınıf:</b> ${esc(m.sinifAdi || "—")}</td></tr>
+          <tr><td><b>Ders:</b> ${esc((m.ders || "").toUpperCase())}</td><td><b>Öğretmen:</b> ${esc((m.ogretmen || "").toUpperCase())}</td></tr>
+          <tr><td><b>Sınav:</b> ${esc(m.sinavAdi || "—")}</td><td><b>Yıl:</b> ${esc(m.egitimYili || "—")}</td></tr>
+        </table>
+        <table class="ozet"><tbody>${istatHtml}</tbody></table>
+        ${kazanimBloklar}
+        <h3 style="font-size:12pt;margin:14px 0 6px">DEĞERLENDİRME:</h3>
+        <p style="text-align:justify;line-height:1.45">${degerParagraf}</p>
+        ${zayifBlock}
+        ${ek}
+        <div class="imza">
+          <div><b>${esc(m.ogretmen || "")}</b><br/>Ders Öğretmeni</div>
+          <div><b>${esc(m.mudur || "")}</b><br/>Okul Müdürü</div>
+        </div>
+      </div>`;
+
+    const ogrSatir = H.ogrenciZayif.map((r, i) => {
+      if (r.o.katilmadi) {
+        return `<tr><td style="text-align:center">${esc(r.o.ogrNo)}</td><td>${esc(r.o.adSoyad)}</td><td style="text-align:center">G</td><td>—</td></tr>`;
+      }
+      const pu = r.toplam != null && r.toplam !== "" ? String(r.toplam) : "—";
+      const bullets = r.items.length
+        ? r.items.map((it) => `• ${it.cnt > 1 ? "(x" + it.cnt + ") " : ""}${esc(kisaMetin(it.metin, 72))}`).join("<br/>")
+        : "—";
+      return `<tr><td style="text-align:center">${esc(r.o.ogrNo)}</td><td>${esc(r.o.adSoyad)}</td><td style="text-align:center">${pu}</td><td style="font-size:10px">${bullets || "—"}</td></tr>`;
+    }).join("");
+
+    const sayfa2 = `
+      <div class="sayfa break">
+        <h2 style="text-align:center;font-size:14pt">${esc(m.sinifAdi || "—")} ÖĞRENCİ BAZLI SINAV ANALİZİ</h2>
+        <table><thead><tr><th>No</th><th>Öğrenci</th><th>PUAN</th><th>Eksik Kazanımlar/Öğrenme Çıktıları</th></tr></thead>
+        <tbody>${ogrSatir}</tbody></table>
+      </div>`;
+
+    const css = `
+      body{font-family:'Times New Roman',Times,serif;margin:14mm;color:#000;font-size:11pt}
+      table{border-collapse:collapse;width:100%;margin:8px 0;font-size:10pt}
+      th,td{border:1px solid #333;padding:5px 6px;vertical-align:top}
+      th{background:#e8e8e8;font-weight:bold}
+      .ust td{width:50%;padding:4px 6px;border:1px solid #333}
+      .ozet td{border:1px solid #333;padding:4px 8px}
+      .ozet tr td:first-child{font-weight:bold;width:42%}
+      .imza{display:flex;justify-content:space-between;margin-top:28px;text-align:center}
+      .imza div{width:40%}
+      .sayfa{page-break-inside:avoid}
+      .break{page-break-before:always}
+      @media print{.no-print{display:none}}
+    `;
+
+    return `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"/><title>Analiz Raporu</title><style>${css}</style></head><body>${sayfa1}${sayfa2}</body></html>`;
+  }
+
+  let soruPanelTur = "yazili";
+  let mufredatFilter = "";
+
+  async function fetchCurriculum() {
+    if (curriculumCache) return curriculumCache;
+    const r = await fetch(API_MUFREDAT, { credentials: "same-origin" });
+    if (!r.ok) throw new Error("Müfredat yüklenemedi (" + r.status + ")");
+    curriculumCache = await r.json();
+    return curriculumCache;
+  }
+
+  function setMeta(k, v) {
+    state.meta[k] = v;
+    scheduleSave();
+  }
+
+  function syncSinifFromSelect() {
+    const id = state.meta.sinifId;
+    const row = SINIFLAR.find((s) => s.id === id);
+    state.meta.sinifAdi = row ? row.sinif_adi : "";
+    scheduleSave();
+  }
+
+  async function sinifListesiYukle() {
+    const id = state.meta.sinifId;
+    if (!id) {
+      alert("Önce sınıf seçin.");
+      return;
+    }
+    try {
+      const r = await fetch(API_SINIF(id), { credentials: "same-origin" });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.sebep || "Liste alınamadı");
+      state.ogrenciler = (j.ogrenciler || []).map((row, i) => ({
+        dbId: row.id,
+        sira: i + 1,
+        ogrNo: row.ogr_no,
+        adSoyad: row.ad_soyad,
+        katilmadi: false,
+      }));
+      state.notlar = {};
+      scheduleSave();
+      renderActivePanel();
+    } catch (e) {
+      alert(e.message || String(e));
+    }
+  }
+
+  function ogrenciSatirEkle() {
+    state.ogrenciler.push({ dbId: null, sira: state.ogrenciler.length + 1, ogrNo: "", adSoyad: "", katilmadi: false });
+    scheduleSave();
+    renderActivePanel();
+  }
+
+  function patchOgrenci(i, k, v) {
+    if (!state.ogrenciler[i]) return;
+    state.ogrenciler[i][k] = v;
+    scheduleSave();
+  }
+
+  function soruEkle(tur, metin, puan) {
+    const q = { id: uid("q"), metin: metin || "", puan: Math.max(0, parseFloat(puan) || 1) };
+    state.sorular[tur].push(q);
+    scheduleSave();
+    renderActivePanel();
+  }
+
+  function soruSil(tur, idx) {
+    const removed = state.sorular[tur][idx];
+    state.sorular[tur].splice(idx, 1);
+    if (removed) {
+      const colId = tur[0] + "_" + removed.id;
+      Object.keys(state.notlar).forEach((sk) => {
+        if (state.notlar[sk]) delete state.notlar[sk][colId];
+      });
+    }
+    scheduleSave();
+    renderActivePanel();
+  }
+
+  function soruGuncelle(tur, idx, k, v) {
+    const q = state.sorular[tur][idx];
+    if (!q) return;
+    if (k === "puan") q.puan = Math.max(0, parseFloat(v) || 0);
+    else q[k] = v;
+    scheduleSave();
+  }
+
+  function notHucre(sk, colId, v) {
+    const bag = ensureNotlar(sk);
+    if (v === "" || v == null) delete bag[colId];
+    else bag[colId] = v;
+    scheduleSave();
+  }
+
+  function renderTabs() {
+    const nav = document.getElementById("tabs");
+    if (!nav) return;
+    nav.innerHTML = TAB_DEF.map((t) => {
+      const on = t.id === activeTab;
+      return `<button type="button" data-tab="${t.id}" class="rounded-lg px-2.5 py-1.5 text-[11px] sm:text-xs font-bold border ${
+        on ? "bg-amber-700 text-white border-amber-800" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+      }">${t.icon} ${t.label}</button>`;
+    }).join("");
+    nav.querySelectorAll("[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeTab = btn.getAttribute("data-tab");
+        renderTabs();
+        showPanel();
+        renderActivePanel();
       });
     });
   }
 
-  function renderTur() {
+  function showPanel() {
+    TAB_DEF.forEach((t) => {
+      const el = document.getElementById("panel-" + t.id);
+      if (el) el.classList.toggle("hidden", t.id !== activeTab);
+    });
+  }
+
+  function inputClass(wide) {
+    return (
+      "rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-800 shadow-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-400 " +
+      (wide ? "w-full" : "")
+    );
+  }
+
+  function renderBilgi() {
+    const el = document.getElementById("panel-bilgi");
     const m = state.meta;
-    document.getElementById("panel-tur").innerHTML = `
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 class="font-black text-slate-800 mb-3">⚙️ Analiz türü seçimi</h2>
-        <div class="grid sm:grid-cols-2 gap-2">
-          ${Object.entries(ANALIZ_LABEL).map(([k, lab]) => `
-            <label class="flex items-center gap-2 rounded-xl border p-3 cursor-pointer hover:bg-amber-50 ${m.analizTuru === k ? "border-amber-500 bg-amber-50" : "border-slate-200"}">
-              <input type="radio" name="analizTuru" value="${k}" ${m.analizTuru === k ? "checked" : ""} class="accent-amber-600"/>
-              <span class="text-sm font-semibold">${lab}</span>
-            </label>`).join("")}
+    el.innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <h2 class="text-sm font-black text-slate-800">Okul / sınav bilgileri</h2>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <label class="block text-xs font-bold text-slate-600">Okul adı<input class="${inputClass(true)} mt-1" value="${esc(m.okulAdi)}" data-meta="okulAdi"/></label>
+          <label class="block text-xs font-bold text-slate-600">Ders<input class="${inputClass(true)} mt-1" value="${esc(m.ders)}" data-meta="ders"/></label>
+          <label class="block text-xs font-bold text-slate-600">Öğretmen<input class="${inputClass(true)} mt-1" value="${esc(m.ogretmen)}" data-meta="ogretmen"/></label>
+          <label class="block text-xs font-bold text-slate-600">Müdür<input class="${inputClass(true)} mt-1" value="${esc(m.mudur)}" data-meta="mudur"/></label>
+          <label class="block text-xs font-bold text-slate-600">Sınav adı<input class="${inputClass(true)} mt-1" value="${esc(m.sinavAdi)}" data-meta="sinavAdi"/></label>
+          <label class="block text-xs font-bold text-slate-600">Eğitim yılı<input class="${inputClass(true)} mt-1" value="${esc(m.egitimYili)}" data-meta="egitimYili"/></label>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-3">
+          <label class="block text-xs font-bold text-slate-600">Sınıf (ECO)
+            <select class="${inputClass(true)} mt-1" data-sinif-select="1">
+              <option value="">${SINIFLAR.length ? "— Sınıf seçin —" : "— Kayıtlı sınıf yok —"}</option>
+              ${SINIFLAR.map(
+                (s) =>
+                  `<option value="${s.id}" ${m.sinifId === s.id ? "selected" : ""}>${esc(s.sinif_adi)}</option>`
+              ).join("")}
+            </select>
+          </label>
+          <label class="block text-xs font-bold text-slate-600">Sınıf mevcudu (rapor)
+            <input class="${inputClass(true)} mt-1" type="number" min="0" value="${esc(m.sinifMevcudu)}" data-meta="sinifMevcudu"/>
+          </label>
+          <label class="block text-xs font-bold text-slate-600">Sınava katılan (rapor, boşsa otomatik)
+            <input class="${inputClass(true)} mt-1" type="number" min="0" value="${esc(m.sinavaKatilan)}" data-meta="sinavaKatilan"/>
+          </label>
+          <label class="block text-xs font-bold text-slate-600">Başarı eşiği (puan)<input class="${inputClass(true)} mt-1" type="number" min="0" value="${esc(m.basariEsik)}" data-meta="basariEsik"/></label>
+          <label class="block text-xs font-bold text-slate-600">Zayıf kazanım eşiği (%)
+            <input class="${inputClass(true)} mt-1" type="number" min="0" max="100" value="${esc(m.zayifKazanimEsik)}" data-meta="zayifKazanimEsik"/></label>
+        </div>
+        <label class="block text-xs font-bold text-slate-600">Ek değerlendirme notu (raporda basılır)
+          <textarea class="${inputClass(true)} mt-1 min-h-[72px]" data-meta="degerlendirmeEk">${esc(m.degerlendirmeEk)}</textarea>
+        </label>
+      </div>`;
+    el.querySelectorAll("[data-meta]").forEach((inp) => {
+      const k = inp.getAttribute("data-meta");
+      inp.addEventListener("input", () => setMeta(k, inp.value));
+    });
+    const sel = el.querySelector("[data-sinif-select]");
+    if (sel) {
+      sel.value = String(m.sinifId || "");
+      sel.addEventListener("change", () => {
+        state.meta.sinifId = parseInt(sel.value, 10) || null;
+        syncSinifFromSelect();
+        renderActivePanel();
+      });
+    }
+  }
+
+  function renderTur() {
+    const el = document.getElementById("panel-tur");
+    const cur = state.meta.analizTuru || "genel";
+    el.innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
+        <h2 class="text-sm font-black text-slate-800">Analiz türü (etiket)</h2>
+        <p class="text-xs text-slate-600">Rapor başlıklarında kullanılır; soru türleri (yazılı / dinleme / konuşma) ayrıca Sorular sekmesinde tanımlanır.</p>
+        <div class="flex flex-wrap gap-2">
+          ${Object.keys(ANALIZ_LABEL)
+            .map(
+              (k) =>
+                `<button type="button" data-analiz-tur="${k}" class="rounded-xl border px-3 py-2 text-xs font-bold ${
+                  cur === k ? "border-amber-700 bg-amber-50 text-amber-900" : "border-slate-200 bg-white text-slate-700"
+                }">${ANALIZ_LABEL[k]}</button>`
+            )
+            .join("")}
         </div>
       </div>`;
-    document.querySelectorAll("#panel-tur [name=analizTuru]").forEach((r) => {
-      r.addEventListener("change", () => {
-        state.meta.analizTuru = r.value;
+    el.querySelectorAll("[data-analiz-tur]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.meta.analizTuru = btn.getAttribute("data-analiz-tur");
         scheduleSave();
+        renderActivePanel();
       });
     });
   }
 
   function renderSinif() {
-    const opts = (SINIFLAR || []).map((s) => `<option value="${s.id}" ${Number(state.meta.sinifId) === Number(s.id) ? "selected" : ""}>${esc(s.sinif_adi)}</option>`).join("");
-    const rows = state.ogrenciler.map((o, i) => {
-      const k = studentKey(o);
-      return `<tr class="border-t border-slate-100 text-sm">
-        <td class="py-1.5 px-2">${i + 1}</td>
-        <td class="py-1.5 px-2 font-mono">${esc(o.ogrNo)}</td>
-        <td class="py-1.5 px-2">${esc(o.adSoyad)}</td>
-        <td class="py-1.5 px-2"><button type="button" data-del-idx="${i}" class="text-rose-600 font-bold text-xs">Sil</button></td>
-      </tr>`;
-    }).join("");
-
-    document.getElementById("panel-sinif").innerHTML = `
+    const el = document.getElementById("panel-sinif");
+    const rows = state.ogrenciler
+      .map((o, i) => {
+        return `<tr class="border-t border-slate-100">
+          <td class="p-2"><input type="checkbox" data-o-idx="${i}" data-o-k="katilmadi" ${o.katilmadi ? "checked" : ""} title="Katılmadı"/></td>
+          <td class="p-2"><input class="${inputClass(true)}" value="${esc(o.ogrNo)}" data-o-idx="${i}" data-o-k="ogrNo"/></td>
+          <td class="p-2"><input class="${inputClass(true)}" value="${esc(o.adSoyad)}" data-o-idx="${i}" data-o-k="adSoyad"/></td>
+        </tr>`;
+      })
+      .join("");
+    el.innerHTML = `
       <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <h2 class="font-black text-slate-800">🏫 Sınıf listesi</h2>
-        <div class="flex flex-wrap gap-2 items-end">
-          <label class="text-sm">Şube (veritabanı)
-            <select id="sa-sinif-select" class="mt-1 block border rounded-lg px-2 py-1.5 min-w-[8rem]">${opts || '<option value="">—</option>'}</select>
-          </label>
-          <button type="button" id="sa-sinif-yukle" class="rounded-lg bg-emerald-600 text-white text-xs font-bold px-3 py-2 hover:bg-emerald-500">Öğrencileri yükle</button>
-          <button type="button" id="sa-ogr-yeni" class="rounded-lg bg-slate-200 text-slate-800 text-xs font-bold px-3 py-2">+ Manuel öğrenci</button>
-        </div>
-        <details class="text-sm border rounded-xl p-3 bg-slate-50">
-          <summary class="font-bold cursor-pointer">📋 E-Okul / Excel satırları yapıştır</summary>
-          <p class="text-xs text-slate-500 mt-2">Her satır: <code>numara[TAB veya virgül]ad soyad</code></p>
-          <textarea id="sa-excel-ogr" rows="4" class="mt-2 w-full border rounded-lg text-xs font-mono p-2" placeholder="101\tAHMET YILMAZ&#10;102\tAYŞE KAYA"></textarea>
-          <button type="button" id="sa-excel-ogr-btn" class="mt-2 rounded-lg bg-indigo-600 text-white text-xs font-bold px-3 py-1.5">Listeye ekle</button>
-        </details>
-        <div class="overflow-x-auto border rounded-xl">
-          <table class="min-w-full text-left">
-            <thead><tr class="bg-slate-100 text-xs uppercase text-slate-500"><th class="py-2 px-2">S.No</th><th class="py-2 px-2">Okul no</th><th class="py-2 px-2">Ad soyad</th><th class="py-2 px-2"></th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="4" class="py-6 text-center text-slate-400 text-sm">Henüz öğrenci yok — şube seçip yükleyin veya yapıştırın.</td></tr>'}</tbody>
-          </table>
-        </div>
-      </div>`;
-
-    const sel = document.getElementById("sa-sinif-select");
-    if (sel) {
-      sel.addEventListener("change", () => {
-        state.meta.sinifId = sel.value ? Number(sel.value) : null;
-        const s = (SINIFLAR || []).find((x) => Number(x.id) === state.meta.sinifId);
-        state.meta.sinifAdi = s ? s.sinif_adi : "";
-        scheduleSave();
-      });
-    }
-    document.getElementById("sa-sinif-yukle").addEventListener("click", async () => {
-      const id = state.meta.sinifId;
-      if (!id) {
-        alert("Önce şube seçin.");
-        return;
-      }
-      try {
-        const r = await fetch(API_SINIF(id));
-        const data = await r.json();
-        if (!data.ok) {
-          alert(data.sebep || "Yüklenemedi");
-          return;
-        }
-        state.ogrenciler = data.ogrenciler.map((o, i) => ({
-          dbId: o.id,
-          sira: i + 1,
-          ogrNo: o.ogr_no,
-          adSoyad: o.ad_soyad,
-        }));
-        const s = (SINIFLAR || []).find((x) => Number(x.id) === id);
-        if (s) state.meta.sinifAdi = s.sinif_adi;
-        scheduleSave();
-        renderSinif();
-      } catch (e) {
-        alert("Bağlantı hatası: " + e.message);
-      }
-    });
-    document.getElementById("sa-ogr-yeni").addEventListener("click", () => {
-      const ad = prompt("Ad soyad:");
-      if (!ad) return;
-      const no = parseInt(prompt("Okul numarası:", "0"), 10) || 0;
-      state.ogrenciler.push({ dbId: null, sira: state.ogrenciler.length + 1, ogrNo: no, adSoyad: ad.trim() });
-      scheduleSave();
-      renderSinif();
-    });
-    document.getElementById("sa-excel-ogr-btn").addEventListener("click", () => {
-      const raw = document.getElementById("sa-excel-ogr").value.trim();
-      if (!raw) return;
-      raw.split(/\r?\n/).forEach((line, i) => {
-        const t = line.split(/\t|,|;/).map((x) => x.trim()).filter(Boolean);
-        if (t.length < 2) return;
-        const no = parseInt(t[0], 10) || 0;
-        const ad = t.slice(1).join(" ");
-        state.ogrenciler.push({ dbId: null, sira: state.ogrenciler.length + 1, ogrNo: no, adSoyad: ad });
-      });
-      scheduleSave();
-      renderSinif();
-    });
-    document.querySelectorAll("#panel-sinif [data-del-idx]").forEach((b) => {
-      b.addEventListener("click", () => {
-        const idx = parseInt(b.getAttribute("data-del-idx"), 10);
-        if (isNaN(idx) || idx < 0 || idx >= state.ogrenciler.length) return;
-        const dead = state.ogrenciler[idx];
-        const k = studentKey(dead);
-        state.ogrenciler.splice(idx, 1);
-        delete state.notlar[k];
-        state.ogrenciler.forEach((o, i) => { o.sira = i + 1; });
-        scheduleSave();
-        renderSinif();
-      });
-    });
-  }
-
-  function renderQuestionTable(tur, label, emoji) {
-    const list = state.sorular[tur];
-    const rows = list.map((q, i) => `
-      <tr class="border-t border-slate-100 text-sm">
-        <td class="py-1 px-2 w-10">${i + 1}</td>
-        <td class="py-1 px-2"><input data-q-tur="${tur}" data-q-id="${q.id}" data-f="metin" class="w-full border rounded px-1.5 py-1 text-xs" value="${esc(q.metin)}"/></td>
-        <td class="py-1 px-2 w-20"><input data-q-tur="${tur}" data-q-id="${q.id}" data-f="puan" type="number" min="1" class="w-full border rounded px-1 py-1 text-xs" value="${q.puan}"/></td>
-        <td class="py-1 px-2 w-12"><button type="button" data-q-del="${tur}:${q.id}" class="text-rose-600 font-bold text-xs">Sil</button></td>
-      </tr>`).join("");
-
-    return `
-      <div class="rounded-xl border border-slate-200 bg-white p-3">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <h3 class="font-bold text-slate-800">${emoji} ${label}</h3>
-          <div class="flex gap-1">
-            <button type="button" data-q-add="${tur}" class="rounded-lg bg-amber-600 text-white text-[11px] font-bold px-2 py-1">+ Soru</button>
+        <div class="flex flex-wrap items-center gap-2 justify-between">
+          <h2 class="text-sm font-black text-slate-800">Öğrenci listesi</h2>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="btn-sinif-yukle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2 hover:bg-okul-900">ECO’dan yükle</button>
+            <button type="button" id="btn-ogr-ekle" class="rounded-xl border border-slate-300 text-xs font-bold px-3 py-2 hover:bg-slate-50">Satır ekle</button>
           </div>
         </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full">
-            <thead><tr class="text-left text-[10px] uppercase text-slate-500 bg-slate-50"><th class="py-1 px-2">No</th><th class="py-1 px-2">Soru / kazanım / öğrenme çıktısı</th><th class="py-1 px-2">Puan</th><th></th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="4" class="py-3 text-center text-slate-400 text-xs">Soru ekleyin</td></tr>'}</tbody>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="min-w-full text-xs">
+            <thead><tr class="bg-slate-100 text-left font-bold text-slate-700">
+              <th class="p-2 w-10">G</th><th class="p-2 w-24">No</th><th class="p-2">Ad Soyad</th>
+            </tr></thead>
+            <tbody>${rows || `<tr><td colspan="3" class="p-4 text-center text-slate-500">Liste boş — ECO’dan yükleyin veya satır ekleyin.</td></tr>`}</tbody>
           </table>
         </div>
-        <details class="mt-2 text-xs">
-          <summary class="font-bold cursor-pointer text-indigo-700">📋 Toplu yapıştır (her satır bir soru; isteğe bağlı TAB sonra puan)</summary>
-          <textarea data-q-bulk="${tur}" rows="3" class="mt-1 w-full border rounded font-mono p-2" placeholder="Doğal sayılar&#10;Fonksiyonlar	10"></textarea>
-          <button type="button" data-q-bulk-go="${tur}" class="mt-1 rounded bg-slate-800 text-white px-2 py-1 text-[11px] font-bold">Yükle</button>
-        </details>
       </div>`;
+    const yukle = el.querySelector("#btn-sinif-yukle");
+    if (yukle) yukle.addEventListener("click", () => sinifListesiYukle());
+    const ek = el.querySelector("#btn-ogr-ekle");
+    if (ek) ek.addEventListener("click", () => ogrenciSatirEkle());
+    el.querySelectorAll("input[data-o-idx]").forEach((inp) => {
+      const i = parseInt(inp.getAttribute("data-o-idx"), 10);
+      const k = inp.getAttribute("data-o-k");
+      if (inp.type === "checkbox") {
+        inp.addEventListener("change", () => patchOgrenci(i, k, inp.checked));
+      } else {
+        inp.addEventListener("input", () => patchOgrenci(i, k, inp.value));
+      }
+    });
   }
 
   function renderSoru() {
-    document.getElementById("panel-soru").innerHTML = `
-      <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-        <h2 class="font-black text-slate-800">📝 Sorular, kazanımlar ve öğrenme çıktıları</h2>
-        ${renderQuestionTable("yazili", "Yazılı", "📝")}
-        ${renderQuestionTable("dinleme", "Dinleme", "🎧")}
-        ${renderQuestionTable("konusma", "Konuşma", "🗣️")}
-        <p class="text-xs text-slate-500">Cebirci arayüzündeki gibi üç oturum tipi ayrı tutulur; not girişi ekranında tüm sorular birleşik tabloda görünür.</p>
+    const el = document.getElementById("panel-soru");
+    const turler = [
+      { id: "yazili", label: "Yazılı" },
+      { id: "dinleme", label: "Dinleme" },
+      { id: "konusma", label: "Konuşma" },
+    ];
+    const tur = soruPanelTur;
+    const liste = state.sorular[tur] || [];
+    const satirlar = liste
+      .map((q, idx) => {
+        return `<tr class="border-t border-slate-100 align-top">
+          <td class="p-2 w-16"><input type="number" min="0" class="${inputClass(true)}" value="${q.puan}" data-sq-idx="${idx}" data-sq-k="puan"/></td>
+          <td class="p-2"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="metin">${esc(q.metin)}</textarea></td>
+          <td class="p-2 w-10"><button type="button" data-sq-del="${idx}" class="text-red-600 font-bold text-lg leading-none" title="Sil">×</button></td>
+        </tr>`;
+      })
+      .join("");
+
+    el.innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <h2 class="text-sm font-black text-slate-800">Sorular / kazanımlar / öğrenme çıktıları</h2>
+        <div class="flex flex-wrap gap-1">
+          ${turler
+            .map(
+              (t) =>
+                `<button type="button" data-soru-tur="${t.id}" class="rounded-lg px-2.5 py-1.5 text-xs font-bold border ${
+                  tur === t.id ? "bg-amber-700 text-white border-amber-800" : "bg-white border-slate-200"
+                }">${t.label}</button>`
+            )
+            .join("")}
+        </div>
+        <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3 space-y-2">
+          <p class="text-[11px] font-bold text-amber-900">TYMM temel eğitim — öğrenme çıktısı ara</p>
+          <div class="flex flex-wrap gap-2 items-end">
+            <button type="button" id="btn-muf-yukle" class="rounded-lg bg-slate-800 text-white text-xs font-bold px-3 py-2">Müfredatı yükle</button>
+            <label class="text-[11px] font-bold text-slate-600">Ders<select id="muf-ders" class="${inputClass(true)} ml-1 min-w-[140px]"><option value="">—</option></select></label>
+            <label class="text-[11px] font-bold text-slate-600 flex-1 min-w-[120px]">Filtre<input id="muf-filt" class="${inputClass(true)} ml-1 w-full" placeholder=" çıktı metninde ara…" value="${esc(mufredatFilter)}"/></label>
+          </div>
+          <div id="muf-sonuc" class="max-h-48 overflow-auto text-[11px] border border-slate-200 rounded-lg bg-white"></div>
+          <p class="text-[10px] text-slate-500">Seçilen satır, aktif soru türüne (${tur}) metin olarak eklenir; puanı aşağıdan düzenleyebilirsiniz.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="btn-soru-ekle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2">Bu türe boş soru ekle</button>
+        </div>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="min-w-full text-xs">
+            <thead><tr class="bg-slate-100 text-left font-bold text-slate-700"><th class="p-2 w-20">Puan</th><th class="p-2">Metin</th><th class="p-2 w-8"></th></tr></thead>
+            <tbody>${satirlar || `<tr><td colspan="3" class="p-4 text-center text-slate-500">Henüz soru yok.</td></tr>`}</tbody>
+          </table>
+        </div>
       </div>`;
 
-    document.querySelectorAll("#panel-soru [data-q-add]").forEach((b) => {
-      b.addEventListener("click", () => {
-        const tur = b.getAttribute("data-q-add");
-        state.sorular[tur].push({ id: uid("q"), metin: "", puan: 10 });
-        scheduleSave();
-        renderSoru();
+    el.querySelectorAll("[data-soru-tur]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        soruPanelTur = btn.getAttribute("data-soru-tur");
+        renderActivePanel();
       });
     });
-    document.querySelectorAll("#panel-soru [data-q-del]").forEach((b) => {
-      b.addEventListener("click", () => {
-        const [tur, id] = b.getAttribute("data-q-del").split(":");
-        state.sorular[tur] = state.sorular[tur].filter((q) => q.id !== id);
-        Object.keys(state.notlar).forEach((sk) => {
-          if (state.notlar[sk][tur[0] + "_" + id] != null) delete state.notlar[sk][tur[0] + "_" + id];
+    const ekle = el.querySelector("#btn-soru-ekle");
+    if (ekle) ekle.addEventListener("click", () => soruEkle(tur, "", 10));
+
+    el.querySelectorAll("[data-sq-idx]").forEach((inp) => {
+      const idx = parseInt(inp.getAttribute("data-sq-idx"), 10);
+      const k = inp.getAttribute("data-sq-k");
+      inp.addEventListener("input", () => soruGuncelle(tur, idx, k, inp.value));
+    });
+    el.querySelectorAll("[data-sq-del]").forEach((btn) => {
+      btn.addEventListener("click", () => soruSil(tur, parseInt(btn.getAttribute("data-sq-del"), 10)));
+    });
+
+    const mf = el.querySelector("#btn-muf-yukle");
+    const mfDers = el.querySelector("#muf-ders");
+    const mfFilt = el.querySelector("#muf-filt");
+    const mfOut = el.querySelector("#muf-sonuc");
+
+    function mufredatCiz() {
+      if (!curriculumCache || !mfOut) return;
+      const ders = (mfDers && mfDers.value) || "";
+      const flt = (mufredatFilter || "").toLowerCase().trim();
+      const dersler = curriculumCache.dersler || {};
+      const bloklar = ders ? dersler[ders] || [] : [];
+      const sat = [];
+      bloklar.forEach((bl) => {
+        const tema = bl.tema || "";
+        (bl.konular || []).forEach((kon) => {
+          const kb = kon.baslik || "";
+          (kon.ciktilar || []).forEach((c) => {
+            const metin = (c || "").trim();
+            if (!metin) return;
+            if (flt && metin.toLowerCase().indexOf(flt) === -1) return;
+            sat.push({ tema, konu: kb, metin });
+          });
         });
-        scheduleSave();
-        renderSoru();
       });
-    });
-    document.querySelectorAll("#panel-soru [data-q-tur]").forEach((inp) => {
-      const tur = inp.getAttribute("data-q-tur");
-      const id = inp.getAttribute("data-q-id");
-      const f = inp.getAttribute("data-f");
-      inp.addEventListener("input", () => {
-        const q = state.sorular[tur].find((x) => x.id === id);
-        if (!q) return;
-        if (f === "puan") q.puan = Math.max(1, parseInt(inp.value, 10) || 1);
-        else q.metin = inp.value;
-        scheduleSave();
-      });
-    });
-    document.querySelectorAll("#panel-soru [data-q-bulk-go]").forEach((b) => {
-      b.addEventListener("click", () => {
-        const tur = b.getAttribute("data-q-bulk-go");
-        const ta = document.querySelector(`#panel-soru [data-q-bulk="${tur}"]`);
-        const raw = (ta && ta.value) || "";
-        raw.split(/\r?\n/).forEach((line) => {
-          const p = line.split(/\t/).map((x) => x.trim());
-          const metin = p[0] || "";
-          if (!metin) return;
-          const puan = p[1] ? Math.max(1, parseInt(p[1], 10) || 10) : 10;
-          state.sorular[tur].push({ id: uid("q"), metin, puan });
+      if (!ders) {
+        mfOut.innerHTML = `<div class="p-2 text-slate-500">Ders seçin.</div>`;
+        return;
+      }
+      if (!sat.length) {
+        mfOut.innerHTML = `<div class="p-2 text-slate-500">Sonuç yok (filtre veya ders içeriği).</div>`;
+        return;
+      }
+      mfOut.innerHTML = sat
+        .map(
+          (r, i) =>
+            `<div class="border-b border-slate-100 px-2 py-1.5 hover:bg-amber-50/80">
+              <button type="button" class="text-left w-full" data-muf-pick="${i}">
+                <span class="text-[10px] text-slate-500">${esc(r.tema)} · ${esc(r.konu)}</span><br/>
+                <span class="text-slate-800">${esc(r.metin)}</span>
+              </button>
+            </div>`
+        )
+        .join("");
+      mfOut.querySelectorAll("[data-muf-pick]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const i = parseInt(btn.getAttribute("data-muf-pick"), 10);
+          const row = sat[i];
+          if (row) soruEkle(soruPanelTur, row.metin, 10);
         });
-        if (ta) ta.value = "";
-        scheduleSave();
-        renderSoru();
       });
-    });
+    }
+
+    if (mf) {
+      mf.addEventListener("click", async () => {
+        try {
+          await fetchCurriculum();
+          const dersAdlari = Object.keys(curriculumCache.dersler || {}).sort();
+          if (mfDers) {
+            const selD = mfDers.value;
+            mfDers.innerHTML =
+              `<option value="">— Ders seçin —</option>` +
+              dersAdlari.map((d) => `<option value="${escAttr(d)}"${selD === d ? " selected" : ""}>${esc(d)}</option>`).join("");
+          }
+          mufredatCiz();
+        } catch (e) {
+          alert(e.message || String(e));
+        }
+      });
+    }
+    if (mfDers) mfDers.addEventListener("change", () => mufredatCiz());
+    if (mfFilt) {
+      mfFilt.addEventListener("input", () => {
+        mufredatFilter = mfFilt.value;
+        mufredatCiz();
+      });
+    }
+    if (curriculumCache && mfDers) {
+      const dersAdlari = Object.keys(curriculumCache.dersler || {}).sort();
+      mfDers.innerHTML =
+        `<option value="">— Ders seçin —</option>` +
+        dersAdlari.map((d) => `<option value="${escAttr(d)}">${esc(d)}</option>`).join("");
+      mufredatCiz();
+    }
   }
 
   function renderNot() {
+    const el = document.getElementById("panel-not");
     const fq = flatQuestions();
-    if (state.ogrenciler.length === 0) {
-      document.getElementById("panel-not").innerHTML = `<div class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Önce <b>Sınıf listesi</b> sekmesinden öğrenci ekleyin veya veritabanından yükleyin.</div>`;
-      return;
-    }
-    if (fq.length === 0) {
-      document.getElementById("panel-not").innerHTML = `<div class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">Önce <b>Sorular</b> sekmesinden en az bir soru tanımlayın.</div>`;
-      return;
-    }
-
-    const head = `<tr class="bg-slate-100 text-[10px] uppercase text-slate-600">
-      <th class="py-2 px-1 sticky left-0 bg-slate-100 z-10 border-r">Öğrenci</th>
-      ${fq.map((c) => `<th class="py-2 px-1 min-w-[3.2rem] text-center" title="${esc(c.q.metin)}"><span class="inline-block max-w-[4rem] truncate align-middle">${c.tur[0].toUpperCase()}${c.idx + 1}</span><br/><span class="text-[9px] text-slate-400">/${c.q.puan}</span></th>`).join("")}
-      <th class="py-2 px-1">Σ</th>
-    </tr>`;
-
-    const body = state.ogrenciler.map((o, oi) => {
-      const sk = studentKey(o);
-      const rowCells = fq.map((c) => {
-        const cid = c.colId;
-        const rawVal = state.notlar[sk] && Object.prototype.hasOwnProperty.call(state.notlar[sk], cid)
-          ? state.notlar[sk][cid]
-          : "";
-        const v = rawVal === null || rawVal === undefined ? "" : String(rawVal);
-        return `<td class="py-0.5 px-0.5 border-l border-slate-100"><input type="number" step="0.5" min="0" max="${c.q.puan}" class="sa-sc w-14 text-center text-xs border rounded py-0.5" data-sk="${sk.replace(/"/g, "&quot;")}" data-cid="${cid.replace(/"/g, "&quot;")}" data-max="${c.q.puan}" value="${esc(v)}"/></td>`;
-      }).join("");
-      return `<tr class="border-t border-slate-100 text-xs">
-        <td class="py-1 px-2 sticky left-0 bg-white z-10 border-r font-medium max-w-[10rem] truncate" title="${esc(o.adSoyad)}">${esc(o.adSoyad)}</td>
-        ${rowCells}
-        <td class="py-1 px-1 text-center font-mono font-bold text-emerald-700" data-sum-idx="${oi}">0</td>
-      </tr>`;
-    }).join("");
-
-    document.getElementById("panel-not").innerHTML = `
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h2 class="font-black text-slate-800">🎓 Öğrenci notları</h2>
-          <div class="flex flex-wrap gap-2">
-            <details class="text-xs border rounded-lg px-2 py-1 bg-slate-50">
-              <summary class="font-bold cursor-pointer">📋 Excel puan yapıştır</summary>
-              <p class="text-slate-500 mt-1">Her satır: <code>okul_no puan1 puan2 ...</code> (boşluk veya TAB)</p>
-              <textarea id="sa-paste-not" rows="3" class="mt-1 w-full max-w-md border rounded font-mono p-1"></textarea>
-              <button type="button" id="sa-paste-not-btn" class="mt-1 rounded bg-indigo-600 text-white px-2 py-1 font-bold">İşle</button>
-            </details>
-          </div>
-        </div>
-        <div class="overflow-auto max-h-[70vh] border rounded-xl">
-          <table class="min-w-max text-left text-sm">${head}<tbody>${body}</tbody></table>
+    const head = fq
+      .map((c) => {
+        const k = kisaMetin(c.q.metin, 14);
+        return `<th class="p-1 border border-slate-200 bg-slate-50 font-bold text-[10px] align-bottom whitespace-nowrap" title="${esc(c.q.metin)}">${
+          esc(c.tur[0].toUpperCase()) + (c.idx + 1)
+        }<br/><span class="font-normal text-slate-500">${esc(k)}</span></th>`;
+      })
+      .join("");
+    const body = state.ogrenciler
+      .map((o) => {
+        if (o.katilmadi) {
+          return `<tr class="bg-slate-50"><td class="p-1 border border-slate-100 text-[10px]">${esc(o.ogrNo)}</td><td class="p-1 border border-slate-100 text-[10px]">${esc(
+            o.adSoyad
+          )}</td>${fq.map(() => `<td class="p-1 border border-slate-100 text-center text-slate-400">—</td>`).join("")}</tr>`;
+        }
+        const sk = studentKey(o);
+        const hucre = fq
+          .map((c) => {
+            const v = (state.notlar[sk] && state.notlar[sk][c.colId]) ?? "";
+            return `<td class="p-0 border border-slate-100"><input class="w-full min-w-[3rem] text-center text-[11px] py-1 border-0" data-n-sk="${escAttr(sk)}" data-n-col="${escAttr(
+              c.colId
+            )}" value="${escAttr(v)}"/></td>`;
+          })
+          .join("");
+        return `<tr><td class="p-1 border border-slate-100 text-[10px] font-mono">${esc(o.ogrNo)}</td><td class="p-1 border border-slate-100 text-[10px] whitespace-nowrap">${esc(
+          o.adSoyad
+        )}</td>${hucre}</tr>`;
+      })
+      .join("");
+    el.innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
+        <h2 class="text-sm font-black text-slate-800">Öğrenci notları</h2>
+        <p class="text-xs text-slate-600">Her hücre sorunun tam puanına kadar değer alabilir. Katılmayanlar (G) için giriş kapalıdır.</p>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-[70vh]">
+          <table class="text-xs border-collapse min-w-max">
+            <thead class="sticky top-0 z-10"><tr class="bg-slate-100 font-bold text-slate-700">
+              <th class="p-1 border border-slate-200 w-12">No</th><th class="p-1 border border-slate-200 w-36">Öğrenci</th>${head}
+            </tr></thead>
+            <tbody>${body || `<tr><td colspan="${2 + fq.length}" class="p-4 text-center text-slate-500">Öğrenci veya soru yok.</td></tr>`}</tbody>
+          </table>
         </div>
       </div>`;
-
-    function recalcSums() {
-      state.ogrenciler.forEach((o, oi) => {
-        const sk = studentKey(o);
-        let sum = 0;
-        fq.forEach((c) => {
-          const v = state.notlar[sk] && state.notlar[sk][c.colId];
-          if (v != null && v !== "" && !isNaN(Number(v))) sum += Number(v);
-        });
-        const el = document.querySelector(`[data-sum-idx="${oi}"]`);
-        if (el) el.textContent = sum ? String(sum % 1 === 0 ? sum : Math.round(sum * 10) / 10) : "—";
-      });
-    }
-
-    document.querySelectorAll(".sa-sc").forEach((inp) => {
-      inp.addEventListener("input", () => {
-        const sk = inp.getAttribute("data-sk");
-        const cid = inp.getAttribute("data-cid");
-        const max = parseFloat(inp.getAttribute("data-max")) || 100;
-        let v = inp.value.trim();
-        ensureNotlar(sk);
-        if (v === "") delete state.notlar[sk][cid];
-        else {
-          let n = parseFloat(v);
-          if (n > max) {
-            n = max;
-            inp.value = n;
-          }
-          state.notlar[sk][cid] = n;
-        }
-        scheduleSave();
-        recalcSums();
-      });
+    el.querySelectorAll("input[data-n-sk]").forEach((inp) => {
+      const upd = () => notHucre(inp.getAttribute("data-n-sk"), inp.getAttribute("data-n-col"), inp.value);
+      inp.addEventListener("change", upd);
+      inp.addEventListener("blur", upd);
     });
-    recalcSums();
-
-    document.getElementById("sa-paste-not-btn").addEventListener("click", () => {
-      const raw = document.getElementById("sa-paste-not").value.trim();
-      if (!raw) return;
-      const lines = raw.split(/\r?\n/);
-      lines.forEach((line) => {
-        const p = line.trim().split(/\s+|\t+/);
-        if (p.length < 2) return;
-        const no = parseInt(p[0], 10);
-        const o = state.ogrenciler.find((x) => Number(x.ogrNo) === no);
-        if (!o) return;
-        const sk = studentKey(o);
-        ensureNotlar(sk);
-        fq.forEach((c, i) => {
-          const cell = p[i + 1];
-          if (cell == null || cell === "") return;
-          let n = parseFloat(cell.replace(",", "."));
-          if (isNaN(n)) return;
-          n = Math.min(n, c.q.puan);
-          state.notlar[sk][c.colId] = n;
-        });
-      });
-      scheduleSave();
-      renderNot();
-    });
-  }
-
-  function analizTurBaslik() {
-    return ANALIZ_LABEL[state.meta.analizTuru] || state.meta.analizTuru;
   }
 
   function renderRapor() {
-    const fq = flatQuestions();
-    let maxTop = 0;
-    fq.forEach((c) => {
-      maxTop += c.q.puan;
-    });
-    const rows = state.ogrenciler.map((o) => {
-      const sk = studentKey(o);
-      let alinan = 0;
-      fq.forEach((c) => {
-        const v = state.notlar[sk] && state.notlar[sk][c.colId];
-        if (v != null && !isNaN(Number(v))) alinan += Number(v);
-      });
-      const pct = maxTop > 0 ? Math.round((alinan / maxTop) * 1000) / 10 : null;
-      return { o, sk, alinan, pct };
-    });
-
-    const ortRows = fq.map((c) => {
-      let s = 0;
-      let n = 0;
-      state.ogrenciler.forEach((o) => {
-        const sk = studentKey(o);
-        const v = state.notlar[sk] && state.notlar[sk][c.colId];
-        if (v != null && !isNaN(Number(v))) {
-          s += Number(v);
-          n++;
+    const el = document.getElementById("panel-rapor");
+    const html = buildFormalRaporHtml();
+    const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+    el.innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <div class="flex flex-wrap gap-2 items-center justify-between">
+          <h2 class="text-sm font-black text-slate-800">Yazdırılabilir rapor</h2>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="btn-print-rapor" class="rounded-xl bg-amber-700 text-white text-xs font-bold px-3 py-2">Yazdır / PDF</button>
+            <a id="btn-rapor-indir" class="rounded-xl border border-slate-300 text-xs font-bold px-3 py-2 inline-flex items-center" href="${blobUrl}" download="sinav-analiz-raporu.html">HTML indir</a>
+          </div>
+        </div>
+        <iframe id="rapor-ifr" class="w-full min-h-[520px] border border-slate-200 rounded-xl bg-white" title="Önizleme"></iframe>
+      </div>`;
+    const ifr = el.querySelector("#rapor-ifr");
+    if (ifr) ifr.srcdoc = html;
+    const pr = el.querySelector("#btn-print-rapor");
+    if (pr) {
+      pr.addEventListener("click", () => {
+        const w = window.open("", "_blank");
+        if (w) {
+          w.document.write(html);
+          w.document.close();
+          w.focus();
+          w.print();
         }
       });
-      const ort = n ? Math.round((s / n) * 10) / 10 : "—";
-      return `<tr class="border-t text-sm"><td class="py-1">${c.tur} #${c.idx + 1}</td><td class="py-1">${ort} <span class="text-slate-400">/ ${c.q.puan}</span></td></tr>`;
-    }).join("");
-
-    document.getElementById("panel-rapor").innerHTML = `
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="font-black text-slate-800">🖨️ Özet rapor</h2>
-          <button type="button" id="sa-print" class="rounded-xl bg-slate-900 text-white text-xs font-bold px-4 py-2">Yazdır / PDF</button>
-        </div>
-        <div id="sa-rapor-ozet" class="rounded-xl border border-slate-100 p-4 bg-slate-50 text-sm space-y-2">
-          <p><b>Okul:</b> ${esc(state.meta.okulAdi)} · <b>Sınıf:</b> ${esc(state.meta.sinifAdi)} · <b>Sınav:</b> ${esc(state.meta.sinavAdi)}</p>
-          <p><b>Ders:</b> ${esc(state.meta.ders)} · <b>Öğretmen:</b> ${esc(state.meta.ogretmen)} · <b>Yıl:</b> ${esc(state.meta.egitimYili)}</p>
-          <p><b>Analiz türü:</b> ${esc(analizTurBaslik())}</p>
-          <p class="text-slate-500 text-xs">Toplam soru puanı (teorik): ${maxTop}</p>
-        </div>
-        <div class="overflow-x-auto border rounded-xl">
-          <table class="min-w-full text-sm">
-            <thead><tr class="bg-slate-100"><th class="py-2 px-2 text-left">Öğrenci</th><th class="py-2 px-2">No</th><th class="py-2 px-2">Aldığı</th><th class="py-2 px-2">%</th></tr></thead>
-            <tbody>
-              ${rows.map((r) => `<tr class="border-t"><td class="py-1.5 px-2">${esc(r.o.adSoyad)}</td><td class="py-1.5 px-2 font-mono">${r.o.ogrNo}</td><td class="py-1.5 px-2 text-center font-bold">${r.alinan || "—"}</td><td class="py-1.5 px-2 text-center">${r.pct != null ? r.pct + "%" : "—"}</td></tr>`).join("")}
-            </tbody>
-          </table>
-        </div>
-        <div class="rounded-xl border border-slate-100 p-3">
-          <h3 class="font-bold text-sm mb-2">Soru ortalamaları</h3>
-          <table class="w-full">${ortRows || '<tr><td class="text-slate-400 text-sm">Not girilmedi</td></tr>'}</table>
-        </div>
-      </div>`;
-
-    document.getElementById("sa-print").addEventListener("click", () => {
-      const w = window.open("", "_blank");
-      const qcols = fq.map((c, i) => `<th>${c.tur[0].toUpperCase()}${i + 1}</th>`).join("");
-      const body = state.ogrenciler.map((o) => {
-        const sk = studentKey(o);
-        const tds = fq.map((c) => {
-          const v = state.notlar[sk] && state.notlar[sk][c.colId];
-          return `<td style="text-align:center">${v != null ? v : "—"}</td>`;
-        }).join("");
-        let sum = 0;
-        fq.forEach((c) => {
-          const v = state.notlar[sk] && state.notlar[sk][c.colId];
-          if (v != null && !isNaN(Number(v))) sum += Number(v);
-        });
-        return `<tr><td>${esc(o.adSoyad)}</td><td>${o.ogrNo}</td>${tds}<td><b>${sum || "—"}</b></td></tr>`;
-      }).join("");
-      w.document.write(`<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"/><title>Sınav Analiz Raporu</title>
-        <style>body{font-family:Segoe UI,sans-serif;padding:16px;color:#111}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ccc;padding:4px 6px}th{background:#f3f4f6}h1{font-size:18px} .muted{color:#666;font-size:12px}</style></head><body>
-        <h1>${esc(state.meta.okulAdi)}</h1>
-        <p class="muted">${esc(state.meta.sinifAdi)} · ${esc(state.meta.sinavAdi)} · ${esc(analizTurBaslik())}</p>
-        <p class="muted">Ders: ${esc(state.meta.ders)} · Öğretmen: ${esc(state.meta.ogretmen)} · ${esc(state.meta.egitimYili)}</p>
-        <table><thead><tr><th>Öğrenci</th><th>No</th>${qcols}<th>Toplam</th></tr></thead><tbody>${body}</tbody></table>
-        <script>window.onload=function(){window.print();}<\/script>
-        </body></html>`);
-      w.document.close();
-    });
+    }
   }
 
   function renderYedek() {
-    const hist = JSON.parse(localStorage.getItem(LS_KEY + "_hist") || "[]");
-    document.getElementById("panel-yedek").innerHTML = `
+    const el = document.getElementById("panel-yedek");
+    el.innerHTML = `
       <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <h2 class="font-black text-slate-800">💾 Veri yönetimi</h2>
-        <p class="text-xs text-slate-600">Tüm çalışmanız tarayıcı <code>localStorage</code> içinde tutulur. Tarayıcı verisini silerseniz kaybolur — düzenli yedek indirin.</p>
+        <h2 class="text-sm font-black text-slate-800">Yedek / geri yükle</h2>
+        <p class="text-xs text-slate-600">Veriler tarayıcıda (localStorage) saklanır. Aşağıdaki JSON’u kopyalayarak yedekleyebilirsiniz.</p>
+        <textarea id="yedek-ta" class="w-full min-h-[200px] rounded-xl border border-slate-300 p-2 text-xs font-mono"></textarea>
         <div class="flex flex-wrap gap-2">
-          <button type="button" id="sa-dl" class="rounded-lg bg-emerald-600 text-white text-xs font-bold px-3 py-2">⬇ Yedek indir (.json)</button>
-          <label class="rounded-lg bg-indigo-600 text-white text-xs font-bold px-3 py-2 cursor-pointer">⬆ Yedekten yükle<input type="file" id="sa-ul" accept="application/json,.json" class="hidden"/></label>
-          <button type="button" id="sa-reset" class="rounded-lg bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold px-3 py-2">🗑 Sıfırla</button>
-        </div>
-        <div class="rounded-xl border border-slate-100 p-3 text-xs">
-          <p class="font-bold mb-2">Son kayıtlar</p>
-          <ul class="list-disc pl-4 text-slate-600 space-y-1">${hist.length ? hist.map((h) => `<li>${esc(h.t)} — ${esc(h.sinav)}</li>`).join("") : "<li>Henüz yedek geçmişi yok.</li>"}</ul>
+          <button type="button" id="btn-yedek-copy" class="rounded-xl bg-slate-800 text-white text-xs font-bold px-3 py-2">Panoya kopyala</button>
+          <button type="button" id="btn-yedek-apply" class="rounded-xl border border-amber-600 text-amber-900 text-xs font-bold px-3 py-2">Metinden yükle</button>
+          <button type="button" id="yedek-reset" class="rounded-xl border border-red-200 text-red-700 text-xs font-bold px-3 py-2">Sıfırla</button>
         </div>
       </div>`;
-
-    document.getElementById("sa-dl").addEventListener("click", () => {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "eco_sinav_analiz_yedek_" + (state.meta.sinavAdi || "sinav").replace(/\s+/g, "_") + ".json";
-      a.click();
-      URL.revokeObjectURL(a.href);
+    const ta = el.querySelector("#yedek-ta");
+    if (ta) ta.value = JSON.stringify(state, null, 2);
+    el.querySelector("#btn-yedek-copy")?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(ta.value);
+        alert("Kopyalandı.");
+      } catch (e) {
+        alert("Panoya kopyalanamadı.");
+      }
     });
-    document.getElementById("sa-ul").addEventListener("change", (ev) => {
-      const f = ev.target.files && ev.target.files[0];
-      if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        try {
-          const o = JSON.parse(r.result);
-          if (!o.meta || !o.sorular) throw new Error("Geçersiz dosya");
-          state = Object.assign(defaultState(), o);
-          scheduleSave();
-          renderAllPanels();
-          alert("Yedek yüklendi.");
-        } catch (e) {
-          alert("Dosya okunamadı: " + e.message);
-        }
-      };
-      r.readAsText(f);
-      ev.target.value = "";
+    el.querySelector("#btn-yedek-apply")?.addEventListener("click", () => {
+      try {
+        const o = JSON.parse(ta.value);
+        if (!o || typeof o !== "object") throw new Error("Geçersiz");
+        state = Object.assign(defaultState(), o);
+        mergeMetaDefaults();
+        ["yazili", "dinleme", "konusma"].forEach((k) => {
+          if (!Array.isArray(state.sorular[k])) state.sorular[k] = [];
+        });
+        if (!state.notlar || typeof state.notlar !== "object") state.notlar = {};
+        state.ogrenciler.forEach((ogr) => {
+          if (ogr.katilmadi == null) ogr.katilmadi = false;
+        });
+        scheduleSave();
+        renderTabs();
+        showPanel();
+        renderActivePanel();
+        alert("Yüklendi.");
+      } catch (e) {
+        alert("JSON hatalı: " + (e.message || e));
+      }
     });
-    document.getElementById("sa-reset").addEventListener("click", () => {
-      if (!confirm("Tüm sınav analiz verisi silinsin mi?")) return;
+    el.querySelector("#yedek-reset")?.addEventListener("click", () => {
+      if (!confirm("Tüm sınav analizi verisi silinsin mi?")) return;
       localStorage.removeItem(LS_KEY);
       state = defaultState();
-      scheduleSave();
-      renderAllPanels();
+      curriculumCache = null;
+      renderTabs();
+      showPanel();
+      renderActivePanel();
     });
   }
 
+  function renderActivePanel() {
+    if (activeTab === "bilgi") renderBilgi();
+    else if (activeTab === "tur") renderTur();
+    else if (activeTab === "sinif") renderSinif();
+    else if (activeTab === "soru") renderSoru();
+    else if (activeTab === "not") renderNot();
+    else if (activeTab === "rapor") renderRapor();
+    else if (activeTab === "yedek") renderYedek();
+  }
+
   loadState();
-  if (!state.meta.ogretmen && OGRETMEN_ADI) state.meta.ogretmen = OGRETMEN_ADI;
   renderTabs();
-  renderAllPanels();
+  showPanel();
+  renderActivePanel();
 })();
 </script>
 {% endblock %}
