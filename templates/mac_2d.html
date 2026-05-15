@@ -375,7 +375,8 @@ let ball = {
     x: GAME_WIDTH/2, y: GAME_HEIGHT/2, z: 0,
     vx: 0, vy: 0, vz: 0,
     spinX: 0, spinY: 0, // angular velocity for magnus
-    speed: 0, owner: null, targetPlayer: null, lastTouchedBy: null
+    speed: 0, owner: null, targetPlayer: null, lastTouchedBy: null,
+    stallTicks: 0, // sahipsiz ve çok yavaş: süreklilik sayacı (takılma kurtarma)
 };
 let players = [];
 
@@ -558,6 +559,7 @@ function resetPositions() {
     ball.spinX = 0; ball.spinY = 0;
     ball.owner = null; ball.targetPlayer = null;
     ball.lastTouchedBy = null;
+    ball.stallTicks = 0;
     stateMachine = "PLAYING";
 }
 
@@ -901,6 +903,30 @@ function update() {
     ball.x += ball.vx;
     ball.y += ball.vy;
     ball.speed = Math.hypot(ball.vx, ball.vy);
+
+    // --- Takılma önleme: sahipsiz top + eski pas hedefi → kimse koşmuyor ---
+    if (!ball.owner) {
+        if (ball.targetPlayer) {
+            const tp = ball.targetPlayer;
+            if (!players.includes(tp)) {
+                ball.targetPlayer = null;
+            } else if (ball.speed < 0.55 && dist(ball, tp) > 72) {
+                ball.targetPlayer = null;
+            }
+        }
+        if (ball.speed < 0.22) ball.stallTicks++;
+        else ball.stallTicks = 0;
+        if (ball.stallTicks > 35) {
+            ball.targetPlayer = null;
+            if (ball.stallTicks > 110) {
+                ball.vx += (Math.random() - 0.5) * 1.1;
+                ball.vy += (Math.random() - 0.5) * 1.1;
+                ball.stallTicks = 45;
+            }
+        }
+    } else {
+        ball.stallTicks = 0;
+    }
     
     // Goal Check: Ball must beat the goalkeeper
     const goalLeft = GAME_WIDTH/2 - 75, goalRight = GAME_WIDTH/2 + 75;
@@ -1094,18 +1120,23 @@ function update() {
         }
         
     } else {
-        // Interception: reach radius based on defans stat
+        // Interception: reach radius based on defans stat; yavaş top için daha kolay devralma
         let bestClaim = null; let bestDist = 9999;
+        const slowBall = ball.speed < 1.35;
+        const stallPickup = ball.stallTicks > 18;
+        const speedLimit = stallPickup ? 22 : (slowBall ? 19 : 16);
         players.forEach(p => {
-            const reachRadius = 16 + (p.ozellikler.defans / 12);
+            let reachRadius = 16 + (p.ozellikler.defans / 12);
+            if (slowBall || stallPickup) reachRadius += stallPickup ? 14 : 8;
             const d = dist(p, ball);
-            if (d < reachRadius && ball.speed < 16 && p.actionCooldown <= 0 && d < bestDist) {
+            if (d < reachRadius && ball.speed < speedLimit && p.actionCooldown <= 0 && d < bestDist) {
                 bestDist = d; bestClaim = p;
             }
         });
         if (bestClaim) {
             ball.owner = bestClaim; bestClaim.state = 'WITH_BALL';
             bestClaim.hasBallTime = 0; ball.lastTouchedBy = bestClaim;
+            ball.targetPlayer = null;
             ball.z = 0; ball.vz = 0;
         }
     }
@@ -1484,7 +1515,8 @@ function update() {
             const dyFromBase = targetY - p.baseY;
             const distFromBase = Math.hypot(dxFromBase, dyFromBase);
 
-            if (distFromBase > zoneRadius) {
+            const looseBallChase = !ball.owner && p.state === 'CHASE';
+            if (!looseBallChase && distFromBase > zoneRadius) {
                 // Base'e doğru elastik çekme — ne kadar uzak, o kadar güçlü
                 const excess = distFromBase - zoneRadius;
                 const pullStrength = Math.min(0.72, excess / (zoneRadius * 1.8));
@@ -1674,6 +1706,7 @@ function endHalftime() {
     // Ball to center
     ball.x = GAME_WIDTH/2; ball.y = GAME_HEIGHT/2;
     ball.vx = 0; ball.vy = 0; ball.owner = null; ball.targetPlayer = null;
+    ball.stallTicks = 0;
     
     showEvent("2. Yarı Başlıyor!", 3000);
 }
