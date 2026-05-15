@@ -20,23 +20,6 @@
             <a href="/" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition">Ana Menü</a>
         </div>
 
-        <p class="text-slate-400 text-sm -mt-4">
-            Müfredat verisi TYMM temel eğitim programıyla uyumlu JSON dosyasından gelir
-            (<code class="text-slate-500">data/meb_temel_egitim_curriculum.json</code>).
-            Aynı dizinde <code class="text-slate-500">data/ogrenme_kanitlari_excel.json</code>
-            bulunursa, Excel’deki öğrenme kanıtları / çıktıları bu derslerin listesinin başına
-            eklenir (formda önce görünür).
-            Excel’i JSON’a aktarmak:
-            <code class="text-slate-500">python scripts/import_ogrenme_kanitlari_xlsx.py "dosya.xlsx"</code>
-            <br>
-            Güncellemek için (ağ gerekir):
-            <code class="text-slate-500">python scripts/sync_meb_tymm.py</code>
-            — tüm dersler veya
-            <code class="text-slate-500">python scripts/sync_meb_tymm.py --ders Matematik</code>
-            — tek ders. İstekler arası bekleme için
-            <code class="text-slate-500">--delay 0.5</code> kullanın.
-        </p>
-
         <!-- Yeni Ödev Ekle -->
         <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
             <h2 class="text-xl font-bold text-white mb-4"><i class="fa-solid fa-plus mr-2 text-green-400"></i>Yeni Görev / Ödev Ver</h2>

@@ -8,6 +8,7 @@ Gerekli: pip install reportlab
 from __future__ import annotations
 
 import io
+import json
 import os
 import platform
 from datetime import datetime
@@ -612,6 +613,208 @@ def pdf_analiz_uret_bytes(snapshot: dict[str, Any], ogretmen_adi: str) -> bytes:
         Paragraph(
             "Sunum ve paylaşım için bu rapor üretildi. Arşiv menüsünden geçmiş PDF’lere "
             "yeniden ulaşabilirsiniz.",
+            small,
+        )
+    )
+
+    doc.build(story)
+    return buf.getvalue()
+
+
+def pdf_odev_raporu_bytes(detay: dict[str, Any], ogretmen_adi: str) -> bytes:
+    """Yeni oluşturulan veya mevcut ödev için ayrıntılı PDF rapor (TYMM / öğrenci listesi)."""
+    if not REPORTLAB_OK:
+        raise ImportError("reportlab kurulu degil (pip install reportlab)")
+    fn = _register_font()
+    margin_x = 1.5 * cm
+    usable_w = A4[0] - 2 * margin_x
+
+    odev = detay.get("odev") or {}
+    ogrenciler = detay.get("ogrenciler") or []
+
+    try:
+        ciktilar = json.loads(odev.get("ogrenme_ciktilari_json") or "[]")
+        if not isinstance(ciktilar, list):
+            ciktilar = []
+    except Exception:
+        ciktilar = []
+    try:
+        kodlar = json.loads(odev.get("ogrenme_cikti_kodlari_json") or "[]")
+        if not isinstance(kodlar, list):
+            kodlar = []
+    except Exception:
+        kodlar = []
+
+    sev = int(odev.get("sinif_seviyesi") or 0)
+    tam_s = sum(
+        1 for o in ogrenciler if (o.get("durum") or "") == "tamamladi"
+    )
+    top = len(ogrenciler)
+    pct = round((tam_s / top * 100) if top else 0)
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        rightMargin=margin_x,
+        leftMargin=margin_x,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm,
+        title=f"OdevRaporu_{odev.get('id', '')}",
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        name="OdevTtl",
+        parent=styles["Heading1"],
+        fontName=fn,
+        fontSize=15,
+        spaceAfter=8,
+    )
+    h2 = ParagraphStyle(
+        name="OdevH2",
+        parent=styles["Heading2"],
+        fontName=fn,
+        fontSize=11,
+        spaceAfter=5,
+    )
+    body = ParagraphStyle(name="OdevBd", parent=styles["Normal"], fontName=fn, fontSize=9)
+    small = ParagraphStyle(name="OdevSm", parent=styles["Normal"], fontName=fn, fontSize=7.5)
+
+    td8 = ParagraphStyle(
+        "odev_td8",
+        parent=styles["Normal"],
+        fontName=fn,
+        fontSize=8,
+        leading=10,
+        spaceBefore=0,
+        spaceAfter=0,
+    )
+    th_w = ParagraphStyle("odev_th", parent=td8, textColor=colors.whitesmoke)
+
+    def tbl_pad():
+        return [
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]
+
+    story: list = []
+    now_s = datetime.now().strftime("%Y-%m-%d %H:%M")
+    story.append(Paragraph("Erenler Cumhuriyet Ortaokulu", title_style))
+    story.append(Paragraph("Ödev / tema takibi — Detaylı rapor", title_style))
+    story.append(
+        Paragraph(
+            f"Öğretmen: {html_escape(str(ogretmen_adi or '—'))}<br/>"
+            f"Rapor tarihi: {html_escape(now_s)}<br/>"
+            f"Ödev kayıt no: {html_escape(str(odev.get('id', '—')))}",
+            body,
+        )
+    )
+    story.append(Spacer(1, 0.35 * cm))
+
+    meta_lines = [
+        f"<b>Sınıf:</b> {html_escape(str(odev.get('sinif_adi', '—')))}",
+        f"<b>Ders (branş):</b> {html_escape(str(odev.get('ders_adi', '—')))}",
+        f"<b>Tema / ünite / öğrenme alanı:</b> {html_escape(str(odev.get('tema_adi', '—')))}",
+    ]
+    konu = (odev.get("konu_adi") or "").strip()
+    if konu:
+        meta_lines.append(f"<b>Konu:</b> {html_escape(konu)}")
+    if 5 <= sev <= 8:
+        meta_lines.append(f"<b>TYMM sınıf düzeyi:</b> {sev}")
+    meta_lines.append(
+        f"<b>Ödev oluşturma (kayıt tarihi):</b> {html_escape(str(odev.get('tarih', '—'))[:19])}"
+    )
+    story.append(Paragraph("<br/>".join(meta_lines), body))
+    story.append(Spacer(1, 0.4 * cm))
+
+    if kodlar:
+        story.append(Paragraph("Öğrenme çıktısı kodları (varsa)", h2))
+        story.append(
+            Paragraph(
+                html_escape(", ".join(str(k) for k in kodlar)),
+                body,
+            )
+        )
+        story.append(Spacer(1, 0.25 * cm))
+
+    if ciktilar:
+        story.append(Paragraph("Seçilen öğrenme çıktıları / ölçme-değerlendirme öğeleri", h2))
+        for i, sat in enumerate(ciktilar, 1):
+            t = html_escape(str(sat).strip()) or "—"
+            story.append(Paragraph(f"{i}. {t}", body))
+        story.append(Spacer(1, 0.35 * cm))
+    else:
+        story.append(
+            Paragraph(
+                "<i>Formda öğrenme çıktısı / kanıt seçilmediyse bu bölüm boştur.</i>",
+                small,
+            )
+        )
+        story.append(Spacer(1, 0.25 * cm))
+
+    story.append(Paragraph("Özet (anlık durum)", h2))
+    oz_txt = (
+        f"Toplam öğrenci: <b>{top}</b> · "
+        f"Tamamlayan (Yaptı): <b>{tam_s}</b> · "
+        f"Tamamlamayan (Yapmadı): <b>{top - tam_s}</b> · "
+        f"Oran: <b>%{pct}</b>"
+    )
+    story.append(Paragraph(oz_txt, body))
+    story.append(Spacer(1, 0.35 * cm))
+
+    story.append(Paragraph("Sınıf listesi — öğrenci bazında durum", h2))
+    rows_tbl = [
+        [
+            _pdf_paragraph("#", th_w),
+            _pdf_paragraph("Öğr. no", th_w),
+            _pdf_paragraph("Ad Soyad", th_w),
+            _pdf_paragraph("Ödev durumu", th_w),
+        ]
+    ]
+    for i, ogr in enumerate(ogrenciler, 1):
+        d = (ogr.get("durum") or "tamamlamadi") == "tamamladi"
+        durum_etik = "Yaptı" if d else "Yapmadı"
+        rows_tbl.append(
+            [
+                _pdf_paragraph(str(i), td8),
+                _pdf_paragraph(str(ogr.get("ogr_no", "")), td8),
+                _pdf_paragraph(str(ogr.get("ad_soyad", "")), td8),
+                _pdf_paragraph(durum_etik, td8),
+            ]
+        )
+    if len(rows_tbl) == 1:
+        rows_tbl.append(
+            [
+                _pdf_paragraph("—", td8),
+                _pdf_paragraph("—", td8),
+                _pdf_paragraph("Öğrenci kaydı yok", td8),
+                _pdf_paragraph("—", td8),
+            ]
+        )
+    wn = usable_w * 0.07
+    wo = usable_w * 0.11
+    wa = usable_w * 0.48
+    wd = usable_w * 0.34
+    t = Table(rows_tbl, colWidths=[wn, wo, wa, wd], repeatRows=1)
+    t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e40af")),
+                ("GRID", (0, 0), (-1, -1), 0.2, colors.lightgrey),
+            ]
+            + tbl_pad()
+        )
+    )
+    story.append(t)
+
+    story.append(Spacer(1, 0.55 * cm))
+    story.append(
+        Paragraph(
+            "Bu PDF, ödev kaydı için özet ve sınıf listesini içerir. Öğrenci işaretlemelerini "
+            "güncelledikten sonra raporu tekrar indirerek güncel tabloyu alabilirsiniz.",
             small,
         )
     )

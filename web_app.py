@@ -69,7 +69,7 @@ from database import (
     denetim_listesi, denetim_kaydet, admin_meta_get, admin_meta_set,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
-from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes
+from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes, pdf_odev_raporu_bytes
 from rapor_analiz import (
     aylik_tik_sayilari,
     durum_dagilimi_hesapla,
@@ -1724,7 +1724,7 @@ def odevler():
                 og_json,
                 sinif_seviyesi=sev,
             )
-            return redirect(url_for("odev_tema_detay", odev_id=odev_id))
+            return redirect(url_for("odev_tema_detay", odev_id=odev_id, yeni=1))
 
     odev_listesi = odevleri_getir(oid)
     from database import sinif_adi_tymm_seviyesi
@@ -1737,6 +1737,42 @@ def odevler():
         odevler=odev_listesi,
         siniflar=siniflar,
         yetki=session.get("ogretmen_yetki"),
+    )
+
+
+@app.route("/odev/<int:odev_id>/rapor.pdf")
+@giris_zorunlu
+def odev_rapor_pdf(odev_id):
+    """Ödev/tema kaydı için ayrıntılı PDF rapor (oluşturma sonrası veya isteğe bağlı indirme)."""
+    from database import odev_detay_getir
+
+    oid = session["ogretmen_id"]
+    detay = odev_detay_getir(odev_id, oid)
+    if not detay:
+        abort(404)
+    if not PDF_OK:
+        flash(
+            "PDF üretmek için sunucuda reportlab gerekir: pip install reportlab",
+            "error",
+        )
+        return redirect(url_for("odev_tema_detay", odev_id=odev_id))
+    try:
+        pdf_bytes = pdf_odev_raporu_bytes(
+            detay, session.get("ogretmen_adi", "") or ""
+        )
+    except Exception as e:
+        flash("PDF oluşturulamadı: %s" % (e,), "error")
+        return redirect(url_for("odev_tema_detay", odev_id=odev_id))
+    odev = detay.get("odev") or {}
+    sinif_k = "".join(
+        c for c in str(odev.get("sinif_adi") or "sinif") if c.isalnum() or c in "-_"
+    )[:48] or "sinif"
+    fname = f"Odev_raporu_{odev_id}_{sinif_k}.pdf"
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        download_name=fname,
+        as_attachment=False,
     )
 
 
@@ -1775,6 +1811,7 @@ def odev_tema_detay(odev_id):
         odev=detay["odev"],
         ogrenciler=detay["ogrenciler"],
         yetki=session.get("ogretmen_yetki"),
+        pdf_ok=PDF_OK,
     )
 
 

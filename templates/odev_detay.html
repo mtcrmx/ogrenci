@@ -14,12 +14,32 @@
 </head>
 <body class="p-4 md:p-8">
 
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+    <div class="max-w-4xl mx-auto mb-4 space-y-2">
+        {% for cat, msg in msgs %}
+        <div class="rounded-lg px-4 py-2 text-sm font-bold {{ 'bg-red-900/40 text-red-200 border border-red-700' if cat == 'error' else 'bg-amber-900/30 text-amber-200 border border-amber-700' }}">
+            {{ msg }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
     <div class="max-w-4xl mx-auto space-y-6">
-        <div class="flex items-center gap-4 mb-4">
-            <a href="/odevler" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition text-slate-300">
+        <div class="flex items-center gap-4 mb-4 flex-wrap">
+            <a href="/odevler" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition text-slate-300 shrink-0">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
-            <h1 class="text-2xl font-black text-white flex-1">Ödev Sonuçları</h1>
+            <h1 class="text-2xl font-black text-white flex-1 min-w-[200px]">Ödev Sonuçları</h1>
+            {% if pdf_ok %}
+            <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 text-white text-sm font-bold transition shadow-lg">
+                <i class="fa-solid fa-file-pdf"></i> PDF rapor
+            </a>
+            {% else %}
+            <span class="text-xs text-slate-500" title="pip install reportlab">PDF için reportlab gerekli</span>
+            {% endif %}
         </div>
 
         <!-- Ödev Bilgisi -->
@@ -117,6 +137,14 @@
             </div>
         </form>
     </div>
+
+    {% if request.args.get('yeni') and pdf_ok %}
+    <script>
+      window.addEventListener("load", function () {
+        window.open("{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}", "_blank", "noopener");
+      });
+    </script>
+    {% endif %}
 
 </body>
 </html>
