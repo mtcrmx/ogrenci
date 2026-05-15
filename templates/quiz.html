@@ -173,6 +173,34 @@
       </div>
     </div>
 
+    <!-- Sınav analizi -->
+    <div id="sinav-analizi" class="hidden rounded-2xl border border-blue-900/50 bg-blue-950/30 p-4 text-left space-y-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-blue-300 text-[10px] font-black tracking-wider">SINAV ANALİZİ</div>
+          <div class="text-white text-sm font-black mt-1" id="analiz-duzey"></div>
+          <div class="text-slate-400 text-xs mt-0.5" id="analiz-ders"></div>
+        </div>
+        <div class="shrink-0 text-right">
+          <div class="text-2xl font-black text-blue-200" id="analiz-yuzde">0%</div>
+          <div class="text-[10px] text-slate-500">başarı</div>
+        </div>
+      </div>
+      <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
+        <div id="analiz-bar" class="h-full bg-blue-400" style="width:0%"></div>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed" id="analiz-yorum"></p>
+      <div class="rounded-xl border border-amber-700/30 bg-amber-900/10 px-3 py-2">
+        <div class="text-[10px] font-black text-amber-300 mb-1">GELİŞİM ODAĞI</div>
+        <p class="text-xs text-slate-300 leading-relaxed" id="analiz-gelisim"></p>
+      </div>
+      <div>
+        <div class="text-[10px] font-black text-emerald-300 mb-2">TYMM UYUMLU ÖĞRENME ÇIKTILARI</div>
+        <ul class="space-y-1 text-xs text-slate-300 list-disc pl-4" id="analiz-ciktilar"></ul>
+      </div>
+      <p class="text-[10px] text-slate-500 leading-relaxed" id="analiz-notu"></p>
+    </div>
+
     <!-- Detaylı sonuç -->
     <div class="rounded-2xl border border-slate-700 overflow-hidden" style="background:#0d1a30">
       <div class="text-slate-400 text-xs font-bold px-4 py-2 border-b border-slate-700">SORU CEVAP DETAYI</div>
@@ -264,6 +292,7 @@ async function dersBaslat(ders, el) {
   mevcutSoru = 0;
   cevaplar = {};
   dogru = yanlis = 0;
+  document.getElementById('sinav-analizi')?.classList.add('hidden');
 
   document.getElementById('ekran-secim').classList.add('hidden');
   document.getElementById('ekran-quiz').classList.remove('hidden');
@@ -334,6 +363,31 @@ function guncelleTmerBar(pct) {
   bar.style.background = pct > 50 ? '#3b82f6' : pct > 20 ? '#f59e0b' : '#ef4444';
 }
 
+function sinavAnaliziGoster(analiz) {
+  const panel = document.getElementById('sinav-analizi');
+  if (!analiz || !panel) {
+    return;
+  }
+  const yuzde = Math.max(0, Math.min(100, Number(analiz.basari_yuzde || 0)));
+  document.getElementById('analiz-duzey').textContent = analiz.duzey || 'Öğrenme analizi';
+  document.getElementById('analiz-ders').textContent =
+    `${analiz.sinif_seviyesi || ''} — ${analiz.ders || seciliDers}`;
+  document.getElementById('analiz-yuzde').textContent = `${yuzde}%`;
+  document.getElementById('analiz-bar').style.width = `${yuzde}%`;
+  document.getElementById('analiz-yorum').textContent = analiz.yorum || '';
+  document.getElementById('analiz-gelisim').textContent = analiz.gelisim_odagi || '';
+  document.getElementById('analiz-notu').textContent = analiz.tymm_notu || '';
+
+  const liste = document.getElementById('analiz-ciktilar');
+  liste.innerHTML = '';
+  (analiz.ogrenme_ciktilari || []).forEach(cikti => {
+    const li = document.createElement('li');
+    li.textContent = cikti;
+    liste.appendChild(li);
+  });
+  panel.classList.remove('hidden');
+}
+
 // ════════════════════════════════════════════════════════════════════════
 // CEVAPLA
 // ════════════════════════════════════════════════════════════════════════
@@ -383,6 +437,7 @@ async function sonucGoster() {
       sinif_id: SINIF_ID,
       sinif_seviyesi: seciliSinif,
       ders: seciliDers,
+      soru_idleri: sorular.map(s => s.id),
       cevaplar: cevaplar,
     })
   });
@@ -406,6 +461,7 @@ async function sonucGoster() {
     `${SINIF_ADI} — ${seciliDers}`;
   document.getElementById('sonuc-dogru').textContent  = dogru;
   document.getElementById('sonuc-yanlis').textContent = yanlis;
+  sinavAnaliziGoster(sonuc.analiz);
 
   const pd = document.getElementById('puan-degisim-text');
   pd.textContent = (puan >= 0 ? '+' : '') + puan + ' net';

@@ -2892,6 +2892,91 @@ DERS_EMOJI = {
     "İngilizce": "🇬🇧", "Din Kültürü": "🕌",
 }
 
+TYMM_OGRENME_CIKTILARI = {
+    "Türkçe": [
+        "Okuduğu veya dinlediği metnin ana fikrini, yardımcı fikirlerini ve örtük iletilerini belirler.",
+        "Metindeki bilgi, olay ve düşünceleri kanıtlarıyla yorumlar; çıkarım yapar.",
+        "Söz varlığını, yazım ve noktalama kurallarını anlamlı iletişim kurmak için kullanır.",
+        "Farklı metin türlerini yapı, içerik ve amaç bakımından karşılaştırır.",
+    ],
+    "Matematik": [
+        "Matematiksel kavram ve işlemleri problem durumlarında uygun stratejiyle kullanır.",
+        "Verilenleri ilişkilendirerek akıl yürütür, çözüm yolunu gerekçelendirir.",
+        "Tablo, grafik, şekil ve sembolleri matematiksel temsil olarak yorumlar.",
+        "Sonucunu tahmin, kontrol ve farklı çözüm yollarıyla değerlendirir.",
+    ],
+    "Fen Bilimleri": [
+        "Gözlem ve kanıtlardan yararlanarak bilimsel açıklama oluşturur.",
+        "Kavramlar arasındaki neden-sonuç ilişkilerini günlük yaşam örnekleriyle açıklar.",
+        "Deney, ölçme ve veri yorumlama süreçlerinde bilimsel düşünme becerilerini kullanır.",
+        "Doğa, çevre ve teknolojiyle ilgili bilgileri sorumlu kararlar almak için değerlendirir.",
+    ],
+    "Sosyal Bilgiler": [
+        "Tarih, coğrafya ve vatandaşlık bilgisini olay, yer ve zaman bağlamında ilişkilendirir.",
+        "Harita, grafik, tablo ve kaynaklardan elde ettiği bilgileri yorumlar.",
+        "Toplumsal yaşamda hak, sorumluluk, katılım ve ortak değerleri açıklar.",
+        "Geçmiş ile günümüz arasında bağlantı kurarak kanıta dayalı çıkarım yapar.",
+    ],
+    "T.C. İnkılap Tarihi": [
+        "Tarihsel olayları neden, sonuç, süreklilik ve değişim ilişkileriyle açıklar.",
+        "Milli Mücadele ve Cumhuriyet sürecini kanıta dayalı tarihsel düşünmeyle yorumlar.",
+        "Tarihsel kaynaklardan elde ettiği bilgileri karşılaştırır ve çıkarım yapar.",
+        "Vatandaşlık bilincini demokrasi, bağımsızlık ve ortak değerler bağlamında değerlendirir.",
+    ],
+    "İngilizce": [
+        "Temel sözcük ve kalıpları bağlama uygun şekilde anlar ve kullanır.",
+        "Kısa okuma ve dinleme metinlerinden açık bilgileri seçer.",
+        "Günlük iletişim durumlarında basit soru, cevap ve yönergeleri yapılandırır.",
+        "Dil öğrenme sürecinde anlamı bağlam, görsel ve örneklerden tahmin eder.",
+    ],
+    "Din Kültürü": [
+        "Dini kavram, değer ve ilkeleri temel kaynaklarla ilişkilendirerek açıklar.",
+        "Ahlaki durumları sorumluluk, adalet, saygı ve merhamet değerleriyle değerlendirir.",
+        "İnanç, ibadet ve kültür arasındaki ilişkiyi günlük yaşam örnekleriyle yorumlar.",
+        "Farklı görüşlere saygı temelinde bilinçli ve ölçülü değerlendirme yapar.",
+    ],
+}
+
+TYMM_GENEL_OGRENME_CIKTILARI = [
+    "Bilgiyi anlamlandırır, farklı durumlara aktarır ve gerekçeli çıkarımlar yapar.",
+    "Öğrenme sürecini öz değerlendirme ve geri bildirimle geliştirir.",
+    "Sorumluluk, saygı ve iş birliği değerlerini öğrenme davranışına yansıtır.",
+]
+
+
+def _quiz_analizi_olustur(sinif_seviyesi: int, ders: str, dogru: int, yanlis: int) -> dict:
+    toplam = max(int(dogru or 0) + int(yanlis or 0), 1)
+    basari = round((int(dogru or 0) * 100) / toplam)
+    if basari >= 85:
+        duzey = "Pekişmiş öğrenme"
+        yorum = "Öğrenme çıktıları büyük ölçüde karşılanmış görünüyor."
+        gelisim = "Benzer sorularda gerekçe yazma ve farklı çözüm yolu deneme ile öğrenme derinleştirilebilir."
+    elif basari >= 70:
+        duzey = "Güçlü gelişim"
+        yorum = "Temel kazanımlar güçlü; birkaç alt beceri için kısa tekrar yeterli olur."
+        gelisim = "Yanlış yapılan soruların kavram veya işlem basamağı bulunup örnek çözümle pekiştirilmeli."
+    elif basari >= 50:
+        duzey = "Gelişiyor"
+        yorum = "Öğrenme süreci ilerliyor; konu bağları ve işlem adımlarında desteğe ihtiyaç var."
+        gelisim = "Önce temel kavramlar tekrar edilmeli, ardından benzer soru üzerinde rehberli uygulama yapılmalı."
+    else:
+        duzey = "Destek gerekli"
+        yorum = "Öğrenme çıktıları için yeniden öğretim ve küçük adımlı çalışma önerilir."
+        gelisim = "Kavram haritası, örnek soru çözümü ve kısa öz değerlendirme ile eksik öğrenmeler belirlenmeli."
+    return {
+        "sinif_seviyesi": f"{sinif_seviyesi}. sınıf" if sinif_seviyesi else "Sınıf seviyesi",
+        "ders": ders,
+        "basari_yuzde": basari,
+        "duzey": duzey,
+        "yorum": yorum,
+        "gelisim_odagi": gelisim,
+        "ogrenme_ciktilari": TYMM_OGRENME_CIKTILARI.get(ders) or TYMM_GENEL_OGRENME_CIKTILARI,
+        "tymm_notu": (
+            "Türkiye Yüzyılı Maarif Modeli yaklaşımına göre sonuç; yalnız puan olarak değil, "
+            "öğrenme kanıtı, geri bildirim ve bir sonraki öğrenme adımı olarak yorumlanmıştır."
+        ),
+    }
+
 
 @app.route("/quiz/<int:sinif_id>")
 def quiz(sinif_id):
@@ -2931,7 +3016,8 @@ def api_quiz_cevapla():
     sinif_seviyesi = veri.get("sinif_seviyesi")
     ders = veri.get("ders")
     cevaplar = veri.get("cevaplar", {})
-    if not (sinif_id and sinif_seviyesi and ders and cevaplar):
+    soru_idleri = veri.get("soru_idleri") or list(cevaplar.keys())
+    if not (sinif_id and sinif_seviyesi and ders and soru_idleri):
         return jsonify({"ok": False, "sebep": "Eksik veri"}), 400
     from database import _conn as _dbc
     from database import _quiz_init as _qi
@@ -2939,12 +3025,13 @@ def api_quiz_cevapla():
     _qi(con)
     dogru = yanlis = 0
     sonuclar = {}
-    for soru_id_str, verilen in cevaplar.items():
+    for soru_id_str in soru_idleri:
+        verilen = cevaplar.get(str(soru_id_str)) or cevaplar.get(soru_id_str)
         row = con.execute("SELECT dogru_cevap FROM quiz_sorulari WHERE id=?",
                           (int(soru_id_str),)).fetchone()
         if row:
             gercek = row["dogru_cevap"]
-            ok = verilen.upper() == gercek.upper()
+            ok = bool(verilen) and verilen.upper() == gercek.upper()
             sonuclar[soru_id_str] = {"dogru": ok, "gercek": gercek}
             if ok: dogru += 1
             else:  yanlis += 1
@@ -2953,6 +3040,7 @@ def api_quiz_cevapla():
     sonuc["dogru"] = dogru
     sonuc["yanlis"] = yanlis
     sonuc["sonuclar"] = sonuclar
+    sonuc["analiz"] = _quiz_analizi_olustur(sinif_seviyesi, ders, dogru, yanlis)
     return jsonify(sonuc)
 
 
