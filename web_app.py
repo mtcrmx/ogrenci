@@ -659,6 +659,33 @@ def ogrenci_gelisim_panel():
     )
 
 
+@app.route("/ogrenci/voleybol-gelisim")
+@ogrenci_giris_zorunlu
+def ogrenci_voleybol_gelisim_panel():
+    oid = int(session["ogrenci_id"])
+    o = _ogrenci_bul(oid)
+    if not o:
+        session.pop("ogrenci_giris", None)
+        session.pop("ogrenci_id", None)
+        return redirect(url_for("ogrenci_giris"))
+    ozet = gelisim_ozeti(oid)
+    gl = gelisim_ligi()
+    sinif_satir = next((s for s in gl if s["sinif_id"] == o["sinif_id"]), None)
+    sinif_sira = next((i for i, s in enumerate(gl, 1) if s["sinif_id"] == o["sinif_id"]), None)
+    puan_dict = ozet.get("puan") or {}
+    toplam_xp = int(puan_dict.get("xp", 0))
+    ozellikler = ogrenci_ozellikleri_getir(oid, toplam_xp)
+    return render_template(
+        "ogrenci_voleybol_xp_panel.html",
+        ogrenci=o,
+        ozet=ozet,
+        sinif_satir=sinif_satir,
+        sinif_sira=sinif_sira,
+        sinif_sayisi=len(gl),
+        ozellikler=ozellikler,
+    )
+
+
 @app.route("/oyunlar")
 @ogrenci_giris_zorunlu
 def oyunlar():
@@ -883,65 +910,86 @@ def api_ogrenci_mac_2d_data():
     
     def extract_players(taktik, kadro, takim_renk):
         players = []
+        if spor == "voleybol":
+            default_positions = [
+                {"x": 25, "y": 58}, {"x": 50, "y": 58}, {"x": 75, "y": 58},
+                {"x": 25, "y": 82}, {"x": 50, "y": 82}, {"x": 75, "y": 82},
+            ]
+            limit = 6
+        else:
+            default_positions = [
+                {"x": 50, "y": 90},
+                {"x": 20, "y": 70}, {"x": 40, "y": 75}, {"x": 60, "y": 75}, {"x": 80, "y": 70},
+                {"x": 20, "y": 50}, {"x": 40, "y": 50}, {"x": 60, "y": 50}, {"x": 80, "y": 50},
+                {"x": 35, "y": 30}, {"x": 65, "y": 30},
+            ]
+            limit = 11
+
+        def oyuncu_satir(ogr, numara, rol, base_x, base_y, renk):
+            ozet = gelisim_ozeti(ogr["id"])
+            puan_dict = ozet.get("puan") or {}
+            xp = int(puan_dict.get("xp", 0))
+            ovr = min(99, 50 + int(xp * 0.8))
+            oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
+            players.append({
+                "id": ogr["id"],
+                "ad": ogr["ad_soyad"].split()[0],
+                "numara": numara,
+                "rol": rol,
+                "baseX": base_x,
+                "baseY": base_y,
+                "ovr": ovr,
+                "renk": renk,
+                "ozellikler": oz,
+            })
+
         taktik_oyuncular = (taktik or {}).get("oyuncular") or (taktik or {}).get("yerlesim")
         if not taktik_oyuncular:
-            if spor == "voleybol":
-                default_positions = [
-                    {"x": 25, "y": 58}, {"x": 50, "y": 58}, {"x": 75, "y": 58},
-                    {"x": 25, "y": 82}, {"x": 50, "y": 82}, {"x": 75, "y": 82}
-                ]
-                limit = 6
-            else:
-                default_positions = [
-                    {"x": 50, "y": 90}, # GK
-                    {"x": 20, "y": 70}, {"x": 40, "y": 75}, {"x": 60, "y": 75}, {"x": 80, "y": 70}, # DEF
-                    {"x": 20, "y": 50}, {"x": 40, "y": 50}, {"x": 60, "y": 50}, {"x": 80, "y": 50}, # MID
-                    {"x": 35, "y": 30}, {"x": 65, "y": 30} # FWD
-                ]
-                limit = 11
             for i, ogr in enumerate(kadro[:limit]):
                 pos = default_positions[i] if i < len(default_positions) else {"x": 50, "y": 50}
-                ozet = gelisim_ozeti(ogr["id"])
-                puan_dict = ozet.get("puan") or {}
-                xp = int(puan_dict.get("xp", 0))
-                ovr = min(99, 50 + int(xp * 0.8))
-                
-                oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
-                
-                players.append({
-                    "id": ogr["id"],
-                    "ad": ogr["ad_soyad"].split()[0],
-                    "numara": i + 1,
-                    "rol": "Oyuncu",
-                    "baseX": pos["x"],
-                    "baseY": pos["y"],
-                    "ovr": ovr,
-                    "renk": takim_renk,
-                    "ozellikler": oz
-                })
+                oyuncu_satir(ogr, i + 1, "Oyuncu", pos["x"], pos["y"], takim_renk)
             return players
-            
-        for pid, p in taktik_oyuncular.items():
+
+        taktik_satirlar = []
+        for pid, p in (taktik_oyuncular or {}).items():
             ogr = next((x for x in kadro if str(x["id"]) == str(pid)), None)
-            if ogr:
-                ozet = gelisim_ozeti(ogr["id"])
-                puan_dict = ozet.get("puan") or {}
-                xp = int(puan_dict.get("xp", 0))
-                ovr = min(99, 50 + int(xp * 0.8))
-                
-                oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
-                
-                players.append({
-                    "id": ogr["id"],
-                    "ad": ogr["ad_soyad"].split()[0],
-                    "numara": p.get("mevki_no", 10),
-                    "rol": p.get("rol", ""),
-                    "baseX": p.get("x", 50),
-                    "baseY": p.get("y", 50),
-                    "ovr": ovr,
-                    "renk": taktik.get("renk", takim_renk),
-                    "ozellikler": oz
-                })
+            if not ogr:
+                continue
+            try:
+                mev = int(p.get("mevki_no") if p.get("mevki_no") is not None else 99)
+            except (TypeError, ValueError):
+                mev = 99
+            taktik_satirlar.append((mev, str(pid), p, ogr))
+        taktik_satirlar.sort(key=lambda t: (t[0], t[1]))
+
+        eklenen_id = set()
+        renk = (taktik or {}).get("renk") or takim_renk
+        for _mev, _pid, p, ogr in taktik_satirlar:
+            if ogr["id"] in eklenen_id:
+                continue
+            if len(players) >= limit:
+                break
+            eklenen_id.add(ogr["id"])
+            oyuncu_satir(
+                ogr,
+                p.get("mevki_no", 10),
+                p.get("rol", ""),
+                p.get("x", 50),
+                p.get("y", 50),
+                renk,
+            )
+
+        i = len(players)
+        for ogr in kadro:
+            if len(players) >= limit:
+                break
+            if ogr["id"] in eklenen_id:
+                continue
+            eklenen_id.add(ogr["id"])
+            pos = default_positions[i] if i < len(default_positions) else {"x": 50, "y": 50}
+            oyuncu_satir(ogr, i + 1, "Oyuncu", pos["x"], pos["y"], renk)
+            i += 1
+
         return players
         
     bizim_oyuncular = extract_players(bizim_taktik, biz_kadro, "#3b82f6")

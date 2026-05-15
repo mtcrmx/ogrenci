@@ -276,6 +276,7 @@ def initialize_db():
 
     _yardimci_tablolar_init(con)
     _rapor_arsiv_init(con)
+    _ogrenci_ozellikler_ensure(con)
     con.close()
 
 
@@ -4289,6 +4290,59 @@ def rapor_arsiv_yedek_gruplari(ogretmen_id: int) -> list[dict]:
     return rows
 
 
+def _ogrenci_ozellikler_ensure(con: sqlite3.Connection) -> None:
+    """ogrenci_ozellikler tablosunu oluşturur veya eksik sütunları ekler (voleybol alanları dahil)."""
+    has = con.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='ogrenci_ozellikler'"
+    ).fetchone()
+    if not has:
+        con.execute("""
+            CREATE TABLE ogrenci_ozellikler (
+                ogrenci_id INTEGER PRIMARY KEY REFERENCES ogrenciler(id),
+                hiz INTEGER NOT NULL DEFAULT 50,
+                sut INTEGER NOT NULL DEFAULT 50,
+                pas INTEGER NOT NULL DEFAULT 50,
+                defans INTEGER NOT NULL DEFAULT 50,
+                kaleci INTEGER NOT NULL DEFAULT 50,
+                servis INTEGER NOT NULL DEFAULT 50,
+                manset INTEGER NOT NULL DEFAULT 50,
+                smac INTEGER NOT NULL DEFAULT 50,
+                blok INTEGER NOT NULL DEFAULT 50,
+                plase INTEGER NOT NULL DEFAULT 50,
+                kalan_puan INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        con.commit()
+        return
+    cols = {r[1] for r in con.execute("PRAGMA table_info(ogrenci_ozellikler)").fetchall()}
+    migrations = [
+        ("hiz", 50), ("sut", 50), ("pas", 50), ("defans", 50), ("kaleci", 50),
+        ("servis", 50), ("manset", 50), ("smac", 50), ("blok", 50), ("plase", 50),
+        ("kalan_puan", 0),
+    ]
+    for name, default in migrations:
+        if name not in cols:
+            con.execute(
+                f"ALTER TABLE ogrenci_ozellikler ADD COLUMN {name} INTEGER NOT NULL DEFAULT {default}"
+            )
+    con.commit()
+
+
+OZELLIK_FUTBOL = ("hiz", "sut", "pas", "defans", "kaleci")
+OZELLIK_VOLEYBOL = ("servis", "manset", "smac", "blok", "plase")
+OZELLIK_TIMI = OZELLIK_FUTBOL + OZELLIK_VOLEYBOL
+
+
+def _ozellik_harcanan_toplam(row: sqlite3.Row) -> int:
+    t = 0
+    for k in OZELLIK_TIMI:
+        try:
+            t += int(row[k]) - 50
+        except (KeyError, TypeError):
+            t += 0
+    return t
+
+
 def rapor_arsiv_grubu_geri_yukle(ogretmen_id: int, grup_id: str) -> dict:
     """Belirtilen yedek grubunu tekrar aktif arşive ekler; yedekten düşer."""
     con = _conn()
@@ -4330,12 +4384,13 @@ def rapor_arsiv_grubu_geri_yukle(ogretmen_id: int, grup_id: str) -> dict:
 
 def ogrenci_ozellikleri_getir(ogrenci_id: int, tik_sayisi: int = 0) -> dict:
     con = _conn()
+    _ogrenci_ozellikler_ensure(con)
     row = con.execute("SELECT * FROM ogrenci_ozellikler WHERE ogrenci_id = ?", (ogrenci_id,)).fetchone()
     
     # Kalan puan hesabı: 1 tik = 1 puan. Puanlar temel 50 üzerine eklenir.
     toplam_harcanan = 0
     if row:
-        toplam_harcanan = (row['hiz'] - 50) + (row['sut'] - 50) + (row['pas'] - 50) + (row['defans'] - 50) + (row['kaleci'] - 50)
+        toplam_harcanan = _ozellik_harcanan_toplam(row)
         kalan = max(0, tik_sayisi - toplam_harcanan)
         if kalan != row['kalan_puan']:
             con.execute("UPDATE ogrenci_ozellikler SET kalan_puan = ? WHERE ogrenci_id = ?", (kalan, ogrenci_id))
@@ -4350,17 +4405,18 @@ def ogrenci_ozellikleri_getir(ogrenci_id: int, tik_sayisi: int = 0) -> dict:
     return dict(row)
 
 def ogrenci_ozellik_artir(ogrenci_id: int, ozellik: str, tik_sayisi: int) -> dict:
-    gecerli = ['hiz', 'sut', 'pas', 'defans', 'kaleci']
-    if ozellik not in gecerli: return {'ok': False, 'sebep': 'Geçersiz özellik'}
+    if ozellik not in OZELLIK_TIMI:
+        return {'ok': False, 'sebep': 'Geçersiz özellik'}
     
     con = _conn()
+    _ogrenci_ozellikler_ensure(con)
     row = con.execute("SELECT * FROM ogrenci_ozellikler WHERE ogrenci_id = ?", (ogrenci_id,)).fetchone()
     if not row:
         con.close()
         return {'ok': False, 'sebep': 'Özellik kaydı bulunamadı'}
         
     # Recalculate correctly to avoid async exploits
-    toplam_harcanan = (row['hiz'] - 50) + (row['sut'] - 50) + (row['pas'] - 50) + (row['defans'] - 50) + (row['kaleci'] - 50)
+    toplam_harcanan = _ozellik_harcanan_toplam(row)
     kalan = tik_sayisi - toplam_harcanan
     
     if kalan <= 0:

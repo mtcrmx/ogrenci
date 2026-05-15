@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voleybol XP · Özellikler</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+
+<header class="sticky top-0 z-20 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
+  <div class="max-w-lg mx-auto px-4 py-3 flex flex-wrap items-center gap-2 justify-between">
+    <div class="text-xs font-bold text-slate-400">🏐 Voleybol gelişim</div>
+    <nav class="flex flex-wrap gap-2">
+      <a href="{{ url_for('ogrenci_voleybol_gelisim_panel') }}" class="text-xs font-black bg-sky-600 px-3 py-1.5 rounded-lg">Voleybol XP</a>
+      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="text-xs font-bold bg-indigo-600 px-3 py-1.5 rounded-lg">Futbol XP</a>
+      <a href="{{ url_for('ogrenci_mac_panel') }}" class="text-xs font-bold bg-green-700 px-3 py-1.5 rounded-lg">Maç/Taktik</a>
+      <a href="{{ url_for('ogrenci_cikis') }}" class="text-xs font-bold bg-slate-800 px-3 py-1.5 rounded-lg">Çıkış</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-lg mx-auto px-4 py-5 pb-16 space-y-5">
+
+  <div class="rounded-2xl bg-gradient-to-br from-sky-900/80 to-slate-900 border border-sky-500/30 p-4">
+    <p class="text-[10px] font-bold text-sky-300 uppercase tracking-wider">Kişisel XP (paylaşılan havuz)</p>
+    <div class="mt-1 flex items-end gap-2">
+      <span class="text-4xl font-black text-white">{{ ozet.puan.xp | default(0) }}</span>
+      <span class="text-sm text-slate-400 mb-1">XP</span>
+    </div>
+    <p class="text-sm mt-2">{{ ozet.avatar.emoji }} <span class="font-bold">{{ ozet.avatar.ad }}</span></p>
+    <p class="text-xs text-slate-500 mt-1">Futbol ve voleybol özellikleri aynı XP havuzundan harcar.</p>
+  </div>
+
+  {% if sinif_satir %}
+  <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sınıfın (gelişim ligi)</p>
+    <div class="mt-2 flex justify-between items-center gap-2">
+      <div>
+        <p class="font-black text-lg">{{ ogrenci.sinif_adi }}</p>
+        <p class="text-xs text-slate-400">Toplam sınıf XP: <span class="text-emerald-400 font-bold">{{ sinif_satir.xp | int }}</span></p>
+      </div>
+      <div class="text-right">
+        <p class="text-2xl font-black text-amber-400">#{{ sinif_sira }}</p>
+        <p class="text-[10px] text-slate-500">{{ sinif_sayisi }} sınıf içinde</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if ozellikler %}
+  <section class="rounded-2xl border border-sky-500/40 bg-sky-950/20 overflow-hidden">
+    <div class="px-4 py-3 border-b border-sky-500/20 bg-sky-500/10 flex justify-between items-center">
+      <div>
+        <h2 class="font-black text-sky-100 text-sm">🏐 Voleybol özellikleri</h2>
+        <p class="text-[10px] text-sky-200/70 mt-1">Servis, manşet, smaç, blok ve plase — XP ile güçlendirin.</p>
+      </div>
+      <div class="text-right">
+        <span class="text-2xl font-black text-sky-400" id="kalan-puan">{{ ozellikler.kalan_puan }}</span>
+        <div class="text-[10px] text-sky-200/70">Kalan Puan</div>
+      </div>
+    </div>
+    <div class="p-4 space-y-3">
+      {% for oz, etiket, icon in [('servis', 'Servis', '🎯'), ('manset', 'Manşet', '🙌'), ('smac', 'Smaç', '💥'), ('blok', 'Blok', '🧱'), ('plase', 'Plase', '🎾')] %}
+      <div class="flex items-center justify-between gap-3">
+        <div class="w-28 text-xs font-bold text-slate-300">{{ icon }} {{ etiket }}</div>
+        <div class="flex-1 bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+          <div id="bar-{{ oz }}" class="bg-sky-500 h-full" style="width: {{ ozellikler[oz] }}%"></div>
+        </div>
+        <div class="w-8 text-right font-mono font-bold text-sm" id="val-{{ oz }}">{{ ozellikler[oz] }}</div>
+        <button type="button" onclick="ozellikArtir('{{ oz }}')" class="btn-artir w-8 h-8 rounded-lg bg-sky-600 font-black text-white hover:bg-sky-500 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" {% if ozellikler.kalan_puan <= 0 or ozellikler[oz] >= 99 %}disabled{% endif %}>+</button>
+      </div>
+      {% endfor %}
+      <p id="ozellik-msg" class="text-xs text-center hidden mt-2"></p>
+    </div>
+  </section>
+  {% endif %}
+
+  <a href="{{ url_for('ogrenci_voleybol_taktik') }}"
+     class="flex items-center justify-between rounded-2xl bg-slate-900 border border-sky-700/50 px-4 py-4 hover:bg-slate-800 transition">
+    <div>
+      <p class="font-black text-sky-100">Voleybol taktik ekranı</p>
+      <p class="text-xs text-sky-200/70 mt-1">6 kişilik dizilişi kaydedin</p>
+    </div>
+    <span class="text-xl">→</span>
+  </a>
+
+</main>
+
+<script>
+async function ozellikArtir(oz) {
+    const msg = document.getElementById("ozellik-msg");
+    const btns = document.querySelectorAll('.btn-artir');
+    btns.forEach(b => b.disabled = true);
+    msg.classList.remove("hidden", "text-red-300", "text-emerald-300");
+    msg.textContent = "Geliştiriliyor...";
+    msg.classList.add("text-sky-300");
+    
+    try {
+        const res = await fetch("{{ url_for('api_ogrenci_ozellik_artir') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ozellik: oz })
+        });
+        const data = await res.json();
+        
+        if (data.ok) {
+            let valEl = document.getElementById('val-' + oz);
+            let barEl = document.getElementById('bar-' + oz);
+            let puanEl = document.getElementById('kalan-puan');
+            
+            let currentVal = parseInt(valEl.textContent);
+            valEl.textContent = currentVal + 1;
+            barEl.style.width = (currentVal + 1) + '%';
+            puanEl.textContent = data.kalan;
+            
+            msg.textContent = "Özellik başarıyla geliştirildi!";
+            msg.classList.replace("text-sky-300", "text-emerald-300");
+            
+            btns.forEach(b => {
+                let checkOz = b.getAttribute('onclick').match(/'([^']+)'/)[1];
+                let checkVal = parseInt(document.getElementById('val-' + checkOz).textContent);
+                if (data.kalan <= 0 || checkVal >= 99) {
+                    b.disabled = true;
+                } else {
+                    b.disabled = false;
+                }
+            });
+        } else {
+            msg.textContent = data.sebep || "Hata oluştu";
+            msg.classList.replace("text-sky-300", "text-red-300");
+            btns.forEach(b => {
+                let checkOz = b.getAttribute('onclick').match(/'([^']+)'/)[1];
+                let checkVal = parseInt(document.getElementById('val-' + checkOz).textContent);
+                if (parseInt(document.getElementById('kalan-puan').textContent) > 0 && checkVal < 99) {
+                    b.disabled = false;
+                }
+            });
+        }
+    } catch (e) {
+        msg.textContent = "Bağlantı hatası!";
+        msg.classList.replace("text-sky-300", "text-red-300");
+    }
+}
+</script>
+</body>
+</html>
