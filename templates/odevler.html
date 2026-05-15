@@ -23,6 +23,12 @@
         <p class="text-slate-400 text-sm -mt-4">
             Müfredat verisi TYMM temel eğitim programıyla uyumlu JSON dosyasından gelir
             (<code class="text-slate-500">data/meb_temel_egitim_curriculum.json</code>).
+            Aynı dizinde <code class="text-slate-500">data/ogrenme_kanitlari_excel.json</code>
+            bulunursa, Excel’deki öğrenme kanıtları / çıktıları bu derslerin listesinin başına
+            eklenir (formda önce görünür).
+            Excel’i JSON’a aktarmak:
+            <code class="text-slate-500">python scripts/import_ogrenme_kanitlari_xlsx.py "dosya.xlsx"</code>
+            <br>
             Güncellemek için (ağ gerekir):
             <code class="text-slate-500">python scripts/sync_meb_tymm.py</code>
             — tüm dersler veya

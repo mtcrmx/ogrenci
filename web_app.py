@@ -1772,11 +1772,28 @@ def odev_tema_detay(odev_id):
 @app.route("/api/curriculum/temel-egitim")
 @giris_zorunlu
 def api_curriculum_temel_egitim():
-    """TYMM temel egitim ozeti: tema > konu > ogrenme ciktisi (data/meb_temel_egitim_curriculum.json)."""
+    """TYMM temel egitim ozeti: tema > konu > ogrenme ciktisi (data/meb_temel_egitim_curriculum.json).
+
+    `data/ogrenme_kanitlari_excel.json` varsa aynı dersler için Excel'deki öğrenme kanıtları / çıktıları
+    yapısı listenin başına eklenir (ödev takibi seçimlerinde önce görünür).
+    """
     path = os.path.join(app.root_path, "data", "meb_temel_egitim_curriculum.json")
+    kanit_path = os.path.join(app.root_path, "data", "ogrenme_kanitlari_excel.json")
     try:
         with open(path, encoding="utf-8") as f:
-            return jsonify(json.load(f))
+            doc = json.load(f)
+        try:
+            with open(kanit_path, encoding="utf-8") as fk:
+                kan_doc = json.load(fk)
+        except OSError:
+            kan_doc = {}
+        dersler = doc.setdefault("dersler", {})
+        for ders, bloklar in (kan_doc.get("dersler") or {}).items():
+            if not bloklar:
+                continue
+            mevcut = list(dersler.get(ders) or [])
+            dersler[ders] = list(bloklar) + mevcut
+        return jsonify(doc)
     except OSError:
         return jsonify({"hata": "Mufredat dosyasi bulunamadi", "dersler": {}}), 404
 

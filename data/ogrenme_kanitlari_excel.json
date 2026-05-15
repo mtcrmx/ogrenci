@@ -1,0 +1,2127 @@
+{
+  "kaynak": "c:\\Users\\METE\\OneDrive\\Desktop\\Yeni Microsoft Excel Çalışma Sayfası (3).xlsx",
+  "aciklama": "Excel TYMM öğrenme kanıtları (ölçme ve değerlendirme) — ödev çıktı listeleri için.",
+  "dersler": {
+    "Türkçe": [
+      {
+        "tema": "5. sınıf · 1. Tema: OYUN DÜNYASI",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kontrol listesi",
+              "Cümle tamamlama",
+              "Boşluk doldurma/açık uçlu soru",
+              "Sözcük ilişkilendirme",
+              "Öz değerlendirme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 2. Tema: ATATÜRK’Ü TANIMAK",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Öz bildirim",
+              "Gelişim çizelgesi",
+              "Sözcük ilişkilendirme",
+              "Kavram haritası"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 3. Tema: DUYGULARIMI TANIYORUM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru/çoktan seçmeli soru",
+              "Bilgi aktarımı",
+              "Zihin haritası"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 4. Tema: GELENEKLERİMİZ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çoktan seçmeli soru/açık uçlu soru/iki bileşenli soru",
+              "Kümelere ayırma",
+              "Kavram haritası",
+              "Bilgi aktarımı",
+              "Yapılandırılmış özetleme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 5. Tema: İLETİŞİM VE SOSYAL İLİŞKİLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çoktan seçmeli/açık uçlu soru",
+              "Anılayıcı dallanmış ağaç",
+              "Eşleştirme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 6. Tema: SAĞLIKLI YAŞIYORUM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kavram haritası",
+              "Açık uçlu/çoktan seçmeli soru",
+              "Kontrol listesi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 1. Tema: DİLİMİZİN ZENGİNLİĞİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kontrol listesi",
+              "Öz bildirim",
+              "Gelişim çizelgesi",
+              "Cümle tamamlama",
+              "Sözcük ilişkilendirme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 2. Tema: BAĞIMSIZLIK YOLU",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Sözcük ilişkilendirme",
+              "Cümle tamamlama",
+              "Çoktan seçmeli/açık uçlu/ iki bileşenli soru",
+              "Kümelere ayırma",
+              "Tanılayıcı dallanmış ağaç",
+              "Kavram haritası",
+              "Yapılandırılmış özetleme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 3. Tema: FARKLI DÜNYALAR",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çoktan seçmeli/açık uçlu/iki bileşenli soru",
+              "Kümelere ayırma",
+              "Bilgi aktarımı",
+              "Tanılayıcı dallanmış ağaç",
+              "Zihin haritası",
+              "Yapılandırılmış özetleme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 4. Tema: İLETİŞİM VE SOSYAL İLİŞKİLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kavram haritası",
+              "Çoktan seçmeli soru"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 5. Tema: BİLİM VE TEKNOLOJİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kavram haritası",
+              "Bilgi aktarımı",
+              "Sözcük ilişkilendirme",
+              "Zihin haritası"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 6. Tema: LİDER RUHLAR",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kontrol listesi",
+              "Açık uçlu soru",
+              "Eşleştirme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 1. Tema: HAYAT BOYU GELİŞİM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kontrol listesi",
+              "Öz bildirim",
+              "Cümle tamamlama",
+              "Sözcük ilişkilendirme",
+              "Boşluk doldurma/açık uçlu soru",
+              "Bilgi aktarımı",
+              "Öz değerlendirme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 2. Tema: BİR HİLAL UĞRUNA",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Sözcük ilişkilendirme",
+              "Çoktan seçmeli/açık uçlu/iki bileşenli soru",
+              "Kavram haritası",
+              "Zihin haritası",
+              "Bilgi aktarım"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 3. Tema: İLETİŞİM VE SOSYAL İLİŞKİLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu/çoktan seçmeli soru",
+              "Bilgi aktarımı",
+              "Gözlem formu",
+              "Zihin haritası",
+              "Kontrol listesi",
+              "Yapılandırılmış özetleme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 4. Tema: TÜRK SANATI",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çoktan seçmeli/açık uçlu/iki bileşenli soru",
+              "Kümelere ayırma",
+              "Tanılayıcı dallanmış ağaç",
+              "Kavram haritası",
+              "Eşleştirme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 5. Tema: OKUMA KÜLTÜRÜ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kümelere ayırma",
+              "Açık uçlu soru",
+              "Bilgi aktarımı",
+              "Kontrol listesi",
+              "Yapılandırılmış özetleme",
+              "Eşleştirme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 6. Tema: HAK VE SORUMLULUKLAR",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Tanılayıcı dallanmış ağaç",
+              "Kavram haritası",
+              "Açık uçlu/çoktan seçmeli soru"
+            ]
+          }
+        ]
+      }
+    ],
+    "Matematik": [
+      {
+        "tema": "5. sınıf · 1. Tema: SAYILAR VE NİCELİKLER (1)",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu sorulardan oluşan çalışma kağıdı",
+              "İzleme testi",
+              "Performans görevi",
+              "Bütüncül veya analitik dereceli puanlama anahtarı",
+              "Öz değerlendirme ve akran değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 3. Tema: GEOMETRİK ŞEKİLLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Gözlem formu",
+              "Çalışma kâğıdı",
+              "Kontrol listesi",
+              "Performans görevi",
+              "Öz değerlendirme",
+              "Akran değerlendirme formları",
+              "Öğrenme günlüğü",
+              "Zihin haritası",
+              "Bütüncül veya analitik dereceli puanlama anahtarı izleme testi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 1. Tema: SAYILAR VE NİCELİKLER (2)",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu ve kısa cevaplı sorulardan oluşan izleme testi",
+              "Açık uçlu soru lardan oluşan çalışma kâğıdı",
+              "Öz ve akran değerlendirme formları",
+              "Performans görevi",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 2. Tema: İŞLEMLERLE CEBİRSEL DÜŞÜNME",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "İzleme testi",
+              "Çalışma kâğıdı",
+              "Gözlem formu",
+              "Öz değerlendirme ve akran Değerlendirme formu",
+              "Grup değerlendirme formu",
+              "Performans görevi",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 4. Tema: GEOMETRİK NİCELİKLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu sorulardan oluşan çalışma kağıdı",
+              "İzleme testi",
+              "Performans görevi",
+              "Bütüncül veya analitik dereceli Puanlama anahtarı",
+              "Öz değerlendirme ve akran değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 5. Tema: İSTATİSTİKSEL ARAŞTIRMA SÜRECİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Performans görevi",
+              "Öz değerlendirme ve akran değerlendirme formları",
+              "Gözlem formu",
+              "Bütüncül veya analitik dereceli puanlama anahtarı",
+              "Çalışma kâğıtları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 6. Tema: VERİDEN OLASILIĞA",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Öz değerlendirme",
+              "Akran değerlendirme ve grup değerlendirme formları",
+              "Çalışma kâğıdı (kısa cevaplı ya da açık Uçlu sorulardan oluşan) performans görevi",
+              "Gözlem formu",
+              "İzleme testleri",
+              "Çalışma kâğıdı",
+              "Kontrol listesi",
+              "Performans görevi",
+              "Akran değerlendirme formları",
+              "Öğrenme günlüğü",
+              "Zihin haritası",
+              "Bütüncül veya analitik dereceli puanlama anahtarı izleme testi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 1. Tema: SAYILAR VE NİCELİKLER (1)",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB2.3.Sosyal Farkındalık Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 1. Tema: SAYILAR VE NİCELİKLER (2)",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB1.2.Kendini Düzenleme (Öz Düzenleme Becerisi)",
+              "SDB1.3.Kendine Uyarlama (Öz Yansıtma Becerisi)",
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB2.3.Sosyal Farkındalık Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 2. Tema: İŞLEMLERLE CEBİRSEL DÜŞÜNME VE DEĞİŞİMLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.3.Sosyal Farkındalık Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 3. Tema: GEOMETRİK ŞEKİLLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB1.2.Kendini Düzenleme (Öz Düzenleme Becerisi)",
+              "SDB2.1.İletişim Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 4. Tema: GEOMETRİK NİCELİKLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB1.3.Kendine Uyarlama (Öz Yansıtma Becerisi)",
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB3.1.Uyum Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 5. Tema: İSTATİSTİKSEL ARAŞTIRMA SÜRECİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB1.2.Kendini Düzenleme (Öz Düzenleme Becerisi)",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB2.3.Sosyal Farkındalık Becerisi",
+              "SDB3.2.Esneklik Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 6. Tema: VERİDEN OLASILIĞA",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB2.2.İş Birliği Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 1. Tema: SAYILAR VE NİCELİKLER (1)",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "İzleme testleri",
+              "Performans görevi",
+              "Öz, akran ve grup değerlendirme formları",
+              "Açık uçlu sorulardan oluşan çalışma kâğıdı",
+              "Bütüncül dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 1. Tema: SAYILAR VE NİCELİKLER (2)",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soruların bulunduğu çalışma kâğıdı",
+              "İzleme testi",
+              "Performans görevleri",
+              "Öz değerlendirme ve akran değerlendirme formu",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 2. Tema: İŞLEMLERLE CEBİRSEL DÜŞÜNME VE DEĞİŞİMLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu, doğru-yanlış veya eşleştirmeli sorulardan oluşan izleme testleri",
+              "Çalışma kâğıtları",
+              "Performans görevi",
+              "Bütüncül dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 3. Tema: DÖNÜŞÜM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Kontrol listesi",
+              "Performans görevi",
+              "Öz/akran/grup değerlendirme",
+              "Gözlem formu",
+              "Derecelendirme ölçeği",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 4. Tema: GEOMETRİK NİCELİKLER (1)",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıtları",
+              "Açık uçlu sorular",
+              "Zihin haritası",
+              "Kontrol listesi",
+              "Öz değerlendirme formu",
+              "Performans görevi",
+              "İzleme testi",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 4. Tema: GEOMETRİK NİCELİKLER (2)",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "İzleme testi",
+              "Zihin veya kavram haritası",
+              "Öz değerlendirme formu",
+              "Akran değerlendirme formu",
+              "Çalışma kâğıtları",
+              "Performans görevi",
+              "Bütüncül veya analitik dereceli",
+              "puanlama anahtarı",
+              "Kontrol listesi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 5. Tema: GEOMETRİK ŞEKİLLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Tanılayıcı dallanmış ağaç",
+              "Kontrol listesi",
+              "Performans görevi",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 6. Tema: İSTATİSTİKSEL ARAŞTIRMA SÜRECİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "İzleme testi",
+              "Gözlem formu",
+              "Öz değerlendirme formu",
+              "Akran değerlendirme formu",
+              "Çalışma kâğıtları",
+              "Performans görevi",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 7. Tema: VERİDEN OLASILIĞA",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "İzleme testleri",
+              "Çalışma kâğıdı",
+              "Gözlem formu",
+              "Performans görevi",
+              "Öz, akran ve grup değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 1. Tema: SAYILAR VE NİCELİKLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "İzleme testi",
+              "Çalışma kâğıdı",
+              "Tanılayıcı dallanmış ağaç",
+              "Performans görevi",
+              "Öz değerlendirme ve akran değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 2. Tema: CEBİRSEL DÜŞÜNME VE DEĞİŞİMLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "İzleme testi",
+              "Çalışma kâğıdı",
+              "Performans görevi",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 3. Tema: GEOMETRİK ŞEKİLLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kağıdı",
+              "İzleme testi",
+              "Performans görevi",
+              "Öz değerlendirme ve akran değerlendirme formu",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 4. Tema: GEOMETRİK NİCELİKLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Zihin haritası",
+              "Çalışma kâğıdı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 5. Tema: DÖNÜŞÜM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "İzleme testi",
+              "Grup değerlendirme formu",
+              "Performans görevi",
+              "Öz ve akran değerlendirme formu",
+              "Gözlem formu",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 6. Tema: İSTATİSTİKSEL ARAŞTIRMA SÜRECİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Performans görevi",
+              "Çalışma kâğıdı",
+              "Öz  ve akran değerlendirme formu",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 7. Tema: VERİDEN OLASILIĞA",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "İzleme testi",
+              "Performans görevi",
+              "Öz, akran ve grup değerlendirme formları",
+              "Gözlem formu",
+              "Bütüncül veya analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      }
+    ],
+    "Sosyal Bilgiler": [
+      {
+        "tema": "5. sınıf · 1. ÖĞRENME ALANI: BİRLİKTE YAŞAMAK",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Karşılaştırma tablosu",
+              "Gözlem formu",
+              "Derecelendirme ölçeği",
+              "Kontrol listesi",
+              "Anekdot kaydı",
+              "Analitik dereceli puanlama anahtarı",
+              "Çalışma yaprakları",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 2. ÖĞRENME ALANI: EVİMİZ DÜNYA",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Gözlem formu",
+              "Kontrol listesi",
+              "Derecelen dirme ölçeği",
+              "Karşılaştırma tablosu",
+              "Balık kılçığı",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 3. ÖĞRENME ALANI: ORTAK MİRASIMIZ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Gözlem formu",
+              "Kontrol listesi",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Derecelendirme ölçeği",
+              "Karşılaştırma tablosu",
+              "İnfografik",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 4. ÖĞRENME ALANI: YAŞAYAN DEMOKRASİMİZ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Gözlem formu",
+              "Kontrol listesi",
+              "Derecelendirme ölçeği",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Çalışma yaprağı",
+              "Performans görevi",
+              "Frayer Modeli",
+              "Kelime ilişkilendirme testi",
+              "Doğru-yanlış testleri",
+              "Tanılayıcı dallanmış ağaç"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 5. ÖĞRENME ALANI: HAYATIMIZDAKİ EKONOMİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Gözlem formu",
+              "Anekdot kaydı",
+              "Kontrol listesi",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Derecelendirme ölçeği",
+              "Öz değerlendirme formu",
+              "Sınıflama tablosu",
+              "Kavram ağı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 6. ÖĞRENME ALANI: TEKNOLOJİ ve SOSYAL BİLİMLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kısa veya uzun cevaplı maddeler içeren çalışma yaprakları",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 1. ÖĞRENME ALANI: BİRLİKTE YAŞAMAK",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB2.3.Sosyal Farkındalık Becerisi",
+              "SDB3.1.Uyum Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 2. ÖĞRENME ALANI: EVİMİZ DÜNYA",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB2.3.Sosyal Farkındalık Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 3. ÖĞRENME ALANI: ORTAK MİRASIMIZ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB2.3.Sosyal Farkındalık Becerisi",
+              "SDB3.1.Uyum Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 4. ÖĞRENME ALANI: YAŞAYAN DEMOKRASİMİZ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB2.3.Sosyal Farkındalık Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 5. ÖĞRENME ALANI: HAYATIMIZDAKİ EKONOMİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB3.1.Uyum Becerisi",
+              "SDB3.2.Esneklik Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 6. ÖĞRENME ALANI: TEKNOLOJİ ve SOSYAL BİLİMLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "SDB1.2.Kendini Düzenleme (Öz Düzenleme Becerisi)",
+              "SDB2.1.İletişim Becerisi",
+              "SDB2.2.İş Birliği Becerisi",
+              "SDB3.3.Sorumlu Karar Verme Becerisi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 1. ÖĞRENME ALANI: BİRLİKTE YAŞAMAK",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "5N1K",
+              "Balık kılçığı",
+              "Gözlem formu",
+              "Kontrol listesi",
+              "Anekdot kaydı",
+              "Derecelendirme ölçeği",
+              "Açık uçlu sorular",
+              "Karşılaştırma tabloları",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 2. ÖĞRENME ALANI: EVİMİZ DÜNYA",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kavram haritası",
+              "Zihin haritası",
+              "Sınıflama tablosu",
+              "Kontrol listesi",
+              "Derecelendirme ölçeği",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 3. ÖĞRENME ALANI: ORTAK MİRASIMIZ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu sorular içeren çalışma yaprağı",
+              "Balık kılçığı",
+              "Sınıflama tablosu",
+              "Gözlem formu",
+              "Kontrol listesi",
+              "Anektod kaydı",
+              "Öz-akran değerlendirme formları",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 4. ÖĞRENME ALANI: YAŞAYAN DEMOKRASİMİZ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kavram haritası",
+              "Kontrol listesi",
+              "Gözlem formu",
+              "Anekdot kaydı",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Öz ve akran değerlendirme formu",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 5. ÖĞRENME ALANI: HAYATIMIZDAKİ EKONOMİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kontrol listesi",
+              "Gözlem formu",
+              "Anekdot kaydı",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Açık uçlu sorular",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 6. ÖĞRENME ALANI: TEKNOLOJİ ve SOSYAL BİLİMLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kontrol listesi",
+              "Gözlem formu",
+              "Anekdot kaydı",
+              "Öz-akran değerlendirme formları",
+              "Açık uçlu sorular içeren çalışma yaprakları",
+              "Analitik dereceli puanlama anahtarı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 1. ÜNİTE: MUSTAFA KEMAL’İN HAYATI",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma yaprağı",
+              "Karşılaştırma tablosu",
+              "Derecelendirme ölçeği",
+              "Dereceli puanlama anahtarı",
+              "Kavram ağı",
+              "10 şeyi listeleme",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 2. ÜNİTE: BİRİNCİ DÜNYA SAVAŞI",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Sınıflandırma tablosu",
+              "Gözlem formu",
+              "Anekdot kaydı",
+              "Kontrol listesi",
+              "Derecelendirme ölçeği",
+              "Soru kartları",
+              "Çalışma yaprağı",
+              "Kavram ağı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 3. ÜNİTE: MİLLÎ MÜCADELE",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Karşılaştırma tablosu",
+              "Kavram ağı",
+              "Sınıflandırma tablosu",
+              "Balık kılçığı",
+              "Dereceli puanlama anahtarı",
+              "Performans görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 4. ÜNİTE: TÜRKİYE CUMHURİYETİ’NİN KURULUŞU VE İNKILAPLAR",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Balık kılçığı",
+              "Dereceli puanlama anahtarı",
+              "Performans görevi",
+              "Çalışma yaprağı",
+              "Sınıflandırma tablosu",
+              "Kart eşleştirme"
+            ]
+          }
+        ]
+      }
+    ],
+    "Fen Bilimleri": [
+      {
+        "tema": "5. sınıf · 1. ÜNİTE: GÖKYÜZÜNDEKİ KOMŞULARIMIZ VE BİZ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kısa cevaplı testler",
+              "Yapılandırılmış grid",
+              "Eşleştirme testleri",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "Analitik  dereceli puanlama anahtarı",
+              "Kontrol listeleri",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Öz, akran ve grup değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 2. ÜNİTE: KUVVETİ TANIYALIM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Kavram/zihin haritası",
+              "Balık kılçığı",
+              "Tanılayıcı dallanmış ağaç",
+              "Yapılandırılmış grid",
+              "Performans görevi",
+              "Kontrol listesi",
+              "Bütüncül dereceli puanlama anahtarları",
+              "Analitik dereceli puanlama anahtarı",
+              "Öz, akran ve grup değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 3. ÜNİTE: CANLILARIN YAPISINA YOLCULUK",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Tanılayıcı dallanmış ağaç",
+              "Yapılandırılmış grid",
+              "Eşleştirme testi",
+              "Performans görevleri",
+              "Analitik dereceli puanlama anahtarı",
+              "Kontrol listesi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 4. ÜNİTE: IŞIĞIN DÜNYASI",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıtları",
+              "Performans görevi",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Kavram haritaları",
+              "Kontrol listeleri"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 5. ÜNİTE: MADDENİN DOĞASI",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Yapılandırılmış grid",
+              "Çalışma kâğıdı",
+              "Performans görevleri",
+              "Anlam çözümleme, bilgi haritası gibi iki boyutlu kavram öğrenme teknikleri",
+              "Kontrol listesi",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Kart eşleştirme tekniği",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 6. ÜNİTE: YAŞAMIMIZDAKİ ELEKTRİK",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Eşleştirme testi",
+              "Çalışma kâğıdı",
+              "Açık uçlu sorular",
+              "Tanılayıcı dallanmış ağaç",
+              "Yapılandırılmış grid",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 7. ÜNİTE: SÜRDÜRÜLEBİLİR YAŞAM VE GERİ DÖNÜŞÜM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Eşleştirme testleri",
+              "Kısa cevaplı testler",
+              "Yapılandırılmış grid",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "Analitik dereceli puanlama anahtarı",
+              "Öz, akran ve grup değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 1. ÜNİTE: GÜNEŞ SİSTEMİ VE TUTULMALAR",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kısa cevaplı testler",
+              "Anlam çözümleme tablosu",
+              "Eşleştirme testleri",
+              "Yapılandırılmış grid",
+              "Dallanmış ağaç",
+              "Boşluk doldurma",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 2. ÜNİTE: KUVVETİN ETKİSİNDE HAREKET",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "V diyagramı",
+              "Performans görevleri",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 3. ÜNİTE: CANLILARDA SİSTEMLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Tanılayıcı dallanmış ağaç",
+              "Yapılandırılmış grid",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "Dereceli puanlama anahtarı",
+              "V diyagramı",
+              "Analitik dereceli puanlama anahtarı",
+              "Kontrol listesi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 4. ÜNİTE: IŞIĞIN YANSIMASI VE RENKLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Yapılandırılmış grid",
+              "Kontrol listesi",
+              "Doğru-yanlış testleri",
+              "Açık uçlu sorular",
+              "Tanılayıcı dallanmış ağaç",
+              "Eşleştirme testi",
+              "Dereceli puanlama anahtarı",
+              "Performans görevleri",
+              "Kısa cevaplı testler",
+              "Yazılı yoklamalar",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 5. ÜNİTE: MADDENİN AYIRT EDİCİ ÖZELLİKLERİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kısa cevaplı test",
+              "Doğru-yanlış testi",
+              "Yazılı yoklama",
+              "Eşleştirme testi",
+              "Kavram haritaları",
+              "Bütüncül dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 6. ÜNİTE: ELEKTRİĞİN İLETİMİ VE DİRENÇ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Eşleştirme testi",
+              "Çalışma kâğıdı",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "Kontrol listesi",
+              "Analitik dereceli puanlama anahtarı",
+              "V diyagramı",
+              "Öz, akran değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 7. ÜNİTE: SÜRDÜRÜLEBİLİR YAŞAM VE ETKİLEŞİM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Açık uçlu sorular",
+              "Doğru-yanlış testleri",
+              "Bilgi testi",
+              "Performans görevleri",
+              "Kontrol listesi",
+              "Öz/akran değerlendirme formları",
+              "Analitik dereceli puanlama anahtarları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 1. ÜNİTE: UZAY ÇAĞI",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Eşleştirme testleri",
+              "Yapılandırılmış grid",
+              "Tanılayıcı dallanmış ağaç",
+              "Çalışma kâğıdı",
+              "Kısa cevaplı testler",
+              "Analitik dereceli puanlama anahtarı",
+              "Performans görevi",
+              "Bütüncül dereceli puanlama anahtarı",
+              "Akran ve grup değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 2. ÜNİTE: KUVVET VE ENERJİYİ KEŞFEDELİM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Eşleştirme testi",
+              "Performans görevi",
+              "Balık kılçığı diyagramı",
+              "Analitik dereceli puanlama anahtarı",
+              "Öz, akran ve grup değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 3. ÜNİTE: VÜCUDUMUZDAKİ SİSTEMLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Eşleştirme testi",
+              "Tanılayıcı dallanmış ağaç",
+              "Çalışma kâğıdı",
+              "Yapılandırılmış grid",
+              "Açık uçlu sorular",
+              "Boşluk doldurma testi",
+              "Anlam çözümleme tablosu",
+              "Performans görevleri",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 4. ÜNİTE: IŞIĞIN KIRILMASI VE MERCEKLER",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Tanılayıcı dallanmış ağaç",
+              "Çalışma kâğıdı",
+              "Yapılandırılmış grid",
+              "Doğru-yanlış testleri",
+              "Kısa cevaplı sorular",
+              "Açık uçlu sorular",
+              "Eşleştirme testleri",
+              "Performans görevi",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 5. ÜNİTE: MADDENİN DOĞASINA YOLCULUK",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Tanılayıcı dallanmış ağaç",
+              "Yapılandırılmış grid",
+              "Boşluk doldurma",
+              "Yazılı yoklama",
+              "Eşleştirme testi",
+              "Doğru-yanlış testi",
+              "Analitik dereceli puanlama anahtarı",
+              "TGA",
+              "Performans Görevi"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 6. ÜNİTE: ELEKTRİKLENME",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Kavram haritası",
+              "Çalışma kâğıdı",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "Analitik dereceli puanlama anahtarı",
+              "Öz/akran değerlendirme formları"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 7. ÜNİTE: SÜRDÜRÜLEBİLİR YAŞAM VE GERİ DÖNÜŞÜM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Tanılayıcı dallanmış ağaç",
+              "Venn şeması",
+              "Yapılandırılmış grid",
+              "Boşluk doldurma",
+              "Çalışma kâğıtları",
+              "Performans görevleri",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 1. ÜNİTE: MEVSİMLER VE İKLİM",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Eşleştirme testi",
+              "Performans görevi",
+              "Kontrol listesi",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 2. ÜNİTE: YAŞAMI KOLAYLAŞTIRAN KUVVET",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Tanılayıcı dallanmış ağaç",
+              "Yapılandırılmış grid",
+              "Eşleştirme testi",
+              "Kavram ağı",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "Analitik dereceli puanlama anahtarı",
+              "Kontrol listesi",
+              "Hikâye haritası formu"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 3. ÜNİTE: YAŞAMIN GİZEMİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma yaprağı",
+              "V diyagramı",
+              "Performans görevi",
+              "Öğrenci ürün dosyası",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 4. ÜNİTE: SESİN DÜNYASI",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma yaprağı",
+              "V diyagramı",
+              "Performans görevi",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 5. ÜNİTE: PERİYODİK TABLO VE MADDENİN ETKİLEŞİMİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Açık uçlu sorular",
+              "Doğru-yanlış testi",
+              "Tanılayıcı dallanmış ağaç",
+              "Yapılandırılmış grid",
+              "Kısa cevaplı testler",
+              "Performans görevleri",
+              "Kontrol listeleri",
+              "Analitik dereceli puanlama anahtarları",
+              "Akran değerlendirme formu"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 6. ÜNİTE: ELEKTRİĞİN YOLCULUĞU",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Yazılı sınavlar",
+              "Kısa cevaplı testler",
+              "Yapılandırılmış grid",
+              "Tanılayıcı dallanmış ağaç",
+              "Eşleştirme testi",
+              "Çalışma kâğıdı",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "TGA tekniği",
+              "Analitik dereceli puanlama anahtarı",
+              "Bütüncül dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 7. ÜNİTE: SÜRDÜRÜLEBİLİR YAŞAM VE MADDE DÖNGÜLERİ",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Çalışma kâğıdı",
+              "Bilgi testi",
+              "Tanılayıcı dallanmış",
+              "Açık uçlu sorular",
+              "Performans görevleri",
+              "Kontrol listesi",
+              "TGA tekniğini",
+              "Analitik dereceli puanlama anahtarı"
+            ]
+          }
+        ]
+      }
+    ],
+    "Din Kültürü": [
+      {
+        "tema": "5. sınıf · 1. Ünite: Allah İnancı",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Görsel inceleme formu",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Evrendeki mükemmel düzen ile ilgili çıkış kartı hazırlama",
+              "Allah’ın varlığı ve birliği ile ilgili kavram haritası hazırlama",
+              "Esmaülhüsna pano çalışması hazırlama",
+              "İhlas suresi ve anlamı ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 2. Ünite: Namaz",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritaları",
+              "Bulmacalar",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Namaz ibadeti hakkında broşür hazırlama",
+              "“Namaz Kılıyorum” ve “Abdest Alıyorum” videoları için gözlem formu hazırlama",
+              "Namazın insana kazandırdıklarıyla ilgili münazara yapma",
+              "Tahiyyat duası ve anlamı ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 3. Ünite: Kur’an-ı Kerim",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Kur’an-ı Kerim’in özellikleriyle ilgili sunu hazırlama",
+              "Kur’an-ı Kerim’in ana konularıyla ilgili kavram haritası hazırlama",
+              "Sure ve dua eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 4. Ünite: Peygamber Kıssaları",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Peygamberlerin görevleriyle ilgili metinlerden ilkeler çıkarma",
+              "Peygamber kıssalarıyla ilgili çalışma yaprağı hazırlama",
+              "Kureyş suresi ve anlamı ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · 5. Ünite: Mimarimizdeki Dinî Motifler",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Görsel inceleme formu",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Cami mimarisiyle ilgili sunu hazırlama",
+              "Dinî motifleri içeren görsel pano hazırlama",
+              "Mimari eserlerle ilgili araştırma dosyası oluşturma"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 1. Ünite: Peygamber ve İlahi Kitap İnancı",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "İlahi kitaplarla ilgili tablo hazırlama",
+              "Peygamberlerin özellikleri hakkında sunu hazırlama",
+              "Sure ve dua eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 2. Ünite: Ramazan ve Oruç",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Ramazan gelenekleri ile ilgili sunu hazırlama",
+              "Oruç ibadetinin faydaları hakkında afiş hazırlama",
+              "Fitre ve zekât ile ilgili örnek olay hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 3. Ünite: Ahlaki Davranışlar",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Kelime ilişkilendirme",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Balık kılçığı",
+              "Yapılandırılmış grid",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Doğru sözlü olmanın önemi hakkında sunu hazırlama",
+              "Merhametli olmanın faydalarıyla ilgili drama etkinliği hazırlama",
+              "Adap ve nezaket kurallarıyla ilgili drama çalışması hazırlama",
+              "Vatan sevgisiyle ilgili sunu hazırlama",
+              "Kunut duaları ve anlamları ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 4. Ünite: Peygamberliğinden Önce Hz. Muhammed",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Hz. Muhammed’in çocukluğu ve gençliğiyle ilgili zaman şeridi hazırlama",
+              "Güvenilir kişiliği ile ilgili örnek olay hazırlama",
+              "Sunu veya panel düzenleme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "6. sınıf · 5. Ünite: Kültürümüzdeki Dinî Motifler",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Gelenek, edebiyat ve musikide dinin izleri hakkında sunu hazırlama",
+              "Kültürümüzdeki dinî motiflerle ilgili pano hazırlama",
+              "İlahi, ezan, mevlit vb. kavramlarla ilgili araştırma hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 1. Ünite: Melek ve Ahiret İnancı",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Sınıflandırma tablosu",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Meleklerin özellikleri ve görevleriyle ilgili sınıflandırma tablosu hazırlama",
+              "Ahiret hayatı hakkında çalışma yaprağı hazırlama",
+              "Melek ve ahiret inancının insan davranışına etkisiyle ilgili metinden ilkeler çıkarma",
+              "Nâs suresi ve anlamı ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 2. Ünite: Hac, Umre ve Kurban",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Tanılayıcı dallanmış ağaç",
+              "Görsel inceleme formu",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Hac kavramlarıyla ilgili kavram haritası hazırlama",
+              "Kurban ibadetinin yardımlaşmaya katkısıyla ilgili çalışma yaprağı hazırlama",
+              "Hac ve kurbanın kültürümüze yansımalarıyla ilgili panel düzenleme",
+              "Kâfirun suresi ve anlamı ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 3. Ünite: İslam Düşüncesinde Yorumlar",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritaları",
+              "Bulmacalar",
+              "Yapılandırılmış grid",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Din ve din anlayışı arasındaki farklarla ilgili metin yazma",
+              "İtikadi, fıkhi ve tasavvufi yorumlarla ilgili yapılandırılmış grid hazırlama",
+              "Tasavvufi yorumlarla ilgili bilgi kartları hazırlama",
+              "Alevilik Bektaşilik kavramlarıyla ilgili kavram haritası hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 4. Ünite: Peygamber Olarak Hz. Muhammed",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "İlk Müslümanlarla ilgili kimlik kartları hazırlama",
+              "Mekke Dönemi olaylarıyla ilgili tarih cetveli hazırlama",
+              "Hicret’in sebep-sonuç diyagramını hazırlama",
+              "Medine hayatı ile ilgili panel düzenleme",
+              "Veda Hutbesi’nden ilkeler çıkarma",
+              "Nasr suresi ve anlamı ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf · 5. Ünite: Yaşayan Dünya Dinleri",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Görsel inceleme formu",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Yahudilik, Hristiyanlık, Hinduizm ve Budizm ile ilgili afiş/sunu hazırlama",
+              "Dinlerin özelliklerini içeren bilgi kartları hazırlama",
+              "Dinlerin kutsal mekân ve sembolleriyle ilgili araştırma yapma"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 1. Ünite: Kader İnancı",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Kader ve irade ile ilgili örnek olay hazırlama",
+              "Tevekkül konulu sunu hazırlama",
+              "Kaza ve kader ile ilgili kavram haritası hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 2. Ünite: Zekât ve Sadaka",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Yardımlaşma ve paylaşma ile ilgili sosyal sorumluluk projesi hazırlama",
+              "Zekât ibadetiyle ilgili afiş hazırlama",
+              "Sadakanın toplumsal faydalarıyla ilgili sunu hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 3. Ünite: Din ve Sosyal Hayat",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritaları",
+              "Bulmacalar",
+              "Öz değerlendirme formu",
+              "Örnek olay incelemesi",
+              "Sınıflandırma tablosu",
+              "Performans Görevleri",
+              "Dinin temel gayesi ile ilgili hikâye yazma",
+              "Dinin sosyal hayattaki işlevi ile ilgili duvar gazetesi hazırlama",
+              "Asr suresi ve anlamı ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 4. Ünite: Kur’an ve İnsan",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritaları",
+              "Bulmacalar",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Kur’an’da insanın özellikleri hakkında münazara yapma",
+              "Kur’an’ın rehberliği hakkında sosyal sorumluluk projesi hazırlama",
+              "Hz. Muhammed’in örnek ahlakı ile ilgili çözüm önerisi metni hazırlama",
+              "Hz. Lokman’ın öğütleri hakkında sunu hazırlama",
+              "Ayetelkürsi ve anlamı ile ilgili eşleştirme etkinliği hazırlama"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "8. sınıf · 5. Ünite: Müslümanların Bilim ve Kültüre Katkısı",
+        "konular": [
+          {
+            "baslik": "Öğrenme kanıtları (ölçme ve değerlendirme)",
+            "ciktilar": [
+              "Açık uçlu soru",
+              "Kısa cevaplı soru",
+              "Çalışma yaprağı",
+              "Kavram haritası",
+              "Öz değerlendirme formu",
+              "Performans Görevleri",
+              "Müslüman bilim insanları hakkında araştırma dosyası hazırlama",
+              "Bilim ve medeniyet katkılarıyla ilgili sunu hazırlama",
+              "İslam medeniyetine katkılar hakkında pano hazırlama"
+            ]
+          }
+        ]
+      }
+    ],
+    "İngilizce": [
+      {
+        "tema": "5. sınıf · Ünite 1 – Theme: Individual and Society",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "Kendini ve başkalarını tanıtabilir.",
+              "Günlük ifadeleri kullanabilir.",
+              "Basit sorular sorup cevaplayabilir.",
+              "Dinlediği kısa konuşmaları anlayabilir.",
+              "Kısa tanıtım metinleri yazabilir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · Ünite 2 – Theme: Nature and Environment",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "Hava durumu ve doğa hakkında konuşabilir.",
+              "Çevreyle ilgili temel kelimeleri kullanabilir.",
+              "Basit çevre sorunlarını ifade edebilir.",
+              "Görsellerden anlam çıkarabilir.",
+              "Kısa çevre metinleri yazabilir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · Ünite 3 – Theme: Health and Sports",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "Spor türlerini tanıyabilir.",
+              "Sağlıklı yaşam hakkında konuşabilir.",
+              "Yapabildiği/yapamadığı şeyleri ifade edebilir.",
+              "Dinleme etkinliklerinden bilgi çıkarabilir.",
+              "Spor alışkanlıklarını yazabilir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · Ünite 4 – Theme: Daily Life and Routines",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "Günlük rutinlerini anlatabilir.",
+              "Saatleri söyleyebilir.",
+              "Sıklık ifadelerini kullanabilir.",
+              "Günlük yaşam diyaloglarını anlayabilir.",
+              "Günlük plan yazabilir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · Ünite 5 – Theme: Culture and Traditions",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "Kültürel etkinlikleri tanıyabilir.",
+              "Bayram ve gelenekleri anlatabilir.",
+              "Sosyal ifadeleri uygun şekilde kullanabilir.",
+              "Kültürel metinleri anlayabilir.",
+              "Kısa kültürel tanıtımlar yazabilir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · Ünite 6 – Theme: Science and Technology",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "Teknolojik araçları adlandırabilir.",
+              "Basit teknolojik kullanımları açıklayabilir.",
+              "Dijital araçlarla iletişim kurabilir.",
+              "Bilgilendirici kısa metinleri anlayabilir.",
+              "Teknoloji hakkında kısa görüş yazabilir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · Ünite 7 – Theme: Arts and Creativity",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "Sanat türlerini tanıyabilir.",
+              "Beğeni ve tercih belirtebilir.",
+              "Görsel içerikleri yorumlayabilir.",
+              "Sanatla ilgili kısa konuşmaları anlayabilir.",
+              "Yaratıcı kısa yazılar yazabilir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "5. sınıf · Ünite 8 – Theme: Global Connections",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "Farklı ülkeleri tanıyabilir.",
+              "Basit seyahat ifadelerini kullanabilir.",
+              "Kültürel farklılıkları ifade edebilir.",
+              "Kısa bilgilendirici metinleri anlayabilir.",
+              "Gezi planı yazabilir."
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
