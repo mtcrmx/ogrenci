@@ -42,8 +42,35 @@
                 {% if pdf_ok %}
                 <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}" target="_blank" rel="noopener"
                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition shadow-lg shadow-rose-900/30">
-                    <i class="fa-solid fa-file-pdf"></i> PDF raporu aç
+                    <i class="fa-solid fa-file-pdf"></i> PDF (sınıf)
                 </a>
+                <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id, tur='hepsi') }}" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition shadow-lg shadow-indigo-900/30"
+                   title="Önce sınıf özeti, sonra her öğrenci ayrı sayfa">
+                    <i class="fa-solid fa-file-lines"></i> PDF (her öğrenci)
+                </a>
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <select id="ogr_pdf_sel"
+                            class="min-w-[11rem] max-w-[18rem] flex-1 sm:flex-none rounded-xl border border-slate-600 bg-slate-900 text-slate-200 text-sm font-semibold px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                        <option value="">Öğrenci seç…</option>
+                        {% for ogr in ogrenciler %}
+                        <option value="{{ ogr.id }}">{{ ogr.ogr_no }} — {{ ogr.ad_soyad }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" onclick="odevPdfSeciliOgrenci()"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold transition shadow-lg shadow-amber-900/30 shrink-0">
+                        <i class="fa-solid fa-user"></i> PDF (seçili)
+                    </button>
+                </div>
+                <script>
+                  function odevPdfSeciliOgrenci() {
+                    var s = document.getElementById('ogr_pdf_sel');
+                    if (!s || !s.value) { alert('Lütfen listeden bir öğrenci seçin.'); return; }
+                    var base = "{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}";
+                    var u = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'tur=ogrenci&ogr=' + encodeURIComponent(s.value);
+                    window.open(u, '_blank', 'noopener');
+                  }
+                </script>
                 {% else %}
                 <span class="text-xs text-slate-500 px-2" title="pip install reportlab">PDF için reportlab</span>
                 {% endif %}

@@ -1743,7 +1743,13 @@ def odevler():
 @app.route("/odev/<int:odev_id>/rapor.pdf")
 @giris_zorunlu
 def odev_rapor_pdf(odev_id):
-    """Ödev/tema kaydı için ayrıntılı PDF rapor (oluşturma sonrası veya isteğe bağlı indirme)."""
+    """Ödev/tema kaydı için ayrıntılı PDF rapor (oluşturma sonrası veya isteğe bağlı indirme).
+
+    Query:
+    - `tur=sinif` (varsayılan): sınıf özeti + tam öğrenci listesi tablosu.
+    - `tur=hepsi`: önce sınıf özeti, ardından her öğrenci için ayrı sayfa.
+    - `tur=ogrenci&ogr=<ogrenci_id>`: yalnızca seçilen öğrencinin detay PDF’i.
+    """
     from database import odev_detay_getir
 
     oid = session["ogretmen_id"]
@@ -1756,10 +1762,18 @@ def odev_rapor_pdf(odev_id):
             "error",
         )
         return redirect(url_for("odev_tema_detay", odev_id=odev_id))
+    tur_raw = (request.args.get("tur") or "sinif").strip().lower()
+    ogr_param = request.args.get("ogr", type=int)
     try:
         pdf_bytes = pdf_odev_raporu_bytes(
-            detay, session.get("ogretmen_adi", "") or ""
+            detay,
+            session.get("ogretmen_adi", "") or "",
+            rapor_turu=tur_raw,
+            ogrenci_id=ogr_param,
         )
+    except ValueError as e:
+        flash(str(e), "error")
+        return redirect(url_for("odev_tema_detay", odev_id=odev_id))
     except Exception as e:
         flash("PDF oluşturulamadı: %s" % (e,), "error")
         return redirect(url_for("odev_tema_detay", odev_id=odev_id))
@@ -1767,7 +1781,12 @@ def odev_rapor_pdf(odev_id):
     sinif_k = "".join(
         c for c in str(odev.get("sinif_adi") or "sinif") if c.isalnum() or c in "-_"
     )[:48] or "sinif"
-    fname = f"Odev_raporu_{odev_id}_{sinif_k}.pdf"
+    if tur_raw in ("tek", "tek_ogrenci", "ogrenci") and ogr_param:
+        fname = f"Odev_ogrenci_{odev_id}_{ogr_param}_{sinif_k}.pdf"
+    elif tur_raw in ("hepsi", "tum", "tum_ogrenciler", "ogrenciler"):
+        fname = f"Odev_tumogrenciler_{odev_id}_{sinif_k}.pdf"
+    else:
+        fname = f"Odev_raporu_{odev_id}_{sinif_k}.pdf"
     return send_file(
         BytesIO(pdf_bytes),
         mimetype="application/pdf",
