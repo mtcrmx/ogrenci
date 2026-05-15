@@ -1285,6 +1285,12 @@ def ogretmen_sinav_analiz():
         "ogretmen_sinav_analiz.html",
         siniflar=siniflar,
         ogretmen_adi=session.get("ogretmen_adi", "") or "",
+        okul_adi="Erenler Cumhuriyet Ortaokulu",
+        mudur_adi="Adem Akgül",
+        dersler=[
+            "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler",
+            "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü",
+        ],
     )
 
 
@@ -1303,6 +1309,8 @@ def api_sinav_analiz_sinif(sinif_id: int):
 
     return jsonify({
         "ok": True,
+        "sinif_adi": next((s["sinif_adi"] for s in ogretmen_siniflari(session["ogretmen_id"]) if int(s["id"]) == int(sinif_id)), ""),
+        "mevcut": len(rows),
         "ogrenciler": [_ogr_row(r) for r in rows],
     })
 

@@ -8,10 +8,9 @@
       <div>
         <h1 class="text-xl sm:text-2xl font-black text-amber-900 tracking-tight">ECO Sınav Analiz</h1>
         <p class="text-xs sm:text-sm text-slate-600 mt-1 max-w-3xl">
-          Cebirci tarzı akış + <strong>Funda öğretmen PDF raporu</strong> düzeninde yazdırılabilir çıktı.
-          Öğrenme çıktılarını <strong>TYMM temel eğitim</strong> özet müfredatından (ders seçerek) ekleyebilirsiniz.
+          Okul, öğretmen ve öğrenci bilgileri ECO’dan hazır gelir. Sadece sınıf, ders, sınav bilgisi,
+          TYMM öğrenme çıktıları ve puan alanlarını seçip raporu yazdırabilirsiniz.
         </p>
-        <p class="text-[10px] text-slate-400 mt-2">Yöntem ilhamı: <a href="https://www.cebirci.com.tr/p/cebirci-sinav-analiz.html" class="underline text-indigo-600" target="_blank" rel="noopener">Cebirci.com.tr</a></p>
       </div>
       <a href="{{ url_for('dashboard') }}" class="shrink-0 inline-flex items-center justify-center rounded-xl bg-okul-800 text-white text-xs font-bold px-4 py-2 hover:bg-okul-900">← Ana menü</a>
     </div>
@@ -34,8 +33,9 @@
   const API_SINIF = (id) => "/api/sinav-analiz/sinif/" + id;
   const API_MUFREDAT = "/api/curriculum/temel-egitim";
   const SINIFLAR = {{ siniflar | default([]) | tojson }};
-  const DEFAULT_OKUL = "Erenler Cumhuriyet Ortaokulu";
-  const DEFAULT_MUDUR = "Adem Akgül";
+  const DERSLER = {{ dersler | default([]) | tojson }};
+  const DEFAULT_OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
+  const DEFAULT_MUDUR = {{ (mudur_adi or "Adem Akgül") | tojson }};
   const OGRETMEN_ADI = {{ (ogretmen_adi or "") | tojson }};
 
   const TUR_RAPOR_BASLIK = {
@@ -72,10 +72,10 @@
       _v: 3,
       meta: {
         okulAdi: DEFAULT_OKUL,
-        ders: "",
+        ders: DERSLER[0] || "",
         ogretmen: OGRETMEN_ADI,
         mudur: DEFAULT_MUDUR,
-        sinavAdi: "",
+        sinavAdi: "2. Dönem 1. Yazılı",
         egitimYili: "2025-2026",
         analizTuru: "genel",
         sinifId: SINIFLAR[0] ? SINIFLAR[0].id : null,
@@ -84,7 +84,12 @@
         sinavaKatilan: "",
         basariEsik: "50",
         zayifKazanimEsik: "60",
-        degerlendirmeEk: "",
+        degerlendirmeEk: (
+          "Hata yapılan soruların ait olduğu kazanımların tekrarı için 2 ders saati süre ayrılmıştır. " +
+          "Sınav soruları sınıfta çözülerek kağıtlar öğrencilere dağıtılmış ve hatalarını görmeleri sağlanmıştır. " +
+          "Bu belirtilen konularla ilgili ödevlendirme yapılmıştır. Ayrıca her öğrencinin tek tek eksik kazanım veya " +
+          "öğrenme çıktıları tespit edilerek \"Öğrenci Bazlı Sınav Analizi\" hazırlanıp bu rapora eklenmiştir."
+        ),
       },
       ogrenciler: [],
       sorular: { yazili: [], dinleme: [], konusma: [] },
@@ -312,8 +317,8 @@
       <tr><td>Ort. Puan</td><td>${hasSoru && hasNot ? H.ortPuan.toFixed(2) : "—"}</td></tr>
       <tr><td>Başarı %</td><td>${hasSoru ? "%" + H.basariYuzde : "—"}</td></tr>
       <tr><td>Std. Sapma</td><td>${hasSoru && hasNot ? (H.std ? H.std.toFixed(2) : "0.00") : "—"}</td></tr>
-      <tr><td>En Yüksek Puan</td><td>${enYuksekStr}</td></tr>
-      <tr><td>En Düşük Puan</td><td>${enDusukStr}</td></tr>
+      <tr><td>Max. Puan</td><td>${enYuksekStr}</td></tr>
+      <tr><td>Min. Puan</td><td>${enDusukStr}</td></tr>
       <tr><td>Sınav Üst Sınırı (Toplam)</td><td>${H.maxTop || "—"}</td></tr>
     `;
 
@@ -435,6 +440,11 @@
     scheduleSave();
   }
 
+  function curriculumDersAdi(ders) {
+    if (ders === "T.C. İnkılap Tarihi") return "T.C. İnkılap Tarihi ve Atatürkçülük";
+    return ders || "";
+  }
+
   async function sinifListesiYukle() {
     const id = state.meta.sinifId;
     if (!id) {
@@ -452,6 +462,9 @@
         adSoyad: row.ad_soyad,
         katilmadi: false,
       }));
+      state.meta.sinifAdi = j.sinif_adi || state.meta.sinifAdi;
+      state.meta.sinifMevcudu = String(j.mevcut || state.ogrenciler.length || "");
+      state.meta.sinavaKatilan = String(state.ogrenciler.length || "");
       state.notlar = {};
       scheduleSave();
       renderActivePanel();
@@ -543,14 +556,26 @@
   function renderBilgi() {
     const el = document.getElementById("panel-bilgi");
     const m = state.meta;
+    const seciliMevcut = state.ogrenciler.length || parseInt(m.sinifMevcudu, 10) || 0;
+    const aktifKatilan = state.ogrenciler.filter((o) => !o.katilmadi).length || parseInt(m.sinavaKatilan, 10) || 0;
     el.innerHTML = `
       <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <h2 class="text-sm font-black text-slate-800">Okul / sınav bilgileri</h2>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-black text-slate-800">Hazır okul / sınav bilgileri</h2>
+            <p class="text-xs text-slate-500 mt-1">Okul, öğretmen ve öğrenci listesi sistemden gelir; rapor için sınıf, ders ve sınavı seçmeniz yeterlidir.</p>
+          </div>
+          <button type="button" id="btn-hazirla" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2 hover:bg-okul-900">Seçili sınıfı hazırla</button>
+        </div>
         <div class="grid sm:grid-cols-2 gap-3">
-          <label class="block text-xs font-bold text-slate-600">Okul adı<input class="${inputClass(true)} mt-1" value="${esc(m.okulAdi)}" data-meta="okulAdi"/></label>
-          <label class="block text-xs font-bold text-slate-600">Ders<input class="${inputClass(true)} mt-1" value="${esc(m.ders)}" data-meta="ders"/></label>
-          <label class="block text-xs font-bold text-slate-600">Öğretmen<input class="${inputClass(true)} mt-1" value="${esc(m.ogretmen)}" data-meta="ogretmen"/></label>
-          <label class="block text-xs font-bold text-slate-600">Müdür<input class="${inputClass(true)} mt-1" value="${esc(m.mudur)}" data-meta="mudur"/></label>
+          <label class="block text-xs font-bold text-slate-600">Okul adı<input class="${inputClass(true)} mt-1 bg-slate-50" value="${esc(m.okulAdi)}" data-meta="okulAdi" readonly/></label>
+          <label class="block text-xs font-bold text-slate-600">Ders
+            <select class="${inputClass(true)} mt-1" data-meta="ders">
+              ${DERSLER.map((d) => `<option value="${escAttr(d)}" ${m.ders === d ? "selected" : ""}>${esc(d)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="block text-xs font-bold text-slate-600">Öğretmen<input class="${inputClass(true)} mt-1 bg-slate-50" value="${esc(m.ogretmen)}" data-meta="ogretmen" readonly/></label>
+          <label class="block text-xs font-bold text-slate-600">Müdür<input class="${inputClass(true)} mt-1 bg-slate-50" value="${esc(m.mudur)}" data-meta="mudur" readonly/></label>
           <label class="block text-xs font-bold text-slate-600">Sınav adı<input class="${inputClass(true)} mt-1" value="${esc(m.sinavAdi)}" data-meta="sinavAdi"/></label>
           <label class="block text-xs font-bold text-slate-600">Eğitim yılı<input class="${inputClass(true)} mt-1" value="${esc(m.egitimYili)}" data-meta="egitimYili"/></label>
         </div>
@@ -564,12 +589,14 @@
               ).join("")}
             </select>
           </label>
-          <label class="block text-xs font-bold text-slate-600">Sınıf mevcudu (rapor)
-            <input class="${inputClass(true)} mt-1" type="number" min="0" value="${esc(m.sinifMevcudu)}" data-meta="sinifMevcudu"/>
-          </label>
-          <label class="block text-xs font-bold text-slate-600">Sınava katılan (rapor, boşsa otomatik)
-            <input class="${inputClass(true)} mt-1" type="number" min="0" value="${esc(m.sinavaKatilan)}" data-meta="sinavaKatilan"/>
-          </label>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <div class="text-[10px] font-bold text-slate-500">Sınıf mevcudu</div>
+            <div class="text-lg font-black text-slate-900">${seciliMevcut || "—"}</div>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <div class="text-[10px] font-bold text-slate-500">Sınava katılan</div>
+            <div class="text-lg font-black text-slate-900">${aktifKatilan || "—"}</div>
+          </div>
           <label class="block text-xs font-bold text-slate-600">Başarı eşiği (puan)<input class="${inputClass(true)} mt-1" type="number" min="0" value="${esc(m.basariEsik)}" data-meta="basariEsik"/></label>
           <label class="block text-xs font-bold text-slate-600">Zayıf kazanım eşiği (%)
             <input class="${inputClass(true)} mt-1" type="number" min="0" max="100" value="${esc(m.zayifKazanimEsik)}" data-meta="zayifKazanimEsik"/></label>
@@ -580,15 +607,17 @@
       </div>`;
     el.querySelectorAll("[data-meta]").forEach((inp) => {
       const k = inp.getAttribute("data-meta");
-      inp.addEventListener("input", () => setMeta(k, inp.value));
+      const ev = inp.tagName === "SELECT" ? "change" : "input";
+      inp.addEventListener(ev, () => setMeta(k, inp.value));
     });
+    el.querySelector("#btn-hazirla")?.addEventListener("click", () => sinifListesiYukle());
     const sel = el.querySelector("[data-sinif-select]");
     if (sel) {
       sel.value = String(m.sinifId || "");
-      sel.addEventListener("change", () => {
+      sel.addEventListener("change", async () => {
         state.meta.sinifId = parseInt(sel.value, 10) || null;
         syncSinifFromSelect();
-        renderActivePanel();
+        await sinifListesiYukle();
       });
     }
   }
@@ -636,10 +665,11 @@
         <div class="flex flex-wrap items-center gap-2 justify-between">
           <h2 class="text-sm font-black text-slate-800">Öğrenci listesi</h2>
           <div class="flex flex-wrap gap-2">
-            <button type="button" id="btn-sinif-yukle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2 hover:bg-okul-900">ECO’dan yükle</button>
+            <button type="button" id="btn-sinif-yukle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2 hover:bg-okul-900">Sistemden yenile</button>
             <button type="button" id="btn-ogr-ekle" class="rounded-xl border border-slate-300 text-xs font-bold px-3 py-2 hover:bg-slate-50">Satır ekle</button>
           </div>
         </div>
+        <p class="text-xs text-slate-500">Sınıf seçildiğinde liste otomatik dolar. Sınava girmeyen öğrenci için G kutusunu işaretleyin.</p>
         <div class="overflow-x-auto border border-slate-200 rounded-xl">
           <table class="min-w-full text-xs">
             <thead><tr class="bg-slate-100 text-left font-bold text-slate-700">
@@ -704,7 +734,7 @@
             <label class="text-[11px] font-bold text-slate-600 flex-1 min-w-[120px]">Filtre<input id="muf-filt" class="${inputClass(true)} ml-1 w-full" placeholder=" çıktı metninde ara…" value="${esc(mufredatFilter)}"/></label>
           </div>
           <div id="muf-sonuc" class="max-h-48 overflow-auto text-[11px] border border-slate-200 rounded-lg bg-white"></div>
-          <p class="text-[10px] text-slate-500">Seçilen satır, aktif soru türüne (${tur}) metin olarak eklenir; puanı aşağıdan düzenleyebilirsiniz.</p>
+          <p class="text-[10px] text-slate-500">Dersiniz otomatik seçilir. Seçilen TYMM öğrenme çıktısı aktif soru türüne (${tur}) eklenir; puanı aşağıdan düzenleyebilirsiniz.</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" id="btn-soru-ekle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2">Bu türe boş soru ekle</button>
@@ -794,9 +824,10 @@
           const dersAdlari = Object.keys(curriculumCache.dersler || {}).sort();
           if (mfDers) {
             const selD = mfDers.value;
+            const hedefDers = curriculumDersAdi(state.meta.ders);
             mfDers.innerHTML =
               `<option value="">— Ders seçin —</option>` +
-              dersAdlari.map((d) => `<option value="${escAttr(d)}"${selD === d ? " selected" : ""}>${esc(d)}</option>`).join("");
+              dersAdlari.map((d) => `<option value="${escAttr(d)}"${(selD || hedefDers) === d ? " selected" : ""}>${esc(d)}</option>`).join("");
           }
           mufredatCiz();
         } catch (e) {
@@ -813,9 +844,10 @@
     }
     if (curriculumCache && mfDers) {
       const dersAdlari = Object.keys(curriculumCache.dersler || {}).sort();
+      const hedefDers = curriculumDersAdi(state.meta.ders);
       mfDers.innerHTML =
         `<option value="">— Ders seçin —</option>` +
-        dersAdlari.map((d) => `<option value="${escAttr(d)}">${esc(d)}</option>`).join("");
+        dersAdlari.map((d) => `<option value="${escAttr(d)}"${hedefDers === d ? " selected" : ""}>${esc(d)}</option>`).join("");
       mufredatCiz();
     }
   }
@@ -973,6 +1005,9 @@
   renderTabs();
   showPanel();
   renderActivePanel();
+  if (state.meta.sinifId && state.ogrenciler.length === 0) {
+    sinifListesiYukle();
+  }
 })();
 </script>
 {% endblock %}
