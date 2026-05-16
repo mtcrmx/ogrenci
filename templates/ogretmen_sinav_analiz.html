@@ -48,7 +48,7 @@
     { id: "bilgi", icon: "🏠", label: "Bilgi girişi" },
     { id: "tur", icon: "⚙️", label: "Analiz türü" },
     { id: "sinif", icon: "🏫", label: "Sınıf listesi" },
-    { id: "soru", icon: "📝", label: "Kazanımlar" },
+    { id: "soru", icon: "📝", label: "Öğrenme çıktıları" },
     { id: "not", icon: "🎓", label: "Öğrenci notları" },
     { id: "rapor", icon: "🖨️", label: "Rapor" },
     { id: "yedek", icon: "💾", label: "Veri / yedek" },
@@ -85,9 +85,9 @@
         basariEsik: "50",
         zayifKazanimEsik: "60",
         degerlendirmeEk: (
-          "Hata yapılan soruların ait olduğu kazanımların tekrarı için 2 ders saati süre ayrılmıştır. " +
+          "Hata yapılan soruların ait olduğu öğrenme çıktılarının tekrarı için 2 ders saati süre ayrılmıştır. " +
           "Sınav soruları sınıfta çözülerek kağıtlar öğrencilere dağıtılmış ve hatalarını görmeleri sağlanmıştır. " +
-          "Bu belirtilen konularla ilgili ödevlendirme yapılmıştır. Ayrıca her öğrencinin tek tek eksik kazanım veya " +
+          "Bu belirtilen konularla ilgili ödevlendirme yapılmıştır. Ayrıca her öğrencinin tek tek eksik öğrenme çıktısı veya " +
           "öğrenme çıktıları tespit edilerek \"Öğrenci Bazlı Sınav Analizi\" hazırlanıp bu rapora eklenmiştir."
         ),
       },
@@ -277,8 +277,8 @@
     const parcalar = [];
     if (q.unite) parcalar.push("Ünite/Tema: " + q.unite);
     if (q.konu) parcalar.push("Konu/İçerik: " + q.konu);
-    if (q.metin) parcalar.push("Kazanım: " + q.metin);
-    return parcalar.join(" | ") || "(Tanımsız kazanım)";
+    if (q.metin) parcalar.push("Öğrenme Çıktısı: " + q.metin);
+    return parcalar.join(" | ") || "(Tanımsız öğrenme çıktısı)";
   }
 
   function esc(s) {
@@ -348,7 +348,7 @@
         </tr>`;
       }).join("");
       return `<h2 style="font-size:13pt;margin:16px 0 8px">${TUR_RAPOR_BASLIK[tur] || tur}</h2>
-        <table><thead><tr><th>No</th><th>Ünite/Tema</th><th>Konu/İçerik Çerçevesi</th><th>Kazanım / Öğrenme Çıktısı</th><th>Puan</th><th>Ort.</th><th>Başarı %</th></tr></thead>
+        <table><thead><tr><th>No</th><th>Ünite/Tema</th><th>Konu/İçerik Çerçevesi</th><th>Öğrenme Çıktısı</th><th>Puan</th><th>Ort.</th><th>Başarı %</th></tr></thead>
         <tbody>${satirlar}</tbody></table>`;
     }).join("");
 
@@ -365,8 +365,8 @@
     const degerParagraf = `Yapılan ortak sınav sonucu ${esc(m.sinifAdi || "—")} sınıfının (Sınava katılan ${H.katSay} öğrenci üzerinden) genel ortalaması ${H.ortPuan ? H.ortPuan.toFixed(2) : "—"} olarak hesaplanmıştır. Sınavda ${H.basarililar} öğrenci başarılı olurken, ${H.basarisiz} öğrenci başarısız olmuştur.`;
 
     const zayifBlock = zayifTekil.length
-      ? `<p><b>Eksik Kazanımlar:</b></p><ul>${zayifTekil.map((l) => "<li>" + esc(l) + "</li>").join("")}</ul><p>olarak tespit edilmiştir.</p>`
-      : "<p><b>Eksik kazanım:</b> Belirlenen eşiğin altında soru bulunmuyor veya not girilmemiş.</p>";
+      ? `<p><b>Eksik Öğrenme Çıktıları:</b></p><ul>${zayifTekil.map((l) => "<li>" + esc(l) + "</li>").join("")}</ul><p>olarak tespit edilmiştir.</p>`
+      : "<p><b>Eksik öğrenme çıktısı:</b> Belirlenen eşiğin altında soru bulunmuyor veya not girilmemiş.</p>";
 
     const ek = (m.degerlendirmeEk || "").trim()
       ? `<p style="margin-top:10px;white-space:pre-wrap">${esc(m.degerlendirmeEk)}</p>`
@@ -406,7 +406,7 @@
     const sayfa2 = `
       <div class="sayfa break">
         <h2 style="text-align:center;font-size:14pt">${esc(m.sinifAdi || "—")} ÖĞRENCİ BAZLI SINAV ANALİZİ</h2>
-        <table><thead><tr><th>No</th><th>Öğrenci</th><th>PUAN</th><th>Eksik Kazanımlar</th></tr></thead>
+        <table><thead><tr><th>No</th><th>Öğrenci</th><th>PUAN</th><th>Eksik Öğrenme Çıktıları</th></tr></thead>
         <tbody>${ogrSatir}</tbody></table>
       </div>`;
 
@@ -616,7 +616,7 @@
             <div class="text-lg font-black text-slate-900">${aktifKatilan || "—"}</div>
           </div>
           <label class="block text-xs font-bold text-slate-600">Başarı eşiği (puan)<input class="${inputClass(true)} mt-1" type="number" min="0" value="${esc(m.basariEsik)}" data-meta="basariEsik"/></label>
-          <label class="block text-xs font-bold text-slate-600">Zayıf kazanım eşiği (%)
+          <label class="block text-xs font-bold text-slate-600">Zayıf öğrenme çıktısı eşiği (%)
             <input class="${inputClass(true)} mt-1" type="number" min="0" max="100" value="${esc(m.zayifKazanimEsik)}" data-meta="zayifKazanimEsik"/></label>
         </div>
         <label class="block text-xs font-bold text-slate-600">Ek değerlendirme notu (raporda basılır)
@@ -725,9 +725,7 @@
       .map((q, idx) => {
         return `<tr class="border-t border-slate-100 align-top">
           <td class="p-2 w-16"><input type="number" min="0" class="${inputClass(true)}" value="${q.puan}" data-sq-idx="${idx}" data-sq-k="puan"/></td>
-          <td class="p-2 min-w-[170px]"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="unite" placeholder="Ünite / Tema">${esc(q.unite || "")}</textarea></td>
-          <td class="p-2 min-w-[180px]"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="konu" placeholder="Konu / İçerik çerçevesi">${esc(q.konu || "")}</textarea></td>
-          <td class="p-2 min-w-[240px]"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="metin" placeholder="Kazanım / Öğrenme çıktısı">${esc(q.metin || "")}</textarea></td>
+          <td class="p-2 min-w-[320px]"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="metin" placeholder="Öğrenme çıktısı">${esc(q.metin || "")}</textarea></td>
           <td class="p-2 w-10"><button type="button" data-sq-del="${idx}" class="text-red-600 font-bold text-lg leading-none" title="Sil">×</button></td>
         </tr>`;
       })
@@ -735,7 +733,7 @@
 
     el.innerHTML = `
       <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <h2 class="text-sm font-black text-slate-800">Kazanımlar / öğrenme çıktıları</h2>
+        <h2 class="text-sm font-black text-slate-800">Öğrenme çıktıları</h2>
         <div class="flex flex-wrap gap-1">
           ${turler
             .map(
@@ -747,22 +745,22 @@
             .join("")}
         </div>
         <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3 space-y-2">
-          <p class="text-[11px] font-bold text-amber-900">Drive kazanım havuzu — ünite/tema, konu/içerik ve öğrenme çıktısı ara</p>
+          <p class="text-[11px] font-bold text-amber-900">Drive öğrenme çıktısı havuzu</p>
           <div class="flex flex-wrap gap-2 items-end">
-            <button type="button" id="btn-muf-yukle" class="rounded-lg bg-slate-800 text-white text-xs font-bold px-3 py-2">Drive kazanımlarını yükle</button>
+            <button type="button" id="btn-muf-yukle" class="rounded-lg bg-slate-800 text-white text-xs font-bold px-3 py-2">Drive öğrenme çıktılarını yükle</button>
             <label class="text-[11px] font-bold text-slate-600">Ders<select id="muf-ders" class="${inputClass(true)} ml-1 min-w-[140px]"><option value="">—</option></select></label>
-            <label class="text-[11px] font-bold text-slate-600 flex-1 min-w-[120px]">Filtre<input id="muf-filt" class="${inputClass(true)} ml-1 w-full" placeholder=" ünite, konu veya çıktıda ara…" value="${esc(mufredatFilter)}"/></label>
+            <label class="text-[11px] font-bold text-slate-600 flex-1 min-w-[120px]">Filtre<input id="muf-filt" class="${inputClass(true)} ml-1 w-full" placeholder=" öğrenme çıktısında ara…" value="${esc(mufredatFilter)}"/></label>
           </div>
           <div id="muf-sonuc" class="max-h-48 overflow-auto text-[11px] border border-slate-200 rounded-lg bg-white"></div>
-          <p class="text-[10px] text-slate-500">Dersiniz otomatik seçilir. Seçilen Drive kazanımı aktif sınav bölümüne (${tur}) ünite, konu ve öğrenme çıktısıyla eklenir; puanı aşağıdan düzenleyebilirsiniz.</p>
+          <p class="text-[10px] text-slate-500">Dersiniz otomatik seçilir. Seçilen öğrenme çıktısı aktif sınav bölümüne (${tur}) eklenir; puanı aşağıdan düzenleyebilirsiniz.</p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button type="button" id="btn-soru-ekle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2">Boş kazanım ekle</button>
+          <button type="button" id="btn-soru-ekle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2">Boş öğrenme çıktısı ekle</button>
         </div>
         <div class="overflow-x-auto border border-slate-200 rounded-xl">
           <table class="min-w-full text-xs">
-            <thead><tr class="bg-slate-100 text-left font-bold text-slate-700"><th class="p-2 w-20">Puan</th><th class="p-2">Ünite/Tema</th><th class="p-2">Konu/İçerik Çerçevesi</th><th class="p-2">Kazanım / öğrenme çıktısı</th><th class="p-2 w-8"></th></tr></thead>
-            <tbody>${satirlar || `<tr><td colspan="5" class="p-4 text-center text-slate-500">Henüz kazanım yok.</td></tr>`}</tbody>
+            <thead><tr class="bg-slate-100 text-left font-bold text-slate-700"><th class="p-2 w-20">Puan</th><th class="p-2">Öğrenme çıktısı</th><th class="p-2 w-8"></th></tr></thead>
+            <tbody>${satirlar || `<tr><td colspan="3" class="p-4 text-center text-slate-500">Henüz öğrenme çıktısı yok.</td></tr>`}</tbody>
           </table>
         </div>
       </div>`;
@@ -823,7 +821,6 @@
           (r, i) =>
             `<div class="border-b border-slate-100 px-2 py-1.5 hover:bg-amber-50/80">
               <button type="button" class="text-left w-full" data-muf-pick="${i}">
-                <span class="text-[10px] text-slate-500"><b>Ünite/Tema:</b> ${esc(r.tema)} · <b>Konu/İçerik:</b> ${esc(r.konu)}</span><br/>
                 <span class="text-slate-800">${esc(r.metin)}</span>
               </button>
             </div>`
@@ -915,7 +912,7 @@
             <thead class="sticky top-0 z-10"><tr class="bg-slate-100 font-bold text-slate-700">
               <th class="p-1 border border-slate-200 w-12">No</th><th class="p-1 border border-slate-200 w-36">Öğrenci</th>${head}
             </tr></thead>
-            <tbody>${body || `<tr><td colspan="${2 + fq.length}" class="p-4 text-center text-slate-500">Öğrenci veya kazanım yok.</td></tr>`}</tbody>
+            <tbody>${body || `<tr><td colspan="${2 + fq.length}" class="p-4 text-center text-slate-500">Öğrenci veya öğrenme çıktısı yok.</td></tr>`}</tbody>
           </table>
         </div>
       </div>`;
