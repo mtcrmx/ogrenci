@@ -286,6 +286,11 @@
               <span><span class="block font-black">Canlı yayın</span>
               <span class="block text-[11px] font-medium text-slate-500">Akıllı tahta ve okul panosu</span></span>
             </a>
+            <a href="{{ url_for('satranc') }}" class="nav-link">
+              <span class="nav-mark mark-sky">ST</span>
+              <span><span class="block font-black">Satranç arenası</span>
+              <span class="block text-[11px] font-medium text-slate-500">Tek oyuncu ve bire bir oyun</span></span>
+            </a>
             <a href="{{ url_for('lig') }}" class="nav-link">
               <span class="nav-mark mark-amber">LG</span>
               <span><span class="block font-black">Süper Lig</span>
@@ -379,6 +384,7 @@
       <h2 class="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Oyun ve Yayın</h2>
       <div class="grid grid-cols-2 gap-2">
         <a href="{{ url_for('yayin', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('yayin') }}" class="mobile-link"><span class="nav-mark mark-violet">YY</span><span>Yayın</span></a>
+        <a href="{{ url_for('satranc') }}" class="mobile-link"><span class="nav-mark mark-sky">ST</span><span>Satranç</span></a>
         <a href="{{ url_for('lig') }}" class="mobile-link"><span class="nav-mark mark-amber">LG</span><span>Lig</span></a>
         <a href="{{ url_for('ogretmen_ogrenci_maclari') }}" class="mobile-link"><span class="nav-mark mark-emerald">MO</span><span>Maç onay</span></a>
         <a href="{{ url_for('oduller') }}" class="mobile-link"><span class="nav-mark mark-rose">ÖD</span><span>Ödüller</span></a>

@@ -708,6 +708,27 @@ def oyunlar():
     )
 
 
+@app.route("/satranc")
+def satranc():
+    puan_kaydet = False
+    if session.get("ogrenci_giris") and session.get("ogrenci_id"):
+        oid = int(session["ogrenci_id"])
+        o = _ogrenci_bul(oid)
+        if not o:
+            session.pop("ogrenci_giris", None)
+            session.pop("ogrenci_id", None)
+            return redirect(url_for("ogrenci_giris"))
+        puan_kaydet = True
+    elif session.get("ogretmen_id"):
+        o = {
+            "ad_soyad": session.get("ogretmen_adi", "Öğretmen"),
+            "sinif_adi": "Öğretmen Paneli",
+        }
+    else:
+        return redirect(url_for("ogrenci_giris", next=request.path))
+    return render_template("satranc.html", ogrenci=o, puan_kaydet=puan_kaydet)
+
+
 @app.route("/ogrenci/mac")
 @ogrenci_giris_zorunlu
 def ogrenci_mac_panel():
