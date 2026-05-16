@@ -32,7 +32,6 @@
     els.modeLocal = document.getElementById("modeLocal");
     els.difficulty = document.getElementById("difficulty");
     els.newGame = document.getElementById("newGameBtn");
-    els.undo = document.getElementById("undoBtn");
     els.flip = document.getElementById("flipBtn");
     els.whitePlayer = document.getElementById("whitePlayer");
     els.blackPlayer = document.getElementById("blackPlayer");
@@ -40,7 +39,6 @@
     els.modeAi.addEventListener("click", () => resetGame("ai"));
     els.modeLocal.addEventListener("click", () => resetGame("local"));
     els.newGame.addEventListener("click", () => resetGame(game?.mode || "ai"));
-    els.undo.addEventListener("click", undoMove);
     els.flip.addEventListener("click", () => {
       game.orientation = game.orientation === "w" ? "b" : "w";
       renderBoard();
@@ -65,7 +63,6 @@
       lastMove: null,
       takenBy: { w: [], b: [] },
       history: [],
-      snapshots: [],
       status: "playing",
       winner: null,
       thinking: false,
@@ -236,7 +233,6 @@
   async function commitMove(move) {
     if (game.status !== "playing") return;
     const movingColor = game.turn;
-    saveSnapshot();
     game.busy = true;
     await animateTravel(move);
 
@@ -548,54 +544,6 @@
     } catch (error) {
       els.notice.textContent = error.message;
     }
-  }
-
-  function undoMove() {
-    if (!game.snapshots.length || game.busy || game.thinking) return;
-    const keepResultSaved = game.resultSaved;
-    let steps = game.mode === "ai" && game.turn === "w" && game.history.length >= 2 ? 2 : 1;
-    while (steps > 0 && game.snapshots.length) {
-      const snapshot = game.snapshots.pop();
-      restoreSnapshot(snapshot, keepResultSaved);
-      steps -= 1;
-    }
-    game.status = "playing";
-    game.winner = null;
-    game.selected = null;
-    game.legal = [];
-    renderAll();
-  }
-
-  function saveSnapshot() {
-    game.snapshots.push({
-      board: cloneBoard(game.board),
-      turn: game.turn,
-      mode: game.mode,
-      orientation: game.orientation,
-      difficulty: game.difficulty,
-      lastMove: game.lastMove ? copyMoveEdge(game.lastMove) : null,
-      takenBy: {
-        w: game.takenBy.w.map((piece) => ({ ...piece })),
-        b: game.takenBy.b.map((piece) => ({ ...piece })),
-      },
-      history: game.history.map((item) => ({ ...item })),
-      resultSaved: game.resultSaved,
-    });
-  }
-
-  function restoreSnapshot(snapshot, keepResultSaved) {
-    game.board = cloneBoard(snapshot.board);
-    game.turn = snapshot.turn;
-    game.mode = snapshot.mode;
-    game.orientation = snapshot.orientation;
-    game.difficulty = snapshot.difficulty;
-    game.lastMove = snapshot.lastMove ? copyMoveEdge(snapshot.lastMove) : null;
-    game.takenBy = {
-      w: snapshot.takenBy.w.map((piece) => ({ ...piece })),
-      b: snapshot.takenBy.b.map((piece) => ({ ...piece })),
-    };
-    game.history = snapshot.history.map((item) => ({ ...item }));
-    game.resultSaved = keepResultSaved || snapshot.resultSaved;
   }
 
   function animateTravel(move) {
