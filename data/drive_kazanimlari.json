@@ -1,49 +1,181 @@
 {
-  "kaynak": "Google Drive / ÖĞRETMENLER / 2025-2026 / MAARİF MODEL klasörlerinden çekilen okul içi kazanım ve öğrenme çıktıları",
-  "surum": "2026-05-15-drive",
+  "kaynak": "Google Drive / Yıllık Planlar klasörü: ders alt klasörlerindeki 2025-2026 yıllık planlardan derlenen ünite/tema, konu/içerik çerçevesi ve öğrenme çıktısı/kazanımlar",
+  "surum": "2026-05-16-yillik-plan",
+  "kaynak_klasor_url": "https://drive.google.com/drive/u/0/folders/1oNUUtXiVm4A5o9l884WvwbhwQIbjEesd",
+  "kaynak_dosyalar": [
+    "Matematik: 2025 5.Sınıf matematik Yıllık Plan.docx",
+    "Matematik: 2025 7.Sınıf matematik Yıllık Plan.docx",
+    "Matematik: 2025-2026 8.Sınıflar Matematik Dersi Yıllık Plan.docx",
+    "Türkçe: MEB YAYINLARI 5. SINIF TÜRKÇE DERSİ YILLIK PLAN.pdf",
+    "Türkçe: GÜNCELLENEN 6. SINIF MEB YAYINLARI TÜRKÇE YILLIK PLANI (YLZ) 2025-2026.DOCX",
+    "Türkçe: 7.SINIF-OZGUN-2026.docx",
+    "Fen Bilimleri: 2025-2026 5.SINIF FEN BİLİMLERİ PLAN.docx",
+    "Sosyal Bilgiler: 2025-2026-5.-Sinif-Sosyal-Bilgiler-Yillik-Plani-WORD.docx",
+    "Sosyal Bilgiler: 2025-2026-6.-Sinif-Sosyal-Bilgiler-Yillik-Plani-WORD.docx",
+    "Din Kültürü ve Ahlak Bilgisi: 2024-2025 ERENLER CUMHURİYET ORT- DKAB 5- YILLIK PLAN.docx",
+    "Müzik: 5_Sinif_Muzik_Yillik_Plan.docx",
+    "Müzik: 2025-2026 Eğitim Öğretim Yılı Müzik-7 dersi Yıllık Planı Document.PDF",
+    "İngilizce: 5. sınıf İngilizce yıllık plan.docx",
+    "İngilizce: 6. sınıf İngilizce yıllık plan.docx",
+    "İngilizce: 7. sınıf İngilizce yıllık plan.docx",
+    "Bilişim Teknolojileri ve Yazılım: 5-sinif-bil-tek-ve-yazilim-maarif-m-yillik-plan-ogretmenevrak-1775381163.docx"
+  ],
   "dersler": {
     "Türkçe": [
       {
-        "tema": "Drive · 5. sınıf Türkçe · Mart ayı TYMM raporu",
+        "tema": "Drive · 5. sınıf Türkçe · 2025-2026 yıllık plan",
         "konular": [
           {
-            "baslik": "Dinleme/izleme kazanımları",
+            "baslik": "Oyun Dünyası · Dinleme/izleme, okuma, konuşma ve yazma",
             "ciktilar": [
               "T.D.5.1. Dinlemede/izlemede materyal seçimini yönetebilme",
-              "T.D.5.2. Dinlemede/izlemede strateji ve yöntem seçimlerini yönetebilme",
-              "T.D.5.8. Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme",
-              "T.D.5.10. Dinledikleri/izledikleri arasında karşılaştırma yapabilme",
-              "T.D.5.12. Dinlediğini/izlediğini yorumlayabilme",
-              "T.D.5.24. Dinlediğindeki/izlediğindeki probleme çözüm üretebilme",
-              "T.D.5.25. Dinleme/izleme sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme"
-            ]
-          },
-          {
-            "baslik": "Okuma kazanımları",
-            "ciktilar": [
+              "T.D.5.4. Dinlediğinde/izlediğinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
+              "T.D.5.5. Dinlediğinin/izlediğinin yüzey anlamını belirleyebilme",
+              "T.D.5.19. Dinlediğinden/izlediğinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
+              "T.D.5.25. Dinleme/izleme sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
               "T.O.5.1. Okumada materyal seçimini yönetebilme",
+              "T.O.5.2. Sesli ve sessiz okurken akıcı okuma unsurlarını yönetebilme",
               "T.O.5.3. Okumada strateji ve yöntem seçimlerini yönetebilme",
-              "T.O.5.9. Metnin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme",
-              "T.O.5.11. Metinler arası karşılaştırma yapabilme",
-              "T.O.5.13. Metni yorumlayabilme",
-              "T.O.5.26. Metindeki probleme çözüm üretebilme",
-              "T.O.5.27. Okuma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme"
-            ]
-          },
-          {
-            "baslik": "Konuşma ve yazma kazanımları",
-            "ciktilar": [
+              "T.O.5.5. Metinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
+              "T.O.5.6. Metnin yüzey anlamını belirleyebilme",
+              "T.O.5.21. Metinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
+              "T.O.5.27. Okuma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
               "T.K.5.1. Konuşma sürecini yönetebilme",
-              "T.K.5.5. Konuşmasında uygun tepki verebilme",
-              "T.K.5.13. Konuşmasında sınıflandırma yapabilme",
-              "T.K.5.15. Sözlü olarak özetleyebilme",
-              "T.K.5.19. Problem çözümüne yönelik konuşma yapabilme",
+              "T.K.5.3. Konuşmasında amaç ve içeriğe yönelik seçimlerini yönetebilme",
+              "T.K.5.4. Konuşmasında ön bilgilerinden yararlanabilme",
+              "T.K.5.9. Konuşmasında sesini uygun şekilde kullanabilme",
+              "T.K.5.22. Konuşmasını zenginleştirecek biçimde söz varlığını kullanabilme",
+              "T.K.5.26. Konuşma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
               "T.Y.5.1. Yazma sürecini yönetebilme",
               "T.Y.5.3. Yazısında içerik ve yapıya yönelik seçimlerini yönetebilme",
-              "T.Y.5.10. Yazısında sınıflandırma yapabilme",
-              "T.Y.5.12. Yazılı olarak özetleyebilme",
-              "T.Y.5.16. Problem çözümüne yönelik yazabilme",
-              "T.Y.5.21. Yazım kuralları ve noktalama işaretlerini uygulayabilme"
+              "T.Y.5.4. Yazılı üretim ve yazılı etkileşiminde ön bilgilerinden yararlanabilme",
+              "T.Y.5.18. Yazısını zenginleştirecek biçimde söz varlığını kullanabilme",
+              "T.Y.5.21. Yazım kuralları ve noktalama işaretlerini uygulayabilme",
+              "T.Y.5.22. Yazma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme"
+            ]
+          },
+          {
+            "baslik": "Sağlıklı Yaşıyorum · Bilgilendirici metin, çoklu ortam ve değerlendirme",
+            "ciktilar": [
+              "T.D.5.14. Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme",
+              "T.D.5.20. Çoklu ortam ögelerine yönelik çözümleme yapabilme",
+              "T.D.5.22. Dinlediğini/izlediğini değerlendirebilme",
+              "T.D.5.23. Dinlediğini/izlediğini eleştirebilme",
+              "T.O.5.15. Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme",
+              "T.O.5.22. Çoklu ortam ögelerine yönelik çözümleme yapabilme",
+              "T.O.5.24. Okuduğunu değerlendirebilme",
+              "T.O.5.25. Metni eleştirebilme",
+              "T.K.5.6. Konuşmasında çoklu ortam ögeleriyle içerik oluşturabilme",
+              "T.K.5.10. Sözlü sunum yapabilme",
+              "T.K.5.14. Yorumunu sözlü olarak ifade edebilme",
+              "T.K.5.16. Değerlendirmesini sözlü olarak ifade edebilme",
+              "T.K.5.18. Eleştirisini sözlü olarak ifade edebilme",
+              "T.Y.5.6. Yazısında çoklu ortam ögeleriyle içerik oluşturabilme",
+              "T.Y.5.11. Yorumunu yazılı olarak ifade edebilme",
+              "T.Y.5.13. Değerlendirmesini yazılı olarak ifade edebilme",
+              "T.Y.5.15. Eleştirisini yazılı olarak ifade edebilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6. sınıf Türkçe · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Dilimizin Zenginlikleri · Dinleme/izleme, okuma, konuşma ve yazma",
+            "ciktilar": [
+              "T.D.6.1. Dinlemede/izlemede materyal seçimini yönetebilme",
+              "T.D.6.4. Dinlediğinde/izlediğinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
+              "T.D.6.5. Dinlediğinin/izlediğinin yüzey anlamını belirleyebilme",
+              "T.D.6.19. Dinlediğinden/izlediğinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
+              "T.D.6.25. Dinleme/izleme sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
+              "T.O.6.1. Okumada materyal seçimini yönetebilme",
+              "T.O.6.2. Sesli ve sessiz okurken akıcı okuma unsurlarını yönetebilme",
+              "T.O.6.4. Okuyacağı metnin içeriğine yönelik tahminde bulunabilme",
+              "T.O.6.5. Metinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
+              "T.O.6.6. Metnin yüzey anlamını belirleyebilme",
+              "T.O.6.21. Metinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
+              "T.O.6.27. Okuma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
+              "T.K.6.1. Konuşma sürecini yönetebilme",
+              "T.K.6.22. Konuşmasını zenginleştirecek biçimde söz varlığını kullanabilme",
+              "T.K.6.26. Konuşma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
+              "T.Y.6.1. Yazma sürecini yönetebilme",
+              "T.Y.6.18. Yazısını zenginleştirecek biçimde söz varlığını kullanabilme",
+              "T.Y.6.21. Yazım kuralları ve noktalama işaretlerini uygulayabilme",
+              "T.Y.6.22. Yazma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme"
+            ]
+          },
+          {
+            "baslik": "Lider Ruhlar · Değerlendirme, eleştiri ve problem çözme",
+            "ciktilar": [
+              "T.D.6.22. Dinlediğini/izlediğini değerlendirebilme",
+              "T.D.6.23. Dinlediğini/izlediğini eleştirebilme",
+              "T.D.6.24. Dinlediğindeki/izlediğindeki probleme çözüm üretebilme",
+              "T.O.6.24. Okuduğunu değerlendirebilme",
+              "T.O.6.25. Metni eleştirebilme",
+              "T.O.6.26. Metindeki probleme çözüm üretebilme",
+              "T.K.6.16. Değerlendirmesini sözlü olarak ifade edebilme",
+              "T.K.6.18. Eleştirisini sözlü olarak ifade edebilme",
+              "T.K.6.19. Problem çözümüne yönelik konuşma yapabilme",
+              "T.Y.6.13. Değerlendirmesini yazılı olarak ifade edebilme",
+              "T.Y.6.15. Eleştirisini yazılı olarak ifade edebilme",
+              "T.Y.6.16. Problem çözümüne yönelik yazabilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 7. sınıf Türkçe · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Bilim ve Teknoloji · Okuma, dinleme/izleme, konuşma ve yazma kazanımları",
+            "ciktilar": [
+              "T.7.3.1. Noktalama işaretlerine dikkat ederek sesli ve sessiz okur.",
+              "T.7.3.5. Bağlamdan hareketle bilmediği kelime ve kelime gruplarının anlamını tahmin eder.",
+              "T.7.3.12. Fiillerin anlam özelliklerini fark eder.",
+              "T.7.3.17. Metnin ana fikrini/ana duygusunu belirler.",
+              "T.7.3.18. Metindeki yardımcı fikirleri belirler.",
+              "T.7.3.27. Metinde önemli noktaların vurgulanış biçimlerini kavrar.",
+              "T.7.3.28. Okudukları ile ilgili çıkarımlarda bulunur.",
+              "T.7.3.37. Metinde kullanılan düşünceyi geliştirme yollarını belirler.",
+              "T.7.1.4. Dinledikleri/izlediklerine yönelik soruları cevaplar.",
+              "T.7.1.12. Dinlediklerinin/izlediklerinin içeriğini değerlendirir.",
+              "T.7.2.3. Konuşma stratejilerini uygular.",
+              "T.7.4.4. Yazma stratejilerini uygular."
+            ]
+          },
+          {
+            "baslik": "Milli Mücadele ve Atatürk · Metin anlama ve üretim kazanımları",
+            "ciktilar": [
+              "T.7.3.6. Deyim ve atasözlerinin metne katkısını belirler.",
+              "T.7.3.16. Metnin konusunu belirler.",
+              "T.7.3.19. Metinle ilgili soruları cevaplar.",
+              "T.7.3.21. Metindeki hikaye unsurlarını belirler.",
+              "T.7.3.30. Görsellerle ilgili soruları cevaplar.",
+              "T.7.3.34. Grafik, tablo ve çizelgeyle sunulan bilgileri yorumlar.",
+              "T.7.3.36. Metindeki anlatım biçimlerini belirler.",
+              "T.7.2.4. Konuşmalarında beden dilini etkili bir şekilde kullanır.",
+              "T.7.4.2. Bilgilendirici metin yazar.",
+              "T.7.4.6. Bir işi işlem basamaklarına göre yazar.",
+              "T.7.4.14. Araştırmalarının sonuçlarını yazılı olarak sunar.",
+              "T.7.4.16. Yazdıklarını düzenler."
+            ]
+          },
+          {
+            "baslik": "Okuma Kültürü, Sağlık ve Spor, Doğa ve Evren · Yorumlama ve değerlendirme kazanımları",
+            "ciktilar": [
+              "T.7.3.13. Anlatım bozukluklarını tespit eder.",
+              "T.7.3.22. Metnin içeriğini yorumlar.",
+              "T.7.3.24. Metinde ele alınan sorunlara farklı çözümler üretir.",
+              "T.7.3.25. Metinler arasında karşılaştırma yapar.",
+              "T.7.3.31. Medya metinlerini değerlendirir.",
+              "T.7.3.38. Metindeki iş ve işlem basamaklarını kavrar.",
+              "T.7.1.6. Dinlediklerinin/izlediklerinin ana fikrini/ana duygusunu belirler.",
+              "T.7.1.8. Dinlediği/izlediği hikaye edici metinleri canlandırır.",
+              "T.7.1.13. Dinleme stratejilerini uygular.",
+              "T.7.4.1. Şiir yazar.",
+              "T.7.4.10. Formları yönergelerine uygun doldurur.",
+              "T.7.4.15. Yazılarında uygun geçiş ve bağlantı ifadelerini kullanır."
             ]
           }
         ]
@@ -51,18 +183,80 @@
     ],
     "Matematik": [
       {
-        "tema": "Drive · 5. sınıf Matematik · Nisan ayı TYMM raporu",
+        "tema": "Drive · 5. sınıf Matematik · 2025-2026 yıllık plan",
         "konular": [
           {
-            "baslik": "Kategorik veri dağılımları ve cebirsel düşünme",
+            "baslik": "Geometrik şekiller · Temel geometrik çizimler, açılar, çokgenler ve çember",
+            "ciktilar": [
+              "MAT.5.3.1. Temel geometrik çizimler için matematiksel araç ve teknolojiden yararlanabilme",
+              "MAT.5.3.2. Temel geometrik çizimlere dayalı deneyimlerini yansıtabilme",
+              "MAT.5.3.3. Açıları ölçmek için matematiksel araç ve teknolojiden yararlanabilme",
+              "MAT.5.3.4. Düzlemde iki veya üç doğrunun birbirine göre durumuna bağlı olarak oluşabilecek açılara dair çıkarım yapabilme",
+              "MAT.5.3.5. Çokgenleri düzlemde ardışık olarak kesişen doğruların oluşturduğu kapalı şekiller olarak yorumlayabilme",
+              "MAT.5.3.6. Çokgenlerin özellikleri ile ilgili edindiği deneyimleri yansıtabilme",
+              "MAT.5.3.7. Matematiksel araç ve teknoloji yardımıyla düzlemde iki noktada kesişen çember çiftinin merkezleri ve kesişim noktalarından biri ile inşa edilen üçgenlerin kenar özelliklerine yönelik muhakeme yapabilme"
+            ]
+          },
+          {
+            "baslik": "İstatistiksel araştırma süreci · Kategorik veri dağılımları",
             "ciktilar": [
               "MAT.5.5.1. Kategorik veri ile çalışabilir ve veriye dayalı karar verebilir.",
-              "MAT.5.5.2. Başkalarının oluşturduğu istatistiksel sonuç ve yorumları tartışır.",
-              "MAT.5.2.1. Eşitliğin korunumu ve işlem özelliklerine yönelik çıkarım yapar.",
-              "İstatistiksel araştırma gerektiren günlük yaşam durumlarını fark eder.",
-              "Kategorik veri toplamaya uygun araştırma soruları oluşturur.",
-              "Toplanan verileri düzenler; sıklık tablosu, nokta grafiği, sütun grafiği ve daire grafiği ile gösterir.",
-              "Grafiklerden çıkarım yapar, sonuçları yorumlar ve karar verme sürecinde kullanır."
+              "MAT.5.5.2. Başkaları tarafından oluşturulan kategorik veriye dayalı istatistiksel sonuç veya yorumları tartışabilme"
+            ]
+          },
+          {
+            "baslik": "İşlemlerle cebirsel düşünme",
+            "ciktilar": [
+              "MAT.5.2.1. Eşitliğin korunumuna ve işlem özelliklerine yönelik çıkarım yapabilme",
+              "MAT.5.2.2. Karşılaştığı günlük hayat ya da matematiksel durumlarda işlem önceliğini yorumlayabilme",
+              "MAT.5.2.3. Sayı ve şekil örüntülerinin kuralına ilişkin muhakeme yapabilme",
+              "MAT.5.2.4. Temel aritmetik işlem içeren durumlardaki algoritmaları yorumlayabilme"
+            ]
+          },
+          {
+            "baslik": "Veriden olasılığa · Öznel olasılık",
+            "ciktilar": [
+              "MAT.5.6.1. Herhangi bir olayın olasılığının 0 (imkânsız) ile 1 (kesin) arasında olduğunu yorumlayabilme",
+              "MAT.5.6.2. Olayları az ya da çok olasılıklı şeklinde yapılandırabilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 7. sınıf Matematik · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Sayılar ve işlemler · Tam sayılar ve rasyonel sayılar",
+            "ciktilar": [
+              "M.7.1.1.1. Tam sayılarla toplama ve çıkarma işlemlerini yapar, ilgili problemleri çözer.",
+              "M.7.1.1.2. Toplama işleminin özelliklerini akıcı işlem yapmak için birer strateji olarak kullanır.",
+              "M.7.1.1.3. Tam sayılarla çarpma ve bölme işlemlerini yapar.",
+              "M.7.1.1.4. Tam sayıların kendileri ile tekrarlı çarpımını üslü nicelik olarak ifade eder.",
+              "M.7.1.1.5. Tam sayılarla işlemler yapmayı gerektiren problemleri çözer.",
+              "M.7.1.2.1. Rasyonel sayıları tanır ve sayı doğrusunda gösterir.",
+              "M.7.1.2.2. Rasyonel sayıları ondalık gösterimle ifade eder.",
+              "M.7.1.2.3. Devirli olan ve olmayan ondalık gösterimleri rasyonel sayı olarak ifade eder.",
+              "M.7.1.2.4. Rasyonel sayıları sıralar ve karşılaştırır.",
+              "M.7.1.3.1. Rasyonel sayılarla toplama ve çıkarma işlemlerini yapar."
+            ]
+          },
+          {
+            "baslik": "Geometri ve ölçme · Alan, çember, daire ve görünümler",
+            "ciktilar": [
+              "M.7.3.2.5. Alan ile ilgili problemleri çözer.",
+              "M.7.3.3.1. Çemberde merkez açıları, gördüğü yayları ve açı ölçüleri arasındaki ilişkileri belirler.",
+              "M.7.3.3.2. Çemberin ve çember parçasının uzunluğunu hesaplar.",
+              "M.7.3.3.3. Dairenin ve daire diliminin alanını hesaplar.",
+              "M.7.3.4.2. Farklı yönlerden görünümlerine ilişkin çizimleri verilen yapıları oluşturur."
+            ]
+          },
+          {
+            "baslik": "Veri işleme · Veri analizi",
+            "ciktilar": [
+              "M.7.4.1.1. Verilere ilişkin çizgi grafiği oluşturur ve yorumlar.",
+              "M.7.4.1.2. Bir veri grubuna ait ortalama, ortanca ve tepe değeri bulur ve yorumlar.",
+              "M.7.4.1.3. Bir veri grubuna ilişkin daire grafiğini oluşturur ve yorumlar.",
+              "M.7.4.1.4. Verileri sütun, daire veya çizgi grafiği ile gösterir ve bu gösterimler arasında uygun olan dönüşümleri yapar."
             ]
           }
         ]
@@ -139,8 +333,23 @@
     ],
     "Fen Bilimleri": [
       {
-        "tema": "Drive · 5. sınıf Fen Bilimleri · Şubat ayı TYMM raporu",
+        "tema": "Drive · 5. sınıf Fen Bilimleri · 2025-2026 yıllık plan",
         "konular": [
+          {
+            "baslik": "Gökyüzündeki komşularımız ve biz",
+            "ciktilar": [
+              "FB.5.1.1.1. Güneş’in yapısı ve dönme hareketi ile ilgili bilgileri toplayabilme",
+              "FB.5.1.2.1. Ay’ın özellikleri, dönme ve dolanma hareketleri ile ilgili bilimsel çıkarım yapabilme",
+              "FB.5.1.2.2. Ay’ın evrelerini temsil eden bilimsel model oluşturabilme",
+              "FB.5.1.3.1. Güneş, Dünya ve Ay’ın birbirlerine göre hareketlerini ve hacimsel büyüklüklerini temsil eden bilimsel model oluşturabilme"
+            ]
+          },
+          {
+            "baslik": "Kuvveti tanıyalım",
+            "ciktilar": [
+              "FB.5.2.1.1. Kuvveti büyüklüğü ile tanımlayabilme"
+            ]
+          },
           {
             "baslik": "Canlıların yapısı ve ışığın dünyası",
             "ciktilar": [
@@ -149,20 +358,52 @@
               "FB.5.4.2.1. Maddeleri ışığı geçirme durumlarına göre sınıflandırabilme",
               "FB.5.4.3.1. Tam gölgeye yönelik bilimsel gözlem yapabilme"
             ]
+          },
+          {
+            "baslik": "Sürdürülebilir yaşam ve geri dönüşüm",
+            "ciktilar": [
+              "FB.5.7.1.2. Kaynakların etkili kullanımı konusunda geri dönüşümün önemli olduğuna yönelik bilimsel çıkarımda bulunabilme",
+              "FB.5.7.1.3. Yakın çevresinde atık yönetiminin uygulanabilirliğine ilişkin deneyimlerini yansıtabilme"
+            ]
           }
         ]
       }
     ],
     "Sosyal Bilgiler": [
       {
-        "tema": "Drive · 5. sınıf Sosyal Bilgiler · Şubat ayı TYMM raporu",
+        "tema": "Drive · 5. sınıf Sosyal Bilgiler · 2025-2026 yıllık plan",
         "konular": [
           {
-            "baslik": "Ortak miras, demokrasi ve etkin vatandaşlık",
+            "baslik": "Birlikte Yaşamak · Gruplar, roller, kültürel özellikler ve dayanışma",
             "ciktilar": [
-              "SB.5.3.3. Mezopotamya ve Anadolu medeniyetlerinin ortak mirasa katkılarını karşılaştırabilme",
-              "SB.5.4.1. Demokrasi ve cumhuriyet kavramları arasındaki ilişkiyi çözümleyebilme",
-              "SB.5.4.2. Toplum düzenine etkisi bakımından etkin vatandaş olmanın önemine yönelik çıkarımda bulunabilme"
+              "SB.5.1.1. Dahil olduğu gruplar ve bu gruplardaki rolleri arasındaki ilişkileri çözümleyebilme",
+              "SB.5.1.2. Kültürel özelliklere saygı duymanın birlikte yaşamaya etkisini yorumlayabilme",
+              "SB.5.1.3. Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetlerine katkı sağlayabilme"
+            ]
+          },
+          {
+            "baslik": "Evimiz Dünya · Yaşadığı ilin göreceli konumu",
+            "ciktilar": [
+              "SB.5.2.1. Yaşadığı ilin göreceli konum özelliklerini belirleyebilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6. sınıf Sosyal Bilgiler · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Birlikte Yaşamak · Roller, milli değerler ve toplumsal sorunlar",
+            "ciktilar": [
+              "SB.6.1.1. Dahil olduğu grupların ve bu gruplardaki rollerinin zaman içerisinde değişebileceğine ilişkin çıkarım yapabilme",
+              "SB.6.1.2. Kültürel bağlarımızın ve milli değerlerimizin toplumsal birliğe etkisini yorumlayabilme",
+              "SB.6.1.3. Toplumsal hayatta karşılaşılan sorunlara yönelik çözüm önerilerini müzakere edebilme"
+            ]
+          },
+          {
+            "baslik": "Evimiz Dünya · Ülkemizin, kıtaların ve okyanusların konum özellikleri",
+            "ciktilar": [
+              "SB.6.2.1. Ülkemizin, kıtaların ve okyanusların göreceli konum özelliklerini belirleyebilme"
             ]
           }
         ]
@@ -170,15 +411,27 @@
     ],
     "Din Kültürü": [
       {
-        "tema": "Drive · 6. sınıf DKAB · 1. ünite Maarif Modeli raporu",
+        "tema": "Drive · 5. sınıf Din Kültürü ve Ahlak Bilgisi · 2025-2026 yıllık plan",
         "konular": [
           {
-            "baslik": "Peygamber ve ilahi kitap inancı",
+            "baslik": "Allah İnancı · Evrendeki düzen, tevhit ve İhlas suresi",
             "ciktilar": [
-              "DKAB.6.1.1. Peygamberlerin insanlara rehber olarak gönderilmesi hakkında bilgi toplayabilme",
-              "DKAB.6.1.2. Vahiylerin insanlara ilettiği mesajları yapılandırabilme",
-              "DKAB.6.1.3. İlahi kitaplarla ilgili bilgileri çözümleyebilme",
-              "DKAB.6.1.4. Felak suresini ve bu surenin anlamını okuyarak yorumlayabilme"
+              "5.1.1. Evrendeki mükemmel düzene ilişkin akıl yürütebilme",
+              "5.1.2. Evrendeki mükemmel düzeni gözlem yoluyla fark edip Allah'ın (cc) varlığı ve birliğini gözleme dayalı tahmin edebilme",
+              "5.1.3. Allah'ın (cc) güzel isimleri hakkında bilgi toplayabilme",
+              "5.1.4. İhlas suresini ve bu surenin anlamını okuyarak yorumlayabilme"
+            ]
+          },
+          {
+            "baslik": "Namaz, Peygamber Kıssaları ve Mimarimizde Dini Motifler",
+            "ciktilar": [
+              "5.2.1. Namaz ibadetini özetleyebilme",
+              "5.4.1. Peygamberlik hakkında akıl yürütebilme",
+              "5.4.2. Peygamber kıssalarında verilen öğütleri sentezleyebilme",
+              "5.4.3. Kureyş suresini ve bu surenin anlamını okuyarak yorumlayabilme",
+              "5.5.1. Dinin mimarimize etkisini çözümleyebilme",
+              "5.5.2. Camilerin bölümlerini tanıyabilme",
+              "5.5.3. Kültürümüzde yer alan cami örneklerini karşılaştırabilme"
             ]
           }
         ]
@@ -186,21 +439,116 @@
     ],
     "İngilizce": [
       {
-        "tema": "Drive · 5. sınıf İngilizce · Şubat ayı Maarif Model raporu",
+        "tema": "Drive · 5. sınıf İngilizce · 2025-2026 yıllık plan",
         "konular": [
           {
-            "baslik": "Theme 5: Life in the Neighbourhood - City",
+            "baslik": "SCHOOL LIFE · People, places and rules at school",
             "ciktilar": [
-              "ENG.5.5.L1. Theme 5 dinleme/izleme öğrenme çıktısı",
-              "ENG.5.5.L2. Theme 5 dinleme/izleme öğrenme çıktısı",
-              "ENG.5.5.L3. Theme 5 dinleme/izleme öğrenme çıktısı",
-              "ENG.5.5.L4. Theme 5 dinleme/izleme öğrenme çıktısı",
-              "ENG.5.5.R1. Theme 5 okuma öğrenme çıktısı",
-              "ENG.5.5.R2. Theme 5 okuma öğrenme çıktısı",
-              "ENG.5.5.R3. Theme 5 okuma öğrenme çıktısı",
-              "ENG.5.5.R4. Theme 5 okuma öğrenme çıktısı",
-              "ENG.5.5.W1. Theme 5 yazma öğrenme çıktısı",
-              "ENG.5.5.S5. Theme 5 konuşma/sunum öğrenme çıktısı"
+              "ENG.5.1.L1. Get ready for the listening/watching comprehension process",
+              "ENG.5.1.R1. Get ready for the reading-comprehension process",
+              "ENG.5.1.W1. Get ready for the writing-expression process",
+              "ENG.5.1.S1. Get ready for the speaking-expression process",
+              "ENG.5.1.V1. Select and use target vocabulary related to people, places and rules at school",
+              "ENG.5.1.G1. Select and use target grammatical elements related to school life",
+              "ENG.5.1.L2. Determine the purpose, context and topic of the listening/watching text",
+              "ENG.5.1.R2. Determine the purpose, context and topic of the reading text",
+              "ENG.5.1.W2. Produce a short written text about school life",
+              "ENG.5.1.S2. Speak about people, places and rules at school"
+            ]
+          },
+          {
+            "baslik": "LIFE IN THE UNIVERSE / FUTURE · School holidays, places, activities and plans",
+            "ciktilar": [
+              "ENG.5.8.L1. Get ready for listening/watching texts about holidays and future plans",
+              "ENG.5.8.R1. Get ready for reading texts about holidays and future plans",
+              "ENG.5.8.W1. Get ready for writing about holiday activities and plans",
+              "ENG.5.8.S1. Get ready for speaking about holiday activities and plans",
+              "ENG.5.8.V1. Select and use target vocabulary related to holidays, places, activities and plans",
+              "ENG.5.8.G1. Select and use target grammatical elements related to future plans",
+              "ENG.5.8.L2. Determine the purpose, context and topic of listening/watching texts",
+              "ENG.5.8.R2. Determine the purpose, context and topic of reading texts",
+              "ENG.5.8.W2. Produce a short written text about future plans",
+              "ENG.5.8.S2. Speak about future plans and holiday activities"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6. sınıf İngilizce · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Life, Yummy Breakfast and Downtown",
+            "ciktilar": [
+              "E6.1.L1. Recognize phrases, words and expressions related to repeated actions",
+              "E6.1.SI1. Talk about repeated actions and daily routines",
+              "E6.1.SP1. Talk about repeated actions and routines",
+              "E6.1.SP2. Tell the time and dates",
+              "E6.1.R1. Understand short and simple texts about daily routines",
+              "E6.2.L1. Recognize phrases and expressions about food and drinks",
+              "E6.2.SI1. Accept and refuse offers about food and drinks",
+              "E6.2.SP1. Talk about breakfast preferences",
+              "E6.2.R1. Understand short texts about food and drinks",
+              "E6.3.L1. Recognize expressions about places in a town",
+              "E6.3.SI1. Talk about locations and people in a town",
+              "E6.3.SP1. Describe places and compare people or places"
+            ]
+          },
+          {
+            "baslik": "Weather, Holidays, Bookworms, Saving the Planet and Democracy",
+            "ciktilar": [
+              "E6.4.L1. Recognize words and expressions about weather and emotions",
+              "E6.4.SI1. Talk about weather conditions and emotions",
+              "E6.7.L1. Recognize words and expressions about holidays",
+              "E6.7.SI1. Talk about past holiday activities",
+              "E6.7.W1. Write short and simple texts about holidays",
+              "E6.8.L1. Recognize words and expressions about books and reading habits",
+              "E6.8.R1. Understand short texts about bookworms",
+              "E6.8.W1. Write short texts about reading habits",
+              "E6.9.L1. Recognize words and expressions about environmental problems",
+              "E6.9.SI1. Talk about saving the planet",
+              "E6.9.W1. Write short texts about environmental protection",
+              "E6.10.L1. Recognize words and expressions about democracy",
+              "E6.10.SI1. Talk about elections and classroom democracy",
+              "E6.10.W1. Write short texts about democratic choices"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 7. sınıf İngilizce · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Appearance and Personality, Sports and Biographies",
+            "ciktilar": [
+              "E7.1.L1. Recognize phrases and expressions about appearance and personality",
+              "E7.1.SI1. Talk about appearance and personality",
+              "E7.1.SP1. Describe people and personal qualities",
+              "E7.1.R1. Understand short texts about personal descriptions",
+              "E7.1.W1. Write short descriptions of people",
+              "E7.2.L1. Recognize expressions about sports",
+              "E7.2.SI1. Talk about sports and routines",
+              "E7.2.W1. Write short texts about sports activities",
+              "E7.3.L1. Recognize expressions about biographies",
+              "E7.3.SI1. Talk about past events in biographies",
+              "E7.3.W1. Write a short biography"
+            ]
+          },
+          {
+            "baslik": "Wild Animals, Environment and Planets",
+            "ciktilar": [
+              "E7.4.L1. Recognize expressions about wild animals",
+              "E7.4.SI1. Talk about wild animals and their habitats",
+              "E7.4.W1. Write short texts about wild animals",
+              "E7.7.L1. Recognize expressions about dreams and future expectations",
+              "E7.7.SI1. Talk about dreams and predictions",
+              "E7.8.L1. Recognize expressions about public buildings",
+              "E7.8.SI1. Talk about public buildings and purposes",
+              "E7.9.L1. Recognize expressions about environment",
+              "E7.9.SI1. Talk about environmental problems and solutions",
+              "E7.9.W1. Write short texts about environmental protection",
+              "E7.10.L1. Recognize expressions about planets and space",
+              "E7.10.SI1. Talk about planets and space",
+              "E7.10.W1. Write short texts about planets"
             ]
           }
         ]
@@ -208,10 +556,21 @@
     ],
     "Bilişim Teknolojileri ve Yazılım": [
       {
-        "tema": "Drive · 5. sınıf Bilişim Teknolojileri ve Yazılım · 2. tema dijital değerlendirme ölçeği",
+        "tema": "Drive · 5. sınıf Bilişim Teknolojileri ve Yazılım · 2025-2026 yıllık plan",
         "konular": [
           {
-            "baslik": "Dijital ürün tasarım ve geliştirme",
+            "baslik": "Bilişim Teknolojilerinin Hayatımızdaki Yeri",
+            "ciktilar": [
+              "BTY.5.1.1. Günlük yaşamda kullanılan bilişim teknolojilerini sınıflandırabilme",
+              "BTY.5.1.2. Bilişim teknolojilerinin birey ve toplum üzerindeki etkilerini özetleyebilme",
+              "BTY.5.1.3. Dijital vatandaşlık uygulamalarını sınıflandırabilme",
+              "BTY.5.1.4. Yapay zeka ile ilgili temel kavramları ve özellikleri sorgulayabilme",
+              "BTY.5.1.5. Bilgisayar sistemlerini çözümleyebilme",
+              "BTY.5.1.6. Dosya ve klasör yönetimi ile ilgili temel işlemlerle çalışabilme"
+            ]
+          },
+          {
+            "baslik": "Dijital Ürün Tasarımı ve Geliştirme",
             "ciktilar": [
               "BTY.5.2.1. Görsel düzenleme programlarından yararlanabilme",
               "BTY.5.2.2. Görsel için kurgu oluşturabilme",
@@ -219,11 +578,15 @@
               "BTY.5.2.4. Kelime işlemci programlarından yararlanabilme",
               "BTY.5.2.5. Kelime işlemci dosyası geliştirebilme",
               "BTY.5.2.6. Sunum programlarından yararlanabilme",
-              "BTY.5.2.7. Sunum dosyası geliştirebilme",
-              "Görsellerin temel özelliklerini tanır.",
-              "Görsel tasarım için kurgu kavramını bilir.",
-              "Kelime işlemcide belirli amaç için dosya oluşturup düzenler.",
-              "Belirli amaç için web tabanlı sunum oluşturur."
+              "BTY.5.2.7. Sunum dosyası geliştirebilme"
+            ]
+          },
+          {
+            "baslik": "Yazılım Tasarımı ve Programlama",
+            "ciktilar": [
+              "BTY.5.6.2. Algoritma oluşturmada test edebilme-hata ayıklayabilme",
+              "BTY.5.6.3. Yazılım geliştirme sürecinde kullanılan bileşenlerden yararlanabilme",
+              "BTY.5.6.4. Blok tabanlı ortamda yazılım geliştirme sürecini yönetebilme"
             ]
           }
         ]
@@ -231,7 +594,37 @@
     ],
     "Müzik": [
       {
-        "tema": "Drive · Müzik · Maarif raporları ve yıllık plan",
+        "tema": "Drive · 5. sınıf Müzik · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Müzik dili",
+            "ciktilar": [
+              "MÜZ.5.1.1. İstiklâl Marşını ezgisine dikkat ederek söyleyebilme",
+              "MÜZ.5.1.2. Farklı türdeki eserleri söyleyebilme",
+              "MÜZ.5.1.3. Belirli gün ve haftalarla ilgili eserleri söyleyebilme",
+              "MÜZ.5.1.4. Ortak repertuvardaki eserleri söyleyebilme",
+              "MÜZ.5.1.5. Müzik eserlerine bedensel hareketlerle eşlik edebilme",
+              "MÜZ.5.1.6. Müzik yazısını çözümleyebilme",
+              "MÜZ.5.1.7. Güzel sanatlarla ilgili kavramları sınıflandırabilme"
+            ]
+          },
+          {
+            "baslik": "Müzik kültürü",
+            "ciktilar": [
+              "MÜZ.5.2.1. Atatürk’ün güzel sanatlara verdiği önemi özetleyebilme",
+              "MÜZ.5.2.2. Farklı türdeki eserleri söyleyebilme",
+              "MÜZ.5.2.3. Nefesli çalgıların özelliklerini karşılaştırabilme",
+              "MÜZ.5.2.4. Klavyeli çalgıların özelliklerini karşılaştırabilme",
+              "MÜZ.5.2.5. Belirli gün ve haftalarla ilgili eserleri söyleyebilme",
+              "MÜZ.5.2.6. Popüler müzik türlerini karşılaştırabilme",
+              "MÜZ.5.2.7. Ortak repertuvardaki eserleri söyleyebilme",
+              "MÜZ.5.2.8. Müzik eserlerine bedensel hareketlerle eşlik edebilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6-8. sınıf Müzik · 2025-2026 yıllık plan kazanımları",
         "konular": [
           {
             "baslik": "5-8. sınıf müzik kazanımları",
