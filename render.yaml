@@ -7,6 +7,8 @@ services:
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      - key: OGR_TAKIP_DATA_DIR
+        value: /data
     disk:
       name: veritabani
       mountPath: /data

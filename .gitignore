@@ -10,7 +10,9 @@ venv/
 .env.*
 
 # Yerel DB (Render /data kullanır; repoda tutmak isteğe bağlı)
-# ogrenci_takip.db
+*.db
+*.sqlite
+*.sqlite3
 
 # IDE
 .idea/

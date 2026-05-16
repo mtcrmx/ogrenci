@@ -10,12 +10,40 @@ import os
 import uuid
 import json
 import re
+import shutil
 from datetime import datetime, timedelta
 
-# Render.com gibi bulut ortamlarında /data klasörü kalıcıdır;
-# yoksa uygulama klasörü kullanılır.
-_DATA_DIR = "/data" if os.path.isdir("/data") else os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(_DATA_DIR, "ogrenci_takip.db")
+_APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _resolve_db_path() -> str:
+    """Canlı veriyi kod güncellemelerinden ayrı, kalıcı bir yerde tutar."""
+    explicit_path = (os.environ.get("OGR_TAKIP_DB_PATH") or os.environ.get("DATABASE_PATH") or "").strip()
+    if explicit_path:
+        parent = os.path.dirname(os.path.abspath(explicit_path))
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        return os.path.abspath(explicit_path)
+
+    preferred_dir = (os.environ.get("OGR_TAKIP_DATA_DIR") or "").strip()
+    if not preferred_dir and os.path.isdir("/data"):
+        preferred_dir = "/data"
+
+    if preferred_dir:
+        try:
+            os.makedirs(preferred_dir, exist_ok=True)
+            db_path = os.path.join(preferred_dir, "ogrenci_takip.db")
+            legacy_path = os.path.join(_APP_DIR, "ogrenci_takip.db")
+            if not os.path.exists(db_path) and os.path.exists(legacy_path):
+                shutil.copy2(legacy_path, db_path)
+            return db_path
+        except OSError as exc:
+            print(f"UYARI: Kalıcı veritabanı klasörü kullanılamadı ({preferred_dir}): {exc}")
+
+    return os.path.join(_APP_DIR, "ogrenci_takip.db")
+
+
+DB_PATH = _resolve_db_path()
 
 
 def _bu_hafta_pazartesi() -> str:
