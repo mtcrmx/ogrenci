@@ -31,11 +31,11 @@
 (function () {
   const LS_KEY = "eco_sinav_analiz_v2";
   const API_SINIF = (id) => "/api/sinav-analiz/sinif/" + id;
-  const API_MUFREDAT = "/api/curriculum/temel-egitim";
+  const API_MUFREDAT = "/api/curriculum/drive-kazanimlari";
   const SINIFLAR = {{ siniflar | default([]) | tojson }};
   const DERSLER = {{ dersler | default([]) | tojson }};
   const DEFAULT_OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
-  const DEFAULT_MUDUR = {{ (mudur_adi or "Adem Akgül") | tojson }};
+  const DEFAULT_MUDUR = "ADEM AKGÜL";
   const OGRETMEN_ADI = {{ (ogretmen_adi or "") | tojson }};
 
   const TUR_RAPOR_BASLIK = {
@@ -106,6 +106,7 @@
     Object.keys(d).forEach((k) => {
       if (state.meta[k] === undefined || state.meta[k] === null) state.meta[k] = d[k];
     });
+    state.meta.mudur = DEFAULT_MUDUR;
   }
 
   function loadState() {
@@ -229,7 +230,7 @@
         const v = state.notlar[sk] && state.notlar[sk][c.colId];
         const got = v != null && v !== "" && !isNaN(Number(v)) ? Number(v) : null;
         if (got === null || got < max) {
-          const m = (c.q.metin || "").trim() || "(Tanımsız soru)";
+          const m = soruAnalizMetni(c.q);
           counts.set(m, (counts.get(m) || 0) + 1);
         }
       });
@@ -270,6 +271,14 @@
     s = (s || "").trim();
     if (s.length <= n) return s;
     return s.slice(0, Math.max(0, n - 1)) + "…";
+  }
+
+  function soruAnalizMetni(q) {
+    const parcalar = [];
+    if (q.unite) parcalar.push("Ünite/Tema: " + q.unite);
+    if (q.konu) parcalar.push("Konu/İçerik: " + q.konu);
+    if (q.metin) parcalar.push("Kazanım: " + q.metin);
+    return parcalar.join(" | ") || "(Tanımsız kazanım)";
   }
 
   function esc(s) {
@@ -330,6 +339,8 @@
         no++;
         return `<tr>
           <td style="text-align:center">${no}</td>
+          <td>${esc(q.q.unite || "")}</td>
+          <td>${esc(q.q.konu || "")}</td>
           <td>${esc(q.q.metin || "")}</td>
           <td style="text-align:center">${q.q.puan}</td>
           <td style="text-align:center">${q.n ? q.ort.toFixed(2) : "—"}</td>
@@ -337,14 +348,14 @@
         </tr>`;
       }).join("");
       return `<h2 style="font-size:13pt;margin:16px 0 8px">${TUR_RAPOR_BASLIK[tur] || tur}</h2>
-        <table><thead><tr><th>No</th><th>Kazanım / Öğrenme Çıktısı</th><th>Puan</th><th>Ort.</th><th>Başarı %</th></tr></thead>
+        <table><thead><tr><th>No</th><th>Ünite/Tema</th><th>Konu/İçerik Çerçevesi</th><th>Kazanım / Öğrenme Çıktısı</th><th>Puan</th><th>Ort.</th><th>Başarı %</th></tr></thead>
         <tbody>${satirlar}</tbody></table>`;
     }).join("");
 
     const zayifTekil = [];
     const gordu = new Set();
     H.zayifListe.forEach((q) => {
-      const metin = (q.q.metin || "").trim();
+      const metin = soruAnalizMetni(q.q);
       const anahtar = metin + "_" + q.basariSoru;
       if (gordu.has(anahtar)) return;
       gordu.add(anahtar);
@@ -429,6 +440,7 @@
   }
 
   function setMeta(k, v) {
+    if (k === "mudur") v = DEFAULT_MUDUR;
     state.meta[k] = v;
     scheduleSave();
   }
@@ -485,8 +497,14 @@
     scheduleSave();
   }
 
-  function soruEkle(tur, metin, puan) {
-    const q = { id: uid("q"), metin: metin || "", puan: Math.max(0, parseFloat(puan) || 1) };
+  function soruEkle(tur, metin, puan, meta) {
+    const q = {
+      id: uid("q"),
+      unite: (meta && meta.unite) || "",
+      konu: (meta && meta.konu) || "",
+      metin: metin || "",
+      puan: Math.max(0, parseFloat(puan) || 1),
+    };
     state.sorular[tur].push(q);
     scheduleSave();
     renderActivePanel();
@@ -707,7 +725,9 @@
       .map((q, idx) => {
         return `<tr class="border-t border-slate-100 align-top">
           <td class="p-2 w-16"><input type="number" min="0" class="${inputClass(true)}" value="${q.puan}" data-sq-idx="${idx}" data-sq-k="puan"/></td>
-          <td class="p-2"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="metin">${esc(q.metin)}</textarea></td>
+          <td class="p-2 min-w-[170px]"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="unite" placeholder="Ünite / Tema">${esc(q.unite || "")}</textarea></td>
+          <td class="p-2 min-w-[180px]"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="konu" placeholder="Konu / İçerik çerçevesi">${esc(q.konu || "")}</textarea></td>
+          <td class="p-2 min-w-[240px]"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="metin" placeholder="Kazanım / Öğrenme çıktısı">${esc(q.metin || "")}</textarea></td>
           <td class="p-2 w-10"><button type="button" data-sq-del="${idx}" class="text-red-600 font-bold text-lg leading-none" title="Sil">×</button></td>
         </tr>`;
       })
@@ -727,22 +747,22 @@
             .join("")}
         </div>
         <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3 space-y-2">
-          <p class="text-[11px] font-bold text-amber-900">TYMM temel eğitim — kazanım / öğrenme çıktısı ara</p>
+          <p class="text-[11px] font-bold text-amber-900">Drive kazanım havuzu — ünite/tema, konu/içerik ve öğrenme çıktısı ara</p>
           <div class="flex flex-wrap gap-2 items-end">
-            <button type="button" id="btn-muf-yukle" class="rounded-lg bg-slate-800 text-white text-xs font-bold px-3 py-2">Müfredatı yükle</button>
+            <button type="button" id="btn-muf-yukle" class="rounded-lg bg-slate-800 text-white text-xs font-bold px-3 py-2">Drive kazanımlarını yükle</button>
             <label class="text-[11px] font-bold text-slate-600">Ders<select id="muf-ders" class="${inputClass(true)} ml-1 min-w-[140px]"><option value="">—</option></select></label>
-            <label class="text-[11px] font-bold text-slate-600 flex-1 min-w-[120px]">Filtre<input id="muf-filt" class="${inputClass(true)} ml-1 w-full" placeholder=" çıktı metninde ara…" value="${esc(mufredatFilter)}"/></label>
+            <label class="text-[11px] font-bold text-slate-600 flex-1 min-w-[120px]">Filtre<input id="muf-filt" class="${inputClass(true)} ml-1 w-full" placeholder=" ünite, konu veya çıktıda ara…" value="${esc(mufredatFilter)}"/></label>
           </div>
           <div id="muf-sonuc" class="max-h-48 overflow-auto text-[11px] border border-slate-200 rounded-lg bg-white"></div>
-          <p class="text-[10px] text-slate-500">Dersiniz otomatik seçilir. Seçilen TYMM kazanımı aktif sınav bölümüne (${tur}) eklenir; puanı aşağıdan düzenleyebilirsiniz.</p>
+          <p class="text-[10px] text-slate-500">Dersiniz otomatik seçilir. Seçilen Drive kazanımı aktif sınav bölümüne (${tur}) ünite, konu ve öğrenme çıktısıyla eklenir; puanı aşağıdan düzenleyebilirsiniz.</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" id="btn-soru-ekle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2">Boş kazanım ekle</button>
         </div>
         <div class="overflow-x-auto border border-slate-200 rounded-xl">
           <table class="min-w-full text-xs">
-            <thead><tr class="bg-slate-100 text-left font-bold text-slate-700"><th class="p-2 w-20">Puan</th><th class="p-2">Kazanım / öğrenme çıktısı</th><th class="p-2 w-8"></th></tr></thead>
-            <tbody>${satirlar || `<tr><td colspan="3" class="p-4 text-center text-slate-500">Henüz kazanım yok.</td></tr>`}</tbody>
+            <thead><tr class="bg-slate-100 text-left font-bold text-slate-700"><th class="p-2 w-20">Puan</th><th class="p-2">Ünite/Tema</th><th class="p-2">Konu/İçerik Çerçevesi</th><th class="p-2">Kazanım / öğrenme çıktısı</th><th class="p-2 w-8"></th></tr></thead>
+            <tbody>${satirlar || `<tr><td colspan="5" class="p-4 text-center text-slate-500">Henüz kazanım yok.</td></tr>`}</tbody>
           </table>
         </div>
       </div>`;
@@ -784,7 +804,8 @@
           (kon.ciktilar || []).forEach((c) => {
             const metin = (c || "").trim();
             if (!metin) return;
-            if (flt && metin.toLowerCase().indexOf(flt) === -1) return;
+            const arama = [tema, kb, metin].join(" ").toLowerCase();
+            if (flt && arama.indexOf(flt) === -1) return;
             sat.push({ tema, konu: kb, metin });
           });
         });
@@ -802,7 +823,7 @@
           (r, i) =>
             `<div class="border-b border-slate-100 px-2 py-1.5 hover:bg-amber-50/80">
               <button type="button" class="text-left w-full" data-muf-pick="${i}">
-                <span class="text-[10px] text-slate-500">${esc(r.tema)} · ${esc(r.konu)}</span><br/>
+                <span class="text-[10px] text-slate-500"><b>Ünite/Tema:</b> ${esc(r.tema)} · <b>Konu/İçerik:</b> ${esc(r.konu)}</span><br/>
                 <span class="text-slate-800">${esc(r.metin)}</span>
               </button>
             </div>`
@@ -812,7 +833,7 @@
         btn.addEventListener("click", () => {
           const i = parseInt(btn.getAttribute("data-muf-pick"), 10);
           const row = sat[i];
-          if (row) soruEkle(soruPanelTur, row.metin, 10);
+          if (row) soruEkle(soruPanelTur, row.metin, 10, { unite: row.tema, konu: row.konu });
         });
       });
     }
@@ -857,8 +878,9 @@
     const fq = flatQuestions();
     const head = fq
       .map((c) => {
-        const k = kisaMetin(c.q.metin, 14);
-        return `<th class="p-1 border border-slate-200 bg-slate-50 font-bold text-[10px] align-bottom whitespace-nowrap" title="${esc(c.q.metin)}">${
+        const tam = soruAnalizMetni(c.q);
+        const k = kisaMetin(tam, 18);
+        return `<th class="p-1 border border-slate-200 bg-slate-50 font-bold text-[10px] align-bottom whitespace-nowrap" title="${esc(tam)}">${
           esc(c.tur[0].toUpperCase()) + (c.idx + 1)
         }<br/><span class="font-normal text-slate-500">${esc(k)}</span></th>`;
       })

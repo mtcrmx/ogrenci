@@ -66,6 +66,75 @@
             ]
           }
         ]
+      },
+      {
+        "tema": "Drive · 8. sınıf Matematik · Ünitelendirilmiş yıllık plan",
+        "konular": [
+          {
+            "baslik": "Sayılar ve işlemler · Çarpanlar ve katlar",
+            "ciktilar": [
+              "M.8.1.1.1. Verilen pozitif tam sayıların pozitif tam sayı çarpanlarını bulur; pozitif tam sayıların pozitif tam sayı çarpanlarını üslü ifadelerin çarpımı şeklinde yazar.",
+              "M.8.1.1.2. İki doğal sayının en büyük ortak bölenini ve en küçük ortak katını hesaplar; ilgili problemleri çözer.",
+              "M.8.1.1.3. Verilen iki doğal sayının aralarında asal olup olmadığını belirler."
+            ]
+          },
+          {
+            "baslik": "Sayılar ve işlemler · Üslü ifadeler",
+            "ciktilar": [
+              "M.8.1.2.1. Tam sayıların tam sayı kuvvetlerini hesaplar.",
+              "M.8.1.2.2. Üslü ifadelerle ilgili temel kuralları anlar, birbirine denk ifadeler oluşturur.",
+              "M.8.1.2.3. Sayıların ondalık gösterimlerini 10'un tam sayı kuvvetlerini kullanarak çözümler.",
+              "M.8.1.2.4. Verilen bir sayıyı 10'un farklı tam sayı kuvvetlerini kullanarak ifade eder.",
+              "M.8.1.2.5. Çok büyük ve çok küçük sayıları bilimsel gösterimle ifade eder ve karşılaştırır."
+            ]
+          },
+          {
+            "baslik": "Sayılar ve işlemler · Kareköklü ifadeler",
+            "ciktilar": [
+              "M.8.1.3.1. Tam kare pozitif tam sayılarla bu sayıların karekökleri arasındaki ilişkiyi belirler.",
+              "M.8.1.3.2. Tam kare olmayan kareköklü bir sayının hangi iki doğal sayı arasında olduğunu belirler.",
+              "M.8.1.3.3. Kareköklü bir ifadeyi a√b şeklinde yazar ve a√b şeklindeki ifadede katsayıyı kök içine alır.",
+              "M.8.1.3.4. Kareköklü ifadelerde çarpma ve bölme işlemlerini yapar.",
+              "M.8.1.3.5. Kareköklü ifadelerde toplama ve çıkarma işlemlerini yapar.",
+              "M.8.1.3.8. Kareköklü ifadeleri içeren ve sonucu doğal sayı olan problemleri çözer."
+            ]
+          },
+          {
+            "baslik": "Veri analizi ve olasılık",
+            "ciktilar": [
+              "M.8.4.1.1. En fazla üç veri grubuna ait çizgi ve sütun grafiklerini yorumlar.",
+              "M.8.4.1.2. Verileri sütun, daire veya çizgi grafiği ile gösterir ve bu gösterimler arasında uygun dönüşümler yapar.",
+              "M.8.5.1.1. Bir olaya ait olası durumları belirler.",
+              "M.8.5.1.2. Daha fazla, eşit ve daha az olasılıklı olayları ayırt eder; örnek verir.",
+              "M.8.5.1.5. Basit bir olayın olma olasılığını hesaplar."
+            ]
+          },
+          {
+            "baslik": "Cebir · Cebirsel ifadeler, özdeşlikler, denklemler ve eşitsizlikler",
+            "ciktilar": [
+              "M.8.2.1.1. Basit cebirsel ifadeleri anlar ve farklı biçimlerde yazar.",
+              "M.8.2.1.2. Cebirsel ifadelerin çarpımını yapar.",
+              "M.8.2.1.3. Özdeşlikleri modellerle açıklar.",
+              "M.8.2.1.4. Cebirsel ifadeleri çarpanlara ayırır.",
+              "M.8.2.2.1. Birinci dereceden bir bilinmeyenli denklemleri çözer.",
+              "M.8.2.2.6. Doğrusal ilişki içeren gerçek yaşam durumlarına ait denklemi, tabloyu ve grafiği oluşturur.",
+              "M.8.2.3.1. Birinci dereceden bir bilinmeyenli eşitsizlik içeren günlük yaşam durumlarına uygun matematik cümleleri yazar.",
+              "M.8.2.3.3. Birinci dereceden bir bilinmeyenli eşitsizlikleri çözer."
+            ]
+          },
+          {
+            "baslik": "Geometri ve ölçme",
+            "ciktilar": [
+              "M.8.3.1.1. Üçgende kenarortay, açıortay ve yüksekliği inşa eder.",
+              "M.8.3.1.2. Üçgenin iki kenar uzunluğunun toplamı veya farkı ile üçüncü kenar uzunluğu arasındaki ilişkiyi belirler.",
+              "M.8.3.1.3. Üçgenin kenar uzunlukları ile açı ölçüleri arasındaki ilişkiyi belirler.",
+              "M.8.3.1.5. Pisagor bağıntısını oluşturur ve ilgili problemleri çözer.",
+              "M.8.3.2.1. Nokta, doğru parçası ve diğer şekillerin öteleme sonucundaki görüntülerini çizer.",
+              "M.8.3.3.1. Eşlik ve benzerliği ilişkilendirir; eş ve benzer şekillerin kenar ve açı ilişkilerini belirler.",
+              "M.8.3.4.1. Dik prizmaları tanır, temel elemanlarını belirler, inşa eder ve açınımını çizer."
+            ]
+          }
+        ]
       }
     ],
     "Fen Bilimleri": [
@@ -181,6 +250,52 @@
               "Mü.8.A.4. Türk müziğinin makamsal bir yapıda olduğunu fark eder.",
               "Mü.8.A.5. Yurdumuza ait müzik türlerinden eserler seslendirir.",
               "Mü.8.D.1. Türk müziği biçimlerini tanır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 7. sınıf Müzik · Ünitelendirilmiş yıllık plan",
+        "konular": [
+          {
+            "baslik": "Dinleme ve söyleme",
+            "ciktilar": [
+              "Mü.7.A.1. İstiklâl Marşı'nı doğru söyler.",
+              "Mü.7.A.2. Millî birlik ve beraberlik duygusunu güçlendiren marşlarımızı doğru söyler.",
+              "Mü.7.A.3. Müzikte hız ve gürlük basamaklarını uygular.",
+              "Mü.7.A.4. Türk müziğinin makamsal bir yapıda olduğunu fark eder.",
+              "Mü.7.A.5. Yurdumuza ait müzik türlerinden eserler seslendirir.",
+              "Mü.7.A.6. Ses grupları oluşturmaya istekli olur.",
+              "Mü.7.A.7. Müzik çalışmalarını sergiler."
+            ]
+          },
+          {
+            "baslik": "Müziksel algı ve bilgilenme",
+            "ciktilar": [
+              "Mü.7.B.1. Temel müzik yazı ve ögelerini kullanır.",
+              "Mü.7.B.2. Müzikte dizileri tanır.",
+              "Mü.7.B.3. İnsan sesi ve ses topluluklarını ayırt eder.",
+              "Mü.7.B.4. Çalgı türleri ve çalgı topluluklarını ayırt eder."
+            ]
+          },
+          {
+            "baslik": "Müziksel yaratıcılık",
+            "ciktilar": [
+              "Mü.7.C.1. Müziklere kendi oluşturduğu ritim kalıbı ile eşlik eder.",
+              "Mü.7.C.2. Kendi oluşturduğu ezgileri seslendirir.",
+              "Mü.7.C.3. Dinlediği farklı türdeki müziklerle ilgili duygu ve düşüncelerini ifade eder.",
+              "Mü.7.C.5. Müzikle ilgili araştırma ve çalışmalarında bilişim teknolojilerinden yararlanır."
+            ]
+          },
+          {
+            "baslik": "Müzik kültürü",
+            "ciktilar": [
+              "Mü.7.D.1. Atatürk'ün müziğin geliştirilmesine verdiği önemi açıklar.",
+              "Mü.7.D.2. Dünya müziklerini tanır.",
+              "Mü.7.D.3. Dinlediği çeşitli türlerdeki müziklerden hem bireysel hem de ortak sınıf arşivini geliştirir.",
+              "Mü.7.D.4. Dinlediği uluslararası müzikleri türlerine göre ayırt eder.",
+              "Mü.7.D.5. Türkülerin yaşanmış öykülerini araştırır.",
+              "Mü.7.D.6. Türk müziği kültürünü tanır."
             ]
           }
         ]

@@ -1286,7 +1286,7 @@ def ogretmen_sinav_analiz():
         siniflar=siniflar,
         ogretmen_adi=session.get("ogretmen_adi", "") or "",
         okul_adi="Erenler Cumhuriyet Ortaokulu",
-        mudur_adi="Adem Akgül",
+        mudur_adi="ADEM AKGÜL",
         dersler=[
             "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler",
             "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü",
@@ -2036,6 +2036,18 @@ def api_curriculum_temel_egitim():
         return jsonify(doc)
     except OSError:
         return jsonify({"hata": "Mufredat dosyasi bulunamadi", "dersler": {}}), 404
+
+
+@app.route("/api/curriculum/drive-kazanimlari")
+@giris_zorunlu
+def api_curriculum_drive_kazanimlari():
+    """Okul Drive'indan derlenen kazanim havuzu: unite/tema > konu/icerik > cikti."""
+    path = os.path.join(app.root_path, "data", "drive_kazanimlari.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    except OSError:
+        return jsonify({"hata": "Drive kazanim dosyasi bulunamadi", "dersler": {}}), 404
 
 
 @app.route("/api/odev/mufredat-ozet")
