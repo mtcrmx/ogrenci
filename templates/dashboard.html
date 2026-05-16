@@ -114,81 +114,87 @@
 
     <div class="px-3 pt-3">
       <section class="grid gap-3 lg:grid-cols-3">
-        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="action-group p-3" style="animation-delay:.02s">
           <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Günlük Takip</h3>
-          <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            <a href="#ogrenci-listesi"
-               class="rounded-lg bg-blue-50 px-3 py-2 text-sm font-black text-blue-900 hover:bg-blue-100">
-              Davranış listesi
-              <span class="block text-[11px] font-medium text-blue-600">Olumlu ve olumsuz tik kaydı</span>
+          <div class="mt-3 grid gap-1.5">
+            <a href="#ogrenci-listesi" class="action-row">
+              <span class="nav-mark mark-blue">DT</span>
+              <span>
+                <span class="block text-sm font-black text-slate-900">Davranış listesi</span>
+                <span class="block text-[11px] font-medium text-blue-700">Olumlu ve olumsuz tik kaydı</span>
+              </span>
             </a>
-            <a href="{{ url_for('odevler') }}"
-               class="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-900 hover:bg-emerald-100">
-              Ödev ve tema takibi
-              <span class="block text-[11px] font-medium text-emerald-700">Müfredat seç, ödev oluştur</span>
+            <a href="{{ url_for('odevler') }}" class="action-row">
+              <span class="nav-mark mark-emerald">ÖT</span>
+              <span>
+                <span class="block text-sm font-black text-slate-900">Ödev ve tema takibi</span>
+                <span class="block text-[11px] font-medium text-emerald-700">Müfredat seç, ödev oluştur</span>
+              </span>
             </a>
-            <a href="{{ url_for('yoklama', sinif=aktif.id) }}"
-               class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-black text-amber-900 hover:bg-amber-100">
-              Ödev işaretleme
-              <span class="block text-[11px] font-medium text-amber-700">Yapan öğrenciyi hızlı işaretle</span>
+            <a href="{{ url_for('yoklama', sinif=aktif.id) }}" class="action-row">
+              <span class="nav-mark mark-amber">İŞ</span>
+              <span>
+                <span class="block text-sm font-black text-slate-900">Ödev işaretleme</span>
+                <span class="block text-[11px] font-medium text-amber-700">Yapan öğrenciyi hızlı işaretle</span>
+              </span>
             </a>
           </div>
         </div>
 
-        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="action-group p-3" style="animation-delay:.08s">
           <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">İletişim ve Sınıf</h3>
-          <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            <a href="{{ url_for('bilgilendirme_yonetimi') }}"
-               class="rounded-lg bg-sky-50 px-3 py-2 text-sm font-black text-sky-900 hover:bg-sky-100">
-              Duyuru yayınla
-              <span class="block text-[11px] font-medium text-sky-700">Öğrenci ve veli bilgilendirme</span>
+          <div class="mt-3 grid gap-1.5">
+            <a href="{{ url_for('bilgilendirme_yonetimi') }}" class="action-row">
+              <span class="nav-mark mark-sky">DY</span>
+              <span>
+                <span class="block text-sm font-black text-slate-900">Duyuru yayınla</span>
+                <span class="block text-[11px] font-medium text-sky-700">Öğrenci ve veli bilgilendirme</span>
+              </span>
             </a>
-            <a href="{{ url_for('ogretmen_randevular') }}"
-               class="rounded-lg bg-rose-50 px-3 py-2 text-sm font-black text-rose-900 hover:bg-rose-100">
-              Veli randevuları
-              <span class="block text-[11px] font-medium text-rose-700">Görüşme talepleri</span>
+            <a href="{{ url_for('ogretmen_randevular') }}" class="action-row">
+              <span class="nav-mark mark-rose">VR</span>
+              <span>
+                <span class="block text-sm font-black text-slate-900">Veli randevuları</span>
+                <span class="block text-[11px] font-medium text-rose-700">Görüşme talepleri</span>
+              </span>
             </a>
-            <a href="{{ url_for('ogretmen_yansimalar') }}"
-               class="rounded-lg bg-cyan-50 px-3 py-2 text-sm font-black text-cyan-900 hover:bg-cyan-100">
-              Günlük yansımalar
-              <span class="block text-[11px] font-medium text-cyan-700">Öğrenci geri bildirimleri</span>
+            <a href="{{ url_for('ogretmen_yansimalar') }}" class="action-row">
+              <span class="nav-mark mark-violet">GY</span>
+              <span>
+                <span class="block text-sm font-black text-slate-900">Günlük yansımalar</span>
+                <span class="block text-[11px] font-medium text-violet-700">Öğrenci geri bildirimleri</span>
+              </span>
             </a>
           </div>
         </div>
 
-        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="action-group p-3" style="animation-delay:.14s">
           <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Oyun, Rapor ve Analiz</h3>
-          <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            <div class="grid grid-cols-2 gap-2">
-              <a href="{{ url_for('yayin', sinif_id=aktif.id) }}"
-                 class="rounded-lg bg-violet-50 px-3 py-2 text-sm font-black text-violet-900 hover:bg-violet-100">
-                Yayın
-              </a>
-              <a href="{{ url_for('lig') }}"
-                 class="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-black text-indigo-900 hover:bg-indigo-100">
-                Lig
-              </a>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <a href="{{ url_for('ogretmen_ogrenci_maclari') }}"
-                 class="rounded-lg bg-green-50 px-3 py-2 text-sm font-black text-green-900 hover:bg-green-100">
-                Maç onay
-              </a>
-              <a href="{{ url_for('oduller') }}"
-                 class="rounded-lg bg-fuchsia-50 px-3 py-2 text-sm font-black text-fuchsia-900 hover:bg-fuchsia-100">
-                Ödüller
-              </a>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}"
-                 class="rounded-lg bg-rose-50 px-3 py-2 text-sm font-black text-rose-900 hover:bg-rose-100">
-                Analiz
-              </a>
-              <a href="{{ url_for('ogretmen_sinav_analiz') }}"
-                 class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-black text-amber-900 hover:bg-amber-100">
-                Sınav
-              </a>
-            </div>
+          <div class="mt-3 grid grid-cols-2 gap-1.5">
+            <a href="{{ url_for('yayin', sinif_id=aktif.id) }}" class="action-row compact">
+              <span class="nav-mark mark-violet">YY</span>
+              <span class="text-sm font-black text-slate-900">Yayın</span>
+            </a>
+            <a href="{{ url_for('lig') }}" class="action-row compact">
+              <span class="nav-mark mark-amber">LG</span>
+              <span class="text-sm font-black text-slate-900">Lig</span>
+            </a>
+            <a href="{{ url_for('ogretmen_ogrenci_maclari') }}" class="action-row compact">
+              <span class="nav-mark mark-emerald">MO</span>
+              <span class="text-sm font-black text-slate-900">Maç</span>
+            </a>
+            <a href="{{ url_for('oduller') }}" class="action-row compact">
+              <span class="nav-mark mark-rose">ÖD</span>
+              <span class="text-sm font-black text-slate-900">Ödül</span>
+            </a>
+            <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}" class="action-row compact">
+              <span class="nav-mark mark-rose">AN</span>
+              <span class="text-sm font-black text-slate-900">Analiz</span>
+            </a>
+            <a href="{{ url_for('ogretmen_sinav_analiz') }}" class="action-row compact">
+              <span class="nav-mark mark-amber">SA</span>
+              <span class="text-sm font-black text-slate-900">Sınav</span>
+            </a>
           </div>
         </div>
       </section>
