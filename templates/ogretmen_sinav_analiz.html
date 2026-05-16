@@ -223,18 +223,21 @@
 
     const ogrenciZayif = state.ogrenciler.map((o) => {
       const sk = studentKey(o);
-      const counts = new Map();
       if (o.katilmadi) return { o, sk, items: [], toplam: null };
+      const items = [];
       fq.forEach((c) => {
         const max = c.q.puan;
         const v = state.notlar[sk] && state.notlar[sk][c.colId];
         const got = v != null && v !== "" && !isNaN(Number(v)) ? Number(v) : null;
         if (got === null || got < max) {
-          const m = soruAnalizMetni(c.q);
-          counts.set(m, (counts.get(m) || 0) + 1);
+          items.push({
+            soruEtiketi: `${TUR_RAPOR_BASLIK[c.tur] || c.tur} ${c.idx + 1}. soru`,
+            metin: soruAnalizMetni(c.q),
+            alinan: got,
+            tamPuan: max,
+          });
         }
       });
-      const items = [...counts.entries()].map(([metin, cnt]) => ({ metin, cnt }));
       let toplam = 0;
       fq.forEach((c) => {
         const v = state.notlar[sk] && state.notlar[sk][c.colId];
@@ -279,6 +282,11 @@
     if (q.konu) parcalar.push("Konu/İçerik: " + q.konu);
     if (q.metin) parcalar.push("Öğrenme Çıktısı: " + q.metin);
     return parcalar.join(" | ") || "(Tanımsız öğrenme çıktısı)";
+  }
+
+  function destekCalismaMetni(it) {
+    const puanBilgisi = it.alinan == null ? "puan girilmediği" : `${it.alinan}/${it.tamPuan} puan aldığı`;
+    return `${it.soruEtiketi} için beklenen öğrenme çıktısını tam gösteremediği (${puanBilgisi}) için öğrenciye konu tekrarı, örnek soru çözümü, pekiştirme ödevi ve kısa kontrol çalışması verilmiştir.`;
   }
 
   function esc(s) {
@@ -394,19 +402,22 @@
 
     const ogrSatir = H.ogrenciZayif.map((r, i) => {
       if (r.o.katilmadi) {
-        return `<tr><td style="text-align:center">${esc(r.o.ogrNo)}</td><td>${esc(r.o.adSoyad)}</td><td style="text-align:center">G</td><td>—</td></tr>`;
+        return `<tr><td style="text-align:center">${esc(r.o.ogrNo)}</td><td>${esc(r.o.adSoyad)}</td><td style="text-align:center">G</td><td>—</td><td>—</td></tr>`;
       }
       const pu = r.toplam != null && r.toplam !== "" ? String(r.toplam) : "—";
-      const bullets = r.items.length
-        ? r.items.map((it) => `• ${it.cnt > 1 ? "(x" + it.cnt + ") " : ""}${esc(kisaMetin(it.metin, 72))}`).join("<br/>")
+      const eksikler = r.items.length
+        ? r.items.map((it) => `• ${esc(it.soruEtiketi)}: ${esc(kisaMetin(it.metin, 86))}`).join("<br/>")
         : "—";
-      return `<tr><td style="text-align:center">${esc(r.o.ogrNo)}</td><td>${esc(r.o.adSoyad)}</td><td style="text-align:center">${pu}</td><td style="font-size:10px">${bullets || "—"}</td></tr>`;
+      const destekler = r.items.length
+        ? r.items.map((it) => `• ${esc(destekCalismaMetni(it))}`).join("<br/>")
+        : "—";
+      return `<tr><td style="text-align:center">${esc(r.o.ogrNo)}</td><td>${esc(r.o.adSoyad)}</td><td style="text-align:center">${pu}</td><td style="font-size:10px">${eksikler || "—"}</td><td style="font-size:10px">${destekler || "—"}</td></tr>`;
     }).join("");
 
     const sayfa2 = `
       <div class="sayfa break">
         <h2 style="text-align:center;font-size:14pt">${esc(m.sinifAdi || "—")} ÖĞRENCİ BAZLI SINAV ANALİZİ</h2>
-        <table><thead><tr><th>No</th><th>Öğrenci</th><th>PUAN</th><th>Eksik Öğrenme Çıktıları</th></tr></thead>
+        <table><thead><tr><th>No</th><th>Öğrenci</th><th>PUAN</th><th>Eksik Öğrenme Çıktıları</th><th>Verilen Eğitim / Ödev / Destek Çalışması</th></tr></thead>
         <tbody>${ogrSatir}</tbody></table>
       </div>`;
 
