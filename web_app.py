@@ -1290,7 +1290,8 @@ def ogretmen_sinav_analiz():
         dersler=[
             "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler",
             "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü",
-            "Müzik", "Bilişim Teknolojileri ve Yazılım",
+            "Müzik", "Bilişim Teknolojileri ve Yazılım", "Beden Eğitimi ve Spor",
+            "Görsel Sanatlar", "Teknoloji ve Tasarım",
         ],
     )
 

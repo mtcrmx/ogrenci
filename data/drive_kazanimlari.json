@@ -1,6 +1,6 @@
 {
   "kaynak": "Google Drive / Yıllık Planlar klasörü: ders alt klasörlerindeki 2025-2026 yıllık planlardan derlenen ünite/tema, konu/içerik çerçevesi ve öğrenme çıktısı/kazanımlar",
-  "surum": "2026-05-16-yillik-plan",
+  "surum": "2026-05-16-yillik-plan-genisletilmis",
   "kaynak_klasor_url": "https://drive.google.com/drive/u/0/folders/1oNUUtXiVm4A5o9l884WvwbhwQIbjEesd",
   "kaynak_dosyalar": [
     "Matematik: 2025 5.Sınıf matematik Yıllık Plan.docx",
@@ -18,7 +18,22 @@
     "İngilizce: 5. sınıf İngilizce yıllık plan.docx",
     "İngilizce: 6. sınıf İngilizce yıllık plan.docx",
     "İngilizce: 7. sınıf İngilizce yıllık plan.docx",
-    "Bilişim Teknolojileri ve Yazılım: 5-sinif-bil-tek-ve-yazilim-maarif-m-yillik-plan-ogretmenevrak-1775381163.docx"
+    "Bilişim Teknolojileri ve Yazılım: 5-sinif-bil-tek-ve-yazilim-maarif-m-yillik-plan-ogretmenevrak-1775381163.docx",
+    "Türkçe: HECCE YAYINLARI 8.SINIF YILLIK PLAN.pdf",
+    "Matematik: 2025-2026 6.Sınıflar Matematik Dersi Yıllık Plan.docx",
+    "Fen Bilimleri: 6.SINIFLAR FEN BİLİMLERİ DERSİ YILLIK PLANI.docx",
+    "Fen Bilimleri: 2025-2026 7.SINIF FEN BİLİMLERİ PLAN.docx",
+    "Fen Bilimleri: 8.SINIFLAR FEN BİLİMLERİ DERSİ YILLIK PLANI.docx",
+    "Sosyal Bilgiler: 2025-2026-7.-Sinif-Sosyal-Bilgiler-Yillik-Plani-YILDIRIM-Yayinlari.docx",
+    "T.C. İnkılap Tarihi ve Atatürkçülük: 2025-2026-8.-Sinif-T.C.-Inkilap-Tarihi-Yillik-Plani-DERSDESTEK.docx",
+    "Din Kültürü ve Ahlak Bilgisi: 2024-2025 ERENLER CUMHURİYET ORT- DKAB 6- YILLIK PLAN.docx",
+    "Din Kültürü ve Ahlak Bilgisi: 2024-2025 ERENLER CUMHURİYET ORT- DKAB 7- YILLIK PLAN.docx",
+    "Din Kültürü ve Ahlak Bilgisi: 2024-2025 ERENLER CUMHURİYET ORT- DKAB 8- YILLIK PLAN.docx",
+    "İngilizce: 8. sınıf İngilizce yıllık plan.docx",
+    "Bilişim Teknolojileri ve Yazılım: 6-sinif-bilisim-teknolojileri-ve-yazilim-yusuf-erturk-yillik-plan-ogretmenevrak-1775381222.docx",
+    "Beden Eğitimi ve Spor: 5-8. sınıf yıllık planları",
+    "Görsel Sanatlar: 5-8. sınıf yıllık planları",
+    "Teknoloji ve Tasarım: 7-8. sınıf yıllık planları"
   ],
   "dersler": {
     "Türkçe": [
@@ -179,6 +194,24 @@
             ]
           }
         ]
+      },
+      {
+        "tema": "Drive · 8. sınıf Türkçe · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Erdemler / Doğa ve Evren / Bilim ve Teknoloji · Okuma, dinleme/izleme, konuşma ve yazma",
+            "ciktilar": [
+              "T.8.3.1. Noktalama işaretlerine dikkat ederek sesli ve sessiz okur.",
+              "T.8.3.5. Bağlamdan yararlanarak bilmediği kelime ve kelime gruplarının anlamını tahmin eder.",
+              "T.8.3.14. Metinle ilgili soruları cevaplar.",
+              "T.8.3.17. Metnin ana fikrini/ana duygusunu belirler.",
+              "T.8.3.32. Grafik, tablo ve çizelgeyle sunulan bilgileri yorumlar.",
+              "T.8.4.2. Bilgilendirici metin yazar.",
+              "T.8.4.3. Hikaye edici metin yazar.",
+              "T.8.4.16. Yazdıklarını düzenler."
+            ]
+          }
+        ]
       }
     ],
     "Matematik": [
@@ -329,6 +362,28 @@
             ]
           }
         ]
+      },
+      {
+        "tema": "Drive · 6. sınıf Matematik · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "1. Tema: Sayılar ve Nicelikler · Çarpanlar, katlar ve bölünebilme",
+            "ciktilar": [
+              "MAT.6.1.1. Karşılaştığı problem durumlarında bir doğal sayının çarpan ve katlarına yönelik muhakeme yapabilme",
+              "MAT.6.1.2. Bir doğal sayının 2, 3, 4, 5, 6, 9 ve 10 ile tam bölünebilme kriterlerine ilişkin çıkarım yapabilme",
+              "MAT.6.1.3. Bir doğal sayının asal olma durumunu ve asal çarpanlarını çözümleyebilme",
+              "MAT.6.1.4. Günlük hayat problemleri ya da matematiksel durumlar üzerinden ortak kat ve ortak böleni yorumlayabilme"
+            ]
+          },
+          {
+            "baslik": "7. Tema: Geometrik Nicelikler · Uzunluk, alan ve çember",
+            "ciktilar": [
+              "MAT.6.4.1. Uzunluk ve alan ölçme birimleri arasındaki ilişkilerle ilgili analojik akıl yürütebilme",
+              "MAT.6.4.2. Dikdörtgenin alan bağıntısına yönelik deneyimlerini paralelkenar ve üçgenin alan bağıntılarına yansıtabilme",
+              "MAT.6.4.4. Çemberin uzunluğu ile çap uzunluğu arasındaki ilişkiye yönelik çıkarım yapabilme"
+            ]
+          }
+        ]
       }
     ],
     "Fen Bilimleri": [
@@ -364,6 +419,75 @@
             "ciktilar": [
               "FB.5.7.1.2. Kaynakların etkili kullanımı konusunda geri dönüşümün önemli olduğuna yönelik bilimsel çıkarımda bulunabilme",
               "FB.5.7.1.3. Yakın çevresinde atık yönetiminin uygulanabilirliğine ilişkin deneyimlerini yansıtabilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6. sınıf Fen Bilimleri · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "FB.6.1. Güneş Sistemi ve Tutulmalar",
+            "ciktilar": [
+              "FB.6.1.1.1. Güneş sistemindeki gezegenleri niteliklerine göre sınıflandırabilme",
+              "FB.6.1.1.2. Güneş sistemi ile ilgili bilimsel model oluşturabilme",
+              "FB.6.1.2.1. Güneş ve Ay tutulması ile ilgili bilimsel çıkarım yapabilme"
+            ]
+          },
+          {
+            "baslik": "FB.6.2-7. Kuvvet, canlı sistemleri, elektrik ve çevre",
+            "ciktilar": [
+              "FB.6.2.2.1. Sürat ve hız kavramlarını karşılaştırabilme",
+              "FB.6.3.1.1. Eşeyli ve eşeysiz üremeyi karşılaştırabilme",
+              "FB.6.6.1.1. Maddelerin elektriği iletme durumlarını gösteren deney yapabilme",
+              "FB.6.7.2.2. Yakın çevresindeki veya ülkemizdeki bir çevre problemine ilişkin çözüm üretebilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 7. sınıf Fen Bilimleri · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "1-2. Üniteler · Güneş Sistemi ve Ötesi / Hücre ve Bölünmeler",
+            "ciktilar": [
+              "F.7.1.1.4. Teleskobun yapısını ve ne işe yaradığını açıklar.",
+              "F.7.1.2.1. Yıldız oluşum sürecinin farkına varır.",
+              "F.7.1.2.3. Galaksilerin yapısını açıklar.",
+              "F.7.2.1.1. Hayvan ve bitki hücrelerini, temel kısımları ve görevleri açısından karşılaştırır.",
+              "F.7.2.3.3. Mayoz ve mitoz arasındaki farkları karşılaştırır."
+            ]
+          },
+          {
+            "baslik": "3-7. Üniteler · Kuvvet, enerji, üreme ve elektrik",
+            "ciktilar": [
+              "F.7.3.1.2. Kütle ve ağırlık kavramlarını karşılaştırır.",
+              "F.7.3.3.1. Kinetik ve potansiyel enerji türlerinin birbirine dönüşümünden hareketle enerjinin korunduğu sonucunu çıkarır.",
+              "F.7.6.1.1. İnsanda üremeyi sağlayan yapı ve organları şema üzerinde göstererek açıklar.",
+              "F.7.7.1.1. Seri bağlı ampullerden oluşan devre şeması çizer."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 8. sınıf Fen Bilimleri · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "F.8.1. Mevsimler ve İklim",
+            "ciktilar": [
+              "F.8.1.1.1. Mevsimlerin oluşumuna yönelik tahminlerde bulunur.",
+              "F.8.1.2.1. İklim ve hava olayları arasındaki farkı açıklar.",
+              "F.8.1.2.2. İklim biliminin bir bilim dalı olduğunu ve klimatologları söyler."
+            ]
+          },
+          {
+            "baslik": "F.8.2. DNA ve Genetik Kod",
+            "ciktilar": [
+              "F.8.2.1.1. Nükleotid, gen, DNA ve kromozom kavramlarını açıklayarak bu kavramlar arasında ilişki kurar.",
+              "F.8.2.1.2. DNA’nın yapısını model üzerinde gösterir.",
+              "F.8.2.2.2. Tek karakter çaprazlamaları ile ilgili problemler çözerek sonuçlar hakkında yorum yapar.",
+              "F.8.2.3.3. Mutasyonla modifikasyon arasındaki farklar ile ilgili çıkarımda bulunur.",
+              "F.8.2.4.1. Canlıların yaşadıkları çevreye uyumlarını gözlem yaparak açıklar."
             ]
           }
         ]
@@ -407,6 +531,28 @@
             ]
           }
         ]
+      },
+      {
+        "tema": "Drive · 7. sınıf Sosyal Bilgiler · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "1. Birey, Toplum ve İletişim",
+            "ciktilar": [
+              "SB.7.1.1. İletişimi etkileyen tutum ve davranışları analiz ederek kendi tutum ve davranışlarını sorgular.",
+              "SB.7.1.2. Bireysel ve toplumsal ilişkilerde olumlu iletişim yollarını kullanır.",
+              "SB.7.1.3. Medyanın sosyal değişim ve etkileşimdeki rolünü tartışır."
+            ]
+          },
+          {
+            "baslik": "2. Osmanlı Devleti ve Kültür / 6-7. Demokrasi ve küresel bağlantılar",
+            "ciktilar": [
+              "SB.7.2.1. Osmanlı Devleti’nin siyasi güç olarak ortaya çıkış sürecini ve bu süreci etkileyen faktörleri açıklar.",
+              "SB.7.2.2. Osmanlı Devleti’nin fetih siyasetini örnekler üzerinden analiz eder.",
+              "SB.7.6.3. Türkiye Cumhuriyeti Devleti’nin temel niteliklerini toplumsal hayattaki uygulamalarla ilişkilendirir.",
+              "SB.7.7.4. Arkadaşlarıyla birlikte küresel sorunların çözümüne yönelik fikir önerileri geliştirir."
+            ]
+          }
+        ]
       }
     ],
     "Din Kültürü": [
@@ -432,6 +578,67 @@
               "5.5.1. Dinin mimarimize etkisini çözümleyebilme",
               "5.5.2. Camilerin bölümlerini tanıyabilme",
               "5.5.3. Kültürümüzde yer alan cami örneklerini karşılaştırabilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6. sınıf Din Kültürü ve Ahlak Bilgisi · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "1. Peygamber ve İlahi Kitap İnancı",
+            "ciktilar": [
+              "DKAB.6.1.1. Peygamberlerin insanlara rehber olarak gönderilmesi hakkında bilgi toplayabilme",
+              "DKAB.6.1.2. Vahiylerin insanlara ilettiği mesajları yapılandırabilme",
+              "DKAB.6.1.3. İlahi kitaplarla ilgili bilgileri çözümleyebilme",
+              "DKAB.6.1.4. Felak suresini ve bu surenin anlamını okuyarak yorumlayabilme"
+            ]
+          },
+          {
+            "baslik": "2-5. Ramazan, Hz. Muhammed ve kültürümüzde dini motifler",
+            "ciktilar": [
+              "DKAB.6.2.1. Ramazan ayının oruç ve Kur’an ayı olduğunu çözümleyebilme",
+              "DKAB.6.4.3. Hz. Muhammed’in (sav) gençlik yılları hakkındaki bilgileri yapılandırabilme",
+              "DKAB.6.5.1. Geleneğimizde, edebiyatımızda ve musikimizde dinin izlerini özetleyebilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 7. sınıf Din Kültürü ve Ahlak Bilgisi · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "1-3. Melek ve Ahiret İnancı / Hac ve Kurban / Ahlaki Davranışlar",
+            "ciktilar": [
+              "7.1.1. Varlıklar alemini özelliklerine göre ayırt eder.",
+              "7.1.2. Melekleri özellikleri ve görevlerine göre sınıflandırır.",
+              "7.1.3. Dünya hayatı ile ahiret hayatı arasındaki ilişkiyi yorumlar.",
+              "7.2.1. İslam’da hac ibadetinin önemini ayet ve hadisler ışığında yorumlar.",
+              "7.2.3. Kurban ibadetini İslam’ın yardımlaşma ve dayanışmaya verdiği önem açısından değerlendirir.",
+              "7.3.1. Güzel ahlaki tutum ve davranışları örneklerle açıklar."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 8. sınıf Din Kültürü ve Ahlak Bilgisi · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "1. Kader İnancı",
+            "ciktilar": [
+              "8.1.1. Kader ve kaza inancını ayet ve hadislerle açıklar.",
+              "8.1.2. İnsanın ilmi, iradesi, sorumluluğu ile kader arasında ilişki kurar.",
+              "8.1.3. Kaza ve kader ile ilgili kavramları analiz eder.",
+              "8.1.6. Ayet el-Kürsi’yi okur, anlamını söyler."
+            ]
+          },
+          {
+            "baslik": "2-5. Zekat, Hz. Muhammed’in örnekliği ve Kur’an-ı Kerim",
+            "ciktilar": [
+              "8.2.1. İslam’ın paylaşma ve yardımlaşmaya verdiği önemi ayet ve hadisler ışığında yorumlar.",
+              "8.2.2. Zekat ve sadaka ibadetini ayet ve hadislerle açıklar.",
+              "8.4.7. Hz. Muhammed’in (sav) örnek davranışlarının toplumsal hayattaki önemini değerlendirir.",
+              "8.5.2. Ayetlerden hareketle Kur’an’ın ana konularını sınıflandırır."
             ]
           }
         ]
@@ -552,6 +759,29 @@
             ]
           }
         ]
+      },
+      {
+        "tema": "Drive · 8. sınıf İngilizce · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Friendship / Teen Life / In the Kitchen / On the Phone",
+            "ciktilar": [
+              "E8.1.L1. Students will be able to understand the main points of short, clear, simple messages about friendship.",
+              "E8.1.SI1. Students will be able to interact with reasonable ease in structured situations and short conversations about friendship.",
+              "E8.2.SP1. Students will be able to express what they prefer, like and dislike.",
+              "E8.3.R1. Students will be able to understand short and simple texts about cooking and recipes.",
+              "E8.4.L1. Students will be able to understand phrases and expressions about telephone conversations."
+            ]
+          },
+          {
+            "baslik": "Chores / Science / Natural Forces",
+            "ciktilar": [
+              "E8.8.SP1. Students will be able to express responsibilities.",
+              "E8.9.R1. Students will be able to understand short texts about scientific achievements.",
+              "E8.10.SP1. Students will be able to talk about predictions concerning natural forces."
+            ]
+          }
+        ]
       }
     ],
     "Bilişim Teknolojileri ve Yazılım": [
@@ -587,6 +817,30 @@
               "BTY.5.6.2. Algoritma oluşturmada test edebilme-hata ayıklayabilme",
               "BTY.5.6.3. Yazılım geliştirme sürecinde kullanılan bileşenlerden yararlanabilme",
               "BTY.5.6.4. Blok tabanlı ortamda yazılım geliştirme sürecini yönetebilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6. sınıf Bilişim Teknolojileri ve Yazılım · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "BT.6.1-3. Bilişim teknolojileri, etik, güvenlik ve araştırma",
+            "ciktilar": [
+              "BT.6.1.1.1. Bilişim teknolojilerinin günlük yaşamdaki önemini değerlendirir.",
+              "BT.6.1.1.3. Bilişim teknolojilerinin beden ve ruh sağlığına etkilerini yorumlar.",
+              "BT.6.2.1.1. İnternet etiğinin önemini ifade eder.",
+              "BT.6.2.3.1. Gizlilik açısından önemli olan bileşenleri belirler.",
+              "BT.6.3.2.1. Arama motorlarını kullanarak ileri düzeyde araştırma yapar."
+            ]
+          },
+          {
+            "baslik": "BT.6.4-5. Ürün oluşturma ve programlama",
+            "ciktilar": [
+              "BT.6.4.1.1. Tablolama programının arayüzünü ve özelliklerini tanır.",
+              "BT.6.4.2.1. Ses ve video dosya biçimlerini bilir.",
+              "BT.6.5.1.1. Verilen bir problemi analiz eder.",
+              "BT.6.5.2.1. Blok tabanlı programlama aracının arayüzünü ve özelliklerini tanır."
             ]
           }
         ]
@@ -689,6 +943,193 @@
               "Mü.7.D.4. Dinlediği uluslararası müzikleri türlerine göre ayırt eder.",
               "Mü.7.D.5. Türkülerin yaşanmış öykülerini araştırır.",
               "Mü.7.D.6. Türk müziği kültürünü tanır."
+            ]
+          }
+        ]
+      }
+    ],
+    "T.C. İnkılap Tarihi ve Atatürkçülük": [
+      {
+        "tema": "Drive · 8. sınıf T.C. İnkılap Tarihi ve Atatürkçülük · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "1. Ünite: Bir Kahraman Doğuyor",
+            "ciktilar": [
+              "İTA.8.1.1. Avrupa’daki gelişmelerin yansımaları bağlamında Osmanlı Devleti’nin yirminci yüzyılın başlarındaki siyasi ve sosyal durumunu kavrar.",
+              "İTA.8.1.2. Mustafa Kemal’in çocukluk ve öğrenim hayatından hareketle onun kişilik özelliklerinin oluşumu hakkında çıkarımlarda bulunur.",
+              "İTA.8.1.4. Mustafa Kemal’in askerlik hayatı ile ilgili olayları ve olguları onun kişilik özellikleri ile ilişkilendirir."
+            ]
+          },
+          {
+            "baslik": "2. Ünite: Milli Uyanış",
+            "ciktilar": [
+              "İTA.8.2.1. Birinci Dünya Savaşı’nın sebeplerini ve savaşın başlamasına yol açan gelişmeleri kavrar.",
+              "İTA.8.2.3. Mondros Ateşkes Antlaşması’nın imzalanması ve uygulanması karşısında Osmanlı yönetiminin, Mustafa Kemal’in ve halkın tutumunu analiz eder.",
+              "İTA.8.2.5. Milli Mücadele’nin hazırlık döneminde Mustafa Kemal’in yaptığı çalışmaları analiz eder."
+            ]
+          },
+          {
+            "baslik": "6-7. Üniteler · Dış politika ve Atatürk sonrası Türkiye",
+            "ciktilar": [
+              "İTA.8.6.2. Atatürk Dönemi Türk dış politikasında yaşanan gelişmeleri analiz eder.",
+              "İTA.8.7.1. Atatürk’ün ölümüne ilişkin yansıma ve değerlendirmelerden hareketle onun fikir ve eserlerinin evrensel değerine ilişkin çıkarımlarda bulunur.",
+              "İTA.8.7.5. Türkiye’de çok partili siyasi hayata geçişi hızlandıran gelişmeleri, demokrasinin gerekleri açısından analiz eder."
+            ]
+          }
+        ]
+      }
+    ],
+    "Beden Eğitimi ve Spor": [
+      {
+        "tema": "Drive · 5. sınıf Beden Eğitimi ve Spor · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Hareket Yetkinliği / Aktif ve Sağlıklı Hayat",
+            "ciktilar": [
+              "BE.5.1.1.1. Yer değiştirme hareketlerini artan bir doğrulukla yapar.",
+              "BE.5.1.1.2. Dengeleme hareketlerini artan bir doğrulukla yapar.",
+              "BE.5.1.1.3. Nesne kontrolü gerektiren hareketleri artan bir doğrulukla yapar.",
+              "BE.5.2.1.1. Fiziksel etkinliklere düzenli olarak katılır."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6. sınıf Beden Eğitimi ve Spor · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Hareket Yetkinliği / Aktif ve Sağlıklı Hayat",
+            "ciktilar": [
+              "BE.6.1.1.1. Bireysel sporlara hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini sergiler.",
+              "BE.6.1.1.2. Takım sporlarına hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini sergiler.",
+              "BE.6.1.2.1. Spor ve etkinliklere hazırlayıcı oyunlarda hareket kavramlarını yerinde kullanır.",
+              "BE.6.2.2.3. Fiziksel etkinlikler sırasında kendisinin ve başkalarının güvenliğini sağlayacak davranışlar sergiler."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 7. sınıf Beden Eğitimi ve Spor · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "7.1. Hareket Yetkinliği / 7.2. Aktif ve Sağlıklı Hayat",
+            "ciktilar": [
+              "BE.7.1.1.1. Bireysel sporlara hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini artan bir doğrulukla sergiler.",
+              "BE.7.1.1.2. Takım sporlarına hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini artan bir doğrulukla sergiler.",
+              "BE.7.1.3.1. Sporlara hazırlayıcı oyunlardaki strateji ve taktikleri çözümler.",
+              "BE.7.2.1.1. Uyguladığı planın etkilerini gözleyerek fiziksel etkinliklere katılır.",
+              "BE.7.2.2.4. Temel ilk yardım uygulamalarını gösterir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 8. sınıf Beden Eğitimi ve Spor · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Hareket Yetkinliği / Aktif ve Sağlıklı Hayat",
+            "ciktilar": [
+              "BE.8.1.1.1. Bireysel sporlara hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini sergiler.",
+              "BE.8.1.1.2. Takım sporlarına hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini sergiler.",
+              "BE.8.2.1.1. Fiziksel etkinlik planı hazırlar ve uygular.",
+              "BE.8.2.3.1. Bayram, kutlama ve törenler için etkinlikler hazırlar."
+            ]
+          }
+        ]
+      }
+    ],
+    "Görsel Sanatlar": [
+      {
+        "tema": "Drive · 5. sınıf Görsel Sanatlar · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Hayat ve Sanat / Müze ve Kültür",
+            "ciktilar": [
+              "GS.5.1.1. Edebi metinlerden ve yazı düzeninden faydalanarak çevre duyarlılığını yansıtan resimleme yapabilme",
+              "GS.1.1.1. Çevresindeki nesnelerin renklerini ve geometrik şekillerini algılayabilme",
+              "GS.1.1.2. Farklı renkler ve geometrik şekillerdeki doğal ve yapay malzemelerle kolaj yapabilme",
+              "GS.5.7.2. Okulunda arkeoloji müzesi yapabilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 6. sınıf Görsel Sanatlar · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Görsel İletişim, biçimlendirme ve kültürel miras",
+            "ciktilar": [
+              "GS.6.1.1. Görsel sanat çalışmalarında sanat elemanlarını ve tasarım ilkelerini kullanır.",
+              "GS.6.1.2. Görsel sanat çalışmasını oluştururken farklı materyal ve tekniklerden yararlanır.",
+              "GS.6.2.1. Sanat eserlerini dönem, üslup ve konu özellikleri açısından inceler."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 7. sınıf Görsel Sanatlar · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Görsel İletişim, özgün tasarım ve sanat eleştirisi",
+            "ciktilar": [
+              "GS.7.1.1. Görsel sanat çalışmalarında farklı teknikleri bir arada kullanır.",
+              "GS.7.1.2. Görsel sanat çalışmasını oluştururken gözlem, araştırma ve deneyimlerinden yararlanır.",
+              "GS.7.2.1. Sanat eserlerini içerik, biçim ve teknik özellikleri bakımından değerlendirir."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 8. sınıf Görsel Sanatlar · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "Sanatsal ifade, sanat eleştirisi ve müze bilinci",
+            "ciktilar": [
+              "GS.8.1.1. Görsel sanat çalışmalarında duygu, düşünce ve izlenimlerini özgün biçimde yansıtır.",
+              "GS.8.1.2. Görsel sanat çalışmasını oluştururken sanat elemanları ve tasarım ilkelerini amacına uygun kullanır.",
+              "GS.8.2.1. Sanat eserlerini bağlam, tema ve teknik özellikleri bakımından çözümler."
+            ]
+          }
+        ]
+      }
+    ],
+    "Teknoloji ve Tasarım": [
+      {
+        "tema": "Drive · 7. sınıf Teknoloji ve Tasarım · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "7.A-7.B. Teknoloji ve tasarımın temelleri / Tasarım süreci",
+            "ciktilar": [
+              "TT.7.A.1.2. Teknoloji ve tasarım arasındaki ilişkiyi ifade eder.",
+              "TT.7.A.1.4. Ülkemizdeki teknolojik gelişmeleri değerlendirir.",
+              "TT.7.A.2.5. Sanat/tasarım elemanlarını ve tasarım ilkelerini kullanarak bir tasarım oluşturur.",
+              "TT.7.B.1.4. Tasarım sürecinin araştırma basamaklarını söyler.",
+              "TT.7.B.2.2. Taslak çizimlerini bilgisayar yardımıyla iki boyutlu görsellere dönüştürür."
+            ]
+          },
+          {
+            "baslik": "7.C-7.D. Yapılı çevre, ihtiyaçlar ve teknolojik çözüm",
+            "ciktilar": [
+              "TT.7.C.1.2. Yakın çevresindeki mimari yapıları işlevsel farklılıklarına göre karşılaştırır.",
+              "TT.7.C.2.3. Ergonomik bir ürün tasarlar.",
+              "TT.7.Ç.1.2. Doğal kaynaklar yoluyla enerji elde edilebilen bir ürün tasarlar.",
+              "TT.7.Ç.2.3. Özel gereksinimli bireyler için yaşama kolaylığı sağlayacak bir ürün çizerek tasarlar.",
+              "TT.7.D.2.1. Sergileyeceği ürün veya ürünlerini sunar."
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "Drive · 8. sınıf Teknoloji ve Tasarım · 2025-2026 yıllık plan",
+        "konular": [
+          {
+            "baslik": "8. sınıf · Tasarım problemi, ürün geliştirme ve sunum",
+            "ciktilar": [
+              "TT.8.A.1.1. Teknoloji, tasarım ve inovasyon kavramları arasındaki ilişkiyi açıklar.",
+              "TT.8.B.1.1. Tasarım problemini belirler ve çözüm önerileri geliştirir.",
+              "TT.8.B.1.2. Tasarım süreci için araştırma yapar ve verileri düzenler.",
+              "TT.8.C.1.1. Tasarımını model, maket veya prototip olarak oluşturur.",
+              "TT.8.D.1.1. Tasarım ürününü etkili biçimde sunar."
             ]
           }
         ]
