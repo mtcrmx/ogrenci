@@ -34,7 +34,7 @@
       </div>
     </header>
 
-    <section class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <section class="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
       <button onclick="oyunAc('quiz')" class="pop rounded-2xl bg-blue-600/20 border border-blue-500/30 p-4 text-left hover:bg-blue-600/30">
         <div class="text-3xl">⚡</div><div class="font-black mt-2">Hızlı Quiz</div><p class="text-xs text-blue-200">Tek cevap, sonra yeni soru</p>
       </button>
@@ -49,6 +49,9 @@
       </button>
       <a href="{{ url_for('satranc') }}" class="pop rounded-2xl bg-stone-200/10 border border-amber-300/30 p-4 text-left hover:bg-amber-300/15 transition" style="animation-delay:.24s">
         <div class="text-3xl">♟</div><div class="font-black mt-2 text-amber-100">Satranç Arenası</div><p class="text-xs text-amber-100/80">Tek oyuncu ve bire bir maç</p>
+      </a>
+      <a href="{{ url_for('dama') }}" class="pop rounded-2xl bg-emerald-200/10 border border-emerald-300/30 p-4 text-left hover:bg-emerald-300/15 transition" style="animation-delay:.30s">
+        <div class="text-3xl">●</div><div class="font-black mt-2 text-emerald-100">Dama Arenası</div><p class="text-xs text-emerald-100/80">Türk daması, hızlı strateji</p>
       </a>
     </section>
 
