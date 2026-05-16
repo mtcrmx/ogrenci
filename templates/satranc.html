@@ -198,6 +198,7 @@
     .chess-board {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, minmax(0, 1fr));
       aspect-ratio: 1;
       overflow: hidden;
       border-radius: 18px;
@@ -209,11 +210,16 @@
       position: relative;
       display: grid;
       place-items: center;
+      width: 100%;
+      height: 100%;
       min-width: 0;
+      min-height: 0;
       border: 0;
       padding: 0;
+      appearance: none;
       color: inherit;
       isolation: isolate;
+      overflow: hidden;
     }
     .square.light {
       background:
@@ -264,6 +270,7 @@
       z-index: 3;
       color: rgba(25,19,13,.58);
       font-size: clamp(.58rem, 2.1cqw, .82rem);
+      line-height: 1;
       font-weight: 900;
       pointer-events: none;
     }
@@ -278,10 +285,11 @@
       width: 100%;
       height: 100%;
       font-family: "Times New Roman", Georgia, serif;
-      font-size: clamp(2.15rem, 10cqw, 5rem);
+      font-size: clamp(1.9rem, 9.2cqw, 4.65rem);
       line-height: 1;
       filter: drop-shadow(0 8px 8px rgba(0,0,0,.28));
       animation: piece-land .22s ease both;
+      pointer-events: none;
       user-select: none;
     }
     .piece.white {
