@@ -13,6 +13,11 @@
       --volley-ink:#0f172a;
       --volley-panel:rgba(15,23,42,.84);
     }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background:
         radial-gradient(circle at 20% 10%, rgba(37,99,235,.28), transparent 34%),
@@ -32,7 +37,15 @@
       animation:pulse-banner 1.3s ease-in-out infinite;
       display:none;
     }
-    #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+    #game-container {
+      position: relative;
+      width: 100dvw;
+      height: 100dvh;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
     #header {
       min-height: 88px;
       background: linear-gradient(90deg,rgba(15,23,42,.98),rgba(17,24,39,.96));
@@ -83,6 +96,7 @@
     .score-line { font-size: 30px; line-height: 1; letter-spacing: .04em; }
     #canvas-wrap {
       flex: 1;
+      min-height: 0;
       position: relative;
       display: flex;
       align-items: center;
@@ -95,6 +109,7 @@
       overflow: hidden;
     }
     canvas {
+      display: block;
       background: #d97706;
       border: 1px solid rgba(255,255,255,.32);
       border-radius: 8px;
@@ -135,12 +150,83 @@
       text-align: center; box-shadow: 0 18px 44px rgba(0,0,0,.45);
     }
     @media (max-width: 760px) {
-      #header { grid-template-columns: 1fr 128px 1fr; gap: 8px; padding: 8px; min-height: 76px; }
-      .team-logo { width: 30px; height: 30px; font-size: 12px; }
-      .team-name { font-size: 12px; }
+      #header {
+        display: flex;
+        gap: 6px;
+        padding: 6px;
+        height: 62px;
+        min-height: 62px;
+        align-items: stretch;
+      }
+      #score-board {
+        order: 2;
+        flex: 0 0 88px;
+        min-width: 0;
+      }
+      .team-card {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        gap: 5px;
+        min-height: 0;
+        padding: 5px;
+      }
+      .team-card.home { order: 1; }
+      .team-card.away { order: 3; }
+      .team-logo { width: 25px; height: 25px; font-size: 11px; }
+      .team-name { font-size: 10px; line-height: 1.05; }
       .team-meta { display: none; }
-      .score-line { font-size: 24px; }
-      #volley-panel { left: 8px; top: 8px; width: 190px; padding: 8px; }
+      .set-line { font-size: 8px; letter-spacing: .08em; }
+      .score-line { font-size: 20px; letter-spacing: 0; }
+      #canvas-wrap { padding: 4px; }
+      canvas {
+        border-radius: 7px;
+        box-shadow: 0 14px 42px rgba(0,0,0,.48), 0 0 0 5px rgba(245,158,11,.14);
+      }
+      #volley-panel {
+        left: 6px;
+        top: 6px;
+        width: 112px;
+        padding: 6px;
+        border-radius: 8px;
+        background: rgba(15,23,42,.72);
+      }
+      .stat-row {
+        grid-template-columns: 1fr auto;
+        gap: 5px;
+        font-size: 10px;
+        margin-bottom: 4px;
+      }
+      #volley-ticker { display: none; }
+      #event-overlay {
+        top: auto;
+        bottom: 8px;
+        width: calc(100dvw - 16px);
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+      #audio-banner {
+        bottom: 8px;
+        width: min(300px, calc(100dvw - 16px));
+        padding: 8px 12px;
+        text-align: center;
+      }
+    }
+    @media (max-width: 380px), (max-height: 620px) {
+      #header {
+        gap: 4px;
+        padding: 5px;
+        height: 56px;
+        min-height: 56px;
+      }
+      #score-board { flex-basis: 76px; }
+      .team-card { padding: 4px; }
+      .team-logo { width: 22px; height: 22px; font-size: 10px; }
+      .team-name { font-size: 9px; }
+      .set-line { font-size: 7px; }
+      .score-line { font-size: 18px; }
+      #volley-panel { width: 96px; }
+      .stat-row { font-size: 9px; margin-bottom: 3px; }
     }
   </style>
 </head>
@@ -259,6 +345,17 @@ const canvas = document.getElementById('pitch');
 const ctx = canvas.getContext('2d');
 canvas.width = GAME_WIDTH;
 canvas.height = GAME_HEIGHT;
+
+function resizeCanvas() {
+    const wrap = document.getElementById('canvas-wrap');
+    if (!wrap || !wrap.clientWidth || !wrap.clientHeight) return;
+    const ratio = Math.max(0.1, Math.min(wrap.clientWidth / GAME_WIDTH, wrap.clientHeight / GAME_HEIGHT) * 0.985);
+    canvas.style.width = (GAME_WIDTH * ratio) + 'px';
+    canvas.style.height = (GAME_HEIGHT * ratio) + 'px';
+}
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 80));
+resizeCanvas();
 
 let team1 = null;
 let team2 = null;
