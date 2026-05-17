@@ -705,6 +705,9 @@ document.getElementById('tik-form').addEventListener('click', async function(e) 
     toast.classList.remove('hidden');
     setTimeout(() => toast.classList.add('hidden'), 4000);
   }
+  if (data.ceza_uygulandi) {
+    alert(data.ceza_mesaj || '3 olumsuz tik cezası uygulandı.');
+  }
 
   yenile();
 });

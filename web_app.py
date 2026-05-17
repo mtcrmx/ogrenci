@@ -17,7 +17,7 @@ from database import (
     tum_ogretmenler, tum_sifre_listesi,
     ogretmen_dogrula, ogretmen_id_bul, ogretmen_siniflari,
     sinif_ogrencileri, tum_okul_ogrencileri, ogrenci_tik_gecmisi,
-    ogrenci_tik_sayisi, OLUMSUZ_TIK_LIMIT, OLUMLU_TIK_LIMIT,
+    ogrenci_tik_sayisi, OLUMSUZ_TIK_LIMIT, OLUMSUZ_TIK_CEZA_ESIGI, OLUMLU_TIK_LIMIT,
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
     ogretmenin_ogrenci_tiklerini_sifirla, ogretmenin_sinif_tiklerini_sifirla,
     olumlu_tik_ekle, olumlu_sinif_etkinlik_ekle,
@@ -2146,6 +2146,7 @@ def tik_at(ogrenci_id):
 
     yeni  = tik_ekle(ogrenci_id, oid, kriter)
     d     = _durum(yeni)
+    uc_olumsuz_cezasi = onceki < OLUMSUZ_TIK_CEZA_ESIGI <= yeni
 
     yeni_seviye = None
     for esik, _, _, etiket in TIK_SEVIYELERI:
@@ -2172,10 +2173,21 @@ def tik_at(ogrenci_id):
             "emoji":       d["emoji"],
             "etiket":      d["etiket"],
             "yeni_seviye": yeni_seviye,
+            "ceza_uygulandi": uc_olumsuz_cezasi,
+            "ceza_mesaj": (
+                "3 olumsuz tik eşiğine ulaşıldı: sınıf lig puanı yarıya indirildi, "
+                "öğrencinin XP'si sıfırlandı."
+                if uc_olumsuz_cezasi else None
+            ),
             "uyari":       idari_islem and onceki < OLUMSUZ_TIK_LIMIT,
             "idari_islem": idari_islem,
             "limit":       OLUMSUZ_TIK_LIMIT,
         })
+    if uc_olumsuz_cezasi:
+        flash(
+            "3 olumsuz tik eşiğine ulaşıldı: sınıf lig puanı yarıya indirildi, öğrencinin XP'si sıfırlandı.",
+            "warning",
+        )
     return redirect(url_for("dashboard", sinif=sinif_id))
 
 

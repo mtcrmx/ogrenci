@@ -684,6 +684,99 @@ function trySkillMove(p, closeOpponents, distToGoal) {
     showEvent(brain.flair > 78 ? "Şık çalım!" : "Adam geçti!", 650);
     return { x: dir.x, y: dir.y, boost: 1.12 + brain.flair / 420 };
 }
+function clampValue(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+function goalDepthY(goalY, depth) {
+    return goalY === 0 ? depth : GAME_HEIGHT - depth;
+}
+function mirroredSlotX(slot, baseGap = 28, center = GAME_WIDTH / 2) {
+    if (slot <= 0) return center;
+    const side = slot % 2 === 0 ? 1 : -1;
+    const ring = Math.ceil(slot / 2);
+    return center + side * (baseGap + ring * 17);
+}
+function clampSetPiecePoint(x, y, margin = 18) {
+    return {
+        x: clampValue(x, margin, GAME_WIDTH - margin),
+        y: clampValue(y, margin, GAME_HEIGHT - margin),
+    };
+}
+function moveTowardPoint(p, targetX, targetY, maxSpeed = 3) {
+    const prevX = p.x;
+    const prevY = p.y;
+    const dir = normalize(targetX - p.x, targetY - p.y);
+    const d = dist(p, {x: targetX, y: targetY});
+    if (d > 5) {
+        p.x += dir.x * Math.min(maxSpeed, d);
+        p.y += dir.y * Math.min(maxSpeed, d);
+    }
+    const moved = Math.hypot(p.x - prevX, p.y - prevY);
+    if (moved > 0.05) {
+        applyMovementFatigue(p, moved, 0.45);
+    }
+}
+function matchStaminaCap(p, playerIsGK = isGoalkeeper(p)) {
+    const progress = Math.max(0, Math.min(1, timeTicks / Math.max(1, TOTAL_TICKS)));
+    const roleTax = playerIsGK ? 0 : (isMidfielder(p) ? 3.5 : (isForward(p) ? 2.5 : 1.5));
+    const endCap = playerIsGK ? 88 : 74;
+    return Math.max(endCap, 100 - progress * ((playerIsGK ? 8 : 19) + roleTax));
+}
+function applyPassiveStamina(p, playerIsGK = isGoalkeeper(p)) {
+    const cap = matchStaminaCap(p, playerIsGK);
+    if (p.stamina > cap) {
+        p.stamina = cap;
+    } else if (p.state !== 'CHASE' && p !== ball.owner && p.stamina < cap) {
+        p.stamina = Math.min(cap, p.stamina + 0.006 + (p.baseOvr / 14000));
+    }
+    p.stamina = clampValue(p.stamina, 0, 100);
+}
+function applyMovementFatigue(p, movedDistance, intensity = 1) {
+    if (!Number.isFinite(movedDistance) || movedDistance <= 0) return;
+    const sprintLoad = Math.max(0, movedDistance - 2.1) * 0.0018;
+    const roleLoad = isMidfielder(p) ? 1.08 : (isForward(p) ? 1.02 : 0.96);
+    const load = (movedDistance * 0.00105 + sprintLoad) * intensity * roleLoad;
+    p.stamina = clampValue(p.stamina - load, 0, 100);
+    p.distanceCovered = (p.distanceCovered || 0) + movedDistance;
+    if (movedDistance > 2.8) p.sprintTicks = (p.sprintTicks || 0) + 1;
+}
+function chooseSetPieceReceiver(taker) {
+    let bestMate = null;
+    let bestScore = -Infinity;
+    const goal = {x: GAME_WIDTH / 2, y: taker.team.goalY};
+    players.forEach(m => {
+        if (m.team !== taker.team || m === taker || isGoalkeeper(m)) return;
+        const dBall = dist(ball, m);
+        const dGoal = dist(m, goal);
+        const forwardGain = Math.abs(taker.y - taker.team.goalY) - Math.abs(m.y - taker.team.goalY);
+        const space = receiverSpace(m).score;
+        const lane = lanePressure(taker, m, taker.team, setPieceType === "TAC" ? 30 : 44);
+        let score = 0;
+        if (setPieceType === "KORNER") {
+            const inBox = Math.abs(m.y - taker.team.goalY) < 190 && Math.abs(m.x - GAME_WIDTH / 2) < 165;
+            score += inBox ? 90 : -30;
+            score += isForward(m) ? 34 : (isMidfielder(m) ? 18 : -8);
+            score += (m.ozellikler.sut || m.ovr || 50) * 0.25;
+            score -= dGoal * 0.18;
+            score -= lane * 0.65;
+        } else if (setPieceType === "TAC") {
+            score += Math.max(0, 240 - dBall) * 0.45;
+            score += forwardGain * 0.34;
+            score += space * 0.45;
+            score -= lane * 0.9;
+            if (dBall < 45 || dBall > 255) score -= 55;
+            if (isDefender(m) && forwardGain > 80) score -= 18;
+        } else {
+            score += forwardGain * 0.36 - dBall * 0.22 + space * 0.3 - lane;
+            if (setPieceType === "KORNER") score -= dGoal * 0.35;
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            bestMate = m;
+        }
+    });
+    return bestMate;
+}
 function clampPitch(x, y, margin = 15) {
     return {
         x: Math.max(margin, Math.min(GAME_WIDTH - margin, x)),
@@ -854,7 +947,7 @@ async function loadData() {
     normalizeTeamShape(team1);
     normalizeTeamShape(team2);
     
-    resetPositions();
+    resetPositions(true);
     showEvent("Hakem düdüğü çaldı, taktiksel maç başladı!", 3000);
     isPlaying = true;
     tryStartStadium();
@@ -886,7 +979,10 @@ function addPlayer(p, team, mirror) {
         state: 'IDLE',
         hasBallTime: 0,
         actionCooldown: 0,
-        burstCooldown: 0
+        burstCooldown: 0,
+        distanceCovered: 0,
+        sprintTicks: 0,
+        possessionTicks: 0
     });
 }
 
@@ -995,10 +1091,16 @@ function separatePlayers() {
     }
 }
 
-function resetPositions() {
+function resetPositions(fullStaminaReset = false) {
     players.forEach(p => {
         p.x = p.baseX; p.y = p.baseY; p.vx = 0; p.vy = 0;
-        p.state = 'IDLE'; p.stamina = 100;
+        p.state = 'IDLE';
+        if (fullStaminaReset) {
+            p.stamina = 100;
+            p.distanceCovered = 0;
+            p.sprintTicks = 0;
+            p.possessionTicks = 0;
+        }
     });
     ball.x = GAME_WIDTH/2; ball.y = GAME_HEIGHT/2; ball.z = 0;
     ball.vx = 0; ball.vy = 0; ball.vz = 0;
@@ -1182,28 +1284,38 @@ function update() {
                 const isDef = p.team !== setPieceTeam;
                 if (isDef) defCount++; else atkCount++;
                 const goalDir = defGoalY === 0 ? 1 : -1;
+                const infieldDir = isLeftCorner ? 1 : -1;
                 
                 if (isGK && isDef) {
-                    targetX = isLeftCorner ? GAME_WIDTH/2 - 20 : GAME_WIDTH/2 + 20;
-                    targetY = defGoalY === 0 ? 10 : GAME_HEIGHT - 10;
+                    targetX = GAME_WIDTH/2 + (isLeftCorner ? -18 : 18);
+                    targetY = goalDepthY(defGoalY, 18);
                 } else if (isDef) {
-                    if (defCount <= 4) {
-                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 1 : -1) * (35 + defCount * 12);
-                        targetY = defGoalY + goalDir * (70 + defCount * 18);
-                    } else if (defCount <= 7) {
-                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 1 : -1) * (55 + (defCount - 4) * 22);
-                        targetY = defGoalY + goalDir * 165;
+                    if (defCount <= 5) {
+                        targetX = mirroredSlotX(defCount, 18);
+                        targetY = goalDepthY(defGoalY, 58 + (defCount % 3) * 22);
+                    } else if (defCount <= 8) {
+                        targetX = mirroredSlotX(defCount - 5, 46);
+                        targetY = goalDepthY(defGoalY, 150);
                     } else {
-                        targetX = p.baseX;
-                        targetY = Math.max(130, Math.min(GAME_HEIGHT - 130, p.baseY));
+                        targetX = GAME_WIDTH/2 + (defCount % 2 === 0 ? 95 : -95);
+                        targetY = goalDepthY(defGoalY, 245);
                     }
                 } else {
-                    if (atkCount === 1) { targetX = ball.x + (isLeftCorner ? 60 : -60); targetY = ball.y + (defGoalY === 0 ? 40 : -40); }
-                    else if (atkCount <= 5 && !isDefensiveRole) { targetX = GAME_WIDTH/2 + (atkCount % 2 === 0 ? 1 : -1) * (20 + atkCount*12); targetY = defGoalY === 0 ? 65 + atkCount*12 : GAME_HEIGHT - (65 + atkCount*12); }
-                    else if (atkCount <= 7 && isForwardRole) { targetX = GAME_WIDTH/2 + (atkCount === 6 ? -50 : 50); targetY = defGoalY === 0 ? 155 : GAME_HEIGHT - 155; }
-                    else {
-                        targetX = p.baseX;
-                        targetY = Math.max(130, Math.min(GAME_HEIGHT - 130, p.baseY + p.team.dirY * 35));
+                    if (isGK) {
+                        targetX = GAME_WIDTH / 2;
+                        targetY = p.team.defendY === 0 ? 58 : GAME_HEIGHT - 58;
+                    } else if (atkCount === 1) {
+                        targetX = ball.x + infieldDir * 62;
+                        targetY = ball.y + goalDir * 42;
+                    } else if (!isDefensiveRole && atkCount <= 6) {
+                        targetX = mirroredSlotX(atkCount - 1, 16);
+                        targetY = goalDepthY(defGoalY, 60 + ((atkCount - 2) % 4) * 28);
+                    } else if (!isDefensiveRole && atkCount <= 8) {
+                        targetX = mirroredSlotX(atkCount - 6, 68);
+                        targetY = goalDepthY(defGoalY, 178);
+                    } else {
+                        targetX = GAME_WIDTH / 2 + (atkCount % 2 === 0 ? 112 : -112);
+                        targetY = goalDepthY(defGoalY, isDefensiveRole ? 300 : 230);
                     }
                 }
             } else if (setPieceType === "TAC") {
@@ -1211,23 +1323,39 @@ function update() {
                 if (isDef) defCount++; else atkCount++;
                 
                 const sidelineDir = ball.x < GAME_WIDTH/2 ? 1 : -1;
+                const throwY = clampValue(ball.y, 58, GAME_HEIGHT - 58);
                 
                 if (isDef) {
-                    if (defCount <= 3) { // Press the throw
-                        targetX = ball.x + sidelineDir * (40 + defCount*15);
-                        targetY = ball.y + (defCount === 1 ? -30 : (defCount === 2 ? 0 : 30));
-                    } else { // Shift block
-                        targetX = p.baseX + sidelineDir * ((GAME_WIDTH/2) - Math.abs(GAME_WIDTH/2 - ball.x)) * 0.5;
-                        targetY = p.baseY;
+                    if (isGK) {
+                        targetX = GAME_WIDTH / 2;
+                        targetY = p.team.defendY === 0 ? 38 : GAME_HEIGHT - 38;
+                    } else if (defCount <= 4) {
+                        targetX = ball.x + sidelineDir * (54 + defCount * 12);
+                        targetY = throwY + [-44, -12, 22, 58][defCount - 1];
+                    } else {
+                        const blockDepth = isDefensiveRole ? -22 : (isMidfielder(p) ? 42 : 104);
+                        targetX = GAME_WIDTH / 2 + sidelineDir * (defCount % 2 === 0 ? 62 : 106);
+                        targetY = throwY + setPieceTeam.dirY * blockDepth;
                     }
                 } else {
-                    if (atkCount <= 2) { // Short
-                        targetX = ball.x + sidelineDir * 50; targetY = ball.y + (atkCount === 1 ? -40 : 40);
-                    } else if (atkCount === 3) { // Down line
-                        targetX = ball.x + sidelineDir * 20; targetY = ball.y + atkDir * 80;
-                    } else { // Shift
-                        targetX = p.baseX + sidelineDir * ((GAME_WIDTH/2) - Math.abs(GAME_WIDTH/2 - ball.x)) * 0.4;
-                        targetY = p.baseY;
+                    if (isGK) {
+                        targetX = GAME_WIDTH / 2;
+                        targetY = p.team.defendY === 0 ? 62 : GAME_HEIGHT - 62;
+                    } else if (atkCount === 1) {
+                        targetX = ball.x + sidelineDir * 52;
+                        targetY = throwY + atkDir * 34;
+                    } else if (atkCount === 2) {
+                        targetX = ball.x + sidelineDir * 55;
+                        targetY = throwY - atkDir * 42;
+                    } else if (atkCount === 3) {
+                        targetX = ball.x + sidelineDir * 24;
+                        targetY = throwY + atkDir * 112;
+                    } else if (atkCount <= 6 && !isDefensiveRole) {
+                        targetX = GAME_WIDTH / 2 + sidelineDir * (atkCount % 2 === 0 ? 48 : 92);
+                        targetY = throwY + atkDir * (28 + atkCount * 12);
+                    } else {
+                        targetX = GAME_WIDTH / 2 + sidelineDir * (atkCount % 2 === 0 ? 118 : 150);
+                        targetY = throwY - atkDir * (isDefensiveRole ? 92 : 35);
                     }
                 }
             } else if (setPieceType === "AUT") {
@@ -1248,9 +1376,7 @@ function update() {
                 targetY = isGK ? (p.team.defendY === 0 ? 18 : GAME_HEIGHT - 18) : safePos.y;
             }
             
-            const dir = normalize(targetX - p.x, targetY - p.y);
-            const d = dist(p, {x:targetX, y:targetY});
-            if (d > 5) { p.x += dir.x * 3; p.y += dir.y * 3; }
+            moveTowardPoint(p, targetX, targetY, 3.2);
         });
         separatePlayers();
 
@@ -1271,24 +1397,25 @@ function update() {
                     const power = setPieceType === "PENALTI" ? 22 : 18 + (p.ozellikler.sut / 12);
                     ball.vx = dir.x * power; ball.vy = dir.y * power;
                 } else {
-                    // find teammate for throw-in or corner
-                    let bestMate = null; let bestScore = -999;
-                    players.forEach(m => {
-                        if (m.team === p.team && m !== p) {
-                            const score = -dist(p, m) + (setPieceType === "KORNER" ? -dist(m, {x:GAME_WIDTH/2, y:p.team.goalY}) : 0);
-                            if (score > bestScore) { bestScore = score; bestMate = m; }
-                        }
-                    });
+                    // find a realistic receiver for throw-in, corner or indirect free kick
+                    let bestMate = chooseSetPieceReceiver(p);
                     
                     if (bestMate) {
                         const errMargin = (100 - p.ozellikler.pas) / 100;
-                        const errX = (Math.random() * 100 - 50) * errMargin;
-                        const errY = (Math.random() * 100 - 50) * errMargin;
-                        const dir = normalize((bestMate.x + errX) - p.x, (bestMate.y + errY) - p.y);
-                        const basePower = setPieceType === "KORNER" ? 18 : 12;
-                        const power = basePower + (p.ozellikler.pas / 20) + (Math.random()*4-2)*errMargin;
+                        const errScale = setPieceType === "KORNER" ? 54 : (setPieceType === "TAC" ? 24 : 42);
+                        const lead = setPieceType === "TAC" ? 2 : 6;
+                        const errX = (Math.random() * errScale - errScale / 2) * errMargin;
+                        const errY = (Math.random() * errScale - errScale / 2) * errMargin;
+                        const aimX = bestMate.x + (bestMate.vx || 0) * lead + errX;
+                        const aimY = bestMate.y + (bestMate.vy || 0) * lead + errY;
+                        const dir = normalize(aimX - p.x, aimY - p.y);
+                        const basePower = setPieceType === "KORNER" ? 18.5 : (setPieceType === "TAC" ? 9.5 : 12);
+                        const power = basePower + (p.ozellikler.pas / (setPieceType === "KORNER" ? 22 : 24)) + (Math.random()*3-1.5)*errMargin;
                         ball.vx = dir.x * power; ball.vy = dir.y * power;
+                        ball.vz = setPieceType === "KORNER" ? 6 + Math.random() * 2.2 : (setPieceType === "TAC" ? 1.2 + Math.random() * 0.9 : 3);
                         ball.targetPlayer = bestMate;
+                        if (setPieceType === "KORNER") showEvent("Korner ortası!", 900);
+                        if (setPieceType === "TAC") showEvent("Taç kullanıldı!", 700);
                     } else {
                         ball.vx = (GAME_WIDTH/2 - p.x) * 0.05; ball.vy = (p.team.goalY - p.y) * 0.05;
                     }
@@ -1300,7 +1427,9 @@ function update() {
                 p.actionCooldown = 30;
             }
             stateMachine = "PLAYING";
-            showEvent("Oyun devam ediyor!", 1000);
+            if (setPieceType !== "KORNER" && setPieceType !== "TAC") {
+                showEvent("Oyun devam ediyor!", 1000);
+            }
         }
         updateDebugPanel();
         return;
@@ -1612,20 +1741,17 @@ function update() {
     players.forEach(p => {
         const playerIsGK = isGoalkeeper(p);
         
-        // Stamina logic
-        if (p.stamina < 100 && p.state !== 'CHASE' && p.state !== 'WITH_BALL') {
-            p.stamina += 0.05 + (p.baseOvr / 2000); // recover
-        }
-        if (p.stamina > 100) p.stamina = 100;
+        // Stamina logic: 90 dakikada kimse sürekli %100 kalmaz; kısa dinlenmeler sadece maç içi tavana kadar toparlar.
+        applyPassiveStamina(p, playerIsGK);
         
         // Yorgunluk etkisi: Özellikleri düşür (Kondisyon %100'den düştükçe)
         const staminaDrop = 100 - p.stamina;
-        p.ovr = Math.round(Math.max(1, p.baseOvr - staminaDrop * (p.baseOvr / 50)));
-        p.ozellikler.hiz = Math.round(Math.max(1, p.baseOzellikler.hiz - staminaDrop * (p.baseOzellikler.hiz / 50)));
-        p.ozellikler.sut = Math.round(Math.max(1, p.baseOzellikler.sut - staminaDrop * (p.baseOzellikler.sut / 50)));
-        p.ozellikler.pas = Math.round(Math.max(1, p.baseOzellikler.pas - staminaDrop * (p.baseOzellikler.pas / 50)));
-        p.ozellikler.defans = Math.round(Math.max(1, p.baseOzellikler.defans - staminaDrop * (p.baseOzellikler.defans / 50)));
-        p.ozellikler.kaleci = Math.round(Math.max(1, p.baseOzellikler.kaleci - staminaDrop * (p.baseOzellikler.kaleci / 50)));
+        p.ovr = Math.round(Math.max(1, p.baseOvr - staminaDrop * (p.baseOvr / 115)));
+        p.ozellikler.hiz = Math.round(Math.max(1, p.baseOzellikler.hiz - staminaDrop * (p.baseOzellikler.hiz / 115)));
+        p.ozellikler.sut = Math.round(Math.max(1, p.baseOzellikler.sut - staminaDrop * (p.baseOzellikler.sut / 115)));
+        p.ozellikler.pas = Math.round(Math.max(1, p.baseOzellikler.pas - staminaDrop * (p.baseOzellikler.pas / 115)));
+        p.ozellikler.defans = Math.round(Math.max(1, p.baseOzellikler.defans - staminaDrop * (p.baseOzellikler.defans / 115)));
+        p.ozellikler.kaleci = Math.round(Math.max(1, p.baseOzellikler.kaleci - staminaDrop * (p.baseOzellikler.kaleci / 130)));
 
         let speedMult = (p.ozellikler.hiz / 100) * 4.0; // Base speed based on 'hiz'
         // Fatigue effect: drop to 50% speed if exhausted
@@ -1636,8 +1762,7 @@ function update() {
 
         if (p === ball.owner) {
             // DECISION ENGINE: HAS BALL (FM-Style)
-            p.stamina -= 0.15; // dribbling tires faster
-            if (p.stamina < 0) p.stamina = 0;
+            p.possessionTicks = (p.possessionTicks || 0) + 1;
             
             const distToGoal = Math.abs(p.y - p.team.goalY);
             
@@ -1870,7 +1995,6 @@ function update() {
                         targetX = ball.x;
                         targetY = ball.y;
                         p.state = 'CHASE';
-                        p.stamina -= 0.08;
                     } else {
                         p.state = 'IDLE';
                         const goalSide = p.team.defendY === 0 ? -1 : 1;
@@ -1969,6 +2093,8 @@ function update() {
         }
 
         // Apply physics
+        const prevMoveX = p.x;
+        const prevMoveY = p.y;
         p.x += p.vx; p.y += p.vy;
         
         // Bounds
@@ -1979,6 +2105,13 @@ function update() {
             p.x = gkSafe.x;
             p.y = gkSafe.y;
         }
+        const movedDistance = Math.hypot(p.x - prevMoveX, p.y - prevMoveY);
+        let fatigueIntensity = playerIsGK ? 0.45 : 0.9;
+        if (p === ball.owner) fatigueIntensity += 0.75;
+        if (p.state === 'CHASE') fatigueIntensity += 0.55;
+        if (p.state === 'SUPPORT') fatigueIntensity += 0.15;
+        if (Math.hypot(p.vx, p.vy) > 3.0) fatigueIntensity += 0.35;
+        applyMovementFatigue(p, movedDistance, fatigueIntensity);
     });
     separatePlayers();
     updateDebugPanel();
@@ -2202,7 +2335,8 @@ function endHalftime() {
         p.baseY = GAME_HEIGHT - p.baseY;
         p.x = p.baseX; p.y = p.baseY;
         p.vx = 0; p.vy = 0;
-        p.stamina = 100;
+        const htRecoveryCap = isGoalkeeper(p) ? 96 : (isMidfielder(p) ? 90 : 92);
+        p.stamina = Math.min(htRecoveryCap, p.stamina + 10 + p.baseOvr / 18);
         p.state = 'IDLE';
         p.actionCooldown = 0;
     });

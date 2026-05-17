@@ -778,10 +778,13 @@ def tik_ekle(ogrenci_id: int, ogretmen_id: int, kriter: str) -> int:
         "INSERT INTO tik_kayitlari (ogrenci_id, ogretmen_id, kriter, tarih) VALUES (?, ?, ?, ?)",
         (ogrenci_id, ogretmen_id, kriter, tarih)
     )
-    con.commit()
     sayi = con.execute(
         "SELECT COUNT(*) FROM tik_kayitlari WHERE ogrenci_id = ?", (ogrenci_id,)
     ).fetchone()[0]
+    ceza = None
+    if mevcut < OLUMSUZ_TIK_CEZA_ESIGI <= int(sayi):
+        ceza = _uc_olumsuz_cezasi_uygula(con, ogrenci_id)
+    con.commit()
     con.close()
     try:
         denetim_kaydet(
@@ -792,7 +795,106 @@ def tik_ekle(ogrenci_id: int, ogretmen_id: int, kriter: str) -> int:
         )
     except Exception:
         pass
+    if ceza and ceza.get("ok"):
+        try:
+            denetim_kaydet(
+                "uc_olumsuz_cezasi",
+                (
+                    f"3 olumsuz tik esigi: sinif {ceza.get('sinif_id')} lig puani "
+                    f"{ceza.get('eski_lig_puan')} -> {ceza.get('yeni_lig_puan')}; "
+                    f"ogrenci XP {ceza.get('eski_xp')} -> 0."
+                ),
+                ogretmen_id=ogretmen_id,
+                ogrenci_id=ogrenci_id,
+            )
+        except Exception:
+            pass
     return sayi
+
+
+def _lig_puan_yariya_indir(con: sqlite3.Connection, sinif_id: int) -> dict:
+    """Sınıfın haftalık Süper Lig puanını ve maç tablosu puanını yarıya indirir."""
+    _ensure_lig_tablolari(con)
+    hafta = _bu_hafta_pazartesi()
+    row = con.execute(
+        "SELECT puan, hafta_basi FROM lig WHERE sinif_id=?", (sinif_id,)
+    ).fetchone()
+    if not row:
+        eski_lig_puan = 0
+        yeni_lig_puan = 0
+        con.execute(
+            "INSERT INTO lig (sinif_id, puan, hafta_basi) VALUES (?,0,?)",
+            (sinif_id, hafta),
+        )
+    elif row["hafta_basi"] != hafta:
+        eski_lig_puan = 0
+        yeni_lig_puan = 0
+        con.execute(
+            "UPDATE lig SET puan=0, hafta_basi=? WHERE sinif_id=?",
+            (hafta, sinif_id),
+        )
+    else:
+        eski_lig_puan = int(row["puan"] or 0)
+        yeni_lig_puan = max(0, eski_lig_puan // 2)
+        con.execute(
+            "UPDATE lig SET puan=?, hafta_basi=? WHERE sinif_id=?",
+            (yeni_lig_puan, hafta, sinif_id),
+        )
+
+    tablo = con.execute(
+        "SELECT puan FROM lig_mac_tablo WHERE sinif_id=?", (sinif_id,)
+    ).fetchone()
+    eski_tablo_puan = int(tablo["puan"] or 0) if tablo else 0
+    yeni_tablo_puan = max(0, eski_tablo_puan // 2)
+    if tablo:
+        con.execute(
+            "UPDATE lig_mac_tablo SET puan=? WHERE sinif_id=?",
+            (yeni_tablo_puan, sinif_id),
+        )
+    return {
+        "eski_lig_puan": eski_lig_puan,
+        "yeni_lig_puan": yeni_lig_puan,
+        "eski_tablo_puan": eski_tablo_puan,
+        "yeni_tablo_puan": yeni_tablo_puan,
+    }
+
+
+def _uc_olumsuz_cezasi_uygula(con: sqlite3.Connection, ogrenci_id: int) -> dict:
+    """3. olumsuz tikte sınıf lig puanını yarıya indirir ve öğrencinin XP'sini sıfırlar."""
+    ogr = con.execute(
+        "SELECT sinif_id FROM ogrenciler WHERE id=?", (ogrenci_id,)
+    ).fetchone()
+    if not ogr:
+        return {"ok": False, "sebep": "Öğrenci bulunamadı."}
+
+    sinif_id = int(ogr["sinif_id"])
+    _gelisim_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    gp = con.execute(
+        "SELECT xp, sandik_hakki FROM gelisim_puan WHERE ogrenci_id=?",
+        (ogrenci_id,),
+    ).fetchone()
+    eski_xp = int(gp["xp"] or 0) if gp else 0
+    eski_sandik = int(gp["sandik_hakki"] or 0) if gp else 0
+    con.execute(
+        """
+        INSERT INTO gelisim_puan (ogrenci_id, xp, sandik_hakki, guncelleme)
+        VALUES (?, 0, 0, ?)
+        ON CONFLICT(ogrenci_id) DO UPDATE SET
+            xp = 0,
+            sandik_hakki = 0,
+            guncelleme = excluded.guncelleme
+        """,
+        (ogrenci_id, now),
+    )
+    lig = _lig_puan_yariya_indir(con, sinif_id)
+    return {
+        "ok": True,
+        "sinif_id": sinif_id,
+        "eski_xp": eski_xp,
+        "eski_sandik_hakki": eski_sandik,
+        **lig,
+    }
 
 
 def ogrenci_tik_sayisi(ogrenci_id: int) -> int:
@@ -901,6 +1003,7 @@ def ogretmenin_sinif_tiklerini_sifirla(sinif_id: int, ogretmen_id: int) -> dict:
 # ══════════════════════════════════════════════════════════════════════════
 
 OLUMLU_TIK_XP = 5
+OLUMSUZ_TIK_CEZA_ESIGI = 3
 OLUMSUZ_TIK_LIMIT = 12
 OLUMLU_TIK_LIMIT = 36
 
