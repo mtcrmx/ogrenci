@@ -6,7 +6,20 @@
   <title>2D Voleybol Motoru (Pro)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #000; color: #fff; margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
+    :root {
+      --volley-blue:#2563eb;
+      --volley-red:#ef4444;
+      --volley-gold:#f59e0b;
+      --volley-ink:#0f172a;
+      --volley-panel:rgba(15,23,42,.84);
+    }
+    body {
+      background:
+        radial-gradient(circle at 20% 10%, rgba(37,99,235,.28), transparent 34%),
+        radial-gradient(circle at 78% 14%, rgba(239,68,68,.22), transparent 32%),
+        linear-gradient(180deg,#07111f 0%,#0b1220 46%,#111827 100%);
+      color: #fff; margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif;
+    }
     @keyframes pulse-banner {
       0%,100% { opacity:1; transform:translateX(-50%) scale(1); }
       50%      { opacity:.85; transform:translateX(-50%) scale(1.04); }
@@ -20,15 +33,114 @@
       display:none;
     }
     #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
-    #header { height: 60px; background: #111; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 2px solid #333; }
-    #score-board { font-size: 20px; font-weight: 900; letter-spacing: 1px; text-align: center; }
-    #canvas-wrap { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #1a1a1a; }
-    canvas { background: #d97706; border: 20px solid #fbbf24; box-shadow: 0 0 20px rgba(0,0,0,0.8); max-width: 100%; max-height: 100%; }
+    #header {
+      min-height: 88px;
+      background: linear-gradient(90deg,rgba(15,23,42,.98),rgba(17,24,39,.96));
+      display: grid;
+      grid-template-columns: minmax(0,1fr) minmax(160px,240px) minmax(0,1fr);
+      gap: 14px;
+      align-items: center;
+      padding: 10px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 12px 38px rgba(0,0,0,.38);
+      z-index: 4;
+    }
+    .team-card {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid rgba(255,255,255,.13);
+      background: rgba(255,255,255,.055);
+      border-radius: 8px;
+    }
+    .team-card.away { flex-direction: row-reverse; text-align: right; }
+    .team-logo {
+      width: 38px; height: 38px; flex: 0 0 auto;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      font-weight: 950;
+      color: white;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.28), 0 8px 20px rgba(0,0,0,.28);
+    }
+    .team-card.home .team-logo { background: linear-gradient(145deg,#60a5fa,#1d4ed8); }
+    .team-card.away .team-logo { background: linear-gradient(145deg,#fb7185,#b91c1c); }
+    .team-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 900; }
+    .team-meta { font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: rgba(226,232,240,.68); font-weight: 800; }
+    #score-board {
+      align-self: stretch;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      background: linear-gradient(180deg,rgba(2,6,23,.96),rgba(15,23,42,.92));
+      border: 1px solid rgba(245,158,11,.45);
+      border-radius: 8px;
+      box-shadow: inset 0 0 28px rgba(245,158,11,.08);
+      font-weight: 950;
+    }
+    .set-line { color: var(--volley-gold); font-size: 11px; letter-spacing: .18em; }
+    .score-line { font-size: 30px; line-height: 1; letter-spacing: .04em; }
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px),
+        linear-gradient(180deg,rgba(255,255,255,.03) 1px,transparent 1px),
+        radial-gradient(circle at 50% 45%,rgba(245,158,11,.18),transparent 46%);
+      background-size: 48px 48px,48px 48px,100% 100%;
+      overflow: hidden;
+    }
+    canvas {
+      background: #d97706;
+      border: 1px solid rgba(255,255,255,.32);
+      border-radius: 8px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.52), 0 0 0 12px rgba(245,158,11,.18);
+      max-width: 100%;
+      max-height: 100%;
+    }
+    #volley-panel {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      z-index: 3;
+      width: min(230px, calc(100vw - 32px));
+      background: var(--volley-panel);
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.36);
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+    }
+    .stat-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; font-size: 12px; margin-bottom: 7px; color: rgba(226,232,240,.78); }
+    .stat-value { color: #fff; font-weight: 900; }
+    #volley-ticker { display: grid; gap: 5px; margin-top: 7px; }
+    .ticker-item {
+      font-size: 11px;
+      line-height: 1.3;
+      color: rgba(255,255,255,.84);
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding-top: 5px;
+      overflow-wrap: anywhere;
+    }
     #event-overlay {
       position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
-      font-weight: bold; font-size: 16px; opacity: 0; transition: opacity 0.3s; pointer-events: none;
-      text-align: center;
+      background: rgba(2,6,23,0.84); color: #fff; padding: 14px 24px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.18);
+      font-weight: 950; font-size: 18px; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+      text-align: center; box-shadow: 0 18px 44px rgba(0,0,0,.45);
+    }
+    @media (max-width: 760px) {
+      #header { grid-template-columns: 1fr 128px 1fr; gap: 8px; padding: 8px; min-height: 76px; }
+      .team-logo { width: 30px; height: 30px; font-size: 12px; }
+      .team-name { font-size: 12px; }
+      .team-meta { display: none; }
+      .score-line { font-size: 24px; }
+      #volley-panel { left: 8px; top: 8px; width: 190px; padding: 8px; }
     }
   </style>
 </head>
@@ -38,15 +150,33 @@
 
 <div id="game-container">
   <div id="header">
-    <div class="text-blue-400 font-bold text-sm w-1/3" id="team1-name">Bizim Sınıf</div>
-    <div id="score-board" class="w-1/3">
-       <div class="text-xs text-amber-400">SET <span id="set1">0</span> - <span id="set2">0</span></div>
-       <div class="text-lg"><span id="score1">0</span> - <span id="score2">0</span></div>
+    <div class="team-card home">
+      <div class="team-logo" id="team1-badge">B</div>
+      <div style="min-width:0">
+        <div class="team-meta">Ev Sahibi</div>
+        <div class="team-name" id="team1-name">Bizim Sınıf</div>
+      </div>
     </div>
-    <div class="text-red-400 font-bold text-sm w-1/3 text-right" id="team2-name">Rakip Sınıf</div>
+    <div id="score-board">
+       <div class="set-line">SET <span id="set1">0</span> - <span id="set2">0</span></div>
+       <div class="score-line"><span id="score1">0</span> - <span id="score2">0</span></div>
+    </div>
+    <div class="team-card away">
+      <div class="team-logo" id="team2-badge">R</div>
+      <div style="min-width:0">
+        <div class="team-meta">Rakip</div>
+        <div class="team-name" id="team2-name">Rakip Sınıf</div>
+      </div>
+    </div>
     <button onclick="window.close()" class="absolute right-4 top-14 mt-2 px-3 py-1 bg-red-600 rounded text-xs font-bold hover:bg-red-500 z-50 hidden" id="close-btn">Kapat</button>
   </div>
   <div id="canvas-wrap">
+    <div id="volley-panel">
+      <div class="stat-row"><span>Ralli</span><span class="stat-value" id="hud-rally">0</span></div>
+      <div class="stat-row"><span>Temas</span><span class="stat-value" id="hud-touch">0/3</span></div>
+      <div class="stat-row"><span>Faz</span><span class="stat-value" id="hud-phase">Servis</span></div>
+      <div id="volley-ticker"></div>
+    </div>
     <canvas id="pitch"></canvas>
     <div id="event-overlay">Maç Başlıyor!</div>
   </div>
@@ -139,11 +269,16 @@ let goalTimer = 0;
 let eventTimeout = null;
 let servisOyuncuIndex = 0; // rotates each set
 let lastNetSide = null; // track net crossing properly
+let volleyTicks = 0;
+let rallyTicks = 0;
+let volleyTickerItems = [];
+let lastVolleyPhase = "";
 
 function showEvent(msg, duration=2000) {
     const el = document.getElementById('event-overlay');
     el.innerHTML = msg;
     el.style.opacity = 1;
+    pushVolleyTicker(String(msg).replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, ""));
     clearTimeout(eventTimeout);
     if(duration > 0) eventTimeout = setTimeout(() => el.style.opacity = 0, duration);
 }
@@ -154,6 +289,68 @@ const normalize = (dx, dy) => {
     if (len === 0) return {x:0, y:0};
     return {x: dx/len, y: dy/len};
 };
+
+function clampVolleyStat(value, fallback = 55) {
+    const n = Number.isFinite(value) ? value : fallback;
+    return Math.max(1, Math.min(100, n));
+}
+
+function makeVolleyBrain(oz, ovr, role) {
+    const base = clampVolleyStat(ovr, 55);
+    const hiz = clampVolleyStat(oz.hiz, base);
+    const sut = clampVolleyStat(oz.sut, base);
+    const pas = clampVolleyStat(oz.pas, base);
+    const defans = clampVolleyStat(oz.defans, base);
+    const r = String(role || "").toLocaleLowerCase('tr-TR');
+    const liberoBoost = r.includes("libero") ? 8 : 0;
+    const setterBoost = r.includes("pas") || r.includes("setter") ? 8 : 0;
+    return {
+        receive: clampVolleyStat(Math.round(defans * 0.42 + pas * 0.24 + hiz * 0.16 + base * 0.16 + liberoBoost)),
+        set: clampVolleyStat(Math.round(pas * 0.58 + base * 0.24 + hiz * 0.08 + setterBoost)),
+        attack: clampVolleyStat(Math.round(sut * 0.58 + hiz * 0.18 + base * 0.2)),
+        block: clampVolleyStat(Math.round(defans * 0.48 + hiz * 0.18 + base * 0.2)),
+        decisions: clampVolleyStat(Math.round(pas * 0.38 + defans * 0.22 + base * 0.3)),
+    };
+}
+
+function teamInitial(name, fallback) {
+    const clean = String(name || fallback || "").trim();
+    return (clean.match(/[A-Za-zÇĞİÖŞÜçğıöşü0-9]/) || [fallback || "?"])[0].toLocaleUpperCase('tr-TR');
+}
+
+function pushVolleyTicker(text) {
+    const ticker = document.getElementById('volley-ticker');
+    if (!ticker || !text) return;
+    volleyTickerItems.unshift(text);
+    volleyTickerItems = volleyTickerItems.slice(0, 4);
+    ticker.innerHTML = volleyTickerItems.map(item => `<div class="ticker-item">${escapeHtml(item)}</div>`).join('');
+}
+
+function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[ch]);
+}
+
+function updateVolleyHud() {
+    const rally = document.getElementById('hud-rally');
+    const touch = document.getElementById('hud-touch');
+    const phase = document.getElementById('hud-phase');
+    if (rally) rally.textContent = String(Math.floor(rallyTicks / FPS));
+    if (touch) touch.textContent = `${Math.max(0, teamTouches)}/3`;
+    if (phase) {
+        const text = stateMachine === "SERVIS" ? "Servis"
+            : stateMachine === "POINT_CELEBRATION" ? "Sayı"
+            : ball.serveFlight ? "Servis karşılama"
+            : teamTouches === 1 ? "Manşet sonrası"
+            : teamTouches === 2 ? "Hücum seti"
+            : "Ralli";
+        if (text !== lastVolleyPhase) {
+            lastVolleyPhase = text;
+            phase.textContent = text;
+        }
+    }
+}
 
 function clampPointToTeamCourt(team, x, y, buffer = 18) {
     const minY = team.side === 1 ? NET_Y + buffer : buffer;
@@ -189,14 +386,16 @@ function ballMovingTowardTeam(team) {
 function predictBallLanding() {
     let predX = ball.x;
     let predY = ball.y;
+    let predZ = ball.z;
     let predVz = ball.vz;
     let predTime = 0;
-    while (predVz > -20 && predTime < 120) {
+    while (predTime < 150) {
         predVz -= GRAVITY;
         predX += ball.vx * (1 - AIR_DRAG * 0.5);
         predY += ball.vy * (1 - AIR_DRAG * 0.5);
+        predZ += predVz;
         predTime++;
-        if (predVz + predTime * -GRAVITY < 0) break;
+        if (predZ <= 0) break;
     }
     return { x: predX, y: predY, time: predTime };
 }
@@ -208,11 +407,13 @@ function chooseReceiver(team, target) {
         if (p.team !== team) return;
         // Çift vuruş kuralı: son topa vuran oyuncu receiver olamaz
         if (p === ball.lastTouchedBy) return;
-        let score = dist(p, target);
-        if (p.isLibero) score -= 22;
-        if (p.currentRow === 'back') score -= 10;
-        if (Math.abs(ball.y - NET_Y) < 90 && p.currentRow === 'front') score -= 12;
-        if (p.actionCooldown > 0) score += 35;
+        const receiveSkill = p.brain?.receive || p.ozellikler.defans || p.ovr || 55;
+        let score = dist(p, target) * 0.82;
+        score -= receiveSkill * 0.38;
+        if (p.isLibero) score -= 28;
+        if (p.currentRow === 'back') score -= 16;
+        if (Math.abs(target.y - NET_Y) < 100 && p.currentRow === 'front') score -= 10;
+        if (p.actionCooldown > 0) score += 32;
         if (score < bestScore) {
             bestScore = score;
             best = p;
@@ -228,6 +429,67 @@ function chooseReceiver(team, target) {
         });
     }
     return best;
+}
+
+function chooseSetter(team, avoidPlayer) {
+    let best = null;
+    let bestScore = -Infinity;
+    const idealY = team.side === 1 ? NET_Y + 74 : NET_Y - 74;
+    players.forEach(p => {
+        if (p.team !== team || p === avoidPlayer || p === ball.lastTouchedBy) return;
+        const setSkill = p.brain?.set || p.ozellikler.pas || p.ovr || 55;
+        let score = setSkill * 1.1 - Math.abs(p.y - idealY) * 0.18 - Math.abs(p.x - GAME_WIDTH * 0.52) * 0.08;
+        if (p.currentRow === 'front') score += 18;
+        if (p.isLibero) score -= 20;
+        if (p.actionCooldown > 0) score -= 24;
+        if (score > bestScore) { bestScore = score; best = p; }
+    });
+    return best || players.find(p => p.team === team && p !== avoidPlayer) || avoidPlayer;
+}
+
+function chooseSpiker(team, setter) {
+    let best = null;
+    let bestScore = -Infinity;
+    players.forEach(p => {
+        if (p.team !== team || p === setter || p.isLibero) return;
+        const attack = p.brain?.attack || p.ozellikler.sut || p.ovr || 55;
+        let score = attack * 1.15 - Math.abs(p.y - NET_Y) * 0.16;
+        if (p.currentRow === 'front') score += 26;
+        if (Math.abs(p.x - GAME_WIDTH / 2) > 82) score += 8;
+        if (p.actionCooldown > 0) score -= 28;
+        if (score > bestScore) { bestScore = score; best = p; }
+    });
+    return best || players.find(p => p.team === team && p !== setter && !p.isLibero) || setter;
+}
+
+function chooseAttackLanding(p) {
+    const attackTop = p.team.side === 1;
+    const yMin = attackTop ? 38 : NET_Y + 58;
+    const yMax = attackTop ? NET_Y - 58 : GAME_HEIGHT - 38;
+    const deepY = attackTop ? yMin + (yMax - yMin) * 0.28 : yMin + (yMax - yMin) * 0.72;
+    const shortY = attackTop ? yMin + (yMax - yMin) * 0.72 : yMin + (yMax - yMin) * 0.28;
+    const candidates = [
+        {x: 42, y: deepY, label: "çizgi"},
+        {x: GAME_WIDTH - 42, y: deepY, label: "çizgi"},
+        {x: GAME_WIDTH * 0.5, y: shortY, label: "plase"},
+        {x: p.x < GAME_WIDTH / 2 ? GAME_WIDTH - 62 : 62, y: deepY, label: "çapraz"},
+        {x: Math.max(44, Math.min(GAME_WIDTH - 44, p.x + (Math.random() * 120 - 60))), y: (deepY + shortY) / 2, label: "boş alan"},
+    ];
+    let best = candidates[0];
+    let bestScore = -Infinity;
+    candidates.forEach(c => {
+        let nearest = 260;
+        players.forEach(opp => {
+            if (opp.team === p.team) return;
+            nearest = Math.min(nearest, Math.hypot(opp.x - c.x, opp.y - c.y));
+        });
+        let score = nearest;
+        score += Math.abs(c.x - GAME_WIDTH / 2) * 0.12;
+        if (c.label === "çapraz") score += (p.brain?.decisions || 55) * 0.25;
+        if (c.label === "plase" && (p.brain?.attack || 55) > 76) score += 18;
+        if (score > bestScore) { bestScore = score; best = c; }
+    });
+    return clampPointToTeamCourt(p.team === team1 ? team2 : team1, best.x, best.y, 24);
 }
 
 function coverageTarget(p, receivePlan) {
@@ -286,6 +548,8 @@ async function loadData() {
     
     document.getElementById('team1-name').textContent = data.bizim_takim.ad;
     document.getElementById('team2-name').textContent = data.rakip_takim.ad;
+    document.getElementById('team1-badge').textContent = teamInitial(data.bizim_takim.ad, "B");
+    document.getElementById('team2-badge').textContent = teamInitial(data.rakip_takim.ad, "R");
     team1 = { name: data.bizim_takim.ad, color: '#3b82f6', dirY: -1, defendY: GAME_HEIGHT, side: 1 };
     team2 = { name: data.rakip_takim.ad, color: '#ef4444', dirY: 1, defendY: 0, side: 2 };
     serverTeam = team1;
@@ -295,6 +559,7 @@ async function loadData() {
     
     resetPositions();
     showEvent("Voleybol Maçı Başlıyor!", 3000);
+    updateVolleyHud();
     isPlaying = true;
     requestAnimationFrame(gameLoop);
   } catch(e) {
@@ -307,9 +572,11 @@ function addPlayer(p, team, mirror) {
     let ty = (p.baseY / 100) * GAME_HEIGHT;
     if (mirror) { tx = GAME_WIDTH - tx; ty = GAME_HEIGHT - ty; }
     let isLibero = (p.rol && p.rol.toLowerCase().includes('libero')) || players.filter(pl => pl.team === team).length === 5; // make 6th player libero if none specified
+    const baseOzellikler = p.ozellikler ? { ...p.ozellikler } : {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr};
     players.push({
-        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, team: team,
-        ozellikler: p.ozellikler || {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr},
+        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, team: team, rol: p.rol || "",
+        ozellikler: { ...baseOzellikler },
+        brain: makeVolleyBrain(baseOzellikler, p.ovr, p.rol || ""),
         baseX: tx, baseY: ty, x: tx, y: ty, vx: 0, vy: 0,
         actionCooldown: 0,
         isLibero: isLibero
@@ -353,7 +620,7 @@ function resetPositions() {
     });
 
     ball.vx = 0; ball.vy = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0; ball.owner = null; ball.serveFlight = false;
-    teamTouches = 0; ball.lastTeamTouched = null;
+    teamTouches = 0; ball.lastTeamTouched = null; rallyTicks = 0;
     
     if (stateMachine !== "MATCH_END") {
         stateMachine = "SERVIS";
@@ -374,6 +641,7 @@ function resetPositions() {
         ball.owner = server;
         server.actionCooldown = 60; // delay
         lastNetSide = serverTeam;
+        updateVolleyHud();
     }
 }
 
@@ -381,6 +649,7 @@ function givePoint(team, reason) {
     stateMachine = "POINT_CELEBRATION";
     goalTimer = 120;
     showEvent(reason + "<br>Sayı: " + team.name, 2000);
+    updateVolleyHud();
     // Ortam sesi zaten çalıyor; ek bir sayı sesi yok
     
     if (team === team1) score1++; else score2++;
@@ -434,6 +703,9 @@ function autoSubmit() {
 
 function update() {
     if (!isPlaying || stateMachine === "MATCH_END") return;
+    volleyTicks++;
+    if (stateMachine === "PLAYING") rallyTicks++;
+    if (volleyTicks % 12 === 0) updateVolleyHud();
 
     if (stateMachine === "POINT_CELEBRATION") {
         goalTimer--;
@@ -447,11 +719,12 @@ function update() {
             if (p.actionCooldown > 0) { p.actionCooldown--; return; }
             
             // Servis normalde rakip sahaya düşer; düşük ihtimalle file veya aut olur.
-            const errMargin = (100 - p.ozellikler.sut) / 100;
+            const serveSkill = p.brain?.attack || p.ozellikler.sut || p.ovr || 55;
+            const errMargin = ((100 - serveSkill) / 100) * 0.58;
             const faultRoll = Math.random();
-            const serveFault = faultRoll < 0.055 ? "net" : (faultRoll < 0.095 ? "out" : null);
-            const errX = (Math.random() * 58 - 29) * errMargin;
-            const errY = (Math.random() * 46 - 23) * errMargin;
+            const serveFault = faultRoll < 0.024 ? "net" : (faultRoll < 0.046 ? "out" : null);
+            const errX = (Math.random() * 42 - 21) * errMargin;
+            const errY = (Math.random() * 34 - 17) * errMargin;
             const courtMargin = 70;
             const targetTop = p.team.side === 1;
             let gX = Math.max(courtMargin, Math.min(GAME_WIDTH - courtMargin,
@@ -459,7 +732,7 @@ function update() {
             let gY = targetTop
                 ? Math.max(90, Math.min(NET_Y - 95, 150 + Math.random() * 165 + errY))
                 : Math.max(NET_Y + 95, Math.min(GAME_HEIGHT - 90, GAME_HEIGHT - 315 + Math.random() * 165 + errY));
-            let travelFrames = 72 + Math.random() * 10;
+            let travelFrames = 68 + Math.random() * 8 - serveSkill / 45;
 
             if (serveFault === "out") {
                 const outX = Math.random() < 0.5 ? -35 : GAME_WIDTH + 35;
@@ -487,6 +760,7 @@ function update() {
             ball.serveFlight = true;
             lastNetSide = p.team;
             teamTouches = 0;
+            rallyTicks = 0;
             stateMachine = "PLAYING";
             showEvent("Servis!", 600);
         }
@@ -613,7 +887,7 @@ function update() {
         const moveDir = normalize(targetX - p.x, targetY - p.y);
         const d = dist(p, {x:targetX, y:targetY});
         if (d > 5) {
-            const speedMult = (p.ozellikler.hiz / 100) * 7.5; // Artırıldı: Oyuncular topa daha hızlı yetişecek
+            const speedMult = 0.55 + (p.ozellikler.hiz / 100) * 8.6; // daha seri ayak hareketi
             p.vx = moveDir.x * speedMult;
             p.vy = moveDir.y * speedMult;
         } else {
@@ -625,9 +899,9 @@ function update() {
         clampPlayerToOwnCourt(p);
         
         // ========== HITBOX & CONTACT DETECTION ==========
-        const HITBOX_RADIUS = 35; // Artırıldı: Top karşılama daha kolay
+        const HITBOX_RADIUS = 40; // Top karşılama daha güvenilir
         const hitDist = dist(p, ball);
-        const zOK = ball.z > 0 && ball.z < 45; // Artırıldı: Daha yüksekten top çıkarabilirler
+        const zOK = ball.z > 0 && ball.z < 58; // Daha yüksekten top çıkarabilirler
         const nearNet = Math.abs(p.y - NET_Y) < 80;
         const isBlockAttempt = nearNet && ball.vz < 0 && ball.z > 12 && ballMovingTowardTeam(p.team);
         // Çift vuruş önlemi: son topa vuran oyuncu hitbox'ı tetikleyemez
@@ -650,12 +924,6 @@ function update() {
             teamTouches++;
             p.actionCooldown = 25;
             
-            // === HIT TYPE SELECTION ===
-            const errMargin = (100 - p.ozellikler.pas) / 100;
-            
-            // Contact angle affects output angle
-            const contactAngle = Math.atan2(ball.y - p.y, ball.x - p.x);
-            
             // Check if opponent is near net for BLOCK
             const isBlock = isBlockAttempt;
             
@@ -669,7 +937,7 @@ function update() {
                 // === BLOCK: reverse velocity ===
                 showEvent("BLOK! 🖐️", 600);
                 topVurusSesi();
-                const blockPower = 0.6 + (p.ozellikler.defans / 200);
+                const blockPower = 0.58 + ((p.brain?.block || p.ozellikler.defans) / 220);
                 ball.vx = -ball.vx * blockPower + (Math.random() - 0.5) * 2;
                 ball.vy = -ball.vy * blockPower;
                 ball.vz = Math.abs(ball.vz) * 0.3 + 2;
@@ -678,22 +946,23 @@ function update() {
                 
             } else if (teamTouches === 1) {
                 // === MANŞET (Dig/Bump): absorb speed, redirect up ===
-                showEvent("Manşet!", 400);
+                const receiveSkill = p.brain?.receive || p.ozellikler.defans || p.ovr || 55;
+                const errMargin = ((100 - receiveSkill) / 100) * 0.68;
+                showEvent(receiveSkill > 76 ? "Temiz manşet!" : "Manşet!", 400);
                 topVurusSesi();
-                let setter = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - NET_Y) < 120);
-                if (!setter) setter = players.find(m => m.team === p.team && m !== p);
+                const setter = chooseSetter(p.team, p);
                 
-                const errX = (Math.random() * 80 - 40) * errMargin;
-                const errY = (Math.random() * 80 - 40) * errMargin;
+                const errX = (Math.random() * 52 - 26) * errMargin;
+                const errY = (Math.random() * 52 - 26) * errMargin;
                 const tgt = {x: setter.x + errX, y: setter.y + errY};
                 const tgtDist = dist(p, tgt);
                 const bDir = normalize(tgt.x - p.x, tgt.y - p.y);
                 
                 // Manşet sends high to the setter
-                ball.vz = 10 + Math.random() * 3; // Biraz daha yüksek pas
+                ball.vz = 10.5 + receiveSkill / 55 + Math.random() * 1.5;
                 const airT = (ball.vz / GRAVITY) * 2;
                 // Artık absorbed ile çarpmıyoruz, pas doğrudan hedefe ulaşacak güce sahip olacak
-                const pw = Math.max(2.0, tgtDist / airT);
+                const pw = Math.max(2.25, tgtDist / airT);
                 ball.vx = bDir.x * pw;
                 ball.vy = bDir.y * pw;
                 ball.spinX = (Math.random() - 0.5) * 0.05; // minimal spin
@@ -701,23 +970,23 @@ function update() {
                 
             } else if (teamTouches === 2) {
                 // === PARMAK PAS (Finger Set): precise placement ===
-                showEvent("Parmak Pas! 🤲", 400);
+                const setSkill = p.brain?.set || p.ozellikler.pas || p.ovr || 55;
+                const errMargin = ((100 - setSkill) / 100) * 0.48;
+                showEvent(setSkill > 76 ? "Akıllı pas!" : "Parmak Pas! 🤲", 400);
                 topVurusSesi();
-                let spiker = players.find(m => m.team === p.team && m !== p && Math.abs(m.baseY - NET_Y) < 100);
-                if (!spiker) spiker = players.find(m => m.team === p.team && m !== p);
+                const spiker = chooseSpiker(p.team, p);
                 
                 // Parmak pas = very precise, low error
-                const precisionBonus = 0.5; // halves error
-                const errX = (Math.random() * 60 - 30) * errMargin * precisionBonus;
-                const errY = (Math.random() * 60 - 30) * errMargin * precisionBonus;
+                const errX = (Math.random() * 42 - 21) * errMargin;
+                const errY = (Math.random() * 42 - 21) * errMargin;
                 const tgt = {x: spiker.x + errX, y: spiker.y + errY};
                 const tgtDist = dist(p, tgt);
                 const bDir = normalize(tgt.x - p.x, tgt.y - p.y);
                 
                 // Set goes high and precise
-                ball.vz = 10 + Math.random() * 3;
+                ball.vz = 10.7 + setSkill / 58 + Math.random() * 1.4;
                 const airT = (ball.vz / GRAVITY) * 2;
-                const pw = Math.max(1.5, tgtDist / airT);
+                const pw = Math.max(1.8, tgtDist / airT);
                 ball.vx = bDir.x * pw;
                 ball.vy = bDir.y * pw;
                 ball.spinX = 0; ball.spinY = 0; // clean set
@@ -738,28 +1007,23 @@ function update() {
                     }
                 }
                 
-                showEvent("SMAÇ! 💥", 600);
+                const attackSkill = p.brain?.attack || p.ozellikler.sut || p.ovr || 55;
+                showEvent(attackSkill > 78 ? "Sert smaç! 💥" : "SMAÇ! 💥", 600);
                 topVurusSesi();
-                const sutErr = (100 - p.ozellikler.sut) / 100;
-                
-                const margin = 40;
-                const gX = margin + Math.random() * (GAME_WIDTH - margin * 2);
-                const gY = p.team.side === 1
-                    ? margin + Math.random() * (NET_Y - margin - 40)
-                    : NET_Y + 40 + Math.random() * (GAME_HEIGHT - NET_Y - margin - 40);
-                
-                const errX = (Math.random() * 100 - 50) * sutErr;
-                const errY = (Math.random() * 100 - 50) * sutErr;
-                const tX = Math.max(5, Math.min(GAME_WIDTH - 5, gX + errX));
-                const tY = Math.max(5, Math.min(GAME_HEIGHT - 5, gY + errY));
+                const sutErr = ((100 - attackSkill) / 100) * Math.max(0.36, 1 - (p.brain?.decisions || 55) / 180);
+                const landing = chooseAttackLanding(p);
+                const errX = (Math.random() * 54 - 27) * sutErr;
+                const errY = (Math.random() * 54 - 27) * sutErr;
+                const tX = Math.max(8, Math.min(GAME_WIDTH - 8, landing.x + errX));
+                const tY = Math.max(8, Math.min(GAME_HEIGHT - 8, landing.y + errY));
                 
                 const bDir = normalize(tX - p.x, tY - p.y);
                 const tgtDist = dist(p, {x: tX, y: tY});
                 
                 // Spike: flat trajectory, fast
-                ball.vz = 2 + Math.random() * 3;
+                ball.vz = 2.4 + attackSkill / 90 + Math.random() * 1.9;
                 const airT = (ball.vz / GRAVITY) * 2;
-                const pw = Math.max(3, tgtDist / airT);
+                const pw = Math.max(4.6, (tgtDist / airT) * 1.12);
                 ball.vx = bDir.x * pw;
                 ball.vy = bDir.y * pw;
                 
@@ -775,103 +1039,137 @@ function update() {
 
 function draw() {
     ctx.clearRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-    
-    // Court floor
-    ctx.fillStyle = '#c27803';
+
+    const freeZone = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+    freeZone.addColorStop(0, '#1e40af');
+    freeZone.addColorStop(0.5, '#2563eb');
+    freeZone.addColorStop(1, '#1d4ed8');
+    ctx.fillStyle = freeZone;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    
-    // Court Lines
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-    ctx.strokeRect(2, 2, GAME_WIDTH-4, GAME_HEIGHT-4); // outer boundary
-    
-    // Center line
-    ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2); ctx.stroke();
-    
-    // 3 meter attack lines
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10, 5]);
-    ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2 - 150); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2 - 150); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, GAME_HEIGHT/2 + 150); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2 + 150); ctx.stroke();
-    ctx.setLineDash([]);
-    
-    // Net visualization (thicker, with posts)
-    const netY = GAME_HEIGHT/2;
-    // Net posts
-    ctx.fillStyle = '#666'; 
-    ctx.fillRect(-2, netY - 8, 8, 16);
-    ctx.fillRect(GAME_WIDTH - 6, netY - 8, 8, 16);
-    // Net mesh
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, netY); ctx.lineTo(GAME_WIDTH, netY); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
-    for (let nx = 0; nx < GAME_WIDTH; nx += 15) {
-        ctx.beginPath(); ctx.moveTo(nx, netY - 5); ctx.lineTo(nx, netY + 5); ctx.stroke();
+
+    const margin = 22;
+    const courtGrad = ctx.createLinearGradient(0, margin, 0, GAME_HEIGHT - margin);
+    courtGrad.addColorStop(0, '#f59e0b');
+    courtGrad.addColorStop(0.5, '#d97706');
+    courtGrad.addColorStop(1, '#f59e0b');
+    ctx.fillStyle = courtGrad;
+    ctx.fillRect(margin, margin, GAME_WIDTH - margin * 2, GAME_HEIGHT - margin * 2);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(margin, NET_Y - 150, GAME_WIDTH - margin * 2, 150);
+    ctx.fillRect(margin, NET_Y, GAME_WIDTH - margin * 2, 150);
+
+    ctx.strokeStyle = 'rgba(120,53,15,.22)';
+    ctx.lineWidth = 1;
+    for (let y = margin + 18; y < GAME_HEIGHT - margin; y += 34) {
+        ctx.beginPath();
+        ctx.moveTo(margin, y);
+        ctx.lineTo(GAME_WIDTH - margin, y);
+        ctx.stroke();
     }
-    
-    // Players
+
+    ctx.strokeStyle = '#fff7ed';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(margin, margin, GAME_WIDTH - margin * 2, GAME_HEIGHT - margin * 2);
+
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(margin, NET_Y); ctx.lineTo(GAME_WIDTH - margin, NET_Y); ctx.stroke();
+
+    ctx.lineWidth = 2;
+    ctx.setLineDash([12, 8]);
+    ctx.beginPath(); ctx.moveTo(margin, NET_Y - 150); ctx.lineTo(GAME_WIDTH - margin, NET_Y - 150); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(margin, NET_Y + 150); ctx.lineTo(GAME_WIDTH - margin, NET_Y + 150); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const netY = GAME_HEIGHT / 2;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(4, netY - 13, 8, 26);
+    ctx.fillRect(GAME_WIDTH - 12, netY - 13, 8, 26);
+    ctx.strokeStyle = 'rgba(15,23,42,.48)';
+    ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(8, netY + 3); ctx.lineTo(GAME_WIDTH - 8, netY + 3); ctx.stroke();
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(8, netY); ctx.lineTo(GAME_WIDTH - 8, netY); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.45)';
+    ctx.lineWidth = 1;
+    for (let nx = 18; nx < GAME_WIDTH - 18; nx += 14) {
+        ctx.beginPath(); ctx.moveTo(nx, netY - 9); ctx.lineTo(nx, netY + 9); ctx.stroke();
+    }
+    for (let ny = netY - 8; ny <= netY + 8; ny += 8) {
+        ctx.beginPath(); ctx.moveTo(8, ny); ctx.lineTo(GAME_WIDTH - 8, ny); ctx.stroke();
+    }
+
     players.forEach(p => {
-        // Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.arc(p.x, p.y+5, 12, 0, Math.PI*2); ctx.fill();
-        
-        // Body
-        ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI*2);
-        // Libero wears opposite color
-        ctx.fillStyle = p.isLibero ? (p.team === team1 ? team2.color : team1.color) : p.team.color; 
+        const primary = p.isLibero ? (p.team === team1 ? team2.color : team1.color) : p.team.color;
+        const grad = ctx.createRadialGradient(p.x - 5, p.y - 7, 2, p.x, p.y, 16);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.18, primary);
+        grad.addColorStop(1, '#0f172a');
+
+        ctx.fillStyle = 'rgba(2,6,23,.35)';
+        ctx.beginPath(); ctx.ellipse(p.x, p.y + 9, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
         ctx.fill();
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-        
-        // Jersey number
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.strokeStyle = p.isLibero ? '#fbbf24' : '#f8fafc';
+        ctx.lineWidth = p.isLibero ? 3 : 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '900 11px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillText(p.numara, p.x, p.y);
-        // Name
-        ctx.font = 'bold 10px sans-serif'; 
-        ctx.fillText(p.ad, p.x, p.y + 22);
+
+        const name = String(p.ad || '').slice(0, 8);
+        ctx.font = '800 9px Segoe UI, sans-serif';
+        ctx.fillStyle = 'rgba(15,23,42,.78)';
+        ctx.fillRect(p.x - 22, p.y + 18, 44, 13);
+        ctx.strokeStyle = 'rgba(255,255,255,.22)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(p.x - 22, p.y + 18, 44, 13);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(name, p.x, p.y + 25);
     });
 
-    // Ball spin trail (ghosting effect)
     const spinMag = Math.hypot(ball.spinX || 0, ball.spinY || 0);
-    if (ball.z > 0 && spinMag > 0.03) {
-        ctx.globalAlpha = 0.15;
-        for (let t = 1; t <= 3; t++) {
-            const trailSize = Math.max(3, 7 + ball.z * 0.15 - t);
+    const speed = Math.hypot(ball.vx, ball.vy, ball.vz);
+    if (ball.z > 0 && (spinMag > 0.02 || speed > 5.5)) {
+        for (let t = 4; t >= 1; t--) {
+            ctx.globalAlpha = 0.07 * (5 - t);
+            const trailSize = Math.max(4, 8 + ball.z * 0.12 - t);
             ctx.beginPath();
-            ctx.arc(ball.x - ball.vx * t * 2, ball.y - ball.vy * t * 2 - ball.z + ball.vz * t, trailSize, 0, Math.PI*2);
-            ctx.fillStyle = '#fde047'; ctx.fill();
+            ctx.arc(ball.x - ball.vx * t * 1.7, ball.y - ball.vy * t * 1.7 - ball.z + ball.vz * t, trailSize, 0, Math.PI*2);
+            ctx.fillStyle = speed > 8 ? '#fb7185' : '#fde68a';
+            ctx.fill();
         }
-        ctx.globalAlpha = 1.0;
+        ctx.globalAlpha = 1;
     }
 
-    // Ball shadow
-    const shadowOffset = ball.z * 0.5;
-    const shadowSize = Math.max(3, 8 - ball.z * 0.1);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath(); ctx.arc(ball.x, ball.y + shadowOffset, shadowSize, 0, Math.PI*2); ctx.fill();
-    
-    // Ball
-    const ballSize = Math.max(5, 8 + ball.z * 0.2);
+    const shadowOffset = ball.z * 0.45;
+    const shadowSize = Math.max(4, 10 - ball.z * 0.09);
+    ctx.fillStyle = 'rgba(15,23,42,0.38)';
+    ctx.beginPath(); ctx.ellipse(ball.x, ball.y + shadowOffset, shadowSize * 1.25, shadowSize * 0.62, 0, 0, Math.PI*2); ctx.fill();
+
+    const ballSize = Math.max(6, 8 + ball.z * 0.18);
     const ballDrawY = ball.y - ball.z;
+    const ballGrad = ctx.createRadialGradient(ball.x - 3, ballDrawY - 4, 1, ball.x, ballDrawY, ballSize);
+    ballGrad.addColorStop(0, '#ffffff');
+    ballGrad.addColorStop(0.42, speed > 8 ? '#fb7185' : (speed > 4 ? '#fde047' : '#fef3c7'));
+    ballGrad.addColorStop(1, '#1e3a8a');
     ctx.beginPath(); ctx.arc(ball.x, ballDrawY, ballSize, 0, Math.PI*2);
-    
-    // Ball color changes with speed
-    const speed = Math.hypot(ball.vx, ball.vy, ball.vz);
-    if (speed > 8) {
-        ctx.fillStyle = '#ef4444'; // red = fast spike
-    } else if (speed > 4) {
-        ctx.fillStyle = '#fbbf24'; // amber = medium
-    } else {
-        ctx.fillStyle = '#fde047'; // yellow = slow set
-    }
+    ctx.fillStyle = ballGrad;
     ctx.fill();
-    ctx.strokeStyle = '#1e3a8a'; ctx.lineWidth = 2; ctx.stroke();
-    
-    // Spin indicator (small line on ball)
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.6; ctx.stroke();
+
     if (spinMag > 0.02) {
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,.9)';
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.moveTo(ball.x, ballDrawY);
-        ctx.lineTo(ball.x + (ball.spinX || 0) * 30, ballDrawY + (ball.spinY || 0) * 30);
+        ctx.moveTo(ball.x - ballSize * 0.45, ballDrawY);
+        ctx.quadraticCurveTo(ball.x, ballDrawY - ballSize * 0.45, ball.x + ballSize * 0.45, ballDrawY);
         ctx.stroke();
     }
 }

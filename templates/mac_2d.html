@@ -490,9 +490,15 @@ function pushTicker(text) {
     tickerItems = tickerItems.slice(0, 4);
     ticker.innerHTML = tickerItems.map(item => `
       <div class="ticker-item">
-        <span style="color:var(--ui-gold);font-weight:950;margin-right:8px">${item.minute}</span>${item.text}
+        <span style="color:var(--ui-gold);font-weight:950;margin-right:8px">${escapeHtml(item.minute)}</span>${escapeHtml(item.text)}
       </div>
     `).join('');
+}
+
+function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[ch]);
 }
 
 function setMatchPhase(text) {
@@ -566,6 +572,118 @@ function isForward(p) {
     const r = roleText(p);
     return r.includes("forvet") || r.includes("kanat") || r.includes("hücum") || r.includes("hucum");
 }
+function clampStat(value, fallback = 55) {
+    const n = Number.isFinite(value) ? value : fallback;
+    return Math.max(1, Math.min(100, n));
+}
+function makeFootballBrain(oz, ovr, role) {
+    const base = clampStat(ovr, 55);
+    const hiz = clampStat(oz.hiz, base);
+    const sut = clampStat(oz.sut, base);
+    const pas = clampStat(oz.pas, base);
+    const defans = clampStat(oz.defans, base);
+    const r = String(role || "").toLocaleLowerCase('tr-TR');
+    const attackBoost = r.includes("forvet") || r.includes("kanat") || r.includes("hücum") || r.includes("hucum") ? 5 : 0;
+    const midfieldBoost = r.includes("orta") || r.includes("merkez") ? 5 : 0;
+    return {
+        vision: clampStat(Math.round(pas * 0.62 + base * 0.28 + midfieldBoost)),
+        composure: clampStat(Math.round(sut * 0.42 + pas * 0.18 + base * 0.34 + attackBoost)),
+        flair: clampStat(Math.round(hiz * 0.42 + pas * 0.24 + base * 0.26 + attackBoost)),
+        decisions: clampStat(Math.round(pas * 0.46 + defans * 0.16 + base * 0.32 + midfieldBoost)),
+        pressResistance: clampStat(Math.round(hiz * 0.32 + pas * 0.28 + base * 0.32)),
+    };
+}
+function lanePressure(from, to, team, width = 34) {
+    const passDist = Math.max(1, dist(from, to));
+    let pressure = 0;
+    players.forEach(opp => {
+        if (opp.team === team) return;
+        const dot = ((opp.x - from.x) * (to.x - from.x) + (opp.y - from.y) * (to.y - from.y)) / (passDist * passDist);
+        if (dot <= 0 || dot >= 1) return;
+        const projX = from.x + dot * (to.x - from.x);
+        const projY = from.y + dot * (to.y - from.y);
+        const lineDist = Math.hypot(opp.x - projX, opp.y - projY);
+        if (lineDist < width) {
+            pressure += (width - lineDist) * (1 + (opp.ozellikler.defans || 50) / 120);
+        }
+    });
+    return pressure;
+}
+function receiverSpace(player) {
+    let nearest = 220;
+    let markers = 0;
+    players.forEach(opp => {
+        if (opp.team === player.team) return;
+        const d = dist(player, opp);
+        nearest = Math.min(nearest, d);
+        if (d < 72) markers++;
+    });
+    return {
+        nearest,
+        markers,
+        score: Math.min(85, nearest * 0.38) - markers * 22,
+    };
+}
+function chooseSmartPass(p, closeOpponents) {
+    let best = null;
+    const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol);
+    players.forEach(m => {
+        if (m.team !== p.team || m === p || isGoalkeeper(m)) return;
+        const d = dist(p, m);
+        if (d < 38 || d > 540) return;
+        const forwardGain = Math.abs(p.y - p.team.goalY) - Math.abs(m.y - p.team.goalY);
+        const space = receiverSpace(m);
+        const lane = lanePressure(p, m, p.team, 36 + brain.vision * 0.05);
+        const centralLane = 1 - Math.min(1, Math.abs(m.x - GAME_WIDTH / 2) / (GAME_WIDTH / 2));
+        const isAhead = forwardGain > 8;
+        const through = isForward(m) && forwardGain > 42 && space.nearest > 54 && lane < 58;
+        let score = 0;
+        score += forwardGain * 0.58;
+        score += space.score;
+        score += centralLane * 12;
+        score -= d * 0.075;
+        score -= lane * (brain.vision > 72 ? 0.72 : 1.05);
+        if (isMidfielder(m)) score += 10;
+        if (isForward(m)) score += isAhead ? 24 : 5;
+        if (through) score += 26 + brain.vision * 0.12;
+        if (closeOpponents > 0 && d < 190) score += 16;
+        if (m.actionCooldown > 0) score -= 18;
+        if (!isAhead && closeOpponents === 0 && p.hasBallTime < 48) score -= 10;
+
+        const passSpeed = (through ? 14.5 : 12.5) + (p.ozellikler.pas / (through ? 15 : 18));
+        const eta = d / Math.max(1, passSpeed);
+        const lead = through ? Math.min(18, eta + 7) : Math.min(10, eta + 3);
+        const aimY = m.y + (m.vy || 0) * lead + (through ? p.team.dirY * Math.min(72, forwardGain * 0.42) : 0);
+        const aimX = m.x + (m.vx || 0) * lead;
+        if (!best || score > best.score) {
+            best = {
+                target: m,
+                aim: clampPitch(aimX, aimY, 24),
+                score,
+                power: passSpeed,
+                leadFrames: lead,
+                through,
+            };
+        }
+    });
+    return best;
+}
+function trySkillMove(p, closeOpponents, distToGoal) {
+    if (closeOpponents <= 0 || p.burstCooldown > 0 || p.stamina < 16) return null;
+    const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol);
+    const chance = 0.12 + brain.flair / 210 + brain.pressResistance / 360 + (distToGoal < 280 ? 0.06 : 0);
+    if (Math.random() > Math.min(0.72, chance)) return null;
+
+    const goalDrive = normalize(GAME_WIDTH / 2 - p.x, p.team.goalY - p.y);
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const lateral = { x: -goalDrive.y * side, y: goalDrive.x * side };
+    const dir = normalize(goalDrive.x * 0.94 + lateral.x * 0.76, goalDrive.y * 0.94 + lateral.y * 0.76);
+    p.burstCooldown = Math.max(30, 74 - Math.round(brain.flair * 0.34));
+    p.actionCooldown = Math.max(p.actionCooldown, 6);
+    p.stamina = Math.max(0, p.stamina - 1.4);
+    showEvent(brain.flair > 78 ? "Şık çalım!" : "Adam geçti!", 650);
+    return { x: dir.x, y: dir.y, boost: 1.12 + brain.flair / 420 };
+}
 function clampPitch(x, y, margin = 15) {
     return {
         x: Math.max(margin, Math.min(GAME_WIDTH - margin, x)),
@@ -601,9 +719,9 @@ function goalkeeperTarget(p) {
 
     return clampGoalkeeperArea(p, targetX, targetY);
 }
-function sendPass(p, target, power, leadFrames = 4) {
-    const tx = target.x + (target.vx || 0) * leadFrames;
-    const ty = target.y + (target.vy || 0) * leadFrames;
+function sendPass(p, target, power, leadFrames = 4, aimPoint = null) {
+    const tx = aimPoint ? aimPoint.x : target.x + (target.vx || 0) * leadFrames;
+    const ty = aimPoint ? aimPoint.y : target.y + (target.vy || 0) * leadFrames;
     const dir = normalize(tx - p.x, ty - p.y);
     ball.vx = dir.x * power;
     ball.vy = dir.y * power;
@@ -760,13 +878,15 @@ function addPlayer(p, team, mirror) {
         id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, baseOvr: p.ovr, rol: p.rol || "", team: team,
         ozellikler: { ...baseOzellikler },
         baseOzellikler: baseOzellikler,
+        brain: makeFootballBrain(baseOzellikler, p.ovr, p.rol || ""),
         baseX: tx, baseY: ty,
         x: tx, y: ty, vx: 0, vy: 0,
         mass: PLAYER_MASS + (Math.random()*20 - 10), // slight variation
         stamina: 100,
         state: 'IDLE',
         hasBallTime: 0,
-        actionCooldown: 0
+        actionCooldown: 0,
+        burstCooldown: 0
     });
 }
 
@@ -1261,10 +1381,21 @@ function update() {
         // Find GK of defending team
         const gk = players.find(p => p.team === defendingTeam && isGoalkeeper(p));
         if (gk) {
-            const savePower = gk.ozellikler.kaleci + Math.random() * 30;
-            const shotPower = (ball.lastTouchedBy ? ball.lastTouchedBy.ozellikler.sut : 50) + Math.random() * 20;
-            // GK save chance: higher kaleci = higher save rate
-            if (savePower > shotPower || dist(gk, ball) < 35) {
+            const shooter = ball.lastTouchedBy;
+            const reactionDistance = dist(gk, ball);
+            const anglePenalty = Math.abs(ball.x - GAME_WIDTH / 2) / 22;
+            const shotPower = (shooter ? shooter.ozellikler.sut : 50)
+                + ball.speed * 4.1
+                + Math.max(0, ball.z) * 1.35
+                + (shooter?.brain?.composure || 58) * 0.18
+                + Math.random() * 22;
+            const closeReaction = reactionDistance < 24 ? 11 : (reactionDistance < 46 ? 3 : -7);
+            const savePower = gk.ozellikler.kaleci
+                + (gk.brain?.composure || 55) * 0.12
+                + Math.random() * 20
+                + closeReaction
+                - anglePenalty;
+            if (savePower > shotPower + 8) {
                 // SAVE!
                 showEvent(`${gk.ad} KURTARDI! 🧤`, 2000);
                 // GK pushes ball away
@@ -1501,6 +1632,7 @@ function update() {
         speedMult *= Math.max(0.5, p.stamina / 100); 
 
         if (p.actionCooldown > 0) p.actionCooldown--;
+        if (p.burstCooldown > 0) p.burstCooldown--;
 
         if (p === ball.owner) {
             // DECISION ENGINE: HAS BALL (FM-Style)
@@ -1526,6 +1658,7 @@ function update() {
                 players.forEach(opp => {
                     if (opp.team !== p.team && dist(p, opp) < 58) closeOpponents++;
                 });
+                const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol);
 
                 // === 0. 1'E 1 TESPİTİ: Kaleci dışında araya giren defansör yok mu? ===
                 // Oyuncu ile rakip kale arasındaki şerit içinde sadece kaleci varsa → anında şut
@@ -1557,7 +1690,7 @@ function update() {
                 // 1. Shoot?
                 // 1'e 1 durumunda mesafeden bağımsız, hemen şut çek
                 const forceShot = isOneOnOne;
-                if (forceShot || distToGoal < 300) {
+                if (forceShot || distToGoal < 340) {
                     let pathClear = true;
                     if (!forceShot && distToGoal > 80) {
                         players.forEach(opp => {
@@ -1566,15 +1699,18 @@ function update() {
                                 pathClear = false;
                             }
                         });
+                        if (lanePressure(p, {x: GAME_WIDTH / 2, y: p.team.goalY}, p.team, 44) > 82) {
+                            pathClear = false;
+                        }
                     }
                     
                     // High probability to shoot if in box and clear, or just very close
-                    const shotChance = distToGoal < 140 ? 0.75 : (distToGoal < 220 ? 0.35 : 0.10);
+                    const shotChance = distToGoal < 145 ? 0.86 : (distToGoal < 240 ? 0.52 : 0.20);
                     if (forceShot || distToGoal < 115 || (pathClear && Math.random() < shotChance)) {
-                        const errSut = (100 - p.ozellikler.sut) / 100;
+                        const errSut = ((100 - p.ozellikler.sut) / 100) * Math.max(0.42, 1 - brain.composure / 175);
                         const distFactor = distToGoal / 250;
                         // 1'e 1'de plase/köşe şansı yüksek
-                        const usePlase = (distToGoal < 150 || forceShot) && Math.random() < (forceShot ? 0.72 : 0.5);
+                        const usePlase = (distToGoal < 165 || forceShot) && Math.random() < (forceShot ? 0.82 : 0.58);
                         
                         if (usePlase) {
                             // Kaleciyi bul, ondan uzak köşeye gönder
@@ -1582,9 +1718,9 @@ function update() {
                             // Kaleciyle zıt köşeye at
                             const cornerSide = gkOffsetX > 0 ? -1 : 1;
                             const gX = GAME_WIDTH/2 + cornerSide * (38 + Math.random() * 28);
-                            const errX = (Math.random() * 150 - 75) * errSut;
+                            const errX = (Math.random() * 96 - 48) * errSut;
                             const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
-                            const power = 10 + (p.ozellikler.sut / 18);
+                            const power = 11.5 + (p.ozellikler.sut / 16);
                             ball.vx = dir.x * power; ball.vy = dir.y * power;
                             ball.vz = 1 + Math.random() * 2;
                             ball.spinX = (Math.random() - 0.5) * 0.8;
@@ -1592,10 +1728,10 @@ function update() {
                             showEvent(forceShot ? '🎯 1\'e 1 — Plase!' : '🎯 Plase!', 800);
                         } else {
                             const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
-                            const totalErr = errSut + distFactor * 0.5;
-                            const errX = (Math.random() * 400 - 200) * totalErr;
+                            const totalErr = errSut + distFactor * 0.36;
+                            const errX = (Math.random() * 300 - 150) * totalErr;
                             const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
-                            const power = 16 + (p.ozellikler.sut / 12);
+                            const power = 17 + (p.ozellikler.sut / 11);
                             ball.vx = dir.x * power; ball.vy = dir.y * power;
                             const strikePoint = Math.random();
                             if (strikePoint < 0.3) { ball.vz = 4 + Math.random() * 3; } 
@@ -1609,68 +1745,25 @@ function update() {
                     }
                 }
                 
-                // 2. Pass Evaluation (Intelligent FM style)
-                if (p.hasBallTime > 22) {
-                    let bestMate = null; let bestScore = -999;
-                    players.forEach(m => {
-                        if (m.team === p.team && m !== p) {
-                            const d = dist(p, m);
-                            if (d > 40 && d < 450) { // Valid pass range
-                                let score = 0;
-                                // Reward forward passes
-                                const forwardDist = Math.abs(p.y - p.team.goalY) - Math.abs(m.y - p.team.goalY);
-                                score += forwardDist * 0.4;
-                                
-                                // Penalize if an opponent is too close to the receiver
-                                let oppNear = 0;
-                                players.forEach(opp => { if (opp.team !== p.team && dist(m, opp) < 70) oppNear++; });
-                                score -= oppNear * 60;
-                                
-                                // Penalize if passing lane is blocked
-                                let blocked = false;
-                                players.forEach(opp => {
-                                    if (opp.team !== p.team && dist(p, opp) < d) {
-                                        // Quick distance-to-line check
-                                        const dot = ((opp.x - p.x)*(m.x - p.x) + (opp.y - p.y)*(m.y - p.y)) / (d*d);
-                                        if (dot > 0 && dot < 1) {
-                                            const projX = p.x + dot*(m.x - p.x);
-                                            const projY = p.y + dot*(m.y - p.y);
-                                            if (dist(opp, {x:projX, y:projY}) < 25) blocked = true;
-                                        }
-                                    }
-                                });
-                                if (blocked) score -= 100;
-                                
-                                if (score > bestScore) { bestScore = score; bestMate = m; }
-                            }
-                        }
-                    });
-                    
-                    // If a good pass is found, OR forced to pass because pressed
+                // 2. Pass Evaluation (vision + receiver space + through-ball timing)
+                if (p.hasBallTime > 10 || closeOpponents > 0) {
+                    const smartPass = chooseSmartPass(p, closeOpponents);
                     let oppPressing = false;
-                    players.forEach(opp => { if (opp.team !== p.team && dist(p, opp) < 40) oppPressing = true; });
-                    
-                    const shouldKeepDribbling = closeOpponents < 2 && distToGoal > 105 && p.hasBallTime < 95;
-                    if (bestMate && !shouldKeepDribbling && (bestScore > 28 || (oppPressing && bestScore > -45) || p.hasBallTime > 95)) {
-                        const errPas = (100 - p.ozellikler.pas) / 100;
-                        const passDist = dist(p, bestMate);
-                        const passSpeed = 12 + (p.ozellikler.pas / 20);
-                        const eta = passDist / passSpeed;
-                        
-                        // Through-ball logic: if teammate is running forward, pass to space ahead
-                        let predX = bestMate.x + bestMate.vx * eta;
-                        let predY = bestMate.y + bestMate.vy * eta;
-                        
-                        const errX = (Math.random() * 150 - 75) * errPas;
-                        const errY = (Math.random() * 150 - 75) * errPas;
-                        const dir = normalize((predX + errX) - p.x, (predY + errY) - p.y);
-                        
-                        const pw = passSpeed + (Math.random() * 4 - 2) * errPas;
-                        ball.vx = dir.x * pw; ball.vy = dir.y * pw;
-                        ball.z = 0; ball.vz = 0; ball.spinX = 0; ball.spinY = 0;
-                        ball.targetPlayer = bestMate;
-                        playKickSound(true);
-                        ball.owner = null; p.actionCooldown = 20;
+                    players.forEach(opp => { if (opp.team !== p.team && dist(p, opp) < 44) oppPressing = true; });
+
+                    const keepBias = brain.pressResistance > 74 && closeOpponents < 2 && distToGoal > 96 && p.hasBallTime < 70;
+                    const passThreshold = oppPressing ? -18 : (smartPass?.through ? 18 : 30);
+                    if (smartPass && !keepBias && (smartPass.score > passThreshold || p.hasBallTime > 76 || closeOpponents >= 2)) {
+                        const errPas = ((100 - p.ozellikler.pas) / 100) * Math.max(0.38, 1 - brain.vision / 165);
+                        const errScale = smartPass.through ? 44 : 34;
+                        const aim = {
+                            x: smartPass.aim.x + (Math.random() * errScale - errScale / 2) * errPas,
+                            y: smartPass.aim.y + (Math.random() * errScale - errScale / 2) * errPas,
+                        };
+                        sendPass(p, smartPass.target, smartPass.power + (Math.random() * 2 - 1) * errPas, smartPass.leadFrames, aim);
+                        showEvent(smartPass.through ? "Ara pas!" : "Akıllı pas!", 650);
+                        p.actionCooldown = smartPass.through ? 24 : 18;
+                        p.hasBallTime = 0;
                         return;
                     }
                 }
@@ -1679,6 +1772,13 @@ function update() {
             // 3. Dribbling: first thought is to carry the ball toward goal.
             const goalDrive = normalize(GAME_WIDTH/2 - p.x, p.team.goalY - p.y);
             let dribbleDir = goalDrive;
+            const dribblePressure = players.reduce((count, opp) => count + (opp.team !== p.team && dist(p, opp) < 62 ? 1 : 0), 0);
+            const skillBurst = trySkillMove(p, dribblePressure, distToGoal);
+            let dribbleBoost = 0.98;
+            if (skillBurst) {
+                dribbleDir = normalize(skillBurst.x, skillBurst.y);
+                dribbleBoost = skillBurst.boost;
+            }
             
             // Avoid nearby opponents
             let avoidVec = { x: 0, y: 0 };
@@ -1692,15 +1792,15 @@ function update() {
                 }
             });
             
-            if (Math.hypot(avoidVec.x, avoidVec.y) > 0.1) {
+            if (!skillBurst && Math.hypot(avoidVec.x, avoidVec.y) > 0.1) {
                 dribbleDir = normalize(goalDrive.x * 1.45 + avoidVec.x * 1.35, goalDrive.y * 1.45 + avoidVec.y * 1.35);
-            } else {
+            } else if (!skillBurst) {
                 // Drive at goal, with a slight center lane correction.
                 dribbleDir = normalize(goalDrive.x + (GAME_WIDTH/2 - p.x)*0.006, goalDrive.y);
             }
             
-            p.vx = dribbleDir.x * speedMult * 0.92;
-            p.vy = dribbleDir.y * speedMult * 0.92;
+            p.vx = dribbleDir.x * speedMult * dribbleBoost;
+            p.vy = dribbleDir.y * speedMult * dribbleBoost;
             
         } else {
             // NOT BALL OWNER
