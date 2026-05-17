@@ -2414,6 +2414,7 @@ function gameLoop() {
 function startHalftime() {
     stateMachine = "HALFTIME";
     htTeamReady = false;
+    stopStadium();
     
     // Show overlay
     const overlay = document.getElementById('halftime-overlay');
@@ -2430,6 +2431,7 @@ function startHalftime() {
 
 function openTaktik() {
     // Open tactic screen in new window (parent page's tactic URL)
+    stopStadium();
     const taktikUrl = "{{ url_for('ogrenci_taktik') }}";
     window.open(taktikUrl, "TaktikEkrani", "width=800,height=700,resizable=yes");
 }
@@ -2450,6 +2452,7 @@ function endHalftime() {
     // Mark second half
     isSecondHalf = true;
     stateMachine = "PLAYING";
+    if (audioUnlocked) tryStartStadium();
     
     // Reset positions for 2nd half (swap sides)
     players.forEach(p => {

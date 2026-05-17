@@ -88,7 +88,7 @@
       padding:7px 8px;border-radius:10px;cursor:grab;
       border:1.5px solid rgba(255,255,255,.1);
       background:rgba(255,255,255,.06);
-      transition:all .18s;user-select:none;touch-action:none;
+      transition:all .18s;user-select:none;touch-action:pan-x pan-y;
     }
     .kadro-item:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25);}
     .kadro-item.sahada{opacity:.35;cursor:default;}
@@ -797,33 +797,71 @@ function sahaDrop(e) {
 // TOUCH DRAG — LİSTEDEN SAHAYA (Mobil)
 // ════════════════════════════════════════════════════════════════════════
 let touchDragId   = null;
+let touchStartId  = null;
+let touchStartX   = 0;
+let touchStartY   = 0;
+let touchDragTimer = null;
 const ghost        = document.getElementById('ghost');
 const ghostDaire   = document.getElementById('ghost-daire');
 
-function listeTouchStart(e) {
-  e.preventDefault();
-  touchDragId = e.currentTarget.dataset.id;
+function listeTouchBaslat(id, x, y) {
+  touchDragId = id;
   const o = oyuncular[touchDragId];
   ghostDaire.style.background = takimRengi;
   ghostDaire.textContent = EMOJI[o?.rol] || '🏐';
   ghost.style.display = 'block';
+  ghost.style.left = x + 'px';
+  ghost.style.top  = y + 'px';
+}
+
+function listeTouchTemizle() {
+  clearTimeout(touchDragTimer);
+  touchDragTimer = null;
+  touchDragId = null;
+  touchStartId = null;
+  ghost.style.display = 'none';
+  document.removeEventListener('touchmove', listeTouchMove);
+  document.removeEventListener('touchend',  listeTouchEnd);
+  document.removeEventListener('touchcancel', listeTouchEnd);
+}
+
+function listeTouchStart(e) {
+  if (!e.touches || e.touches.length !== 1) return;
   const t = e.touches[0];
-  ghost.style.left = t.clientX + 'px';
-  ghost.style.top  = t.clientY + 'px';
+  touchStartId = e.currentTarget.dataset.id;
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+  clearTimeout(touchDragTimer);
+  touchDragTimer = setTimeout(() => {
+    if (touchStartId) listeTouchBaslat(touchStartId, touchStartX, touchStartY);
+  }, 230);
 
   document.addEventListener('touchmove', listeTouchMove, {passive:false});
   document.addEventListener('touchend',  listeTouchEnd);
+  document.addEventListener('touchcancel', listeTouchEnd);
 }
 function listeTouchMove(e) {
-  if (!touchDragId) return;
-  e.preventDefault();
+  if (!e.touches || !e.touches[0]) return;
   const t = e.touches[0];
+  if (!touchDragId) {
+    const moved = Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY);
+    if (moved > 9) {
+      clearTimeout(touchDragTimer);
+      touchDragTimer = null;
+    }
+    return;
+  }
+  e.preventDefault();
   ghost.style.left = t.clientX + 'px';
   ghost.style.top  = t.clientY + 'px';
 }
 function listeTouchEnd(e) {
-  if (!touchDragId) return;
-  ghost.style.display = 'none';
+  clearTimeout(touchDragTimer);
+  touchDragTimer = null;
+  if (!touchDragId) {
+    listeTouchTemizle();
+    return;
+  }
   const t = e.changedTouches[0];
   const saha = document.getElementById('saha-wrap');
   const rect = saha.getBoundingClientRect();
@@ -833,9 +871,7 @@ function listeTouchEnd(e) {
     const y = Math.max(4, Math.min(96, (t.clientY - rect.top)  / rect.height * 100));
     yerleştirVeyaDegistir(touchDragId, x, y, true);
   }
-  document.removeEventListener('touchmove', listeTouchMove);
-  document.removeEventListener('touchend',  listeTouchEnd);
-  touchDragId = null;
+  listeTouchTemizle();
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -1177,52 +1213,18 @@ function toast(m) {
 // ════════════════════════════════════════════════════════════════════════
 // SES SİSTEMİ
 // ════════════════════════════════════════════════════════════════════════
-const volAudio = {
-  ortam: new Audio("{{ url_for('static', filename='audio/ortamstadium.mp3') }}"),
-  top:   new Audio("{{ url_for('static', filename='audio/topavurus.mp3') }}"),
-};
-volAudio.ortam.loop   = true;
-volAudio.ortam.volume = 0.22;   // salon sesi biraz kısık
-volAudio.top.volume   = 0.5;
-let volAudioUnlocked  = false;
-let lastTopSesiAt     = 0;
+const TAKTIK_SES_AKTIF = false;
 
 function sesAc() {
-  volAudioUnlocked = true;
   const banner = document.getElementById('ses-banner');
   if (banner) banner.style.display = 'none';
-  volAudio.ortam.play().catch(() => {});
 }
-
-// Her 3 saniyede bir ortam sesi kesilmemişse kontrol et
-setInterval(() => {
-  if (volAudioUnlocked && volAudio.ortam.paused) {
-    volAudio.ortam.play().catch(() => {});
-  }
-}, 3000);
 
 function topSesiCal() {
-  if (!volAudioUnlocked) return;
-  const now = performance.now();
-  if (now - lastTopSesiAt < 120) return;
-  lastTopSesiAt = now;
-  const klon = volAudio.top.cloneNode();
-  klon.volume = 0.5 + Math.random() * 0.25;
-  klon.play().catch(() => {});
+  if (!TAKTIK_SES_AKTIF) return;
 }
 
-// Sayfa yüklenince otomatik aç — başarısız olursa banner göster
-volAudio.ortam.play().then(() => {
-  volAudioUnlocked = true;
-}).catch(() => {
-  const banner = document.getElementById('ses-banner');
-  if (banner) banner.style.display = 'block';
-});
-
-// Herhangi bir etkileşimde sesi aç
-['pointerdown','keydown','touchstart'].forEach(ev => {
-  window.addEventListener(ev, () => { if (!volAudioUnlocked) sesAc(); }, { once: true, passive: true });
-});
+sesAc();
 
 // ════════════════════════════════════════════════════════════════════════
 // BAŞLAT
