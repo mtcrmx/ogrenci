@@ -6,20 +6,232 @@
   <title>2D FM Maç Motoru (Pro)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #000; color: #fff; margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
+    :root {
+      --ui-bg: rgba(3, 10, 8, .88);
+      --ui-line: rgba(209, 250, 229, .16);
+      --ui-gold: #d6b35a;
+      --ui-green: #21c070;
+      --ui-red: #ef4444;
+      --ui-muted: rgba(226, 245, 238, .64);
+    }
+    body {
+      background:
+        radial-gradient(circle at 50% -10%, rgba(33,192,112,.18), transparent 32%),
+        linear-gradient(180deg, #020706 0%, #07120f 52%, #000 100%);
+      color: #fff; margin: 0; overflow: hidden;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
     @keyframes pulse-banner {
       0%,100% { opacity:1; transform:translateX(-50%) scale(1); }
       50%      { opacity:.85; transform:translateX(-50%) scale(1.04); }
     }
+    @keyframes ticker-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
     #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
-    #header { height: 60px; background: #111; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 2px solid #333; }
-    #score-board { font-size: 24px; font-weight: 900; letter-spacing: 2px; }
-    #canvas-wrap { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #1a1a1a; }
-    canvas { background: #2f855a; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.8); max-width: 100%; max-height: 100%; }
+    #header {
+      min-height: 86px;
+      background: linear-gradient(180deg, rgba(3,10,8,.96), rgba(6,18,14,.92));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: stretch;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--ui-line);
+      box-shadow: 0 16px 42px rgba(0,0,0,.42);
+      z-index: 30;
+    }
+    .team-card {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--ui-line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.045);
+      padding: 10px 12px;
+    }
+    .team-card.away { justify-content: flex-end; text-align: right; }
+    .crest {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: #03110b;
+      font-size: 20px;
+      font-weight: 950;
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,.28), 0 10px 20px rgba(0,0,0,.35);
+    }
+    .crest.home { background: linear-gradient(135deg, #93c5fd, #2563eb); color:white; }
+    .crest.away { background: linear-gradient(135deg, #fecaca, #dc2626); color:white; }
+    .team-label {
+      color: var(--ui-muted);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .team-name {
+      max-width: 28vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 950;
+      line-height: 1.1;
+    }
+    #score-board {
+      min-width: 210px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(214,179,90,.38);
+      border-radius: 12px;
+      background:
+        linear-gradient(90deg, transparent, rgba(214,179,90,.08), transparent),
+        rgba(0,0,0,.46);
+      padding: 8px 16px;
+      text-align: center;
+    }
+    .clock-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--ui-gold);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .score-line {
+      color: #fff;
+      font-size: 34px;
+      font-weight: 950;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .phase-line {
+      margin-top: 3px;
+      color: var(--ui-muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(33,192,112,.16), transparent 42%),
+        linear-gradient(180deg,#06110d,#020706);
+    }
+    #canvas-wrap::before {
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background: linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px) 0 0 / 48px 48px;
+      opacity:.35;
+    }
+    canvas {
+      background: #2f855a;
+      border: 1px solid rgba(236,253,245,.78);
+      border-radius: 10px;
+      box-shadow: 0 26px 80px rgba(0,0,0,0.66), 0 0 0 10px rgba(255,255,255,.035);
+      max-width: 100%; max-height: 100%;
+    }
     #event-overlay {
-      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
-      font-weight: bold; font-size: 16px; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+      position: absolute; bottom: 86px; left: 50%; transform: translateX(-50%);
+      min-width: min(520px, calc(100vw - 28px));
+      background: rgba(3,10,8,0.88); color: #fff; padding: 12px 18px; border-radius: 999px;
+      border:1px solid rgba(214,179,90,.36);
+      font-weight: 900; font-size: 15px; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+      text-align:center;
+      box-shadow: 0 14px 44px rgba(0,0,0,.45);
+    }
+    #broadcast-panel {
+      position:absolute;
+      left:14px;
+      top:14px;
+      z-index:20;
+      width:min(260px, calc(100vw - 28px));
+      border:1px solid var(--ui-line);
+      border-radius:12px;
+      background:var(--ui-bg);
+      box-shadow:0 18px 50px rgba(0,0,0,.38);
+      overflow:hidden;
+      pointer-events:none;
+    }
+    .panel-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      border-bottom:1px solid var(--ui-line);
+      padding:9px 11px;
+      color:var(--ui-gold);
+      font-size:10px;
+      font-weight:950;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+    .live-dot {
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:#ef4444;
+      box-shadow:0 0 0 5px rgba(239,68,68,.16);
+    }
+    .match-stats {
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:1px;
+      background:var(--ui-line);
+    }
+    .stat-cell {
+      background:rgba(3,10,8,.86);
+      padding:9px 6px;
+      text-align:center;
+    }
+    .stat-value {
+      color:white;
+      font-size:15px;
+      font-weight:950;
+      font-variant-numeric:tabular-nums;
+    }
+    .stat-label {
+      color:var(--ui-muted);
+      font-size:9px;
+      font-weight:900;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+    #ticker {
+      position:absolute;
+      right:14px;
+      bottom:14px;
+      z-index:20;
+      display:grid;
+      gap:7px;
+      width:min(320px, calc(100vw - 28px));
+      pointer-events:none;
+    }
+    .ticker-item {
+      animation:ticker-in .22s ease both;
+      border:1px solid var(--ui-line);
+      border-radius:10px;
+      background:rgba(3,10,8,.82);
+      padding:9px 11px;
+      color:rgba(255,255,255,.9);
+      font-size:12px;
+      font-weight:800;
+      box-shadow:0 12px 30px rgba(0,0,0,.3);
     }
     #halftime-overlay {
       position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.92);
@@ -41,23 +253,80 @@
       background: rgba(0,0,0,0.78); color: #bbf7d0; border: 1px solid rgba(187,247,208,0.35);
       border-radius: 8px; font: 11px/1.35 Consolas, monospace; white-space: pre-wrap;
     }
+    .floating-btn {
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:10px;
+      padding:8px 11px;
+      color:white;
+      font-size:12px;
+      font-weight:900;
+      box-shadow:0 12px 28px rgba(0,0,0,.28);
+    }
+    @media (max-width: 760px) {
+      #header {
+        min-height: 112px;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      #score-board { grid-column: 1 / -1; grid-row: 1; min-width:0; }
+      .team-card { grid-row: 2; padding:8px; }
+      .team-name { max-width: 32vw; font-size: 13px; }
+      .crest { width:34px; height:34px; font-size:16px; }
+      .score-line { font-size: 28px; }
+      #broadcast-panel { top:10px; left:10px; width:min(230px, calc(100vw - 20px)); }
+      #ticker { display:none; }
+      #event-overlay { bottom: 20px; font-size: 13px; border-radius: 14px; }
+    }
   </style>
 </head>
 <body>
 
 <div id="game-container">
   <div id="header">
-    <div class="text-blue-400 font-bold" id="team1-name">Bizim Sınıf</div>
-    <div id="score-board"><span id="score1">0</span> - <span id="score2">0</span></div>
-    <div class="text-red-400 font-bold" id="team2-name">Rakip Sınıf</div>
-    <div class="absolute top-2 left-1/2 -translate-x-1/2 text-xs text-slate-400 font-mono" id="timer">00:00</div>
-    <button onclick="enableMatchAudio()" class="absolute right-24 top-14 mt-2 px-3 py-1 bg-emerald-600 rounded text-xs font-bold hover:bg-emerald-500 z-50 hidden" id="sound-btn">Sesi Aç</button>
-    <button onclick="window.close()" class="absolute right-4 top-14 mt-2 px-3 py-1 bg-red-600 rounded text-xs font-bold hover:bg-red-500 z-50 hidden" id="close-btn">Pencereyi Kapat</button>
+    <div class="team-card home">
+      <div class="crest home" id="team1-crest">B</div>
+      <div class="min-w-0">
+        <div class="team-label">Ev Sahibi</div>
+        <div class="team-name" id="team1-name">Bizim Sınıf</div>
+      </div>
+    </div>
+    <div id="score-board">
+      <div class="clock-row"><span>Canlı</span><span id="timer">00:00</span></div>
+      <div class="score-line"><span id="score1">0</span><span class="text-emerald-100/35 px-3">-</span><span id="score2">0</span></div>
+      <div class="phase-line" id="match-phase">Maç yükleniyor</div>
+    </div>
+    <div class="team-card away">
+      <div class="min-w-0">
+        <div class="team-label">Deplasman</div>
+        <div class="team-name" id="team2-name">Rakip Sınıf</div>
+      </div>
+      <div class="crest away" id="team2-crest">R</div>
+    </div>
+    <button onclick="enableMatchAudio()" class="floating-btn absolute right-28 top-[94px] bg-emerald-600 hover:bg-emerald-500 z-50 hidden" id="sound-btn">Sesi Aç</button>
+    <button onclick="window.close()" class="floating-btn absolute right-4 top-[94px] bg-red-600 hover:bg-red-500 z-50 hidden" id="close-btn">Pencereyi Kapat</button>
   </div>
   <div id="canvas-wrap">
     <canvas id="pitch"></canvas>
+    <div id="broadcast-panel">
+      <div class="panel-head"><span>Maç Takibi</span><span class="live-dot"></span></div>
+      <div class="match-stats">
+        <div class="stat-cell">
+          <div class="stat-value" id="hud-poss">50-50</div>
+          <div class="stat-label">Momentum</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-value" id="hud-speed">0.0</div>
+          <div class="stat-label">Top Hızı</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-value" id="hud-zone">Orta</div>
+          <div class="stat-label">Bölge</div>
+        </div>
+      </div>
+    </div>
     <div id="debug-panel"></div>
     <div id="event-overlay">Maç Başlıyor!</div>
+    <div id="ticker"></div>
     <!-- Ses kilidi bannerı -->
     <div id="audio-banner" onclick="enableMatchAudio()" style="
       position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
@@ -106,6 +375,8 @@ let score1 = 0, score2 = 0;
 let stateMachine = "PLAYING"; // PLAYING, GOAL_CELEBRATION, SET_PIECE, HALFTIME
 let isSecondHalf = false;
 let htTeamReady = false; // player confirmed tactics
+let tickerItems = [];
+let lastPhaseText = "";
 
 // Canvas
 const canvas = document.getElementById('pitch');
@@ -202,7 +473,60 @@ function showEvent(text, duration=2000) {
   const el = document.getElementById('event-overlay');
   el.textContent = text;
   el.style.opacity = 1;
+  pushTicker(text);
   setTimeout(() => el.style.opacity = 0, duration);
+}
+
+function teamInitial(name, fallback) {
+    const clean = String(name || fallback || "").trim();
+    return (clean.match(/[A-Za-zÇĞİÖŞÜçğıöşü0-9]/) || [fallback || "?"])[0].toLocaleUpperCase('tr-TR');
+}
+
+function pushTicker(text) {
+    const ticker = document.getElementById('ticker');
+    if (!ticker || !text) return;
+    const minute = document.getElementById('timer')?.textContent || "00:00";
+    tickerItems.unshift({ minute, text });
+    tickerItems = tickerItems.slice(0, 4);
+    ticker.innerHTML = tickerItems.map(item => `
+      <div class="ticker-item">
+        <span style="color:var(--ui-gold);font-weight:950;margin-right:8px">${item.minute}</span>${item.text}
+      </div>
+    `).join('');
+}
+
+function setMatchPhase(text) {
+    if (text === lastPhaseText) return;
+    lastPhaseText = text;
+    const phase = document.getElementById('match-phase');
+    if (phase) phase.textContent = text;
+}
+
+function updateBroadcastHud() {
+    const poss = document.getElementById('hud-poss');
+    const speed = document.getElementById('hud-speed');
+    const zone = document.getElementById('hud-zone');
+    if (!poss || !speed || !zone) return;
+
+    const teamWithBall = getTeamWithBall();
+    let homeMomentum = 50;
+    if (teamWithBall === team1) homeMomentum = 62;
+    else if (teamWithBall === team2) homeMomentum = 38;
+    else {
+        const nearestHome = Math.min(...players.filter(p => p.team === team1).map(p => dist(p, ball)).concat([999]));
+        const nearestAway = Math.min(...players.filter(p => p.team === team2).map(p => dist(p, ball)).concat([999]));
+        homeMomentum = nearestHome <= nearestAway ? 55 : 45;
+    }
+    poss.textContent = `${homeMomentum}-${100 - homeMomentum}`;
+    speed.textContent = `${ball.speed.toFixed(1)}`;
+    zone.textContent = ball.y < GAME_HEIGHT * 0.33 ? "Üst" : (ball.y > GAME_HEIGHT * 0.66 ? "Alt" : "Orta");
+
+    if (stateMachine === "HALFTIME") setMatchPhase("Devre arası");
+    else if (stateMachine === "SET_PIECE") setMatchPhase(setPieceType || "Duran top");
+    else if (stateMachine === "GOAL_CELEBRATION") setMatchPhase("Gol sevinci");
+    else if (ball.owner) setMatchPhase(`${ball.owner.team.name} hücumda`);
+    else if (ball.speed > 6) setMatchPhase("Geçiş oyunu");
+    else setMatchPhase("Top kapma mücadelesi");
 }
 
 // Math Utils
@@ -402,6 +726,8 @@ async function loadData() {
     
     document.getElementById('team1-name').textContent = data.bizim_takim.ad;
     document.getElementById('team2-name').textContent = data.rakip_takim.ad;
+    document.getElementById('team1-crest').textContent = teamInitial(data.bizim_takim.ad, "B");
+    document.getElementById('team2-crest').textContent = teamInitial(data.rakip_takim.ad, "R");
     team1.name = data.bizim_takim.ad;
     team2.name = data.rakip_takim.ad;
     
@@ -609,6 +935,7 @@ function update() {
     const gameMin = Math.floor((timeTicks / TOTAL_TICKS) * 90);
     const gameSec = Math.floor(((timeTicks / TOTAL_TICKS) * 90 * 60) % 60);
     document.getElementById('timer').textContent = `${gameMin.toString().padStart(2,'0')}:${gameSec.toString().padStart(2,'0')}`;
+    if (timeTicks % 15 === 0) updateBroadcastHud();
     
     // Halftime check at 45 min (halfway)
     if (!isSecondHalf && timeTicks >= TOTAL_TICKS / 2) {
@@ -1557,80 +1884,162 @@ function update() {
     updateDebugPanel();
 }
 
-function draw() {
-    // Grass stripes
-    for (let i=0; i<10; i++) {
-        ctx.fillStyle = i%2===0 ? '#276749' : '#2f855a';
-        ctx.fillRect(0, i*(GAME_HEIGHT/10), GAME_WIDTH, GAME_HEIGHT/10);
-    }
-    
-    // Pitch Lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-    ctx.lineWidth = 3; ctx.beginPath();
-    // Center line & circle
-    ctx.moveTo(0, GAME_HEIGHT/2); ctx.lineTo(GAME_WIDTH, GAME_HEIGHT/2);
-    ctx.arc(GAME_WIDTH/2, GAME_HEIGHT/2, 60, 0, Math.PI*2);
-    // Penalty boxes
-    ctx.rect(GAME_WIDTH/2 - 150, 0, 300, 130);
-    ctx.rect(GAME_WIDTH/2 - 150, GAME_HEIGHT-130, 300, 130);
-    // Goal areas
-    ctx.rect(GAME_WIDTH/2 - 60, 0, 120, 40);
-    ctx.rect(GAME_WIDTH/2 - 60, GAME_HEIGHT-40, 120, 40);
+function drawPitchLine(x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+}
+
+function drawPlayerToken(p) {
+    const fatigue = Math.max(0.34, p.stamina / 100);
+    const radius = isGoalkeeper(p) ? 14 : 12;
+    const kit = p.team.color;
+
+    const shadowGradient = ctx.createRadialGradient(p.x + 4, p.y + 5, 2, p.x + 4, p.y + 5, 20);
+    shadowGradient.addColorStop(0, 'rgba(0,0,0,.48)');
+    shadowGradient.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shadowGradient;
+    ctx.beginPath();
+    ctx.ellipse(p.x + 4, p.y + 7, 19, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = kit;
+    ctx.fill();
+
+    const shine = ctx.createRadialGradient(p.x - 4, p.y - 5, 1, p.x, p.y, radius + 3);
+    shine.addColorStop(0, 'rgba(255,255,255,.5)');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = shine;
+    ctx.fill();
+
+    ctx.strokeStyle = p === ball.owner ? '#f8d66d' : `rgba(255,255,255,${0.35 + fatigue * 0.55})`;
+    ctx.lineWidth = p === ball.owner ? 3 : 2;
     ctx.stroke();
 
-    // Players
-    players.forEach(p => {
-        // Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.beginPath(); ctx.arc(p.x+3, p.y+3, 12, 0, Math.PI*2); ctx.fill();
-        
-        // Body
-        ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI*2);
-        ctx.fillStyle = p.team.color; ctx.fill();
-        
-        // Outline (fatigue indication - dims if tired)
-        let alpha = 0.4 + (p.stamina/100)*0.6;
-        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-        ctx.lineWidth = 2; ctx.stroke();
-        
-        // Info
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(p.numara, p.x, p.y);
-        
-        ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText(p.ad, p.x, p.y + 22);
-        
-        // Rating Badge
-        ctx.fillStyle = p.ovr > 80 ? '#fbbf24' : '#a7f3d0';
-        ctx.font = '10px monospace';
-        ctx.fillText(`⚡${p.ovr}`, p.x, p.y - 18);
-        
-        // Stamina bar (small line below name)
-        ctx.fillStyle = p.stamina > 50 ? '#4ade80' : (p.stamina > 20 ? '#facc15' : '#ef4444');
-        ctx.fillRect(p.x - 10, p.y + 30, 20 * (p.stamina/100), 3);
-    });
+    if (p.state === 'CHASE' || p.state === 'GK_DIVE') {
+        ctx.strokeStyle = p.team === team1 ? 'rgba(147,197,253,.52)' : 'rgba(252,165,165,.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p.x - p.vx * 5, p.y - p.vy * 5);
+        ctx.lineTo(p.x - p.vx * 14, p.y - p.vy * 14);
+        ctx.stroke();
+    }
 
-    // Ball shadow (on ground)
-    const shadowSize = Math.max(3, 7 - ball.z * 0.15);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.arc(ball.x + 2, ball.y + 2 + ball.z * 0.4, shadowSize, 0, Math.PI*2); ctx.fill();
-    
-    // Ball (lifted by z)
-    const ballDrawY = ball.y - ball.z;
-    const ballSize = Math.max(5, 7 + ball.z * 0.15);
-    ctx.beginPath(); ctx.arc(ball.x, ballDrawY, ballSize, 0, Math.PI*2);
-    ctx.fillStyle = ball.z > 3 ? '#fde047' : '#fff'; // yellow when airborne
+    ctx.fillStyle = '#fff';
+    ctx.font = '900 10px Segoe UI, system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.numara, p.x, p.y);
+
+    const label = String(p.ad || '').split(' ').slice(-1)[0] || p.ad || '';
+    ctx.font = '800 11px Segoe UI, system-ui';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,.72)';
+    ctx.strokeText(label, p.x, p.y + 24);
+    ctx.fillStyle = 'rgba(255,255,255,.94)';
+    ctx.fillText(label, p.x, p.y + 24);
+
+    ctx.fillStyle = p.ovr > 80 ? '#f8d66d' : '#bbf7d0';
+    ctx.font = '800 9px Consolas, monospace';
+    ctx.strokeStyle = 'rgba(0,0,0,.65)';
+    ctx.lineWidth = 2;
+    ctx.strokeText(`${p.ovr}`, p.x, p.y - 19);
+    ctx.fillText(`${p.ovr}`, p.x, p.y - 19);
+
+    ctx.fillStyle = 'rgba(0,0,0,.42)';
+    ctx.fillRect(p.x - 12, p.y + 31, 24, 3);
+    ctx.fillStyle = p.stamina > 50 ? '#4ade80' : (p.stamina > 20 ? '#facc15' : '#ef4444');
+    ctx.fillRect(p.x - 12, p.y + 31, 24 * (p.stamina / 100), 3);
+}
+
+function draw() {
+    const grass = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+    grass.addColorStop(0, '#1d6b45');
+    grass.addColorStop(.5, '#258454');
+    grass.addColorStop(1, '#165a3b');
+    ctx.fillStyle = grass;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    for (let i = 0; i < 12; i++) {
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,.045)' : 'rgba(0,0,0,.035)';
+        ctx.fillRect(0, i * (GAME_HEIGHT / 12), GAME_WIDTH, GAME_HEIGHT / 12);
+    }
+    for (let x = 0; x < GAME_WIDTH; x += 48) {
+        ctx.strokeStyle = 'rgba(255,255,255,.026)';
+        ctx.lineWidth = 1;
+        drawPitchLine(x, 0, x, GAME_HEIGHT);
+    }
+
+    ctx.strokeStyle = 'rgba(236,253,245,.74)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(12, 12, GAME_WIDTH - 24, GAME_HEIGHT - 24);
+    drawPitchLine(12, GAME_HEIGHT / 2, GAME_WIDTH - 12, GAME_HEIGHT / 2);
+    ctx.beginPath();
+    ctx.arc(GAME_WIDTH / 2, GAME_HEIGHT / 2, 62, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(GAME_WIDTH / 2, GAME_HEIGHT / 2, 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(236,253,245,.88)';
     ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = '#000'; ctx.stroke();
-    
-    // Spin indicator when ball has curve
-    const spinMag = Math.hypot(ball.spinX || 0, ball.spinY || 0);
-    if (spinMag > 0.05 && ball.z > 1) {
-        ctx.strokeStyle = 'rgba(255,200,0,0.5)'; ctx.lineWidth = 1;
+
+    ctx.strokeStyle = 'rgba(236,253,245,.68)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(GAME_WIDTH / 2 - 155, 12, 310, 122);
+    ctx.strokeRect(GAME_WIDTH / 2 - 155, GAME_HEIGHT - 134, 310, 122);
+    ctx.strokeRect(GAME_WIDTH / 2 - 64, 12, 128, 38);
+    ctx.strokeRect(GAME_WIDTH / 2 - 64, GAME_HEIGHT - 50, 128, 38);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(GAME_WIDTH / 2 - 82, 5, 164, 7);
+    ctx.fillRect(GAME_WIDTH / 2 - 82, GAME_HEIGHT - 12, 164, 7);
+    ctx.fillStyle = 'rgba(15,23,42,.8)';
+    ctx.fillRect(GAME_WIDTH / 2 - 72, 7, 144, 5);
+    ctx.fillRect(GAME_WIDTH / 2 - 72, GAME_HEIGHT - 12, 144, 5);
+
+    players
+        .slice()
+        .sort((a, b) => a.y - b.y)
+        .forEach(drawPlayerToken);
+
+    const shadowSize = Math.max(4, 9 - ball.z * 0.12);
+    ctx.fillStyle = 'rgba(0,0,0,0.34)';
+    ctx.beginPath();
+    ctx.ellipse(ball.x + 2, ball.y + 3 + ball.z * 0.35, shadowSize + 2, shadowSize * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const ballDrawY = ball.y - ball.z;
+    const ballSize = Math.max(5, 7 + ball.z * 0.13);
+    const ballGradient = ctx.createRadialGradient(ball.x - 2, ballDrawY - 2, 1, ball.x, ballDrawY, ballSize + 1);
+    ballGradient.addColorStop(0, '#fff');
+    ballGradient.addColorStop(.66, ball.z > 3 ? '#fde047' : '#f8fafc');
+    ballGradient.addColorStop(1, '#cbd5e1');
+    ctx.beginPath();
+    ctx.arc(ball.x, ballDrawY, ballSize, 0, Math.PI * 2);
+    ctx.fillStyle = ballGradient;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#0f172a';
+    ctx.stroke();
+
+    if (ball.speed > 4) {
+        ctx.strokeStyle = 'rgba(250,204,21,.42)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(ball.x, ballDrawY);
-        ctx.lineTo(ball.x + (ball.spinX||0) * 40, ballDrawY + (ball.spinY||0) * 40);
+        ctx.lineTo(ball.x - ball.vx * 3.4, ballDrawY - ball.vy * 3.4);
+        ctx.stroke();
+    }
+
+    const spinMag = Math.hypot(ball.spinX || 0, ball.spinY || 0);
+    if (spinMag > 0.05 && ball.z > 1) {
+        ctx.strokeStyle = 'rgba(255,220,90,0.58)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ballDrawY);
+        ctx.lineTo(ball.x + (ball.spinX || 0) * 40, ballDrawY + (ball.spinY || 0) * 40);
         ctx.stroke();
     }
 }
