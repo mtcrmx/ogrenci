@@ -433,7 +433,7 @@
   </style>
 </head>
 <body>
-{% set odev_liste = odevler|default([]) %}
+{% set odev_liste = odevler|default([], true) %}
 {% set toplam_odev = odev_liste|length %}
 {% set tamamlanan_odev = odev_liste|selectattr('tamamlandi')|list|length %}
 {% set odev_orani = (tamamlanan_odev * 100 / toplam_odev)|round(0) if toplam_odev else 0 %}
@@ -561,7 +561,7 @@
           {% for n in metrics.notlar %}
           <article class="note-card">
             <div class="note-text">{{ n.not_metni }}</div>
-            <div class="note-meta">{{ n.ogretmen }} · {{ n.tarih[:16] }}</div>
+            <div class="note-meta">{{ n.ogretmen }} · {{ (n.tarih or '')[:16] }}</div>
           </article>
           {% else %}
           <div class="empty">Veliye açık öğretmen notu yok.</div>
@@ -580,7 +580,7 @@
           {% for g in gecmis_kisa %}
           <article class="history-card">
             <div class="history-reason">{{ g.kriter }}</div>
-            <div class="history-meta">{{ g.tarih[:16] }} · {{ g.ogretmen }}</div>
+            <div class="history-meta">{{ (g.tarih or '')[:16] }} · {{ g.ogretmen }}</div>
           </article>
           {% else %}
           <div class="empty">Kayıt yok.</div>
