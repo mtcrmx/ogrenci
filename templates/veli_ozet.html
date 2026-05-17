@@ -3,72 +3,592 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Veli özeti</title>
+  <title>Veli özeti · {{ ogrenci.ad_soyad }}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: rgba(148, 163, 184, .28);
+      --surface: rgba(255,255,255,.92);
+      --surface-strong: #ffffff;
+      --blue: #2563eb;
+      --blue-strong: #1d4ed8;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --rose: #e11d48;
+      --radius: 8px;
+      --shadow: 0 22px 60px rgba(15, 23, 42, .12);
+    }
+    * { box-sizing: border-box; letter-spacing: 0; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(120deg, rgba(219, 234, 254, .9), rgba(236, 253, 245, .86) 46%, rgba(255, 247, 237, .88)),
+        linear-gradient(90deg, rgba(15, 23, 42, .04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(15, 23, 42, .04) 1px, transparent 1px);
+      background-size: 240% 240%, 34px 34px, 34px 34px;
+      animation: page-shift 26s ease-in-out infinite;
+      overflow-x: hidden;
+    }
+    @keyframes page-shift {
+      0%, 100% { background-position: 0% 0%, 0 0, 0 0; }
+      50% { background-position: 100% 58%, 17px 17px, -17px 12px; }
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes sheen {
+      from { transform: translateX(-130%) skewX(-16deg); }
+      to { transform: translateX(130%) skewX(-16deg); }
+    }
+    @keyframes fill {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid rgba(15, 23, 42, .08);
+      background: rgba(255,255,255,.84);
+      backdrop-filter: blur(18px);
+    }
+    .topbar-inner, .shell {
+      width: min(1080px, calc(100% - 24px));
+      margin: 0 auto;
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-size: 12px;
+      font-weight: 1000;
+      color: #334155;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius);
+      background: rgba(37, 99, 235, .12);
+      color: var(--blue-strong);
+      flex: 0 0 auto;
+    }
+    .nav {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      max-width: 100%;
+      padding: 2px;
+    }
+    .nav::-webkit-scrollbar { display: none; }
+    .action {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius);
+      border: 1px solid rgba(148, 163, 184, .28);
+      background: rgba(255,255,255,.9);
+      color: #0f172a;
+      padding: 8px 11px;
+      font-size: 12px;
+      font-weight: 1000;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: transform .18s ease, border-color .18s ease, color .18s ease;
+    }
+    .action:hover {
+      transform: translateY(-1px);
+      border-color: rgba(37, 99, 235, .42);
+      color: var(--blue-strong);
+    }
+    .action.primary {
+      background: var(--blue-strong);
+      border-color: var(--blue-strong);
+      color: #fff;
+    }
+    .action.danger {
+      background: rgba(255, 241, 242, .9);
+      border-color: rgba(251, 113, 133, .32);
+      color: #be123c;
+    }
+    .shell { padding: 18px 0 48px; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(15,23,42,.96), rgba(30,64,175,.92) 52%, rgba(16,185,129,.82));
+      color: #fff;
+      box-shadow: var(--shadow);
+      animation: rise .42s ease both;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, transparent, rgba(255,255,255,.20), transparent),
+        linear-gradient(180deg, rgba(255,255,255,.16), transparent 54%);
+      animation: sheen 7s ease-in-out infinite;
+      opacity: .7;
+      pointer-events: none;
+    }
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+      gap: 18px;
+      padding: 24px;
+    }
+    .identity {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+    .avatar {
+      width: 64px;
+      height: 64px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 1000;
+      border: 1px solid rgba(255,255,255,.32);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), 0 16px 34px rgba(15,23,42,.18);
+      flex: 0 0 auto;
+    }
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.14);
+      padding: 6px 9px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      font-weight: 1000;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 42px);
+      line-height: 1.03;
+      font-weight: 1000;
+      word-break: break-word;
+    }
+    .hero-sub {
+      margin-top: 8px;
+      color: rgba(255,255,255,.78);
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .hero-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-content: end;
+    }
+    .hero-metric {
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.14);
+      padding: 12px;
+      backdrop-filter: blur(12px);
+    }
+    .hero-metric span {
+      display: block;
+      color: rgba(255,255,255,.74);
+      font-size: 11px;
+      font-weight: 1000;
+    }
+    .hero-metric strong {
+      display: block;
+      margin-top: 4px;
+      color: #fff;
+      font-size: 27px;
+      line-height: 1;
+      font-weight: 1000;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+      gap: 16px;
+      margin-top: 16px;
+      align-items: start;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 18px 48px rgba(15,23,42,.09);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+      animation: rise .42s ease both;
+      animation-delay: var(--delay, 0s);
+    }
+    .panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.58);
+    }
+    .panel-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 1000;
+    }
+    .panel-note {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .panel-body { padding: 16px; }
+    .meter {
+      height: 9px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(148,163,184,.22);
+    }
+    .meter > span {
+      display: block;
+      height: 100%;
+      width: var(--value, 0%);
+      border-radius: 999px;
+      transform-origin: left;
+      animation: fill .72s cubic-bezier(.2,.8,.2,1) both;
+      background: linear-gradient(90deg, var(--green), var(--blue), var(--amber));
+    }
+    .flash {
+      border-radius: var(--radius);
+      border: 1px solid rgba(16,185,129,.26);
+      background: rgba(236,253,245,.92);
+      color: #047857;
+      padding: 11px 12px;
+      font-size: 13px;
+      font-weight: 900;
+      animation: rise .32s ease both;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-strong);
+      padding: 14px;
+    }
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .stat strong {
+      display: block;
+      margin-top: 8px;
+      color: #0f172a;
+      font-size: 29px;
+      line-height: 1;
+      font-weight: 1000;
+      word-break: break-word;
+    }
+    .note-list, .history-list, .homework-list {
+      display: grid;
+      gap: 10px;
+    }
+    .note-card, .history-card, .homework-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.78);
+      padding: 12px;
+      animation: rise .32s ease both;
+    }
+    .note-card {
+      border-left: 4px solid var(--blue);
+    }
+    .note-text, .history-reason, .homework-title {
+      color: #0f172a;
+      font-size: 14px;
+      font-weight: 900;
+      word-break: break-word;
+    }
+    .note-meta, .history-meta, .homework-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+    .homework-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .state {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 26px;
+      border-radius: var(--radius);
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 1000;
+      white-space: nowrap;
+    }
+    .state-done {
+      border: 1px solid rgba(16,185,129,.24);
+      background: rgba(16,185,129,.12);
+      color: #047857;
+    }
+    .state-wait {
+      border: 1px solid rgba(245,158,11,.25);
+      background: rgba(245,158,11,.14);
+      color: #b45309;
+    }
+    textarea {
+      width: 100%;
+      min-height: 112px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: #0f172a;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      outline: none;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    textarea:focus {
+      border-color: rgba(37, 99, 235, .48);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, .10);
+    }
+    .submit {
+      width: 100%;
+      min-height: 42px;
+      border: 0;
+      border-radius: var(--radius);
+      background: var(--blue-strong);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 1000;
+      cursor: pointer;
+      transition: transform .18s ease, background-color .18s ease;
+    }
+    .submit:hover {
+      transform: translateY(-1px);
+      background: #1e40af;
+    }
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 10px 0;
+    }
+    @media (max-width: 860px) {
+      .topbar-inner { align-items: flex-start; flex-direction: column; }
+      .nav { width: 100%; }
+      .hero-inner, .grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .topbar-inner, .shell { width: min(100% - 16px, 1080px); }
+      .shell { padding-top: 10px; }
+      .hero-inner { padding: 18px; }
+      .hero-metrics, .stat-grid { grid-template-columns: 1fr 1fr; }
+      .avatar { width: 56px; height: 56px; }
+      h1 { font-size: 28px; }
+      .panel-head { flex-direction: column; }
+      .homework-top { flex-direction: column; }
+    }
+  </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
-  <header class="border-b border-slate-800 bg-slate-900 px-4 py-4">
-    <div class="max-w-xl mx-auto flex flex-wrap justify-between gap-2 items-center">
-      <h1 class="font-black text-lg">Veli özeti · {{ ogrenci.ad_soyad }}</h1>
-      <div class="flex gap-2">
-        <a href="{{ url_for('veli_panel') }}" class="text-xs font-bold bg-slate-700 px-3 py-1.5 rounded-lg">Tik geçmişi</a>
-        <a href="{{ url_for('veli_cikis') }}" class="text-xs font-bold bg-red-900 px-3 py-1.5 rounded-lg">Çıkış</a>
+<body>
+{% set odev_liste = odevler|default([]) %}
+{% set toplam_odev = odev_liste|length %}
+{% set tamamlanan_odev = odev_liste|selectattr('tamamlandi')|list|length %}
+{% set odev_orani = (tamamlanan_odev * 100 / toplam_odev)|round(0) if toplam_odev else 0 %}
+{% set son_tik = metrics.tik_son_gun|int %}
+{% set risk_yuzde = [100, son_tik * 10]|min %}
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="brand-mark">EC</span><span>Erenler Cumhuriyet Ortaokulu</span></div>
+    <nav class="nav" aria-label="Veli bağlantıları">
+      <a href="{{ url_for('veli_panel') }}" class="action primary">Tik geçmişi</a>
+      <a href="{{ url_for('paylasim_tema_odevler_sayfa') }}" target="_blank" rel="noopener" class="action">Ödevler</a>
+      <a href="{{ url_for('veli_cikis') }}" class="action danger">Çıkış</a>
+    </nav>
+  </div>
+</header>
+
+<main class="shell">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-3 space-y-2">
+      {% for cat, msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="eyebrow">Veli özet paneli</div>
+        <div class="identity">
+          <div class="avatar" style="background:{{ avatar.renk if avatar else '#2563eb' }}">{{ avatar.initials if avatar else ogrenci.ad_soyad[:2]|upper }}</div>
+          <div class="min-w-0">
+            <h1>{{ ogrenci.ad_soyad }}</h1>
+            <div class="hero-sub">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-metrics">
+        <div class="hero-metric">
+          <span>Son {{ metrics.gun }} gün</span>
+          <strong>{{ metrics.tik_son_gun }}</strong>
+        </div>
+        <div class="hero-metric">
+          <span>Ödev durumu</span>
+          <strong style="font-size:22px">{{ tamamlanan_odev }}/{{ toplam_odev }}</strong>
+        </div>
       </div>
     </div>
-  </header>
-  <main class="max-w-xl mx-auto px-4 py-6 space-y-6">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for cat, msg in messages %}
-        <div class="rounded-xl px-3 py-2 text-sm {% if cat=='success' %}bg-emerald-900/50 border border-emerald-600{% else %}bg-amber-900/40{% endif %}">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
-      <h2 class="text-sm font-black text-emerald-400 mb-3">Son {{ metrics.gun }} gün</h2>
-      <p class="text-3xl font-black">{{ metrics.tik_son_gun }} <span class="text-sm font-normal text-slate-400">tik kaydı</span></p>
-      <p class="text-xs text-slate-500 mt-2">Öğretmen paylaştığı sürece güncellenir.</p>
-    </section>
+  </section>
 
-    {% if metrics.notlar %}
-    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
-      <h2 class="text-sm font-black text-sky-400 mb-3">Öğretmen notları (size açık)</h2>
-      <ul class="space-y-3 text-sm">
-        {% for n in metrics.notlar %}
-        <li class="border-l-2 border-sky-600 pl-3">
-          <div class="text-slate-300">{{ n.not_metni }}</div>
-          <div class="text-[10px] text-slate-500 mt-1">{{ n.ogretmen }} · {{ n.tarih[:16] }}</div>
-        </li>
-        {% endfor %}
-      </ul>
-    </section>
-    {% endif %}
+  <div class="grid">
+    <div class="space-y-4">
+      <section class="panel" style="--delay:.04s">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">30 günlük görünüm</h2>
+            <p class="panel-note">Son kayıt yoğunluğu ve ödev ilerlemesi tek ekranda.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="stat-grid">
+            <div class="stat">
+              <span>Tik kaydı</span>
+              <strong>{{ metrics.tik_son_gun }}</strong>
+              <div class="meter mt-3"><span style="--value:{{ risk_yuzde }}%"></span></div>
+            </div>
+            <div class="stat">
+              <span>Ödev tamamlama</span>
+              <strong>%{{ odev_orani|int }}</strong>
+              <div class="meter mt-3"><span style="--value:{{ odev_orani }}%"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
-      <h2 class="text-sm font-black mb-3">Rehberlik / görüşme talebi</h2>
-      <form method="POST" action="{{ url_for('veli_randevu_kaydet') }}" class="space-y-2">
-        <textarea name="mesaj" rows="3" placeholder="Kısaca konuyu yazın (isteğe bağlı)"
-                  class="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-sm"></textarea>
-        <button type="submit" class="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 font-black py-2.5 text-sm">
-          Talep gönder
-        </button>
-      </form>
-    </section>
+      <section class="panel" style="--delay:.08s">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Rehberlik / görüşme talebi</h2>
+            <p class="panel-note">Talep öğretmen ekranına düşer.</p>
+          </div>
+        </div>
+        <form method="POST" action="{{ url_for('veli_randevu_kaydet') }}" class="panel-body space-y-3">
+          <textarea name="mesaj" rows="4" placeholder="Kısaca konuyu yazın"></textarea>
+          <button type="submit" class="submit">Talep gönder</button>
+        </form>
+      </section>
 
-    <section>
-      <h2 class="text-sm font-black text-slate-400 mb-2">Son tik kayıtları</h2>
-      <ul class="space-y-2 text-sm">
-        {% for g in gecmis_kisa %}
-        <li class="rounded-xl bg-slate-900/80 border border-slate-800 px-3 py-2">
-          <span class="text-slate-400">{{ g.tarih[:16] }}</span>
-          <span class="block text-slate-200">{{ g.kriter }}</span>
-          <span class="text-[10px] text-slate-500">{{ g.ogretmen }}</span>
-        </li>
-        {% else %}
-        <li class="text-slate-500 text-sm">Kayıt yok.</li>
-        {% endfor %}
-      </ul>
-    </section>
-  </main>
+      <section class="panel" style="--delay:.12s">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Ödev özeti</h2>
+            <p class="panel-note">En güncel sınıf ödevleri.</p>
+          </div>
+          <span class="state {{ 'state-done' if toplam_odev and tamamlanan_odev == toplam_odev else 'state-wait' }}">{{ tamamlanan_odev }}/{{ toplam_odev }}</span>
+        </div>
+        <div class="panel-body homework-list">
+          {% for od in odev_liste %}
+          <article class="homework-card">
+            <div class="homework-top">
+              <div class="homework-title">{{ od.baslik }}</div>
+              <span class="state {{ 'state-done' if od.tamamlandi else 'state-wait' }}">{{ 'Tamamlandı' if od.tamamlandi else 'Bekliyor' }}</span>
+            </div>
+            <div class="homework-meta">{{ od.ders }} · Son teslim: {{ od.son_tarih }} · {{ od.ogretmen }}</div>
+          </article>
+          {% else %}
+          <div class="empty">Henüz ödev girilmedi.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="space-y-4">
+      <section class="panel" style="--delay:.16s">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Öğretmen notları</h2>
+            <p class="panel-note">Veliye açık son paylaşımlar.</p>
+          </div>
+        </div>
+        <div class="panel-body note-list">
+          {% for n in metrics.notlar %}
+          <article class="note-card">
+            <div class="note-text">{{ n.not_metni }}</div>
+            <div class="note-meta">{{ n.ogretmen }} · {{ n.tarih[:16] }}</div>
+          </article>
+          {% else %}
+          <div class="empty">Veliye açık öğretmen notu yok.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="panel" style="--delay:.20s">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Son tik kayıtları</h2>
+            <p class="panel-note">Yakın dönem davranış geçmişi.</p>
+          </div>
+        </div>
+        <div class="panel-body history-list">
+          {% for g in gecmis_kisa %}
+          <article class="history-card">
+            <div class="history-reason">{{ g.kriter }}</div>
+            <div class="history-meta">{{ g.tarih[:16] }} · {{ g.ogretmen }}</div>
+          </article>
+          {% else %}
+          <div class="empty">Kayıt yok.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
 </body>
 </html>

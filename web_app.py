@@ -3279,11 +3279,14 @@ def veli_ozet_sayfa():
         return redirect(url_for("veli_giris"))
     metrics = veli_ozet_metrikleri(int(oid), 30)
     gecmis_kisa = ogrenci_tik_gecmisi(int(oid))[:20]
+    odevler = ogrenci_odevleri(int(oid), 8)
     return render_template(
         "veli_ozet.html",
         ogrenci=o,
+        avatar=_avatar(o),
         metrics=metrics,
         gecmis_kisa=gecmis_kisa,
+        odevler=odevler,
     )
 
 
