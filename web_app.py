@@ -136,6 +136,40 @@ def _ogretmen_ogrenci_macina_erisebilir(ogretmen_id: int, mac: dict | None) -> b
     return int(mac["sinif1_id"]) in siniflar or int(mac["sinif2_id"]) in siniflar
 
 
+def _moral_puani(olumlu: int, olumsuz: int) -> int:
+    return max(0, min(100, 50 + (int(olumlu or 0) - int(olumsuz or 0)) * 10))
+
+
+def _ogrenci_moral_haritasi(kadro: list[dict]) -> dict[int, dict]:
+    ids = [int(o["id"]) for o in kadro if o.get("id") is not None]
+    olumlu_h = ogrenci_olumlu_tik_sayilari(ids)
+    moral = {}
+    for ogr in kadro:
+        oid = int(ogr["id"])
+        olumsuz = int(ogr.get("tik_sayisi") or 0)
+        olumlu = int(olumlu_h.get(oid, 0))
+        moral[oid] = {
+            "moral": _moral_puani(olumlu, olumsuz),
+            "olumlu_tik": olumlu,
+            "olumsuz_tik": olumsuz,
+        }
+    return moral
+
+
+def _ogrenci_spor_ovr(ogrenci_id: int) -> tuple[int, int]:
+    try:
+        ozet = gelisim_ozeti(int(ogrenci_id))
+        puan_dict = ozet.get("puan") or {}
+        xp = int(puan_dict.get("xp", 0))
+    except Exception:
+        xp = 0
+    return min(99, 50 + int(xp * 0.8)), xp
+
+
+def _moral_etkili_ovr(ovr: int, moral: int) -> int:
+    return max(1, min(100, int(round(int(ovr or 50) + (int(moral or 50) - 50) * 0.35))))
+
+
 # Yalnızca rapor/analiz görebilen öğretmenler (`yetki=rapor`) bu endpoint’lere girebilir;
 # tik/ödev vb. diğerleri rapor_ozet’e yönlendirilir.
 _RAPOR_SADECE_ROTALAR = frozenset({
@@ -820,8 +854,10 @@ def api_ogrenci_mac_simule():
     
     bizim_k = sinif_ogrencileri(bizim_sinif_id)
     rakip_k = sinif_ogrencileri(rakip_sinif_id)
+    bizim_moral = _ogrenci_moral_haritasi(bizim_k)
+    rakip_moral = _ogrenci_moral_haritasi(rakip_k)
     
-    def calc_power(taktik, kadro):
+    def calc_power(taktik, kadro, moral_haritasi):
         oyuncu_verisi = (taktik or {}).get("oyuncular") or (taktik or {}).get("yerlesim")
         if not oyuncu_verisi:
             return 50
@@ -830,14 +866,14 @@ def api_ogrenci_mac_simule():
         for pid, _p in oyuncu_verisi.items():
             ogr = next((x for x in kadro if str(x["id"]) == str(pid)), None)
             if ogr:
-                xp = ogr.get("tik_sayisi", 0)
-                ovr = min(99, 50 + int(xp * 0.8))
-                total += ovr
+                ovr, _xp = _ogrenci_spor_ovr(int(ogr["id"]))
+                moral = (moral_haritasi.get(int(ogr["id"])) or {}).get("moral", 50)
+                total += _moral_etkili_ovr(ovr, moral)
                 count += 1
         return int(total / count) if count > 0 else 50
         
-    bizim_guc = calc_power(bizim_taktik, bizim_k)
-    rakip_guc = calc_power(rakip_taktik, rakip_k)
+    bizim_guc = calc_power(bizim_taktik, bizim_k, bizim_moral)
+    rakip_guc = calc_power(rakip_taktik, rakip_k, rakip_moral)
     
     bizim_skor = 0
     rakip_skor = 0
@@ -952,8 +988,10 @@ def api_ogrenci_mac_2d_data():
     
     biz_kadro = sinif_ogrencileri(bizim_sinif_id)
     rak_kadro = sinif_ogrencileri(rakip_sinif_id)
+    biz_moral = _ogrenci_moral_haritasi(biz_kadro)
+    rak_moral = _ogrenci_moral_haritasi(rak_kadro)
     
-    def extract_players(taktik, kadro, takim_renk):
+    def extract_players(taktik, kadro, takim_renk, moral_haritasi):
         players = []
         if spor == "voleybol":
             default_positions = [
@@ -971,11 +1009,13 @@ def api_ogrenci_mac_2d_data():
             limit = 11
 
         def oyuncu_satir(ogr, numara, rol, base_x, base_y, renk):
-            ozet = gelisim_ozeti(ogr["id"])
-            puan_dict = ozet.get("puan") or {}
-            xp = int(puan_dict.get("xp", 0))
-            ovr = min(99, 50 + int(xp * 0.8))
+            ovr, xp = _ogrenci_spor_ovr(int(ogr["id"]))
             oz = ogrenci_ozellikleri_getir(ogr["id"], xp)
+            moral_bilgi = moral_haritasi.get(int(ogr["id"])) or {
+                "moral": 50,
+                "olumlu_tik": 0,
+                "olumsuz_tik": int(ogr.get("tik_sayisi") or 0),
+            }
             players.append({
                 "id": ogr["id"],
                 "ad": ogr["ad_soyad"].split()[0],
@@ -984,6 +1024,9 @@ def api_ogrenci_mac_2d_data():
                 "baseX": base_x,
                 "baseY": base_y,
                 "ovr": ovr,
+                "moral": moral_bilgi["moral"],
+                "olumlu_tik": moral_bilgi["olumlu_tik"],
+                "olumsuz_tik": moral_bilgi["olumsuz_tik"],
                 "renk": renk,
                 "ozellikler": oz,
             })
@@ -1037,8 +1080,8 @@ def api_ogrenci_mac_2d_data():
 
         return players
         
-    bizim_oyuncular = extract_players(bizim_taktik, biz_kadro, "#3b82f6")
-    rakip_oyuncular = extract_players(rakip_taktik, rak_kadro, "#ef4444")
+    bizim_oyuncular = extract_players(bizim_taktik, biz_kadro, "#3b82f6", biz_moral)
+    rakip_oyuncular = extract_players(rakip_taktik, rak_kadro, "#ef4444", rak_moral)
     
     return jsonify({
         "ok": True,

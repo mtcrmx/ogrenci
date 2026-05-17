@@ -246,6 +246,8 @@ const AIR_DRAG = 0.003;         // Air resistance coefficient
 const FLOOR_RESTITUTION = 0.85; // 15% energy loss on floor bounce
 const NET_RESTITUTION = 0.4;    // 60% energy loss on net collision
 const NET_TOP_Z = 18;           // Net height in Z units
+const ATTACK_LINE_DISTANCE = 150;
+const HIGH_ATTACK_Z = NET_TOP_Z + 7;
 
 let isPlaying = false;
 let score1 = 0, score2 = 0;
@@ -295,7 +297,24 @@ function clampVolleyStat(value, fallback = 55) {
     return Math.max(1, Math.min(100, n));
 }
 
-function makeVolleyBrain(oz, ovr, role) {
+function normalizeMorale(value) {
+    const n = Number.isFinite(Number(value)) ? Number(value) : 50;
+    return Math.max(0, Math.min(100, n));
+}
+
+function moraleVolleyStat(value, morale) {
+    return clampVolleyStat(Math.round(clampVolleyStat(value, 55) + (normalizeMorale(morale) - 50) * 0.34));
+}
+
+function moraleMistakeFactor(p) {
+    return Math.max(0.72, Math.min(1.55, 1 + (50 - normalizeMorale(p?.moral)) / 95));
+}
+
+function moraleConfidenceFactor(p) {
+    return Math.max(0.84, Math.min(1.14, 1 + (normalizeMorale(p?.moral) - 50) / 360));
+}
+
+function makeVolleyBrain(oz, ovr, role, moral = 50) {
     const base = clampVolleyStat(ovr, 55);
     const hiz = clampVolleyStat(oz.hiz, base);
     const sut = clampVolleyStat(oz.sut, base);
@@ -304,12 +323,13 @@ function makeVolleyBrain(oz, ovr, role) {
     const r = String(role || "").toLocaleLowerCase('tr-TR');
     const liberoBoost = r.includes("libero") ? 8 : 0;
     const setterBoost = r.includes("pas") || r.includes("setter") ? 8 : 0;
+    const mindBoost = (normalizeMorale(moral) - 50) * 0.18;
     return {
-        receive: clampVolleyStat(Math.round(defans * 0.42 + pas * 0.24 + hiz * 0.16 + base * 0.16 + liberoBoost)),
-        set: clampVolleyStat(Math.round(pas * 0.58 + base * 0.24 + hiz * 0.08 + setterBoost)),
-        attack: clampVolleyStat(Math.round(sut * 0.58 + hiz * 0.18 + base * 0.2)),
-        block: clampVolleyStat(Math.round(defans * 0.48 + hiz * 0.18 + base * 0.2)),
-        decisions: clampVolleyStat(Math.round(pas * 0.38 + defans * 0.22 + base * 0.3)),
+        receive: clampVolleyStat(Math.round(defans * 0.42 + pas * 0.24 + hiz * 0.16 + base * 0.16 + liberoBoost + mindBoost * 0.65)),
+        set: clampVolleyStat(Math.round(pas * 0.58 + base * 0.24 + hiz * 0.08 + setterBoost + mindBoost)),
+        attack: clampVolleyStat(Math.round(sut * 0.58 + hiz * 0.18 + base * 0.2 + mindBoost * 0.8)),
+        block: clampVolleyStat(Math.round(defans * 0.48 + hiz * 0.18 + base * 0.2 + mindBoost * 0.55)),
+        decisions: clampVolleyStat(Math.round(pas * 0.38 + defans * 0.22 + base * 0.3 + mindBoost)),
     };
 }
 
@@ -383,6 +403,29 @@ function ballMovingTowardTeam(team) {
     return team.side === 1 ? ball.vy > 0 : ball.vy < 0;
 }
 
+function attackLineY(team) {
+    return team.side === 1 ? NET_Y + ATTACK_LINE_DISTANCE : NET_Y - ATTACK_LINE_DISTANCE;
+}
+
+function isFrontAttackZone(team, y, buffer = 0) {
+    return team.side === 1 ? y <= attackLineY(team) - buffer : y >= attackLineY(team) + buffer;
+}
+
+function legalBackRowAttackY(team, buffer = 26) {
+    return team.side === 1 ? attackLineY(team) + buffer : attackLineY(team) - buffer;
+}
+
+function legalSpikeContactTarget(p) {
+    if (!p) {
+        return {x: GAME_WIDTH / 2, y: NET_Y};
+    }
+    if (p.currentRow !== 'back' && !p.isLibero) {
+        return clampPointToTeamCourt(p.team, p.x, p.y, 24);
+    }
+    const laneX = Number.isFinite(p.baseX) ? p.baseX : p.x;
+    return clampPointToTeamCourt(p.team, laneX, legalBackRowAttackY(p.team), 24);
+}
+
 function predictBallLanding() {
     let predX = ball.x;
     let predY = ball.y;
@@ -453,13 +496,18 @@ function chooseSpiker(team, setter) {
     players.forEach(p => {
         if (p.team !== team || p === setter || p.isLibero) return;
         const attack = p.brain?.attack || p.ozellikler.sut || p.ovr || 55;
-        let score = attack * 1.15 - Math.abs(p.y - NET_Y) * 0.16;
-        if (p.currentRow === 'front') score += 26;
+        const frontRow = p.currentRow === 'front';
+        const frontZoneRisk = !frontRow && isFrontAttackZone(p.team, p.y, 18);
+        const contactTarget = legalSpikeContactTarget(p);
+        let score = attack * 1.15 - Math.abs(contactTarget.y - NET_Y) * 0.11;
+        if (frontRow) score += 34;
+        else score -= 18;
+        if (frontZoneRisk) score -= 44;
         if (Math.abs(p.x - GAME_WIDTH / 2) > 82) score += 8;
         if (p.actionCooldown > 0) score -= 28;
         if (score > bestScore) { bestScore = score; best = p; }
     });
-    return best || players.find(p => p.team === team && p !== setter && !p.isLibero) || setter;
+    return best || players.find(p => p.team === team && p !== setter && !p.isLibero && p.currentRow === 'front') || players.find(p => p.team === team && p !== setter && !p.isLibero) || setter;
 }
 
 function chooseAttackLanding(p) {
@@ -571,14 +619,27 @@ function addPlayer(p, team, mirror) {
     let tx = (p.baseX / 100) * GAME_WIDTH;
     let ty = (p.baseY / 100) * GAME_HEIGHT;
     if (mirror) { tx = GAME_WIDTH - tx; ty = GAME_HEIGHT - ty; }
-    let isLibero = (p.rol && p.rol.toLowerCase().includes('libero')) || players.filter(pl => pl.team === team).length === 5; // make 6th player libero if none specified
-    const baseOzellikler = p.ozellikler ? { ...p.ozellikler } : {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr};
+    const roleText = String(p.rol || "").toLocaleLowerCase('tr-TR');
+    let isLibero = roleText.includes('libero');
+    const moral = normalizeMorale(p.moral);
+    const rawOzellikler = p.ozellikler ? { ...p.ozellikler } : {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr};
+    const baseOzellikler = {
+        hiz: moraleVolleyStat(rawOzellikler.hiz, moral),
+        sut: moraleVolleyStat(rawOzellikler.sut, moral),
+        pas: moraleVolleyStat(rawOzellikler.pas, moral),
+        defans: moraleVolleyStat(rawOzellikler.defans, moral),
+        kaleci: moraleVolleyStat(rawOzellikler.kaleci, moral),
+    };
+    const baseOvr = moraleVolleyStat(p.ovr, moral);
     players.push({
-        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, team: team, rol: p.rol || "",
+        id: p.id, ad: p.ad, numara: p.numara, ovr: baseOvr, team: team, rol: p.rol || "",
         ozellikler: { ...baseOzellikler },
-        brain: makeVolleyBrain(baseOzellikler, p.ovr, p.rol || ""),
+        brain: makeVolleyBrain(baseOzellikler, baseOvr, p.rol || "", moral),
         baseX: tx, baseY: ty, x: tx, y: ty, vx: 0, vy: 0,
         actionCooldown: 0,
+        moral: moral,
+        olumluTik: Number(p.olumlu_tik || 0),
+        olumsuzTik: Number(p.olumsuz_tik || 0),
         isLibero: isLibero
     });
 }
@@ -720,9 +781,11 @@ function update() {
             
             // Servis normalde rakip sahaya düşer; düşük ihtimalle file veya aut olur.
             const serveSkill = p.brain?.attack || p.ozellikler.sut || p.ovr || 55;
-            const errMargin = ((100 - serveSkill) / 100) * 0.58;
+            const errMargin = ((100 - serveSkill) / 100) * 0.58 * moraleMistakeFactor(p);
             const faultRoll = Math.random();
-            const serveFault = faultRoll < 0.024 ? "net" : (faultRoll < 0.046 ? "out" : null);
+            const serveFaultChance = Math.max(0.012, Math.min(0.095, 0.046 + (50 - normalizeMorale(p.moral)) / 1200 - (serveSkill - 55) / 2500));
+            const netFaultLimit = serveFaultChance * 0.52;
+            const serveFault = faultRoll < netFaultLimit ? "net" : (faultRoll < serveFaultChance ? "out" : null);
             const errX = (Math.random() * 42 - 21) * errMargin;
             const errY = (Math.random() * 34 - 17) * errMargin;
             const courtMargin = 70;
@@ -947,7 +1010,7 @@ function update() {
             } else if (teamTouches === 1) {
                 // === MANŞET (Dig/Bump): absorb speed, redirect up ===
                 const receiveSkill = p.brain?.receive || p.ozellikler.defans || p.ovr || 55;
-                const errMargin = ((100 - receiveSkill) / 100) * 0.68;
+                const errMargin = ((100 - receiveSkill) / 100) * 0.68 * moraleMistakeFactor(p);
                 showEvent(receiveSkill > 76 ? "Temiz manşet!" : "Manşet!", 400);
                 topVurusSesi();
                 const setter = chooseSetter(p.team, p);
@@ -971,15 +1034,16 @@ function update() {
             } else if (teamTouches === 2) {
                 // === PARMAK PAS (Finger Set): precise placement ===
                 const setSkill = p.brain?.set || p.ozellikler.pas || p.ovr || 55;
-                const errMargin = ((100 - setSkill) / 100) * 0.48;
+                const errMargin = ((100 - setSkill) / 100) * 0.48 * moraleMistakeFactor(p);
                 showEvent(setSkill > 76 ? "Akıllı pas!" : "Parmak Pas! 🤲", 400);
                 topVurusSesi();
                 const spiker = chooseSpiker(p.team, p);
+                const spikeTarget = legalSpikeContactTarget(spiker);
                 
                 // Parmak pas = very precise, low error
                 const errX = (Math.random() * 42 - 21) * errMargin;
                 const errY = (Math.random() * 42 - 21) * errMargin;
-                const tgt = {x: spiker.x + errX, y: spiker.y + errY};
+                const tgt = {x: spikeTarget.x + errX, y: spikeTarget.y + errY};
                 const tgtDist = dist(p, tgt);
                 const bDir = normalize(tgt.x - p.x, tgt.y - p.y);
                 
@@ -994,13 +1058,13 @@ function update() {
             } else {
                 // === SMAÇ (Spike): high velocity + topspin ===
                 // RULE: Back row attack violation (including Libero from anywhere)
-                if (Math.abs(p.y - NET_Y) < 150) {
+                if (ball.z >= HIGH_ATTACK_Z) {
                     if (p.isLibero) {
                         contactResolvedThisFrame = true;
                         givePoint(p.team === team1 ? team2 : team1, "Libero Hücum İhlali!");
                         return;
                     }
-                    if (p.currentRow === 'back') {
+                    if (p.currentRow === 'back' && isFrontAttackZone(p.team, p.y, 12)) {
                         contactResolvedThisFrame = true;
                         givePoint(p.team === team1 ? team2 : team1, "Arka Hat Hücum İhlali (3 Metre)!");
                         return;
@@ -1010,7 +1074,7 @@ function update() {
                 const attackSkill = p.brain?.attack || p.ozellikler.sut || p.ovr || 55;
                 showEvent(attackSkill > 78 ? "Sert smaç! 💥" : "SMAÇ! 💥", 600);
                 topVurusSesi();
-                const sutErr = ((100 - attackSkill) / 100) * Math.max(0.36, 1 - (p.brain?.decisions || 55) / 180);
+                const sutErr = ((100 - attackSkill) / 100) * Math.max(0.36, 1 - (p.brain?.decisions || 55) / 180) * moraleMistakeFactor(p);
                 const landing = chooseAttackLanding(p);
                 const errX = (Math.random() * 54 - 27) * sutErr;
                 const errY = (Math.random() * 54 - 27) * sutErr;
@@ -1023,7 +1087,7 @@ function update() {
                 // Spike: flat trajectory, fast
                 ball.vz = 2.4 + attackSkill / 90 + Math.random() * 1.9;
                 const airT = (ball.vz / GRAVITY) * 2;
-                const pw = Math.max(4.6, (tgtDist / airT) * 1.12);
+                const pw = Math.max(4.6, (tgtDist / airT) * 1.12) * moraleConfidenceFactor(p);
                 ball.vx = bDir.x * pw;
                 ball.vy = bDir.y * pw;
                 

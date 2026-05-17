@@ -576,7 +576,20 @@ function clampStat(value, fallback = 55) {
     const n = Number.isFinite(value) ? value : fallback;
     return Math.max(1, Math.min(100, n));
 }
-function makeFootballBrain(oz, ovr, role) {
+function normalizeMorale(value) {
+    const n = Number.isFinite(Number(value)) ? Number(value) : 50;
+    return Math.max(0, Math.min(100, n));
+}
+function moraleStat(value, morale) {
+    return clampStat(Math.round(clampStat(value, 55) + (normalizeMorale(morale) - 50) * 0.34));
+}
+function moraleMistakeFactor(p) {
+    return Math.max(0.72, Math.min(1.55, 1 + (50 - normalizeMorale(p?.moral)) / 95));
+}
+function moraleConfidenceFactor(p) {
+    return Math.max(0.84, Math.min(1.14, 1 + (normalizeMorale(p?.moral) - 50) / 360));
+}
+function makeFootballBrain(oz, ovr, role, moral = 50) {
     const base = clampStat(ovr, 55);
     const hiz = clampStat(oz.hiz, base);
     const sut = clampStat(oz.sut, base);
@@ -585,12 +598,13 @@ function makeFootballBrain(oz, ovr, role) {
     const r = String(role || "").toLocaleLowerCase('tr-TR');
     const attackBoost = r.includes("forvet") || r.includes("kanat") || r.includes("hücum") || r.includes("hucum") ? 5 : 0;
     const midfieldBoost = r.includes("orta") || r.includes("merkez") ? 5 : 0;
+    const mindBoost = (normalizeMorale(moral) - 50) * 0.18;
     return {
         vision: clampStat(Math.round(pas * 0.62 + base * 0.28 + midfieldBoost)),
-        composure: clampStat(Math.round(sut * 0.42 + pas * 0.18 + base * 0.34 + attackBoost)),
-        flair: clampStat(Math.round(hiz * 0.42 + pas * 0.24 + base * 0.26 + attackBoost)),
-        decisions: clampStat(Math.round(pas * 0.46 + defans * 0.16 + base * 0.32 + midfieldBoost)),
-        pressResistance: clampStat(Math.round(hiz * 0.32 + pas * 0.28 + base * 0.32)),
+        composure: clampStat(Math.round(sut * 0.42 + pas * 0.18 + base * 0.34 + attackBoost + mindBoost)),
+        flair: clampStat(Math.round(hiz * 0.42 + pas * 0.24 + base * 0.26 + attackBoost + mindBoost * 0.7)),
+        decisions: clampStat(Math.round(pas * 0.46 + defans * 0.16 + base * 0.32 + midfieldBoost + mindBoost)),
+        pressResistance: clampStat(Math.round(hiz * 0.32 + pas * 0.28 + base * 0.32 + mindBoost * 0.65)),
     };
 }
 function lanePressure(from, to, team, width = 34) {
@@ -626,7 +640,7 @@ function receiverSpace(player) {
 }
 function chooseSmartPass(p, closeOpponents) {
     let best = null;
-    const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol);
+    const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol, p.moral);
     players.forEach(m => {
         if (m.team !== p.team || m === p || isGoalkeeper(m)) return;
         const d = dist(p, m);
@@ -670,7 +684,7 @@ function chooseSmartPass(p, closeOpponents) {
 }
 function trySkillMove(p, closeOpponents, distToGoal) {
     if (closeOpponents <= 0 || p.burstCooldown > 0 || p.stamina < 16) return null;
-    const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol);
+    const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol, p.moral);
     const chance = 0.12 + brain.flair / 210 + brain.pressResistance / 360 + (distToGoal < 280 ? 0.06 : 0);
     if (Math.random() > Math.min(0.72, chance)) return null;
 
@@ -966,12 +980,24 @@ function addPlayer(p, team, mirror) {
         ty = GAME_HEIGHT - ty;
     }
     
-    const baseOzellikler = p.ozellikler ? { ...p.ozellikler } : {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr};
+    const moral = normalizeMorale(p.moral);
+    const rawOzellikler = p.ozellikler ? { ...p.ozellikler } : {hiz: p.ovr, sut: p.ovr, pas: p.ovr, defans: p.ovr, kaleci: p.ovr};
+    const baseOzellikler = {
+        hiz: moraleStat(rawOzellikler.hiz, moral),
+        sut: moraleStat(rawOzellikler.sut, moral),
+        pas: moraleStat(rawOzellikler.pas, moral),
+        defans: moraleStat(rawOzellikler.defans, moral),
+        kaleci: moraleStat(rawOzellikler.kaleci, moral),
+    };
+    const baseOvr = moraleStat(p.ovr, moral);
     players.push({
-        id: p.id, ad: p.ad, numara: p.numara, ovr: p.ovr, baseOvr: p.ovr, rol: p.rol || "", team: team,
+        id: p.id, ad: p.ad, numara: p.numara, ovr: baseOvr, baseOvr: baseOvr, rol: p.rol || "", team: team,
+        moral: moral,
+        olumluTik: Number(p.olumlu_tik || 0),
+        olumsuzTik: Number(p.olumsuz_tik || 0),
         ozellikler: { ...baseOzellikler },
         baseOzellikler: baseOzellikler,
-        brain: makeFootballBrain(baseOzellikler, p.ovr, p.rol || ""),
+        brain: makeFootballBrain(baseOzellikler, baseOvr, p.rol || "", moral),
         baseX: tx, baseY: ty,
         x: tx, y: ty, vx: 0, vy: 0,
         mass: PLAYER_MASS + (Math.random()*20 - 10), // slight variation
@@ -1390,18 +1416,18 @@ function update() {
                 const directShot = setPieceType === "PENALTI" || (setPieceType === "FRİKİK" && goalDistance < 270);
                 if (directShot) {
                     // Shoot directly at goal
-                    const errMargin = (100 - p.ozellikler.sut) / 100;
+                    const errMargin = ((100 - p.ozellikler.sut) / 100) * moraleMistakeFactor(p);
                     const gX = GAME_WIDTH/2 + (Math.random() * 80 - 40);
                     const errX = (Math.random() * 200 - 100) * errMargin;
                     const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
-                    const power = setPieceType === "PENALTI" ? 22 : 18 + (p.ozellikler.sut / 12);
+                    const power = (setPieceType === "PENALTI" ? 22 : 18 + (p.ozellikler.sut / 12)) * moraleConfidenceFactor(p);
                     ball.vx = dir.x * power; ball.vy = dir.y * power;
                 } else {
                     // find a realistic receiver for throw-in, corner or indirect free kick
                     let bestMate = chooseSetPieceReceiver(p);
                     
                     if (bestMate) {
-                        const errMargin = (100 - p.ozellikler.pas) / 100;
+                        const errMargin = ((100 - p.ozellikler.pas) / 100) * moraleMistakeFactor(p);
                         const errScale = setPieceType === "KORNER" ? 54 : (setPieceType === "TAC" ? 24 : 42);
                         const lead = setPieceType === "TAC" ? 2 : 6;
                         const errX = (Math.random() * errScale - errScale / 2) * errMargin;
@@ -1517,6 +1543,7 @@ function update() {
                 + ball.speed * 4.1
                 + Math.max(0, ball.z) * 1.35
                 + (shooter?.brain?.composure || 58) * 0.18
+                + (normalizeMorale(shooter?.moral) - 50) * 0.08
                 + Math.random() * 22;
             const closeReaction = reactionDistance < 24 ? 11 : (reactionDistance < 46 ? 3 : -7);
             const savePower = gk.ozellikler.kaleci
@@ -1783,7 +1810,7 @@ function update() {
                 players.forEach(opp => {
                     if (opp.team !== p.team && dist(p, opp) < 58) closeOpponents++;
                 });
-                const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol);
+                const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol, p.moral);
 
                 // === 0. 1'E 1 TESPİTİ: Kaleci dışında araya giren defansör yok mu? ===
                 // Oyuncu ile rakip kale arasındaki şerit içinde sadece kaleci varsa → anında şut
@@ -1832,7 +1859,7 @@ function update() {
                     // High probability to shoot if in box and clear, or just very close
                     const shotChance = distToGoal < 145 ? 0.86 : (distToGoal < 240 ? 0.52 : 0.20);
                     if (forceShot || distToGoal < 115 || (pathClear && Math.random() < shotChance)) {
-                        const errSut = ((100 - p.ozellikler.sut) / 100) * Math.max(0.42, 1 - brain.composure / 175);
+                        const errSut = ((100 - p.ozellikler.sut) / 100) * Math.max(0.42, 1 - brain.composure / 175) * moraleMistakeFactor(p);
                         const distFactor = distToGoal / 250;
                         // 1'e 1'de plase/köşe şansı yüksek
                         const usePlase = (distToGoal < 165 || forceShot) && Math.random() < (forceShot ? 0.82 : 0.58);
@@ -1845,7 +1872,7 @@ function update() {
                             const gX = GAME_WIDTH/2 + cornerSide * (38 + Math.random() * 28);
                             const errX = (Math.random() * 96 - 48) * errSut;
                             const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
-                            const power = 11.5 + (p.ozellikler.sut / 16);
+                            const power = (11.5 + (p.ozellikler.sut / 16)) * moraleConfidenceFactor(p);
                             ball.vx = dir.x * power; ball.vy = dir.y * power;
                             ball.vz = 1 + Math.random() * 2;
                             ball.spinX = (Math.random() - 0.5) * 0.8;
@@ -1856,7 +1883,7 @@ function update() {
                             const totalErr = errSut + distFactor * 0.36;
                             const errX = (Math.random() * 300 - 150) * totalErr;
                             const dir = normalize((gX + errX) - p.x, p.team.goalY - p.y);
-                            const power = 17 + (p.ozellikler.sut / 11);
+                            const power = (17 + (p.ozellikler.sut / 11)) * moraleConfidenceFactor(p);
                             ball.vx = dir.x * power; ball.vy = dir.y * power;
                             const strikePoint = Math.random();
                             if (strikePoint < 0.3) { ball.vz = 4 + Math.random() * 3; } 
@@ -1879,7 +1906,7 @@ function update() {
                     const keepBias = brain.pressResistance > 74 && closeOpponents < 2 && distToGoal > 96 && p.hasBallTime < 70;
                     const passThreshold = oppPressing ? -18 : (smartPass?.through ? 18 : 30);
                     if (smartPass && !keepBias && (smartPass.score > passThreshold || p.hasBallTime > 76 || closeOpponents >= 2)) {
-                        const errPas = ((100 - p.ozellikler.pas) / 100) * Math.max(0.38, 1 - brain.vision / 165);
+                        const errPas = ((100 - p.ozellikler.pas) / 100) * Math.max(0.38, 1 - brain.vision / 165) * moraleMistakeFactor(p);
                         const errScale = smartPass.through ? 44 : 34;
                         const aim = {
                             x: smartPass.aim.x + (Math.random() * errScale - errScale / 2) * errPas,
