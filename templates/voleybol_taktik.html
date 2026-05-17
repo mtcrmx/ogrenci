@@ -1031,6 +1031,8 @@ function baslaDrag(cx, cy, id) {
                   }
              }
         }
+    } else if (ev.changedTouches) {
+        rolModalAc(dragToken);
     }
     
     dragToken = null;
