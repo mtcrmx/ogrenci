@@ -34,6 +34,26 @@
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    @keyframes goal-slam {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(.72) rotate(-4deg); filter: blur(2px); }
+      16% { opacity: 1; transform: translate(-50%, -50%) scale(1.18) rotate(2deg); filter: blur(0); }
+      32% { transform: translate(-50%, -50%) scale(.98) rotate(-1deg); }
+      88% { opacity: 1; transform: translate(-50%, -50%) scale(1.04) rotate(0); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1.04) rotate(0); }
+    }
+    @keyframes goal-glow {
+      0% { opacity: 0; transform: scale(.7); }
+      18% { opacity: .9; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.35); }
+    }
+    @keyframes confetti-pop {
+      0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.4) rotate(0deg); }
+      8% { opacity: 1; }
+      100% {
+        opacity: 0;
+        transform: translate3d(calc(-50% + var(--dx)), calc(-50% + var(--dy)), 0) scale(var(--s)) rotate(var(--rot));
+      }
+    }
     #game-container {
       position: relative;
       width: 100dvw;
@@ -169,6 +189,69 @@
       font-weight: 900; font-size: 15px; opacity: 0; transition: opacity 0.3s; pointer-events: none;
       text-align:center;
       box-shadow: 0 14px 44px rgba(0,0,0,.45);
+      z-index: 90;
+    }
+    #goal-celebration {
+      position: absolute;
+      inset: 0;
+      z-index: 120;
+      pointer-events: none;
+      overflow: hidden;
+      display: none;
+    }
+    #goal-celebration.active { display: block; }
+    #goal-celebration::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 45%;
+      width: min(560px, 84vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(250,204,21,.35), rgba(16,185,129,.18) 34%, rgba(59,130,246,.08) 54%, transparent 68%);
+      transform: translate(-50%, -50%);
+      animation: goal-glow 3.3s ease-out both;
+      z-index: 0;
+    }
+    .goal-title {
+      position: absolute;
+      left: 50%;
+      top: 43%;
+      z-index: 3;
+      transform: translate(-50%, -50%);
+      color: #fff7ed;
+      font-size: clamp(42px, 12vw, 112px);
+      font-weight: 1000;
+      line-height: .82;
+      letter-spacing: .02em;
+      text-align: center;
+      text-shadow:
+        0 5px 0 rgba(5,46,22,.9),
+        0 12px 28px rgba(0,0,0,.72),
+        0 0 34px rgba(250,204,21,.88);
+      animation: goal-slam 3.2s cubic-bezier(.17,.9,.22,1) both;
+    }
+    .goal-team {
+      display: block;
+      margin-top: 12px;
+      color: #bbf7d0;
+      font-size: clamp(13px, 3.2vw, 22px);
+      font-weight: 950;
+      letter-spacing: 0;
+      text-shadow: 0 5px 20px rgba(0,0,0,.8);
+    }
+    .confetti-piece {
+      position: absolute;
+      left: var(--x);
+      top: var(--y);
+      width: var(--w);
+      height: var(--h);
+      border-radius: 2px;
+      background: var(--c);
+      box-shadow: 0 0 10px rgba(255,255,255,.42);
+      animation: confetti-pop var(--dur) cubic-bezier(.13,.75,.18,1) forwards;
+      z-index: 2;
     }
     #broadcast-panel {
       position:absolute;
@@ -344,6 +427,11 @@
         font-size: 11px;
         border-radius: 10px;
       }
+      .goal-title {
+        top: 42%;
+        font-size: clamp(38px, 18vw, 72px);
+      }
+      .goal-team { font-size: 13px; margin-top: 9px; }
       #audio-banner {
         bottom: 8px;
         width: min(300px, calc(100dvw - 16px));
@@ -418,6 +506,7 @@
       </div>
     </div>
     <div id="debug-panel"></div>
+    <div id="goal-celebration" aria-hidden="true"></div>
     <div id="event-overlay">Maç Başlıyor!</div>
     <div id="ticker"></div>
     <!-- Ses kilidi bannerı -->
@@ -548,6 +637,40 @@ function playKickSound(force = false) {
 function playGoalSound() {
     playOneShot(audio.goal, 0.9);
 }
+
+function triggerGoalCelebration(scoringTeam) {
+    const layer = document.getElementById('goal-celebration');
+    if (!layer) return;
+    const teamName = escapeHtml(scoringTeam?.name || 'Takım');
+    layer.classList.remove('active');
+    layer.innerHTML = `<div class="goal-title">GOOOLLL<span class="goal-team">${teamName}</span></div>`;
+    const colors = ['#facc15', '#22c55e', '#38bdf8', '#f97316', '#ef4444', '#a78bfa', '#ffffff'];
+    const count = window.matchMedia('(max-width: 760px)').matches ? 58 : 92;
+    for (let i = 0; i < count; i++) {
+        const piece = document.createElement('span');
+        piece.className = 'confetti-piece';
+        const sideBias = i % 3 === 0 ? -1 : (i % 3 === 1 ? 1 : 0);
+        const dx = (sideBias * (90 + Math.random() * 280)) + (Math.random() * 150 - 75);
+        const dy = -120 - Math.random() * 330 + (Math.random() < 0.25 ? 240 : 0);
+        piece.style.setProperty('--x', (38 + Math.random() * 24) + '%');
+        piece.style.setProperty('--y', (43 + Math.random() * 14) + '%');
+        piece.style.setProperty('--dx', dx + 'px');
+        piece.style.setProperty('--dy', dy + 'px');
+        piece.style.setProperty('--rot', (Math.random() * 900 - 450) + 'deg');
+        piece.style.setProperty('--s', (0.55 + Math.random() * 0.95).toFixed(2));
+        piece.style.setProperty('--w', (5 + Math.random() * 8) + 'px');
+        piece.style.setProperty('--h', (8 + Math.random() * 14) + 'px');
+        piece.style.setProperty('--dur', (1.75 + Math.random() * 1.45) + 's');
+        piece.style.setProperty('--c', colors[i % colors.length]);
+        layer.appendChild(piece);
+    }
+    layer.classList.add('active');
+    setTimeout(() => {
+        layer.classList.remove('active');
+        layer.innerHTML = '';
+    }, 3600);
+}
+
 // Herhangi bir etkileşimde sesi aç (ilk tıklama / tuş)
 ['pointerdown', 'keydown', 'touchstart'].forEach(evt => {
     window.addEventListener(evt, () => { if (!audioUnlocked) enableMatchAudio(); }, { once: true, passive: true });
@@ -652,6 +775,18 @@ function clampToOwnHalf(team, x, y, buffer = 28) {
 function roleText(p) {
     return String(p.rol || "").toLowerCase();
 }
+function cleanRoleText(p) {
+    return String(p.rol || "")
+        .toLocaleLowerCase('tr-TR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i')
+        .replace(/ş/g, 's')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c');
+}
 function isGoalkeeper(p) {
     return Math.abs(p.baseY - p.team.defendY) < 55 || roleText(p).includes("kaleci");
 }
@@ -666,6 +801,58 @@ function isMidfielder(p) {
 function isForward(p) {
     const r = roleText(p);
     return r.includes("forvet") || r.includes("kanat") || r.includes("hücum") || r.includes("hucum");
+}
+function isWideLanePlayer(p) {
+    return Math.abs((p.baseX || p.x || GAME_WIDTH / 2) - GAME_WIDTH / 2) > 105;
+}
+function roleSide(p) {
+    return ((p.baseX || p.x || GAME_WIDTH / 2) < GAME_WIDTH / 2) ? -1 : 1;
+}
+function isExplicitStriker(p) {
+    const r = cleanRoleText(p);
+    return r.includes("santrafor") || r.includes("golcu") || r.includes("striker") || r.includes("center forward");
+}
+function isWinger(p) {
+    const r = cleanRoleText(p);
+    const explicitWing = r.includes("kanat") || r.includes("acik") || r.includes("wing");
+    const forwardText = r.includes("forvet") || r.includes("hucum") || r.includes("hücum");
+    return explicitWing || (forwardText && isWideLanePlayer(p) && !isExplicitStriker(p));
+}
+function isStriker(p) {
+    const r = cleanRoleText(p);
+    const forwardText = r.includes("forvet") || r.includes("hucum") || r.includes("hücum");
+    return isExplicitStriker(p) || (forwardText && !isWinger(p));
+}
+function isFullBack(p) {
+    const r = cleanRoleText(p);
+    return r.includes("bek") || r.includes("fullback") || r.includes("wingback");
+}
+function roleProfile(p) {
+    if (isGoalkeeper(p)) {
+        return { kind: "goalkeeper", finish: 0.2, shootRange: 0, passBias: 1.0, carry: 0.35, cross: 0.0, press: 0.25, width: 0.0 };
+    }
+    if (isStriker(p)) {
+        return { kind: "striker", finish: 1.42, shootRange: 395, passBias: 0.78, carry: 0.92, cross: 0.22, press: 1.08, width: 0.25 };
+    }
+    if (isWinger(p)) {
+        return { kind: "winger", finish: 0.86, shootRange: 285, passBias: 0.96, carry: 1.42, cross: 1.55, press: 1.12, width: 1.0 };
+    }
+    if (isFullBack(p)) {
+        return { kind: "fullback", finish: 0.45, shootRange: 190, passBias: 1.08, carry: 1.04, cross: 1.12, press: 0.95, width: 0.92 };
+    }
+    if (isMidfielder(p)) {
+        return { kind: "midfielder", finish: 0.74, shootRange: 255, passBias: 1.22, carry: 0.98, cross: 0.55, press: 1.0, width: 0.45 };
+    }
+    if (isDefender(p)) {
+        return { kind: "defender", finish: 0.34, shootRange: 145, passBias: 1.05, carry: 0.62, cross: 0.28, press: 0.85, width: 0.25 };
+    }
+    return { kind: "balanced", finish: 0.8, shootRange: 245, passBias: 1.0, carry: 1.0, cross: 0.55, press: 0.9, width: 0.45 };
+}
+function wideLaneX(p, padding = 34) {
+    return roleSide(p) < 0 ? padding : GAME_WIDTH - padding;
+}
+function attackingThirdDepth(team, depthFromGoal) {
+    return team.goalY === 0 ? depthFromGoal : GAME_HEIGHT - depthFromGoal;
 }
 function clampStat(value, fallback = 55) {
     const n = Number.isFinite(value) ? value : fallback;
@@ -736,6 +923,7 @@ function receiverSpace(player) {
 function chooseSmartPass(p, closeOpponents) {
     let best = null;
     const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol, p.moral);
+    const passerRole = roleProfile(p);
     players.forEach(m => {
         if (m.team !== p.team || m === p || isGoalkeeper(m)) return;
         const d = dist(p, m);
@@ -745,16 +933,21 @@ function chooseSmartPass(p, closeOpponents) {
         const lane = lanePressure(p, m, p.team, 36 + brain.vision * 0.05);
         const centralLane = 1 - Math.min(1, Math.abs(m.x - GAME_WIDTH / 2) / (GAME_WIDTH / 2));
         const isAhead = forwardGain > 8;
-        const through = isForward(m) && forwardGain > 42 && space.nearest > 54 && lane < 58;
+        const receiverRole = roleProfile(m);
+        const through = (receiverRole.kind === "striker" || receiverRole.kind === "winger" || isForward(m)) && forwardGain > 42 && space.nearest > 54 && lane < 58;
         let score = 0;
         score += forwardGain * 0.58;
         score += space.score;
         score += centralLane * 12;
         score -= d * 0.075;
         score -= lane * (brain.vision > 72 ? 0.72 : 1.05);
-        if (isMidfielder(m)) score += 10;
-        if (isForward(m)) score += isAhead ? 24 : 5;
+        if (receiverRole.kind === "midfielder") score += 14;
+        if (receiverRole.kind === "striker") score += isAhead ? 34 : 8;
+        else if (receiverRole.kind === "winger") score += isAhead ? 20 : 6;
+        else if (isForward(m)) score += isAhead ? 24 : 5;
         if (through) score += 26 + brain.vision * 0.12;
+        if (passerRole.kind === "midfielder" && through) score += 12;
+        if (passerRole.kind === "striker" && forwardGain < 18 && d < 170) score -= 16;
         if (closeOpponents > 0 && d < 190) score += 16;
         if (m.actionCooldown > 0) score -= 18;
         if (!isAhead && closeOpponents === 0 && p.hasBallTime < 48) score -= 10;
@@ -777,19 +970,88 @@ function chooseSmartPass(p, closeOpponents) {
     });
     return best;
 }
+function chooseCrossTarget(p) {
+    let best = null;
+    let bestScore = -Infinity;
+    const fromWideSide = p.x < GAME_WIDTH / 2 ? -1 : 1;
+    players.forEach(m => {
+        if (m.team !== p.team || m === p || isGoalkeeper(m)) return;
+        const receiverRole = roleProfile(m);
+        const dGoal = Math.abs(m.y - p.team.goalY);
+        const dPass = dist(p, m);
+        if (dPass < 70 || dPass > 560 || dGoal > 340) return;
+        const centralLane = 1 - Math.min(1, Math.abs(m.x - GAME_WIDTH / 2) / 220);
+        const forwardGain = Math.abs(p.y - p.team.goalY) - dGoal;
+        const space = receiverSpace(m);
+        const lane = lanePressure(p, m, p.team, 50);
+        const farPostLane = Math.sign(m.x - GAME_WIDTH / 2) === -fromWideSide ? 1 : 0;
+        let score = centralLane * 42 + Math.max(0, 260 - dGoal) * 0.22 + space.score * 0.35;
+        score += forwardGain * 0.26;
+        score -= lane * 0.42;
+        if (receiverRole.kind === "striker") score += 48;
+        else if (receiverRole.kind === "midfielder") score += 14;
+        else if (receiverRole.kind === "winger" && farPostLane) score += 16;
+        if (dGoal < 64) score -= 16;
+        if (m.actionCooldown > 0) score -= 14;
+        if (score > bestScore) {
+            const nearPostX = GAME_WIDTH / 2 + fromWideSide * 42;
+            const farPostX = GAME_WIDTH / 2 - fromWideSide * 82;
+            const spotY = attackingThirdDepth(p.team, receiverRole.kind === "striker" ? 104 : 132);
+            const targetX = receiverRole.kind === "striker"
+                ? m.x * 0.48 + farPostX * 0.32 + nearPostX * 0.20
+                : m.x * 0.58 + GAME_WIDTH / 2 * 0.42;
+            bestScore = score;
+            best = {
+                target: m,
+                aim: clampPitch(targetX, m.y * 0.62 + spotY * 0.38, 20),
+                score,
+            };
+        }
+    });
+    return best;
+}
+function attemptRoleCross(p, distToGoal, closeOpponents, brain) {
+    const profile = roleProfile(p);
+    if (profile.cross < 0.75 || p.actionCooldown > 0) return false;
+    const wideEnough = Math.abs(p.x - GAME_WIDTH / 2) > (profile.kind === "winger" ? 118 : 138);
+    const inCrossZone = distToGoal < (profile.kind === "winger" ? 390 : 325) && distToGoal > 68;
+    if (!wideEnough || !inCrossZone) return false;
+    const urgent = closeOpponents > 0 || p.hasBallTime > 18 || distToGoal < 235;
+    const chance = Math.min(0.9, 0.18 + profile.cross * 0.27 + brain.vision / 360 + (urgent ? 0.22 : 0));
+    if (!urgent && Math.random() > chance) return false;
+
+    const cross = chooseCrossTarget(p);
+    if (!cross || cross.score < -12) return false;
+
+    const errPas = ((100 - p.ozellikler.pas) / 100) * Math.max(0.36, 1 - brain.vision / 175) * moraleMistakeFactor(p);
+    const aim = {
+        x: cross.aim.x + (Math.random() * 58 - 29) * errPas,
+        y: cross.aim.y + (Math.random() * 46 - 23) * errPas,
+    };
+    const power = 15.4 + p.ozellikler.pas / 17 + (profile.kind === "winger" ? 1.2 : 0);
+    sendPass(p, cross.target, power, 7, aim);
+    ball.vz = 4.8 + Math.random() * 2.7;
+    p.actionCooldown = 30;
+    p.hasBallTime = 0;
+    showEvent(profile.kind === "fullback" ? "Bek ortası!" : "Kanat ortası!", 850);
+    return true;
+}
 function trySkillMove(p, closeOpponents, distToGoal) {
     if (closeOpponents <= 0 || p.burstCooldown > 0 || p.stamina < 16) return null;
     const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol, p.moral);
-    const chance = 0.12 + brain.flair / 210 + brain.pressResistance / 360 + (distToGoal < 280 ? 0.06 : 0);
+    const profile = roleProfile(p);
+    const chance = 0.12 + brain.flair / 210 + brain.pressResistance / 360 + (distToGoal < 280 ? 0.06 : 0) + (profile.carry - 1) * 0.16;
     if (Math.random() > Math.min(0.72, chance)) return null;
 
     const goalDrive = normalize(GAME_WIDTH / 2 - p.x, p.team.goalY - p.y);
-    const side = Math.random() < 0.5 ? -1 : 1;
+    const side = profile.kind === "winger" ? roleSide(p) : (Math.random() < 0.5 ? -1 : 1);
     const lateral = { x: -goalDrive.y * side, y: goalDrive.x * side };
-    const dir = normalize(goalDrive.x * 0.94 + lateral.x * 0.76, goalDrive.y * 0.94 + lateral.y * 0.76);
+    const dir = profile.kind === "winger"
+        ? normalize(goalDrive.x * 0.74 + lateral.x * 1.08, goalDrive.y * 1.05 + lateral.y * 0.42)
+        : normalize(goalDrive.x * 0.94 + lateral.x * 0.76, goalDrive.y * 0.94 + lateral.y * 0.76);
     p.burstCooldown = Math.max(30, 74 - Math.round(brain.flair * 0.34));
     p.actionCooldown = Math.max(p.actionCooldown, 6);
-    p.stamina = Math.max(0, p.stamina - 1.4);
+    p.stamina = Math.max(0, p.stamina - 2.4);
     showEvent(brain.flair > 78 ? "Şık çalım!" : "Adam geçti!", 650);
     return { x: dir.x, y: dir.y, boost: 1.12 + brain.flair / 420 };
 }
@@ -827,25 +1089,33 @@ function moveTowardPoint(p, targetX, targetY, maxSpeed = 3) {
 }
 function matchStaminaCap(p, playerIsGK = isGoalkeeper(p)) {
     const progress = Math.max(0, Math.min(1, timeTicks / Math.max(1, TOTAL_TICKS)));
-    const roleTax = playerIsGK ? 0 : (isMidfielder(p) ? 3.5 : (isForward(p) ? 2.5 : 1.5));
-    const endCap = playerIsGK ? 88 : 74;
-    return Math.max(endCap, 100 - progress * ((playerIsGK ? 8 : 19) + roleTax));
+    const roleTax = playerIsGK ? 0 : (isMidfielder(p) ? 6 : (isForward(p) ? 4.5 : 3.5));
+    const baseDrop = playerIsGK ? 14 : (isMidfielder(p) ? 42 : (isForward(p) ? 38 : 34));
+    const endCap = playerIsGK ? 82 : (isMidfielder(p) ? 48 : (isForward(p) ? 52 : 56));
+    const workLoad = Math.min(14,
+        (p.distanceCovered || 0) / 760 +
+        (p.sprintTicks || 0) * 0.028 +
+        (p.possessionTicks || 0) * 0.004
+    );
+    return Math.max(endCap, 100 - progress * (baseDrop + roleTax + workLoad));
 }
 function applyPassiveStamina(p, playerIsGK = isGoalkeeper(p)) {
     const cap = matchStaminaCap(p, playerIsGK);
     if (p.stamina > cap) {
         p.stamina = cap;
     } else if (p.state !== 'CHASE' && p !== ball.owner && p.stamina < cap) {
-        p.stamina = Math.min(cap, p.stamina + 0.006 + (p.baseOvr / 14000));
+        p.stamina = Math.min(cap, p.stamina + 0.0025 + (p.baseOvr / 28000));
     }
     p.stamina = clampValue(p.stamina, 0, 100);
 }
 function applyMovementFatigue(p, movedDistance, intensity = 1) {
     if (!Number.isFinite(movedDistance) || movedDistance <= 0) return;
-    const sprintLoad = Math.max(0, movedDistance - 2.1) * 0.0018;
-    const roleLoad = isMidfielder(p) ? 1.08 : (isForward(p) ? 1.02 : 0.96);
-    const load = (movedDistance * 0.00105 + sprintLoad) * intensity * roleLoad;
-    p.stamina = clampValue(p.stamina - load, 0, 100);
+    const sprintLoad = Math.max(0, movedDistance - 1.7) * 0.0046;
+    const roleLoad = isMidfielder(p) ? 1.2 : (isForward(p) ? 1.12 : (isGoalkeeper(p) ? 0.48 : 1.04));
+    const ballLoad = p === ball.owner ? 1.22 : 1;
+    const load = (movedDistance * 0.00245 + sprintLoad) * intensity * roleLoad * ballLoad;
+    const staminaFloor = isGoalkeeper(p) ? 58 : 18;
+    p.stamina = clampValue(p.stamina - load, staminaFloor, 100);
     p.distanceCovered = (p.distanceCovered || 0) + movedDistance;
     if (movedDistance > 2.8) p.sprintTicks = (p.sprintTicks || 0) + 1;
 }
@@ -855,6 +1125,7 @@ function chooseSetPieceReceiver(taker) {
     const goal = {x: GAME_WIDTH / 2, y: taker.team.goalY};
     players.forEach(m => {
         if (m.team !== taker.team || m === taker || isGoalkeeper(m)) return;
+        const receiverRole = roleProfile(m);
         const dBall = dist(ball, m);
         const dGoal = dist(m, goal);
         const forwardGain = Math.abs(taker.y - taker.team.goalY) - Math.abs(m.y - taker.team.goalY);
@@ -864,7 +1135,7 @@ function chooseSetPieceReceiver(taker) {
         if (setPieceType === "KORNER") {
             const inBox = Math.abs(m.y - taker.team.goalY) < 190 && Math.abs(m.x - GAME_WIDTH / 2) < 165;
             score += inBox ? 90 : -30;
-            score += isForward(m) ? 34 : (isMidfielder(m) ? 18 : -8);
+            score += receiverRole.kind === "striker" ? 48 : (receiverRole.kind === "winger" ? 24 : (isMidfielder(m) ? 18 : -8));
             score += (m.ozellikler.sut || m.ovr || 50) * 0.25;
             score -= dGoal * 0.18;
             score -= lane * 0.65;
@@ -873,6 +1144,8 @@ function chooseSetPieceReceiver(taker) {
             score += forwardGain * 0.34;
             score += space * 0.45;
             score -= lane * 0.9;
+            if (receiverRole.kind === "winger" && dBall < 185) score += 16;
+            if (receiverRole.kind === "striker" && forwardGain > 40) score += 10;
             if (dBall < 45 || dBall > 255) score -= 55;
             if (isDefender(m) && forwardGain > 80) score -= 18;
         } else {
@@ -973,8 +1246,10 @@ function goalkeeperDistribute(p) {
 
 function threatScoreFor(defTeam, opp) {
     const goalDistance = Math.abs(opp.y - defTeam.defendY);
+    const oppRole = roleProfile(opp);
     let score = 1000 - goalDistance;
-    if (isForward(opp)) score += 180;
+    if (oppRole.kind === "striker") score += 230;
+    else if (oppRole.kind === "winger" || isForward(opp)) score += 180;
     if (isMidfielder(opp)) score += 80;
     if (ball.owner === opp) score += 260;
     score += Math.max(0, 150 - Math.abs(opp.x - GAME_WIDTH / 2)) * 0.35;
@@ -1647,6 +1922,22 @@ function update() {
                 + closeReaction
                 - anglePenalty;
             if (savePower > shotPower + 8) {
+                const catchSave = savePower > shotPower + 17 && reactionDistance < 54 && ball.speed < 15 && Math.max(0, ball.z) < 4.8;
+                if (catchSave) {
+                    showEvent(`${gk.ad} topu tuttu!`, 1800);
+                    ball.owner = gk;
+                    ball.x = gk.x;
+                    ball.y = gk.y;
+                    ball.z = 0;
+                    ball.vx = 0;
+                    ball.vy = 0;
+                    ball.vz = 0;
+                    ball.targetPlayer = null;
+                    ball.lastTouchedBy = gk;
+                    gk.hasBallTime = 0;
+                    gk.actionCooldown = Math.max(gk.actionCooldown, 18);
+                    return false;
+                }
                 // SAVE!
                 showEvent(`${gk.ad} KURTARDI! 🧤`, 2000);
                 // GK pushes ball away
@@ -1678,6 +1969,7 @@ function update() {
                 score2++; document.getElementById('score2').textContent = score2;
             }
             playGoalSound();
+            triggerGoalCelebration(scoringTeam);
             showEvent(`⚽ GOOOL! ${scoringTeam.name} yazdı!`, 4000);
             stateMachine = "GOAL_CELEBRATION";
             setTimeout(resetPositions, 4000);
@@ -1694,6 +1986,7 @@ function update() {
                 score2++; document.getElementById('score2').textContent = score2;
             }
             playGoalSound();
+            triggerGoalCelebration(scoringTeam);
             showEvent(`⚽ GOOOL! ${scoringTeam.name} yazdı!`, 4000);
             stateMachine = "GOAL_CELEBRATION";
             setTimeout(resetPositions, 4000);
@@ -1868,25 +2161,31 @@ function update() {
         
         // Yorgunluk etkisi: Özellikleri düşür (Kondisyon %100'den düştükçe)
         const staminaDrop = 100 - p.stamina;
-        p.ovr = Math.round(Math.max(1, p.baseOvr - staminaDrop * (p.baseOvr / 115)));
-        p.ozellikler.hiz = Math.round(Math.max(1, p.baseOzellikler.hiz - staminaDrop * (p.baseOzellikler.hiz / 115)));
-        p.ozellikler.sut = Math.round(Math.max(1, p.baseOzellikler.sut - staminaDrop * (p.baseOzellikler.sut / 115)));
-        p.ozellikler.pas = Math.round(Math.max(1, p.baseOzellikler.pas - staminaDrop * (p.baseOzellikler.pas / 115)));
-        p.ozellikler.defans = Math.round(Math.max(1, p.baseOzellikler.defans - staminaDrop * (p.baseOzellikler.defans / 115)));
-        p.ozellikler.kaleci = Math.round(Math.max(1, p.baseOzellikler.kaleci - staminaDrop * (p.baseOzellikler.kaleci / 130)));
+        p.ovr = Math.round(Math.max(1, p.baseOvr - staminaDrop * (p.baseOvr / 96)));
+        p.ozellikler.hiz = Math.round(Math.max(1, p.baseOzellikler.hiz - staminaDrop * (p.baseOzellikler.hiz / 92)));
+        p.ozellikler.sut = Math.round(Math.max(1, p.baseOzellikler.sut - staminaDrop * (p.baseOzellikler.sut / 104)));
+        p.ozellikler.pas = Math.round(Math.max(1, p.baseOzellikler.pas - staminaDrop * (p.baseOzellikler.pas / 108)));
+        p.ozellikler.defans = Math.round(Math.max(1, p.baseOzellikler.defans - staminaDrop * (p.baseOzellikler.defans / 106)));
+        p.ozellikler.kaleci = Math.round(Math.max(1, p.baseOzellikler.kaleci - staminaDrop * (p.baseOzellikler.kaleci / 140)));
 
         let speedMult = (p.ozellikler.hiz / 100) * 4.0; // Base speed based on 'hiz'
-        // Fatigue effect: drop to 50% speed if exhausted
-        speedMult *= Math.max(0.5, p.stamina / 100); 
+        // Fatigue effect: tired players visibly lose acceleration and top speed.
+        speedMult *= Math.max(0.42, 0.32 + p.stamina / 100);
 
         if (p.actionCooldown > 0) p.actionCooldown--;
         if (p.burstCooldown > 0) p.burstCooldown--;
+        const playerRole = roleProfile(p);
+        const brain = p.brain || makeFootballBrain(p.ozellikler, p.ovr, p.rol, p.moral);
 
         if (p === ball.owner) {
             // DECISION ENGINE: HAS BALL (FM-Style)
             p.possessionTicks = (p.possessionTicks || 0) + 1;
             
             const distToGoal = Math.abs(p.y - p.team.goalY);
+            let closeOpponents = 0;
+            players.forEach(opp => {
+                if (opp.team !== p.team && dist(p, opp) < 58) closeOpponents++;
+            });
             
             if (playerIsGK) {
                 const gkHold = goalkeeperTarget(p);
@@ -1894,7 +2193,9 @@ function update() {
                 const gkDist = dist(p, gkHold);
                 p.vx = gkDist > 6 ? gkDir.x * Math.min(speedMult * 0.45, 2.2) : 0;
                 p.vy = gkDist > 6 ? gkDir.y * Math.min(speedMult * 0.45, 2.2) : 0;
-                if (p.actionCooldown <= 0 && p.hasBallTime > 14) {
+                const keeperPressure = players.reduce((count, opp) => count + (opp.team !== p.team && dist(p, opp) < 118 ? 1 : 0), 0);
+                const holdTicks = keeperPressure > 0 ? 28 : 72 + Math.round((brain.composure || 55) / 5);
+                if (p.actionCooldown <= 0 && p.hasBallTime > holdTicks) {
                     goalkeeperDistribute(p);
                 }
                 return;
@@ -1937,7 +2238,7 @@ function update() {
                 // 1. Shoot?
                 // 1'e 1 durumunda mesafeden bağımsız, hemen şut çek
                 const forceShot = isOneOnOne;
-                if (forceShot || distToGoal < 340) {
+                if (forceShot || distToGoal < Math.max(260, playerRole.shootRange)) {
                     let pathClear = true;
                     if (!forceShot && distToGoal > 80) {
                         players.forEach(opp => {
@@ -1952,9 +2253,15 @@ function update() {
                     }
                     
                     // High probability to shoot if in box and clear, or just very close
-                    const shotChance = distToGoal < 145 ? 0.86 : (distToGoal < 240 ? 0.52 : 0.20);
-                    if (forceShot || distToGoal < 115 || (pathClear && Math.random() < shotChance)) {
-                        const errSut = ((100 - p.ozellikler.sut) / 100) * Math.max(0.42, 1 - brain.composure / 175) * moraleMistakeFactor(p);
+                    const baseShotChance = distToGoal < 145 ? 0.86 : (distToGoal < 240 ? 0.52 : 0.20);
+                    const roleShotBoost = Math.max(-0.12, (playerRole.finish - 1) * 0.34);
+                    const shotChance = Math.min(0.96, baseShotChance + roleShotBoost + (playerRole.kind === "striker" ? 0.13 : 0));
+                    const strikerGreenLight = playerRole.kind === "striker" && distToGoal < 320 && closeOpponents <= 1 && (pathClear || brain.composure > 64);
+                    const restrainedMidfielder = playerRole.kind === "midfielder" && distToGoal > 245 && closeOpponents === 0;
+                    if (forceShot || distToGoal < (playerRole.kind === "striker" ? 138 : 115) || (strikerGreenLight && Math.random() < 0.86) || (pathClear && !restrainedMidfielder && Math.random() < shotChance)) {
+                        let errSut = ((100 - p.ozellikler.sut) / 100) * Math.max(0.42, 1 - brain.composure / 175) * moraleMistakeFactor(p);
+                        if (playerRole.kind === "striker") errSut *= 0.84;
+                        if (playerRole.kind === "defender") errSut *= 1.18;
                         const distFactor = distToGoal / 250;
                         // 1'e 1'de plase/köşe şansı yüksek
                         const usePlase = (distToGoal < 165 || forceShot) && Math.random() < (forceShot ? 0.82 : 0.58);
@@ -1994,12 +2301,16 @@ function update() {
                 
                 // 2. Pass Evaluation (vision + receiver space + through-ball timing)
                 if (p.hasBallTime > 10 || closeOpponents > 0) {
+                    if (attemptRoleCross(p, distToGoal, closeOpponents, brain)) return;
                     const smartPass = chooseSmartPass(p, closeOpponents);
                     let oppPressing = false;
                     players.forEach(opp => { if (opp.team !== p.team && dist(p, opp) < 44) oppPressing = true; });
 
-                    const keepBias = brain.pressResistance > 74 && closeOpponents < 2 && distToGoal > 96 && p.hasBallTime < 70;
-                    const passThreshold = oppPressing ? -18 : (smartPass?.through ? 18 : 30);
+                    const keepBias = (brain.pressResistance > 74 && closeOpponents < 2 && distToGoal > 96 && p.hasBallTime < 70)
+                        || (playerRole.kind === "striker" && distToGoal < 310 && closeOpponents < 2);
+                    const passThreshold = (oppPressing ? -18 : (smartPass?.through ? 18 : 30))
+                        + (playerRole.kind === "striker" ? 18 : 0)
+                        - (playerRole.kind === "midfielder" ? 8 : 0);
                     if (smartPass && !keepBias && (smartPass.score > passThreshold || p.hasBallTime > 76 || closeOpponents >= 2)) {
                         const errPas = ((100 - p.ozellikler.pas) / 100) * Math.max(0.38, 1 - brain.vision / 165) * moraleMistakeFactor(p);
                         const errScale = smartPass.through ? 44 : 34;
@@ -2039,7 +2350,19 @@ function update() {
                 }
             });
             
-            if (!skillBurst && Math.hypot(avoidVec.x, avoidVec.y) > 0.1) {
+            const hasAvoid = Math.hypot(avoidVec.x, avoidVec.y) > 0.1;
+            if (!skillBurst && playerRole.kind === "winger" && distToGoal > 92) {
+                const lineDrive = normalize((wideLaneX(p, 28) - p.x) * 0.62, (p.team.goalY - p.y) * 1.28);
+                dribbleDir = hasAvoid
+                    ? normalize(lineDrive.x * 1.35 + avoidVec.x * 0.75, lineDrive.y * 1.35 + avoidVec.y * 0.75)
+                    : lineDrive;
+                dribbleBoost = Math.max(dribbleBoost, 1.05);
+            } else if (!skillBurst && playerRole.kind === "striker") {
+                const centralDrive = normalize((GAME_WIDTH / 2 - p.x) * 0.42, p.team.goalY - p.y);
+                dribbleDir = hasAvoid
+                    ? normalize(centralDrive.x * 1.4 + avoidVec.x * 0.88, centralDrive.y * 1.4 + avoidVec.y * 0.88)
+                    : centralDrive;
+            } else if (!skillBurst && hasAvoid) {
                 dribbleDir = normalize(goalDrive.x * 1.45 + avoidVec.x * 1.35, goalDrive.y * 1.45 + avoidVec.y * 1.35);
             } else if (!skillBurst) {
                 // Drive at goal, with a slight center lane correction.
@@ -2065,7 +2388,10 @@ function update() {
                 const ballRelativeX = (ball.x - GAME_WIDTH/2) / (GAME_WIDTH/2);
                 const ballRelativeY = ball.y / GAME_HEIGHT;
                 // Lateral kayma: defans daha az, forvet biraz daha fazla
-                const lateralFactor = isDefender(p) ? 28 : (isMidfielder(p) ? 42 : 52);
+                const lateralFactor = playerRole.kind === "winger" ? 68
+                    : playerRole.kind === "fullback" ? 54
+                    : isDefender(p) ? 28
+                    : (isMidfielder(p) ? 42 : 52);
                 const shiftX = ballRelativeX * lateralFactor;
                 targetX = p.baseX + shiftX;
 
@@ -2083,7 +2409,12 @@ function update() {
                         const behindBallY = ball.y - p.team.dirY * 85;
                         const aheadBallY = ball.y + p.team.dirY * 105;
 
-                        if (isDefender(p)) {
+                        if (playerRole.kind === "fullback") {
+                            targetX = wideLaneX(p, 48);
+                            targetY = behindBallY + p.team.dirY * 42;
+                            const overlapLimit = attackingThirdDepth(p.team, 245);
+                            targetY = p.team.dirY === -1 ? Math.max(overlapLimit, targetY) : Math.min(overlapLimit, targetY);
+                        } else if (isDefender(p)) {
                             targetY = p.baseY + p.team.dirY * 80;
                             targetY = p.team.defendY === 0
                                 ? Math.min(MID_Y + 45, Math.max(ownHalf.minY, behindBallY - 55))
@@ -2091,6 +2422,15 @@ function update() {
                         } else if (isMidfielder(p)) {
                             targetY = (p.baseY * 0.55) + (behindBallY * 0.45);
                             targetY = Math.max(90, Math.min(GAME_HEIGHT - 90, targetY));
+                        } else if (playerRole.kind === "winger") {
+                            targetX = wideLaneX(p, 36);
+                            targetY = aheadBallY + p.team.dirY * 34;
+                            const wingLimit = attackingThirdDepth(p.team, 96);
+                            targetY = p.team.dirY === -1 ? Math.max(wingLimit, targetY) : Math.min(wingLimit, targetY);
+                        } else if (playerRole.kind === "striker") {
+                            const boxDepth = Math.abs(ball.y - p.team.goalY) < 310 ? 122 : 190;
+                            targetX = GAME_WIDTH / 2 + (p.baseX - GAME_WIDTH / 2) * 0.22 + (ball.x - GAME_WIDTH / 2) * 0.12;
+                            targetY = attackingThirdDepth(p.team, boxDepth);
                         } else {
                             // Forvet: base'in ilerisine atıl fakat çok ileri gitme
                             targetY = p.baseY + p.team.dirY * 60;
@@ -2111,7 +2451,7 @@ function update() {
                         .sort((a,b)=>a.d-b.d);
                     const pressRank = teamDistances.findIndex(entry => entry.m === p) + 1;
                     const canPress = pressRank === 1
-                        && (ballInMyHalf || (!isDefender(p) && dToBall < 185));
+                        && (ballInMyHalf || (playerRole.press > 1.05 && dToBall < 230) || (!isDefender(p) && dToBall < 185));
                     
                     if (canPress) {
                         targetX = ball.x;
@@ -2120,11 +2460,19 @@ function update() {
                     } else {
                         p.state = 'IDLE';
                         const goalSide = p.team.defendY === 0 ? -1 : 1;
-                        const roleOffset = isDefender(p) ? 65 : (isMidfielder(p) ? 155 : 265);
+                        const roleOffset = playerRole.kind === "striker" ? 300
+                            : playerRole.kind === "winger" ? 245
+                            : playerRole.kind === "fullback" ? 92
+                            : isDefender(p) ? 65
+                            : (isMidfielder(p) ? 155 : 265);
                         if (ballInMyHalf) {
                             targetY = ball.y + goalSide * roleOffset;
                         } else {
-                            const depth = isDefender(p) ? 120 : (isMidfielder(p) ? 250 : 360);
+                            const depth = playerRole.kind === "striker" ? 370
+                                : playerRole.kind === "winger" ? 335
+                                : playerRole.kind === "fullback" ? 150
+                                : isDefender(p) ? 120
+                                : (isMidfielder(p) ? 250 : 360);
                             targetY = p.team.defendY === 0 ? depth : GAME_HEIGHT - depth;
                         }
                         targetY = Math.max(ownHalf.minY, Math.min(ownHalf.maxY, targetY));
@@ -2180,6 +2528,9 @@ function update() {
             // === ZONE ANCHOR (Elastik bağ) ===
             // Rol bazlı maksimum base'den uzaklaşma mesafesi
             const zoneRadius = playerIsGK ? 90
+                : playerRole.kind === "winger" ? 270
+                : playerRole.kind === "fullback" ? 225
+                : playerRole.kind === "striker" ? 245
                 : isDefender(p)    ? 115
                 : isMidfielder(p)  ? 175
                 : /* forvet */       230;
@@ -2228,11 +2579,12 @@ function update() {
             p.y = gkSafe.y;
         }
         const movedDistance = Math.hypot(p.x - prevMoveX, p.y - prevMoveY);
-        let fatigueIntensity = playerIsGK ? 0.45 : 0.9;
-        if (p === ball.owner) fatigueIntensity += 0.75;
-        if (p.state === 'CHASE') fatigueIntensity += 0.55;
-        if (p.state === 'SUPPORT') fatigueIntensity += 0.15;
-        if (Math.hypot(p.vx, p.vy) > 3.0) fatigueIntensity += 0.35;
+        let fatigueIntensity = playerIsGK ? 0.38 : 1.16;
+        if (p === ball.owner) fatigueIntensity += 1.0;
+        if (p.state === 'CHASE') fatigueIntensity += 0.78;
+        if (p.state === 'SUPPORT') fatigueIntensity += 0.28;
+        if (Math.hypot(p.vx, p.vy) > 2.6) fatigueIntensity += 0.58;
+        if (Math.hypot(p.vx, p.vy) > 4.0) fatigueIntensity += 0.35;
         applyMovementFatigue(p, movedDistance, fatigueIntensity);
     });
     separatePlayers();
