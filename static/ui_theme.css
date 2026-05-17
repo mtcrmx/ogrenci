@@ -1,0 +1,367 @@
+:root {
+  color-scheme: light;
+  --ui-ink: #0f172a;
+  --ui-muted: #64748b;
+  --ui-line: rgba(148, 163, 184, .28);
+  --ui-surface: rgba(255, 255, 255, .92);
+  --ui-surface-strong: #ffffff;
+  --ui-blue: #0ea5e9;
+  --ui-blue-strong: #0369a1;
+  --ui-green: #10b981;
+  --ui-amber: #f59e0b;
+  --ui-rose: #e11d48;
+  --ui-radius: 8px;
+  --ui-shadow: 0 22px 60px rgba(15, 23, 42, .12);
+  --ui-shadow-soft: 0 14px 38px rgba(15, 23, 42, .09);
+}
+
+* {
+  letter-spacing: 0;
+}
+
+@keyframes ui-page-shift {
+  0%, 100% { background-position: 0% 0%, 0 0, 0 0; }
+  50% { background-position: 100% 58%, 17px 17px, -17px 12px; }
+}
+
+@keyframes ui-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ui-sheen {
+  from { transform: translateX(-130%) skewX(-16deg); }
+  to { transform: translateX(130%) skewX(-16deg); }
+}
+
+@keyframes ui-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, .22); }
+  50% { box-shadow: 0 0 0 8px rgba(14, 165, 233, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body.ui-theme,
+body.app-background {
+  min-height: 100vh;
+  color: var(--ui-ink);
+  background:
+    linear-gradient(120deg, rgba(224, 242, 254, .9), rgba(236, 253, 245, .86) 46%, rgba(255, 247, 237, .88)),
+    linear-gradient(90deg, rgba(15, 23, 42, .04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(15, 23, 42, .04) 1px, transparent 1px) !important;
+  background-size: 240% 240%, 34px 34px, 34px 34px !important;
+  animation: ui-page-shift 26s ease-in-out infinite;
+  overflow-x: hidden;
+}
+
+body.ui-theme::before,
+body.app-background::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, rgba(37, 99, 235, .06), transparent 28%, rgba(16, 185, 129, .08) 56%, transparent 78%),
+    linear-gradient(180deg, rgba(255, 255, 255, .44), transparent 48%);
+}
+
+body.ui-theme a,
+body.app-background a {
+  text-underline-offset: 3px;
+}
+
+body.ui-theme main,
+body.ui-theme .max-w-lg,
+body.ui-theme .max-w-xl,
+body.ui-theme .max-w-2xl,
+body.ui-theme .max-w-3xl,
+body.ui-theme .max-w-4xl,
+body.ui-theme .max-w-5xl,
+body.ui-theme .max-w-6xl,
+body.ui-theme .max-w-7xl,
+body.app-background main {
+  animation: ui-rise .34s ease both;
+}
+
+body.ui-theme > header:not(.topbar):not(.app-header),
+body.app-background > header:not(.topbar):not(.app-header) {
+  border-bottom: 1px solid rgba(15, 23, 42, .08) !important;
+  background: rgba(255, 255, 255, .84) !important;
+  color: var(--ui-ink) !important;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, .08);
+  backdrop-filter: blur(18px);
+}
+
+body.ui-theme header a,
+body.ui-theme header button,
+body.app-background header a,
+body.app-background header button {
+  border-radius: var(--ui-radius) !important;
+}
+
+body.ui-theme .bg-white,
+body.ui-theme .bg-slate-50,
+body.ui-theme .bg-slate-100,
+body.app-background .bg-white,
+body.app-background .bg-slate-50,
+body.app-background .bg-slate-100 {
+  background-color: rgba(255, 255, 255, .92) !important;
+}
+
+body.ui-theme .bg-slate-900,
+body.ui-theme .bg-slate-950,
+body.ui-theme .bg-slate-800,
+body.ui-theme .bg-slate-900\/50,
+body.ui-theme .bg-slate-800\/50 {
+  background: rgba(255, 255, 255, .88) !important;
+  color: var(--ui-ink) !important;
+}
+
+body.ui-theme .text-white,
+body.ui-theme .text-slate-100,
+body.ui-theme .text-slate-200,
+body.ui-theme .text-slate-300 {
+  color: var(--ui-ink) !important;
+}
+
+body.ui-theme .text-slate-400,
+body.ui-theme .text-slate-500,
+body.ui-theme .text-slate-600 {
+  color: var(--ui-muted) !important;
+}
+
+body.ui-theme .border-slate-800,
+body.ui-theme .border-slate-700,
+body.ui-theme .border-slate-600,
+body.app-background .border-slate-800,
+body.app-background .border-slate-700 {
+  border-color: var(--ui-line) !important;
+}
+
+body.ui-theme .rounded-2xl,
+body.app-background .rounded-2xl {
+  border-radius: var(--ui-radius) !important;
+}
+
+body.ui-theme .rounded-xl,
+body.app-background .rounded-xl {
+  border-radius: var(--ui-radius) !important;
+}
+
+body.ui-theme section:not(.ui-hero):not(.hero):not(.panel),
+body.ui-theme form.bg-white,
+body.ui-theme .shadow-xl,
+body.ui-theme .shadow-2xl,
+body.ui-theme .rounded-2xl.bg-white,
+body.ui-theme .rounded-2xl.bg-slate-900,
+body.ui-theme .rounded-2xl.bg-slate-800\/50,
+body.app-background .action-group,
+body.app-background .rounded-2xl,
+body.app-background .bg-white.shadow,
+body.app-background .bg-white.shadow-xl {
+  border: 1px solid var(--ui-line) !important;
+  background: var(--ui-surface) !important;
+  box-shadow: var(--ui-shadow-soft) !important;
+  backdrop-filter: blur(18px);
+}
+
+body.ui-theme section:not(.ui-hero):not(.hero):not(.panel):hover,
+body.app-background .action-group:hover {
+  border-color: rgba(14, 165, 233, .38) !important;
+}
+
+body.ui-theme input,
+body.ui-theme select,
+body.ui-theme textarea,
+body.app-background input,
+body.app-background select,
+body.app-background textarea {
+  border-radius: var(--ui-radius) !important;
+  border-color: var(--ui-line) !important;
+  background: rgba(255, 255, 255, .96) !important;
+  color: var(--ui-ink) !important;
+  box-shadow: none !important;
+}
+
+body.ui-theme input:focus,
+body.ui-theme select:focus,
+body.ui-theme textarea:focus,
+body.app-background input:focus,
+body.app-background select:focus,
+body.app-background textarea:focus {
+  outline: none !important;
+  border-color: rgba(14, 165, 233, .55) !important;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, .12) !important;
+}
+
+body.ui-theme button,
+body.ui-theme .inline-flex,
+body.ui-theme a[class*="bg-"],
+body.app-background button,
+body.app-background a[class*="bg-"] {
+  transition: transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease, color .18s ease;
+}
+
+body.ui-theme button:hover,
+body.ui-theme a[class*="bg-"]:hover,
+body.app-background button:hover,
+body.app-background a[class*="bg-"]:hover {
+  transform: translateY(-1px);
+}
+
+body.ui-theme button[type="submit"],
+body.ui-theme .bg-blue-600,
+body.ui-theme .bg-blue-700,
+body.ui-theme .bg-indigo-600,
+body.ui-theme .bg-emerald-600,
+body.ui-theme .bg-sky-600,
+body.app-background button[type="submit"],
+body.app-background .bg-blue-600,
+body.app-background .bg-indigo-600 {
+  background: var(--ui-blue-strong) !important;
+  color: #fff !important;
+  border-color: var(--ui-blue-strong) !important;
+}
+
+body.ui-theme .bg-red-900,
+body.ui-theme .bg-red-700,
+body.ui-theme .bg-red-600,
+body.app-background .bg-red-900,
+body.app-background .bg-red-700,
+body.app-background .bg-red-600 {
+  background: rgba(255, 241, 242, .94) !important;
+  color: #be123c !important;
+  border: 1px solid rgba(251, 113, 133, .32) !important;
+}
+
+body.ui-theme table,
+body.app-background table {
+  border-radius: var(--ui-radius);
+  overflow: hidden;
+}
+
+body.ui-theme th,
+body.app-background th {
+  background: rgba(248, 250, 252, .78) !important;
+  color: var(--ui-muted) !important;
+  font-weight: 1000 !important;
+}
+
+body.ui-theme td,
+body.app-background td {
+  color: #334155 !important;
+}
+
+.ui-shell {
+  width: min(1120px, calc(100% - 24px));
+  margin: 0 auto;
+}
+
+.ui-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--ui-radius);
+  background: linear-gradient(135deg, rgba(8, 145, 178, .95), rgba(37, 99, 235, .92) 50%, rgba(34, 197, 94, .86));
+  color: #fff;
+  box-shadow: var(--ui-shadow);
+}
+
+.ui-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, .20), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, .16), transparent 54%);
+  animation: ui-sheen 7s ease-in-out infinite;
+  opacity: .7;
+}
+
+.ui-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.ui-theme .ui-hero .text-white,
+body.ui-theme .ui-hero [class*="text-white/"],
+body.app-background .ui-hero .text-white,
+body.app-background .ui-hero [class*="text-white/"] {
+  color: #fff !important;
+}
+
+body.ui-theme .ui-hero [class*="text-white/7"],
+body.app-background .ui-hero [class*="text-white/7"] {
+  color: rgba(255, 255, 255, .76) !important;
+}
+
+body.ui-theme .ui-hero [class*="text-white/8"],
+body.app-background .ui-hero [class*="text-white/8"] {
+  color: rgba(255, 255, 255, .84) !important;
+}
+
+.ui-card {
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  box-shadow: var(--ui-shadow-soft);
+  backdrop-filter: blur(18px);
+  animation: ui-rise .34s ease both;
+}
+
+.ui-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ui-green);
+  animation: ui-pulse 1.6s ease-in-out infinite;
+}
+
+body.ui-game {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(14, 165, 233, .22), transparent 34%),
+    radial-gradient(circle at 84% 16%, rgba(16, 185, 129, .18), transparent 32%),
+    #050b18 !important;
+  color: #e2e8f0 !important;
+}
+
+body.ui-game > header {
+  background: rgba(5, 11, 24, .88) !important;
+  color: #e2e8f0 !important;
+  border-bottom-color: rgba(148, 163, 184, .22) !important;
+}
+
+body.ui-game canvas,
+body.ui-game #game-container,
+body.ui-game #canvas-wrap {
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  .ui-shell {
+    width: min(100% - 16px, 1120px);
+  }
+
+  body.ui-theme main,
+  body.app-background main {
+    padding-left: .5rem !important;
+    padding-right: .5rem !important;
+  }
+
+  body.ui-theme h1,
+  body.app-background h1 {
+    line-height: 1.08 !important;
+    word-break: break-word;
+  }
+
+  body.ui-theme table {
+    font-size: .8125rem;
+  }
+}

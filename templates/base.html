@@ -18,6 +18,7 @@
       }
     }
   </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
   <style>
     /* Pulse animasyonu kırmızı kartlar için */
     @keyframes pulse-red {
@@ -332,7 +333,7 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body class="app-background bg-slate-100 min-h-screen overflow-x-hidden">
+<body class="ui-theme app-background bg-slate-100 min-h-screen overflow-x-hidden">
 
 {% if session.ogretmen_adi %}
 {% set aktif_sinif_id = aktif.id if aktif is defined and aktif else None %}

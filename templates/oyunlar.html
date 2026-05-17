@@ -10,8 +10,9 @@
     .pop { animation: pop .25s ease both; }
     .answer-btn:disabled, .game-btn:disabled { cursor: default; opacity: .72; }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
+<body class="ui-theme min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
   <main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
     <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
       <div class="min-w-0">

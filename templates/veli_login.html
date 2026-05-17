@@ -3,52 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Veli Girişi</title>
+  <title>Veli Girişi - Erenler Cumhuriyet Ortaokulu</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
 </head>
-<body class="min-h-screen bg-sky-950 flex items-center justify-center px-4 py-10 overflow-x-hidden">
-  <main class="w-full max-w-sm">
-    <div class="mb-4">
-      <a href="{{ url_for('login') }}" class="inline-block rounded-xl bg-sky-800 hover:bg-sky-700 text-white px-4 py-2 text-xs font-black">
-        Ana Menü
-      </a>
-    </div>
-    <div class="text-center mb-6">
-      <div class="text-5xl mb-3">👪</div>
-      <h1 class="text-white text-2xl font-black">Veli Girişi</h1>
-      <p class="text-sky-200 text-sm mt-1 break-words">Öğrencinizin tik kayıtları, ödevler ve bireysel ödev PDF özetleri</p>
-    </div>
-
-    <form method="POST" class="bg-white rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-sky-700 px-5 py-4">
-        <h2 class="text-white font-bold text-center">Güvenli veli erişimi</h2>
+<body class="ui-theme min-h-screen overflow-x-hidden">
+  <main class="ui-shell flex min-h-screen items-center py-8">
+    <section class="grid w-full gap-5 lg:grid-cols-[.95fr_1.05fr]">
+      <div class="ui-hero p-6 sm:p-8" style="background:linear-gradient(135deg, rgba(15,23,42,.96), rgba(30,64,175,.92) 52%, rgba(16,185,129,.82));">
+        <div class="relative z-10 flex h-full min-h-[340px] flex-col justify-between">
+          <div>
+            <a href="{{ url_for('login') }}"
+               class="inline-flex rounded-[8px] border border-white/25 bg-white/15 px-3 py-2 text-xs font-black text-white backdrop-blur hover:bg-white/20">
+              Ana menü
+            </a>
+            <h1 class="mt-8 text-3xl font-black leading-tight text-white sm:text-5xl">Veli takip alanı</h1>
+            <p class="mt-4 max-w-lg text-sm font-bold leading-6 text-white/78">
+              Öğrencinizin tik kayıtları, öğretmen notları, ödev özeti ve görüşme talepleri aynı panelde toplanır.
+            </p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div class="rounded-[8px] border border-white/20 bg-white/14 p-3 text-white backdrop-blur">
+              <div class="text-xs font-black text-white/70">Özet</div>
+              <div class="mt-1 text-lg font-black">30 gün</div>
+            </div>
+            <div class="rounded-[8px] border border-white/20 bg-white/14 p-3 text-white backdrop-blur">
+              <div class="text-xs font-black text-white/70">Notlar</div>
+              <div class="mt-1 text-lg font-black">Öğretmen</div>
+            </div>
+            <div class="rounded-[8px] border border-white/20 bg-white/14 p-3 text-white backdrop-blur">
+              <div class="text-xs font-black text-white/70">Ödev</div>
+              <div class="mt-1 text-lg font-black">Durum</div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="p-5 space-y-4">
+
+      <form method="POST" class="ui-card p-5 sm:p-7">
+        <div class="mb-6">
+          <h2 class="text-2xl font-black text-slate-950">Veli girişi</h2>
+          <p class="mt-1 text-sm font-bold text-slate-500">Öğrenci numarası ve veli şifresiyle devam edin.</p>
+        </div>
+
         {% if hata %}
-        <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        <div class="mb-4 rounded-[8px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
           {{ hata }}
         </div>
         {% endif %}
-        <label class="block">
-          <span class="block text-sm font-bold text-slate-700 mb-1">Öğrenci numarası</span>
-          <input type="number" name="ogr_no" required inputmode="numeric" placeholder="Örn: 105"
-                 class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900
-                        outline-none focus:ring-2 focus:ring-sky-500">
-        </label>
-        <label class="block">
-          <span class="block text-sm font-bold text-slate-700 mb-1">Veli şifresi</span>
-          <input type="password" name="sifre" required autocomplete="current-password"
-                 class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900
-                        outline-none focus:ring-2 focus:ring-sky-500">
-        </label>
-        <button class="w-full rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-black py-3 transition">
-          Giriş Yap
-        </button>
-        <a href="{{ url_for('login') }}" class="block text-center text-xs font-bold text-slate-500 hover:text-slate-800">
-          Ana girişe dön
-        </a>
-      </div>
-    </form>
+
+        <div class="space-y-4">
+          <label class="block">
+            <span class="mb-1.5 block text-sm font-black text-slate-700">Öğrenci numarası</span>
+            <input type="number" name="ogr_no" required inputmode="numeric" placeholder="Örn: 105" autofocus
+                   class="w-full rounded-[8px] border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none">
+          </label>
+
+          <label class="block">
+            <span class="mb-1.5 block text-sm font-black text-slate-700">Veli şifresi</span>
+            <input type="password" name="sifre" required autocomplete="current-password"
+                   class="w-full rounded-[8px] border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none">
+          </label>
+
+          <button class="w-full rounded-[8px] bg-sky-700 px-4 py-3 text-sm font-black text-white shadow-lg shadow-sky-900/15 hover:bg-sky-800">
+            Giriş yap
+          </button>
+        </div>
+
+        <div class="mt-5 border-t border-slate-200 pt-4 text-center text-xs font-bold">
+          <a href="{{ url_for('login') }}" class="inline-flex rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-slate-600 hover:bg-slate-50">
+            Ana girişe dön
+          </a>
+        </div>
+      </form>
+    </section>
   </main>
 </body>
 </html>

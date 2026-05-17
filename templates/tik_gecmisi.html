@@ -553,8 +553,9 @@
       .live-strip { align-items: flex-start; flex-direction: column; }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
 </head>
-<body class="{% if veli_modu %}parent-mode{% else %}student-mode{% endif %}">
+<body class="ui-theme {% if veli_modu %}parent-mode{% else %}student-mode{% endif %}">
 {% set odev_liste = odevler|default([], true) %}
 {% set toplam_odev = odev_liste|length %}
 {% set tamamlanan_odev = odev_liste|selectattr('tamamlandi')|list|length %}

@@ -9,8 +9,9 @@
     @keyframes rise { from { opacity:0; transform:translateY(14px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
     .urun { animation: rise .35s ease both; }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
+<body class="ui-theme min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
 <main class="max-w-7xl mx-auto px-4 py-5 space-y-5">
   <header class="flex flex-wrap justify-between gap-3">
     <div class="min-w-0">
