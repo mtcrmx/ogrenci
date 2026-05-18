@@ -16,6 +16,11 @@
     </div>
   </header>
 
+  <div class="mb-3 flex flex-wrap gap-2">
+    <button type="button" id="btn-sunucu-kaydet" class="inline-flex items-center justify-center rounded-xl bg-emerald-700 text-white text-xs font-bold px-4 py-2 hover:bg-emerald-800">Kaydet</button>
+    <button type="button" id="btn-kayitlar" class="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-white text-amber-900 text-xs font-bold px-4 py-2 hover:bg-amber-50">Kayıtlar</button>
+  </div>
+
   <nav class="flex flex-wrap gap-1 mb-3 sticky top-14 z-20 bg-slate-100/95 backdrop-blur py-2 -mx-1 px-1 border-b border-slate-200" id="tabs"></nav>
 
   <section id="panel-bilgi" class="panel space-y-3"></section>
@@ -32,6 +37,10 @@
   const LS_KEY = "eco_sinav_analiz_v2";
   const API_SINIF = (id) => "/api/sinav-analiz/sinif/" + id;
   const API_MUFREDAT = "/api/curriculum/drive-kazanimlari";
+  const API_KAYITLAR = "/api/sinav-analiz/kayitlar";
+  const API_KAYDET = "/api/sinav-analiz/kaydet";
+  const API_KAYIT = (id) => "/api/sinav-analiz/kayit/" + id;
+  const API_KAYIT_SIL = (id) => "/api/sinav-analiz/kayit/" + id + "/sil";
   const SINIFLAR = {{ siniflar | default([]) | tojson }};
   const DERSLER = {{ dersler | default([]) | tojson }};
   const DEFAULT_OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
@@ -99,7 +108,10 @@
 
   let state = defaultState();
   let saveTid = null;
+  let serverSaveTid = null;
   let activeTab = "bilgi";
+  let currentKayitId = null;
+  let serverKayitlar = [];
 
   function mergeMetaDefaults() {
     const d = defaultState().meta;
@@ -109,25 +121,43 @@
     state.meta.mudur = DEFAULT_MUDUR;
   }
 
+  function normalizeState(nextState) {
+    state = Object.assign(defaultState(), nextState || {});
+    if (!state.meta || typeof state.meta !== "object") state.meta = {};
+    if (!Array.isArray(state.ogrenciler)) state.ogrenciler = [];
+    if (!state.sorular || typeof state.sorular !== "object") state.sorular = {};
+    ["yazili", "dinleme", "konusma"].forEach((k) => {
+      if (!Array.isArray(state.sorular[k])) state.sorular[k] = [];
+    });
+    if (!state.notlar || typeof state.notlar !== "object") state.notlar = {};
+    mergeMetaDefaults();
+    state.ogrenciler.forEach((ogr) => {
+      if (ogr.katilmadi == null) ogr.katilmadi = false;
+    });
+  }
+
   function loadState() {
     try {
+      const storedServerId = parseInt(localStorage.getItem(LS_KEY + "_server_id") || "", 10);
+      currentKayitId = Number.isFinite(storedServerId) && storedServerId > 0 ? storedServerId : null;
       const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return;
+      if (!raw) {
+        currentKayitId = null;
+        localStorage.removeItem(LS_KEY + "_server_id");
+        return;
+      }
       const o = JSON.parse(raw);
-      if (!o || typeof o !== "object") return;
-      state = Object.assign(defaultState(), o);
-      if (!state.sorular) state.sorular = { yazili: [], dinleme: [], konusma: [] };
-      ["yazili", "dinleme", "konusma"].forEach((k) => {
-        if (!Array.isArray(state.sorular[k])) state.sorular[k] = [];
-      });
-      if (!state.notlar || typeof state.notlar !== "object") state.notlar = {};
-      mergeMetaDefaults();
-      state.ogrenciler.forEach((ogr) => {
-        if (ogr.katilmadi == null) ogr.katilmadi = false;
-      });
+      if (!o || typeof o !== "object") {
+        currentKayitId = null;
+        localStorage.removeItem(LS_KEY + "_server_id");
+        return;
+      }
+      normalizeState(o);
     } catch (e) {
       console.warn(e);
       state = defaultState();
+      currentKayitId = null;
+      localStorage.removeItem(LS_KEY + "_server_id");
     }
   }
 
@@ -139,10 +169,140 @@
         const hist = JSON.parse(localStorage.getItem(LS_KEY + "_hist") || "[]");
         hist.unshift({ t: new Date().toISOString(), sinav: state.meta.sinavAdi || "—" });
         localStorage.setItem(LS_KEY + "_hist", JSON.stringify(hist.slice(0, 12)));
+        if (currentKayitId) {
+          clearTimeout(serverSaveTid);
+          serverSaveTid = setTimeout(() => sunucuyaKaydet(true), 1400);
+        }
       } catch (e) {
         alert("Kaydedilemedi: " + e.message);
       }
     }, 350);
+  }
+
+  function kayitBaslik() {
+    const m = state.meta || {};
+    const parcalar = [m.sinifAdi, m.ders, m.sinavAdi, m.egitimYili]
+      .map((p) => String(p || "").trim())
+      .filter(Boolean);
+    return parcalar.join(" - ") || "Adsız sınav analizi";
+  }
+
+  function updateKayitStatus() {
+    const btn = document.getElementById("btn-sunucu-kaydet");
+    if (btn) btn.textContent = currentKayitId ? "Güncelle" : "Kaydet";
+  }
+
+  async function sunucuyaKaydet(silent) {
+    try {
+      const r = await fetch(API_KAYDET, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ id: currentKayitId, state }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.sebep || "Kayıt yapılamadı.");
+      currentKayitId = Number(j.kayit.id);
+      localStorage.setItem(LS_KEY + "_server_id", String(currentKayitId));
+      updateKayitStatus();
+      if (activeTab === "yedek") kayitlariYukle();
+      if (!silent) alert("Sınav analizi kaydedildi.");
+      return j;
+    } catch (e) {
+      if (silent) console.warn(e);
+      else alert(e.message || String(e));
+      return null;
+    }
+  }
+
+  function kayitKarti(k) {
+    const current = currentKayitId && Number(k.id) === Number(currentKayitId);
+    const alt = [k.sinif_adi, k.ders, k.sinav_adi, k.egitim_yili].filter(Boolean).join(" · ");
+    return `
+      <div class="rounded-xl border ${current ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"} p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h3 class="text-sm font-black text-slate-800 truncate">${esc(k.baslik || "Adsız sınav analizi")}</h3>
+            ${current ? '<span class="rounded-full bg-emerald-700 px-2 py-0.5 text-[10px] font-black text-white">Açık</span>' : ""}
+          </div>
+          <p class="text-xs text-slate-500 mt-1">${esc(alt || "Bilgi girilmemiş")}</p>
+          <p class="text-[11px] text-slate-400 mt-1">Son kayıt: ${esc(k.guncelleme || k.olusturma || "")}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" data-load-kayit="${k.id}" class="rounded-lg bg-okul-800 text-white text-xs font-bold px-3 py-2">Aç</button>
+          <button type="button" data-delete-kayit="${k.id}" class="rounded-lg border border-red-200 text-red-700 text-xs font-bold px-3 py-2">Sil</button>
+        </div>
+      </div>`;
+  }
+
+  async function kayitlariYukle() {
+    const box = document.getElementById("sunucu-kayit-listesi");
+    if (box) box.innerHTML = '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">Kayıtlar yükleniyor...</div>';
+    try {
+      const r = await fetch(API_KAYITLAR, { credentials: "same-origin" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.sebep || "Kayıtlar alınamadı.");
+      serverKayitlar = Array.isArray(j.kayitlar) ? j.kayitlar : [];
+      if (!box) return;
+      box.innerHTML = serverKayitlar.length
+        ? serverKayitlar.map(kayitKarti).join("")
+        : '<div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">Henüz sunucuya kaydedilmiş sınav analizi yok.</div>';
+      box.querySelectorAll("[data-load-kayit]").forEach((btn) => {
+        btn.addEventListener("click", () => sunucuKaydiYukle(Number(btn.getAttribute("data-load-kayit"))));
+      });
+      box.querySelectorAll("[data-delete-kayit]").forEach((btn) => {
+        btn.addEventListener("click", () => sunucuKaydiSil(Number(btn.getAttribute("data-delete-kayit"))));
+      });
+    } catch (e) {
+      if (box) box.innerHTML = `<div class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">${esc(e.message || String(e))}</div>`;
+    }
+  }
+
+  async function sunucuKaydiYukle(id) {
+    if (!id) return;
+    try {
+      const r = await fetch(API_KAYIT(id), { credentials: "same-origin" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.sebep || "Kayıt açılamadı.");
+      normalizeState(j.state);
+      currentKayitId = Number(j.kayit.id);
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      localStorage.setItem(LS_KEY + "_server_id", String(currentKayitId));
+      activeTab = "bilgi";
+      renderTabs();
+      showPanel();
+      renderActivePanel();
+      updateKayitStatus();
+      alert("Kayıt açıldı.");
+    } catch (e) {
+      alert(e.message || String(e));
+    }
+  }
+
+  async function sunucuKaydiSil(id) {
+    if (!id) return;
+    if (!confirm("Bu sınav analizi sunucu kayıtlarından silinsin mi?")) return;
+    try {
+      const r = await fetch(API_KAYIT_SIL(id), {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.sebep || "Kayıt silinemedi.");
+      if (Number(currentKayitId) === Number(id)) {
+        currentKayitId = null;
+        localStorage.removeItem(LS_KEY + "_server_id");
+        updateKayitStatus();
+      }
+      await kayitlariYukle();
+      alert("Kayıt silindi.");
+    } catch (e) {
+      alert(e.message || String(e));
+    }
   }
 
   function studentKey(o) {
@@ -1094,6 +1254,23 @@
         </div>
       </div>`;
     const ta = el.querySelector("#yedek-ta");
+    el.insertAdjacentHTML("afterbegin", `
+      <div class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-black text-slate-800">Sunucu kayıtları</h2>
+            <p class="text-xs text-slate-600 mt-1">Analizleri öğretmen hesabınıza kaydedin; istediğiniz zaman açabilir veya silebilirsiniz.</p>
+          </div>
+          <button type="button" id="btn-server-save-panel" class="rounded-xl bg-emerald-700 text-white text-xs font-bold px-3 py-2">Bu analizi kaydet</button>
+        </div>
+        <div class="rounded-xl border border-emerald-100 bg-white/70 p-3 text-xs text-emerald-900">
+          Aktif taslak: <b>${esc(kayitBaslik())}</b>${currentKayitId ? " · sunucuda kayıtlı" : " · henüz sunucuya kaydedilmedi"}
+        </div>
+        <div id="sunucu-kayit-listesi" class="space-y-2"></div>
+      </div>
+    `);
+    el.querySelector("#btn-server-save-panel")?.addEventListener("click", () => sunucuyaKaydet(false));
+    kayitlariYukle();
     if (ta) ta.value = JSON.stringify(state, null, 2);
     el.querySelector("#btn-yedek-copy")?.addEventListener("click", async () => {
       try {
@@ -1107,15 +1284,9 @@
       try {
         const o = JSON.parse(ta.value);
         if (!o || typeof o !== "object") throw new Error("Geçersiz");
-        state = Object.assign(defaultState(), o);
-        mergeMetaDefaults();
-        ["yazili", "dinleme", "konusma"].forEach((k) => {
-          if (!Array.isArray(state.sorular[k])) state.sorular[k] = [];
-        });
-        if (!state.notlar || typeof state.notlar !== "object") state.notlar = {};
-        state.ogrenciler.forEach((ogr) => {
-          if (ogr.katilmadi == null) ogr.katilmadi = false;
-        });
+        normalizeState(o);
+        currentKayitId = null;
+        localStorage.removeItem(LS_KEY + "_server_id");
         scheduleSave();
         renderTabs();
         showPanel();
@@ -1128,8 +1299,11 @@
     el.querySelector("#yedek-reset")?.addEventListener("click", () => {
       if (!confirm("Tüm sınav analizi verisi silinsin mi?")) return;
       localStorage.removeItem(LS_KEY);
+      localStorage.removeItem(LS_KEY + "_server_id");
+      currentKayitId = null;
       state = defaultState();
       curriculumCache = null;
+      updateKayitStatus();
       renderTabs();
       showPanel();
       renderActivePanel();
@@ -1150,6 +1324,14 @@
   renderTabs();
   showPanel();
   renderActivePanel();
+  updateKayitStatus();
+  document.getElementById("btn-sunucu-kaydet")?.addEventListener("click", () => sunucuyaKaydet(false));
+  document.getElementById("btn-kayitlar")?.addEventListener("click", () => {
+    activeTab = "yedek";
+    renderTabs();
+    showPanel();
+    renderActivePanel();
+  });
   if (state.meta.sinifId && state.ogrenciler.length === 0) {
     sinifListesiYukle();
   }

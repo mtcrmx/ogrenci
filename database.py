@@ -304,6 +304,7 @@ def initialize_db():
 
     _yardimci_tablolar_init(con)
     _rapor_arsiv_init(con)
+    _sinav_analiz_init(con)
     _ogrenci_ozellikler_ensure(con)
     con.close()
 
@@ -400,6 +401,30 @@ def _rapor_arsiv_init(con: sqlite3.Connection) -> None:
     """)
     con.commit()
     _rapor_arsiv_yedek_init(con)
+
+
+def _sinav_analiz_init(con: sqlite3.Connection) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS sinav_analiz_kayitlari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            olusturma TEXT NOT NULL,
+            guncelleme TEXT NOT NULL,
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            ogretmen_adi TEXT NOT NULL,
+            baslik TEXT NOT NULL,
+            sinif_id INTEGER,
+            sinif_adi TEXT,
+            ders TEXT,
+            sinav_adi TEXT,
+            egitim_yili TEXT,
+            state_json TEXT NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sinav_analiz_kayitlari_ogretmen
+        ON sinav_analiz_kayitlari (ogretmen_id, guncelleme DESC)
+    """)
+    con.commit()
 
 
 def _bilgilendirme_init(con: sqlite3.Connection):
@@ -4367,6 +4392,147 @@ def rapor_arsiv_pdf_oku(arsiv_id: int, ogretmen_id: int) -> dict | None:
     """, (arsiv_id, ogretmen_id)).fetchone()
     con.close()
     return dict(row) if row else None
+
+
+def _sinav_analiz_text(value, limit: int = 240) -> str:
+    return str(value or "").strip()[:limit]
+
+
+def _sinav_analiz_row(row: sqlite3.Row | dict) -> dict:
+    return {
+        "id": int(row["id"]),
+        "olusturma": row["olusturma"],
+        "guncelleme": row["guncelleme"],
+        "baslik": row["baslik"],
+        "sinif_id": row["sinif_id"],
+        "sinif_adi": row["sinif_adi"] or "",
+        "ders": row["ders"] or "",
+        "sinav_adi": row["sinav_adi"] or "",
+        "egitim_yili": row["egitim_yili"] or "",
+    }
+
+
+def sinav_analiz_kaydet(
+    ogretmen_id: int,
+    ogretmen_adi: str,
+    state_json: str,
+    baslik: str,
+    sinif_id: int | None,
+    sinif_adi: str,
+    ders: str,
+    sinav_adi: str,
+    egitim_yili: str,
+    kayit_id: int | None = None,
+) -> dict:
+    con = _conn()
+    _sinav_analiz_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    baslik = _sinav_analiz_text(baslik) or "Adsız sınav analizi"
+    try:
+        sinif_id_val = int(sinif_id) if sinif_id not in (None, "", 0, "0") else None
+    except (TypeError, ValueError):
+        sinif_id_val = None
+    try:
+        kid = int(kayit_id) if kayit_id else None
+    except (TypeError, ValueError):
+        kid = None
+
+    if kid:
+        var = con.execute(
+            "SELECT id FROM sinav_analiz_kayitlari WHERE id = ? AND ogretmen_id = ?",
+            (kid, ogretmen_id),
+        ).fetchone()
+        if not var:
+            con.close()
+            return {"ok": False, "sebep": "Kayıt bulunamadı."}
+        con.execute("""
+            UPDATE sinav_analiz_kayitlari
+            SET guncelleme = ?, ogretmen_adi = ?, baslik = ?, sinif_id = ?,
+                sinif_adi = ?, ders = ?, sinav_adi = ?, egitim_yili = ?, state_json = ?
+            WHERE id = ? AND ogretmen_id = ?
+        """, (
+            now,
+            _sinav_analiz_text(ogretmen_adi, 160),
+            baslik,
+            sinif_id_val,
+            _sinav_analiz_text(sinif_adi, 80),
+            _sinav_analiz_text(ders, 120),
+            _sinav_analiz_text(sinav_adi, 160),
+            _sinav_analiz_text(egitim_yili, 40),
+            state_json,
+            kid,
+            ogretmen_id,
+        ))
+    else:
+        cur = con.execute("""
+            INSERT INTO sinav_analiz_kayitlari (
+                olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik,
+                sinif_id, sinif_adi, ders, sinav_adi, egitim_yili, state_json
+            )
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            now,
+            now,
+            ogretmen_id,
+            _sinav_analiz_text(ogretmen_adi, 160),
+            baslik,
+            sinif_id_val,
+            _sinav_analiz_text(sinif_adi, 80),
+            _sinav_analiz_text(ders, 120),
+            _sinav_analiz_text(sinav_adi, 160),
+            _sinav_analiz_text(egitim_yili, 40),
+            state_json,
+        ))
+        kid = int(cur.lastrowid)
+
+    con.commit()
+    row = con.execute("""
+        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+        FROM sinav_analiz_kayitlari
+        WHERE id = ? AND ogretmen_id = ?
+    """, (kid, ogretmen_id)).fetchone()
+    con.close()
+    return {"ok": True, "kayit": _sinav_analiz_row(row)} if row else {"ok": False, "sebep": "Kayıt okunamadı."}
+
+
+def sinav_analiz_listesi(ogretmen_id: int, limit: int = 50) -> list[dict]:
+    con = _conn()
+    _sinav_analiz_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+        FROM sinav_analiz_kayitlari
+        WHERE ogretmen_id = ?
+        ORDER BY guncelleme DESC, id DESC
+        LIMIT ?
+    """, (ogretmen_id, max(1, min(int(limit or 50), 200)))).fetchall()]
+    con.close()
+    return [_sinav_analiz_row(r) for r in rows]
+
+
+def sinav_analiz_oku(kayit_id: int, ogretmen_id: int) -> dict | None:
+    con = _conn()
+    _sinav_analiz_init(con)
+    row = con.execute("""
+        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi,
+               egitim_yili, state_json
+        FROM sinav_analiz_kayitlari
+        WHERE id = ? AND ogretmen_id = ?
+    """, (kayit_id, ogretmen_id)).fetchone()
+    con.close()
+    return dict(row) if row else None
+
+
+def sinav_analiz_sil(kayit_id: int, ogretmen_id: int) -> dict:
+    con = _conn()
+    _sinav_analiz_init(con)
+    cur = con.execute(
+        "DELETE FROM sinav_analiz_kayitlari WHERE id = ? AND ogretmen_id = ?",
+        (kayit_id, ogretmen_id),
+    )
+    con.commit()
+    silinen = int(cur.rowcount or 0)
+    con.close()
+    return {"ok": True, "silinen": silinen}
 
 
 def rapor_arsiv_tumunu_yedekle_ve_sil(ogretmen_id: int) -> dict:
