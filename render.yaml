@@ -2,11 +2,13 @@ services:
   - type: web
     name: ogrenci-takip
     runtime: python
-    buildCommand: pip install flask openpyxl gunicorn
-    startCommand: gunicorn web_app:app --bind 0.0.0.0:$PORT --workers 2
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn web_app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      - key: OGR_TAKIP_DB_PATH
+        value: /data/ogrenci_takip.db
       - key: OGR_TAKIP_DATA_DIR
         value: /data
     disk:

@@ -16,6 +16,33 @@ from datetime import datetime, timedelta
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+def _kalici_veri_klasorleri() -> list[str]:
+    adaylar: list[str] = []
+    env_dir = (os.environ.get("OGR_TAKIP_DATA_DIR") or "").strip()
+    if env_dir:
+        adaylar.append(env_dir)
+
+    for path in ("/var/data", "/data"):
+        if os.path.isdir(path) or os.environ.get("RENDER"):
+            adaylar.append(path)
+
+    temiz: list[str] = []
+    for path in adaylar:
+        abs_path = os.path.abspath(path)
+        if abs_path not in temiz:
+            temiz.append(abs_path)
+    return temiz
+
+
+def _legacy_db_kopyala(db_path: str) -> None:
+    legacy_path = os.path.join(_APP_DIR, "ogrenci_takip.db")
+    if os.path.abspath(db_path) == os.path.abspath(legacy_path):
+        return
+    hedef_yok = not os.path.exists(db_path) or os.path.getsize(db_path) == 0
+    if hedef_yok and os.path.exists(legacy_path) and os.path.getsize(legacy_path) > 0:
+        shutil.copy2(legacy_path, db_path)
+
+
 def _resolve_db_path() -> str:
     """Canlı veriyi kod güncellemelerinden ayrı, kalıcı bir yerde tutar."""
     explicit_path = (os.environ.get("OGR_TAKIP_DB_PATH") or os.environ.get("DATABASE_PATH") or "").strip()
@@ -23,19 +50,15 @@ def _resolve_db_path() -> str:
         parent = os.path.dirname(os.path.abspath(explicit_path))
         if parent:
             os.makedirs(parent, exist_ok=True)
-        return os.path.abspath(explicit_path)
+        db_path = os.path.abspath(explicit_path)
+        _legacy_db_kopyala(db_path)
+        return db_path
 
-    preferred_dir = (os.environ.get("OGR_TAKIP_DATA_DIR") or "").strip()
-    if not preferred_dir and os.path.isdir("/data"):
-        preferred_dir = "/data"
-
-    if preferred_dir:
+    for preferred_dir in _kalici_veri_klasorleri():
         try:
             os.makedirs(preferred_dir, exist_ok=True)
             db_path = os.path.join(preferred_dir, "ogrenci_takip.db")
-            legacy_path = os.path.join(_APP_DIR, "ogrenci_takip.db")
-            if not os.path.exists(db_path) and os.path.exists(legacy_path):
-                shutil.copy2(legacy_path, db_path)
+            _legacy_db_kopyala(db_path)
             return db_path
         except OSError as exc:
             print(f"UYARI: Kalıcı veritabanı klasörü kullanılamadı ({preferred_dir}): {exc}")
@@ -44,6 +67,11 @@ def _resolve_db_path() -> str:
 
 
 DB_PATH = _resolve_db_path()
+print(f"INFO: Ogrenci takip veritabani: {DB_PATH}")
+if os.environ.get("RENDER") and not (
+    os.environ.get("OGR_TAKIP_DB_PATH") or os.environ.get("OGR_TAKIP_DATA_DIR")
+):
+    print("UYARI: Render kalici disk/env ayari gorunmuyor; veriler deploy sonrasi sifirlanabilir.")
 
 
 def _bu_hafta_pazartesi() -> str:
@@ -209,9 +237,10 @@ _OGRENCILER: dict[str, list[tuple[str, int]]] = {
 # ══════════════════════════════════════════════════════════════════════════
 
 def _conn() -> sqlite3.Connection:
-    c = sqlite3.connect(DB_PATH)
+    c = sqlite3.connect(DB_PATH, timeout=30)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA foreign_keys = ON")
+    c.execute("PRAGMA busy_timeout = 30000")
     return c
 
 
