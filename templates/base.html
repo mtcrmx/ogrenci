@@ -205,6 +205,51 @@
       border-color: #bfdbfe;
       box-shadow: 0 10px 22px rgba(15, 23, 42, .08);
     }
+    .teacher-mobile-tabbar {
+      display: none;
+    }
+    .teacher-mobile-tabbar a,
+    .teacher-mobile-tabbar button {
+      min-width: 0;
+      flex: 1 1 0;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .16rem;
+      border-radius: .8rem;
+      padding: .42rem .2rem;
+      color: #475569;
+      font-size: .66rem;
+      font-weight: 1000;
+      line-height: 1.05;
+      transition: background-color .18s ease, color .18s ease, transform .18s ease;
+    }
+    .teacher-mobile-tabbar .tab-icon {
+      font-size: 1.02rem;
+      line-height: 1;
+    }
+    .teacher-mobile-tabbar a.is-active,
+    .teacher-mobile-tabbar button.is-active {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .dashboard-mobile-switcher {
+      display: none;
+    }
+    .dashboard-mobile-switcher button {
+      border-radius: .8rem;
+      padding: .58rem .55rem;
+      font-size: .76rem;
+      font-weight: 1000;
+      color: #64748b;
+      transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+    .dashboard-mobile-switcher button.is-active {
+      background: #0f2144;
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(15, 33, 68, .18);
+    }
     .action-group {
       animation: soft-rise .34s ease both;
       border: 1px solid rgba(226,232,240,.92);
@@ -322,6 +367,47 @@
       transform: translateY(-1px);
       filter: saturate(1.08);
     }
+    @media (max-width: 1023px) {
+      body.has-teacher-mobile-nav {
+        padding-bottom: calc(74px + env(safe-area-inset-bottom));
+      }
+      .teacher-mobile-tabbar {
+        position: fixed;
+        left: .65rem;
+        right: .65rem;
+        bottom: calc(.55rem + env(safe-area-inset-bottom));
+        z-index: 35;
+        display: flex;
+        gap: .18rem;
+        padding: .42rem;
+        border: 1px solid rgba(148, 163, 184, .28);
+        border-radius: 1.05rem;
+        background: rgba(255, 255, 255, .94);
+        box-shadow: 0 18px 48px rgba(15, 23, 42, .18);
+        backdrop-filter: blur(18px);
+      }
+      .dashboard-mobile-switcher {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .35rem;
+        margin: .65rem .75rem 0;
+        padding: .35rem;
+        border: 1px solid rgba(148, 163, 184, .24);
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, .9);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, .08);
+        backdrop-filter: blur(16px);
+      }
+      .dashboard-mobile-section {
+        display: none !important;
+      }
+      .dashboard-mobile-section.is-mobile-active {
+        display: block !important;
+      }
+      section.dashboard-mobile-section.is-mobile-active {
+        display: block !important;
+      }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: .01ms !important;
@@ -333,7 +419,7 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body class="ui-theme app-background bg-slate-100 min-h-screen overflow-x-hidden">
+<body class="ui-theme app-background bg-slate-100 min-h-screen overflow-x-hidden {% if session.ogretmen_adi %}has-teacher-mobile-nav{% endif %}">
 
 {% if session.ogretmen_adi %}
 {% set aktif_sinif_id = aktif.id if aktif is defined and aktif else None %}
@@ -548,6 +634,31 @@
     <a href="{{ url_for('logout') }}" class="block rounded-lg bg-slate-800 px-4 py-3 text-center text-sm font-black text-white">Çıkış</a>
   </div>
 </nav>
+
+<nav class="teacher-mobile-tabbar lg:hidden" aria-label="Mobil hızlı menü">
+  <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}"
+     class="{{ 'is-active' if request.endpoint == 'dashboard' else '' }}">
+    <span class="tab-icon">⌂</span>
+    <span>Panel</span>
+  </a>
+  <button type="button" onclick="openTeacherShortcut('classes')">
+    <span class="tab-icon">▦</span>
+    <span>Sınıf</span>
+  </button>
+  <button type="button" onclick="openTeacherShortcut('students')">
+    <span class="tab-icon">☰</span>
+    <span>Liste</span>
+  </button>
+  <a href="{{ url_for('ogretmen_sinav_analiz') }}"
+     class="{{ 'is-active' if request.endpoint == 'ogretmen_sinav_analiz' else '' }}">
+    <span class="tab-icon">▣</span>
+    <span>Sınav</span>
+  </a>
+  <button type="button" onclick="openTeacherShortcut('menu')">
+    <span class="tab-icon">☷</span>
+    <span>Menü</span>
+  </button>
+</nav>
 {% endif %}
 
 {% block body %}{% endblock %}
@@ -571,6 +682,22 @@ function closeTeacherMenu() {
   document.getElementById('teacher-menu-overlay')?.classList.remove('menu-open');
   document.getElementById('teacher-menu-button')?.setAttribute('aria-expanded', 'false');
   document.body.classList.remove('overflow-hidden');
+}
+
+function openTeacherShortcut(action) {
+  if (action === 'menu') {
+    toggleTeacherMenu();
+    return;
+  }
+  if (action === 'classes') {
+    if (typeof window.toggleSidebar === 'function') window.toggleSidebar();
+    else window.location.href = "{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}";
+    return;
+  }
+  if (action === 'students') {
+    if (typeof window.setDashboardSection === 'function') window.setDashboardSection('liste');
+    else window.location.href = "{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}#ogrenci-listesi";
+  }
 }
 
 document.addEventListener('click', function (event) {
