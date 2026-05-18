@@ -15,6 +15,13 @@
   --ui-shadow-soft: 0 14px 38px rgba(15, 23, 42, .09);
 }
 
+html {
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+
 * {
   letter-spacing: 0;
 }
@@ -50,6 +57,7 @@
 body.ui-theme,
 body.app-background {
   min-height: 100vh;
+  min-height: 100svh !important;
   color: var(--ui-ink);
   background:
     linear-gradient(120deg, rgba(224, 242, 254, .9), rgba(236, 253, 245, .86) 46%, rgba(255, 247, 237, .88)),
@@ -58,6 +66,12 @@ body.app-background {
   background-size: 240% 240%, 34px 34px, 34px 34px !important;
   animation: ui-page-shift 26s ease-in-out infinite;
   overflow-x: hidden;
+}
+
+body.ui-theme .min-h-screen,
+body.app-background .min-h-screen {
+  min-height: 100vh;
+  min-height: 100svh !important;
 }
 
 body.ui-theme::before,

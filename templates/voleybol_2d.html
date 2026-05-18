@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>2D Voleybol Motoru (Pro)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -39,8 +39,9 @@
     }
     #game-container {
       position: relative;
-      width: 100dvw;
-      height: 100dvh;
+      width: 100vw;
+      height: 100vh;
+      height: 100svh;
       min-height: 100svh;
       display: flex;
       flex-direction: column;
@@ -201,13 +202,13 @@
       #event-overlay {
         top: auto;
         bottom: 8px;
-        width: calc(100dvw - 16px);
+        width: calc(100vw - 16px);
         padding: 8px 10px;
         font-size: 12px;
       }
       #audio-banner {
         bottom: 8px;
-        width: min(300px, calc(100dvw - 16px));
+        width: min(300px, calc(100vw - 16px));
         padding: 8px 12px;
         text-align: center;
       }

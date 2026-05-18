@@ -2,14 +2,14 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>⚽ Taktik Tahtası — {{ sinif_adi }}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-    html{height:100%;overflow:hidden;overscroll-behavior:none;}
+    html{min-height:100%;overflow:hidden;overscroll-behavior:none;}
     body{background:#05090f;font-family:'Segoe UI',system-ui,sans-serif;
-         width:100dvw;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+         width:100vw;height:100vh;height:100svh;display:flex;flex-direction:column;overflow:hidden;}
 
     /* ── Saha ── */
     #saha-wrap{
@@ -586,7 +586,7 @@
 <div id="rol-modal" class="fixed inset-0 z-50 items-end sm:items-center justify-center"
      style="background:rgba(0,0,0,.82)">
   <div class="w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl overflow-hidden flex flex-col"
-       style="background:#0f172a;border:1px solid #1e3a5f;max-height:80vh">
+       style="background:#0f172a;border:1px solid #1e3a5f;max-height:calc(100svh - 16px)">
     <div class="flex items-center justify-between px-4 py-3 flex-shrink-0" style="background:#0d2244">
       <div>
         <div class="text-white font-black text-sm" id="rol-oyuncu-adi">Oyuncu</div>
