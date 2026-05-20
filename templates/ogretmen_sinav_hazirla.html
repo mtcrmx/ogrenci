@@ -11,8 +11,9 @@
         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Sınıf, ders ve kazanımları seç; soru dağılımını otomatik oluştur; cevap alanlı yazdırılabilir sınav taslağını tek yerden hazırla.
         </p>
-      </div>
-      <div class="grid grid-cols-3 gap-2 text-center">
+        </div>
+      <div class="grid gap-3">
+        <div class="grid grid-cols-3 gap-2 text-center">
         <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
           <div class="text-[10px] font-black uppercase text-slate-500">Soru</div>
           <div class="mt-1 text-2xl font-black text-slate-950" id="metric-soru">0</div>
@@ -26,11 +27,20 @@
           <div class="mt-1 text-2xl font-black text-sky-700" id="metric-kazanim">0</div>
         </div>
       </div>
+        <button type="button" class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-800" data-server-save>
+          <span data-save-label>Kaydet</span>
+        </button>
+    </div>
     </div>
   </header>
 
   <div class="no-print sticky top-14 z-20 -mx-1 mt-3 overflow-x-auto border-y border-slate-200 bg-slate-100/95 px-1 py-2 backdrop-blur">
-    <nav class="flex min-w-max gap-1" id="exam-tabs"></nav>
+    <div class="flex min-w-max items-center gap-2">
+      <nav class="flex gap-1" id="exam-tabs"></nav>
+      <button type="button" class="sticky right-1 inline-flex shrink-0 items-center justify-center rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-800" data-server-save>
+        <span data-save-label>Kaydet</span>
+      </button>
+    </div>
   </div>
 
   <section id="panel-bilgi" class="exam-panel mt-3"></section>
@@ -1293,6 +1303,11 @@
     document.getElementById("metric-puan").textContent = String(total);
     document.getElementById("metric-kazanim").textContent = String(state.kazanimlar.length);
   }
+  function updateSaveButtons() {
+    document.querySelectorAll("[data-save-label]").forEach((el) => {
+      el.textContent = currentKayitId ? "Güncelle" : "Kaydet";
+    });
+  }
   function renderAll() {
     normalize();
     document.getElementById("exam-tabs").innerHTML = tabHtml();
@@ -1304,6 +1319,7 @@
     if (activeTab === "onizleme") renderPreview();
     if (activeTab === "kayit") renderKayit();
     renderMetrics();
+    updateSaveButtons();
   }
   async function loadCurriculum() {
     try {
