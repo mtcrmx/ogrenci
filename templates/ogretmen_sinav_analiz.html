@@ -260,6 +260,11 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.sebep || "Kayıtlar alınamadı.");
       serverKayitlar = Array.isArray(j.kayitlar) ? j.kayitlar : [];
+      if (currentKayitId && !serverKayitlar.some((k) => String(k.id) === String(currentKayitId))) {
+        currentKayitId = null;
+        localStorage.removeItem(LS_KEY + "_server_id");
+        updateKayitStatus();
+      }
       if (!box) return;
       box.innerHTML = serverKayitlar.length
         ? serverKayitlar.map(kayitKarti).join("")
@@ -1566,6 +1571,7 @@
   showPanel();
   renderActivePanel();
   updateKayitStatus();
+  kayitlariYukle().then(updateKayitStatus).catch((e) => console.warn(e));
   fetchCurriculum()
     .then(() => {
       if (activeTab === "soru") renderActivePanel();

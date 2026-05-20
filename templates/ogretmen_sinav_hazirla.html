@@ -1334,6 +1334,11 @@
       const r = await fetch(API_KAYITLAR, { credentials: "same-origin" });
       const j = await r.json();
       serverKayitlar = Array.isArray(j.kayitlar) ? j.kayitlar : [];
+      if (currentKayitId && !serverKayitlar.some((k) => String(k.id) === String(currentKayitId))) {
+        currentKayitId = null;
+        localStorage.removeItem(LS_KEY + "_server_id");
+        updateSaveButtons();
+      }
     } catch (e) {
       serverKayitlar = [];
     }

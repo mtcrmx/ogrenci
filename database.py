@@ -4500,15 +4500,7 @@ def sinav_analiz_kaydet(
             (kid, ogretmen_id),
         ).fetchone()
         if not var:
-            ortak_kayit = con.execute(
-                "SELECT id FROM sinav_analiz_kayitlari WHERE id = ?",
-                (kid,),
-            ).fetchone()
-            if ortak_kayit:
-                kid = None
-            else:
-                con.close()
-                return {"ok": False, "sebep": "Kayıt bulunamadı."}
+            kid = None
     if kid:
         con.execute("""
             UPDATE sinav_analiz_kayitlari
@@ -4647,15 +4639,7 @@ def sinav_hazirlama_kaydet(
             (kid, ogretmen_id),
         ).fetchone()
         if not var:
-            ortak_kayit = con.execute(
-                "SELECT id FROM sinav_hazirlama_kayitlari WHERE id = ?",
-                (kid,),
-            ).fetchone()
-            if ortak_kayit:
-                kid = None
-            else:
-                con.close()
-                return {"ok": False, "sebep": "Kayıt bulunamadı."}
+            kid = None
     if kid:
         con.execute("""
             UPDATE sinav_hazirlama_kayitlari
