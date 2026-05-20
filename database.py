@@ -4453,10 +4453,13 @@ def _sinav_analiz_text(value, limit: int = 240) -> str:
 
 
 def _sinav_analiz_row(row: sqlite3.Row | dict) -> dict:
+    keys = set(row.keys()) if hasattr(row, "keys") else set(row)
     return {
         "id": int(row["id"]),
         "olusturma": row["olusturma"],
         "guncelleme": row["guncelleme"],
+        "ogretmen_id": int(row["ogretmen_id"]) if "ogretmen_id" in keys and row["ogretmen_id"] is not None else None,
+        "ogretmen_adi": (row["ogretmen_adi"] or "") if "ogretmen_adi" in keys else "",
         "baslik": row["baslik"],
         "sinif_id": row["sinif_id"],
         "sinif_adi": row["sinif_adi"] or "",
@@ -4497,8 +4500,16 @@ def sinav_analiz_kaydet(
             (kid, ogretmen_id),
         ).fetchone()
         if not var:
-            con.close()
-            return {"ok": False, "sebep": "Kayıt bulunamadı."}
+            ortak_kayit = con.execute(
+                "SELECT id FROM sinav_analiz_kayitlari WHERE id = ?",
+                (kid,),
+            ).fetchone()
+            if ortak_kayit:
+                kid = None
+            else:
+                con.close()
+                return {"ok": False, "sebep": "Kayıt bulunamadı."}
+    if kid:
         con.execute("""
             UPDATE sinav_analiz_kayitlari
             SET guncelleme = ?, ogretmen_adi = ?, baslik = ?, sinif_id = ?,
@@ -4541,7 +4552,7 @@ def sinav_analiz_kaydet(
 
     con.commit()
     row = con.execute("""
-        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
         FROM sinav_analiz_kayitlari
         WHERE id = ? AND ogretmen_id = ?
     """, (kid, ogretmen_id)).fetchone()
@@ -4553,12 +4564,11 @@ def sinav_analiz_listesi(ogretmen_id: int, limit: int = 50) -> list[dict]:
     con = _conn()
     _sinav_analiz_init(con)
     rows = [dict(r) for r in con.execute("""
-        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
         FROM sinav_analiz_kayitlari
-        WHERE ogretmen_id = ?
         ORDER BY guncelleme DESC, id DESC
         LIMIT ?
-    """, (ogretmen_id, max(1, min(int(limit or 50), 200)))).fetchall()]
+    """, (max(1, min(int(limit or 50), 200)),)).fetchall()]
     con.close()
     return [_sinav_analiz_row(r) for r in rows]
 
@@ -4567,11 +4577,11 @@ def sinav_analiz_oku(kayit_id: int, ogretmen_id: int) -> dict | None:
     con = _conn()
     _sinav_analiz_init(con)
     row = con.execute("""
-        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi,
+        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi,
                egitim_yili, state_json
         FROM sinav_analiz_kayitlari
-        WHERE id = ? AND ogretmen_id = ?
-    """, (kayit_id, ogretmen_id)).fetchone()
+        WHERE id = ?
+    """, (kayit_id,)).fetchone()
     con.close()
     return dict(row) if row else None
 
@@ -4590,10 +4600,13 @@ def sinav_analiz_sil(kayit_id: int, ogretmen_id: int) -> dict:
 
 
 def _sinav_hazirlama_row(row: sqlite3.Row | dict) -> dict:
+    keys = set(row.keys()) if hasattr(row, "keys") else set(row)
     return {
         "id": int(row["id"]),
         "olusturma": row["olusturma"],
         "guncelleme": row["guncelleme"],
+        "ogretmen_id": int(row["ogretmen_id"]) if "ogretmen_id" in keys and row["ogretmen_id"] is not None else None,
+        "ogretmen_adi": (row["ogretmen_adi"] or "") if "ogretmen_adi" in keys else "",
         "baslik": row["baslik"],
         "sinif_id": row["sinif_id"],
         "sinif_adi": row["sinif_adi"] or "",
@@ -4634,8 +4647,16 @@ def sinav_hazirlama_kaydet(
             (kid, ogretmen_id),
         ).fetchone()
         if not var:
-            con.close()
-            return {"ok": False, "sebep": "Kayıt bulunamadı."}
+            ortak_kayit = con.execute(
+                "SELECT id FROM sinav_hazirlama_kayitlari WHERE id = ?",
+                (kid,),
+            ).fetchone()
+            if ortak_kayit:
+                kid = None
+            else:
+                con.close()
+                return {"ok": False, "sebep": "Kayıt bulunamadı."}
+    if kid:
         con.execute("""
             UPDATE sinav_hazirlama_kayitlari
             SET guncelleme = ?, ogretmen_adi = ?, baslik = ?, sinif_id = ?,
@@ -4678,7 +4699,7 @@ def sinav_hazirlama_kaydet(
 
     con.commit()
     row = con.execute("""
-        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
         FROM sinav_hazirlama_kayitlari
         WHERE id = ? AND ogretmen_id = ?
     """, (kid, ogretmen_id)).fetchone()
@@ -4690,12 +4711,11 @@ def sinav_hazirlama_listesi(ogretmen_id: int, limit: int = 50) -> list[dict]:
     con = _conn()
     _sinav_hazirlama_init(con)
     rows = [dict(r) for r in con.execute("""
-        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
         FROM sinav_hazirlama_kayitlari
-        WHERE ogretmen_id = ?
         ORDER BY guncelleme DESC, id DESC
         LIMIT ?
-    """, (ogretmen_id, max(1, min(int(limit or 50), 200)))).fetchall()]
+    """, (max(1, min(int(limit or 50), 200)),)).fetchall()]
     con.close()
     return [_sinav_hazirlama_row(r) for r in rows]
 
@@ -4704,11 +4724,11 @@ def sinav_hazirlama_oku(kayit_id: int, ogretmen_id: int) -> dict | None:
     con = _conn()
     _sinav_hazirlama_init(con)
     row = con.execute("""
-        SELECT id, olusturma, guncelleme, baslik, sinif_id, sinif_adi, ders, sinav_adi,
+        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi,
                egitim_yili, state_json
         FROM sinav_hazirlama_kayitlari
-        WHERE id = ? AND ogretmen_id = ?
-    """, (kayit_id, ogretmen_id)).fetchone()
+        WHERE id = ?
+    """, (kayit_id,)).fetchone()
     con.close()
     return dict(row) if row else None
 

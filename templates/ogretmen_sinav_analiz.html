@@ -233,6 +233,8 @@
   function kayitKarti(k) {
     const current = currentKayitId && Number(k.id) === Number(currentKayitId);
     const alt = [k.sinif_adi, k.ders, k.sinav_adi, k.egitim_yili].filter(Boolean).join(" · ");
+    const own = !k.ogretmen_adi || k.ogretmen_adi === OGRETMEN_ADI;
+    const owner = k.ogretmen_adi ? `Kaydeden: ${k.ogretmen_adi}` : "";
     return `
       <div class="rounded-xl border ${current ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"} p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div class="min-w-0">
@@ -241,11 +243,11 @@
             ${current ? '<span class="rounded-full bg-emerald-700 px-2 py-0.5 text-[10px] font-black text-white">Açık</span>' : ""}
           </div>
           <p class="text-xs text-slate-500 mt-1">${esc(alt || "Bilgi girilmemiş")}</p>
-          <p class="text-[11px] text-slate-400 mt-1">Son kayıt: ${esc(k.guncelleme || k.olusturma || "")}</p>
+          <p class="text-[11px] text-slate-400 mt-1">Son kayıt: ${esc(k.guncelleme || k.olusturma || "")}${owner ? " · " + esc(owner) : ""}</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" data-load-kayit="${k.id}" class="rounded-lg bg-okul-800 text-white text-xs font-bold px-3 py-2">Aç</button>
-          <button type="button" data-delete-kayit="${k.id}" class="rounded-lg border border-red-200 text-red-700 text-xs font-bold px-3 py-2">Sil</button>
+          ${own ? `<button type="button" data-delete-kayit="${k.id}" class="rounded-lg border border-red-200 text-red-700 text-xs font-bold px-3 py-2">Sil</button>` : ""}
         </div>
       </div>`;
   }
