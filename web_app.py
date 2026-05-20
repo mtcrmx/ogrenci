@@ -1479,6 +1479,12 @@ def _sinav_hazirlama_analiz_kaydi_bul(ogretmen_id: int, hazirlama_kayit_id: int 
 
 
 def _hazirlik_sorusunu_analiz_sorusuna(soru: dict, idx: int) -> dict:
+    try:
+        no = int(soru.get("no") or 0)
+    except (TypeError, ValueError):
+        no = 0
+    if no <= 0:
+        no = idx + 1
     metin = (
         str(soru.get("kazanim") or "").strip()
         or str(soru.get("kazanimText") or "").strip()
@@ -1497,6 +1503,12 @@ def _hazirlik_sorusunu_analiz_sorusuna(soru: dict, idx: int) -> dict:
     soru_id = str(soru.get("id") or f"hazirlik_{idx + 1}").strip()
     return {
         "id": soru_id,
+        "no": no,
+        "hazirlamaSoruId": soru_id,
+        "soruMetni": str(soru.get("metin") or "").strip(),
+        "kazanimKey": str(soru.get("kazanimKey") or "").strip(),
+        "bilissel": str(soru.get("bilissel") or "").strip(),
+        "tip": str(soru.get("tip") or "").strip(),
         "unite": konu,
         "konu": konu,
         "metin": metin,
@@ -1738,7 +1750,11 @@ def api_sinav_hazirlama_kaydet():
             kayit_id=analiz_kayit_id,
         )
         if analiz_sonuc.get("ok"):
-            sonuc["analiz_kayit"] = analiz_sonuc.get("kayit") or {}
+            analiz_kayit = analiz_sonuc.get("kayit") or {}
+            sonuc["analiz_kayit"] = analiz_kayit
+            if analiz_kayit.get("id"):
+                analiz_state.setdefault("meta", {})["analizKayitId"] = int(analiz_kayit["id"])
+            sonuc["analiz_state"] = analiz_state
         else:
             sonuc["analiz_hata"] = analiz_sonuc.get("sebep") or "Analiz kaydı oluşturulamadı."
     return jsonify(sonuc)

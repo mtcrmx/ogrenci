@@ -128,6 +128,15 @@
     if (!state.sorular || typeof state.sorular !== "object") state.sorular = {};
     ["yazili", "dinleme", "konusma"].forEach((k) => {
       if (!Array.isArray(state.sorular[k])) state.sorular[k] = [];
+      state.sorular[k] = state.sorular[k].map((q, idx) => {
+        const item = q && typeof q === "object" ? q : {};
+        if (!item.id) item.id = uid("q");
+        const no = parseInt(item.no, 10);
+        item.no = Number.isFinite(no) && no > 0 ? no : idx + 1;
+        item.puan = Math.max(0, parseFloat(item.puan) || 0);
+        item.metin = String(item.metin || "");
+        return item;
+      });
     });
     if (!state.notlar || typeof state.notlar !== "object") state.notlar = {};
     mergeMetaDefaults();
@@ -261,7 +270,7 @@
     }
   }
 
-  async function sunucuKaydiYukle(id) {
+  async function sunucuKaydiYukle(id, silent) {
     if (!id) return;
     try {
       const r = await fetch(API_KAYIT(id), { credentials: "same-origin" });
@@ -276,9 +285,10 @@
       showPanel();
       renderActivePanel();
       updateKayitStatus();
-      alert("Kayıt açıldı.");
+      if (!silent) alert("Kayıt açıldı.");
     } catch (e) {
-      alert(e.message || String(e));
+      if (silent) console.warn(e);
+      else alert(e.message || String(e));
     }
   }
 
@@ -315,11 +325,16 @@
     return state.notlar[key];
   }
 
+  function soruNo(q, idx) {
+    const no = parseInt(q && q.no, 10);
+    return Number.isFinite(no) && no > 0 ? no : idx + 1;
+  }
+
   function flatQuestions() {
     const out = [];
     ["yazili", "dinleme", "konusma"].forEach((tur) => {
       (state.sorular[tur] || []).forEach((q, idx) => {
-        out.push({ tur, q, idx, colId: tur[0] + "_" + q.id });
+        out.push({ tur, q, idx, no: soruNo(q, idx), colId: tur[0] + "_" + q.id });
       });
     });
     return out;
@@ -391,7 +406,7 @@
         const got = v != null && v !== "" && !isNaN(Number(v)) ? Number(v) : null;
         if (got === null || got < max) {
           items.push({
-            soruEtiketi: `${TUR_RAPOR_BASLIK[c.tur] || c.tur} ${c.idx + 1}. soru`,
+            soruEtiketi: `${TUR_RAPOR_BASLIK[c.tur] || c.tur} ${c.no}. soru`,
             metin: soruAnalizMetni(c.q),
             alinan: got,
             tamPuan: max,
@@ -498,9 +513,8 @@
     const kazanimBloklar = ["yazili", "dinleme", "konusma"].map((tur) => {
       const sorular = H.qStats.filter((x) => x.tur === tur);
       if (!sorular.length) return "";
-      let no = 0;
       const satirlar = sorular.map((q) => {
-        no++;
+        const no = q.no || soruNo(q.q, q.idx);
         return `<tr>
           <td style="text-align:center">${no}</td>
           <td>${esc(q.q.metin || "")}</td>
@@ -709,6 +723,7 @@
   function soruEkle(tur, metin, puan, meta) {
     const q = {
       id: uid("q"),
+      no: state.sorular[tur].length + 1,
       unite: (meta && meta.unite) || "",
       konu: (meta && meta.konu) || "",
       metin: metin || "",
@@ -933,6 +948,7 @@
     const satirlar = liste
       .map((q, idx) => {
         return `<tr class="border-t border-slate-100 align-top">
+          <td class="p-2 w-20 whitespace-nowrap text-[11px] font-black text-slate-600">Soru ${esc(soruNo(q, idx))}</td>
           <td class="p-2 w-16"><input type="number" min="0" class="${inputClass(true)}" value="${q.puan}" data-sq-idx="${idx}" data-sq-k="puan"/></td>
           <td class="p-2 min-w-[320px]"><textarea class="${inputClass(true)} min-h-[56px]" data-sq-idx="${idx}" data-sq-k="metin" placeholder="Öğrenme çıktısı">${esc(q.metin || "")}</textarea></td>
           <td class="p-2 w-10"><button type="button" data-sq-del="${idx}" class="text-red-600 font-bold text-lg leading-none" title="Sil">×</button></td>
@@ -969,8 +985,8 @@
         </div>
         <div class="overflow-x-auto border border-slate-200 rounded-xl">
           <table class="min-w-full text-xs">
-            <thead><tr class="bg-slate-100 text-left font-bold text-slate-700"><th class="p-2 w-20">Puan</th><th class="p-2">Öğrenme çıktısı</th><th class="p-2 w-8"></th></tr></thead>
-            <tbody>${satirlar || `<tr><td colspan="3" class="p-4 text-center text-slate-500">Henüz öğrenme çıktısı yok.</td></tr>`}</tbody>
+            <thead><tr class="bg-slate-100 text-left font-bold text-slate-700"><th class="p-2 w-20">Soru</th><th class="p-2 w-20">Puan</th><th class="p-2">Öğrenme çıktısı</th><th class="p-2 w-8"></th></tr></thead>
+            <tbody>${satirlar || `<tr><td colspan="4" class="p-4 text-center text-slate-500">Henüz öğrenme çıktısı yok.</td></tr>`}</tbody>
           </table>
         </div>
       </div>`;
@@ -1085,7 +1101,7 @@
         const tam = soruAnalizMetni(c.q);
         const k = kisaMetin(tam, 18);
         return `<th class="p-1 border border-slate-200 bg-slate-50 font-bold text-[10px] align-bottom whitespace-nowrap" title="${esc(tam)}">${
-          esc(c.tur[0].toUpperCase()) + (c.idx + 1)
+          esc(c.tur[0].toUpperCase()) + c.no
         }<br/><span class="font-normal text-slate-500">${esc(k)}</span></th>`;
       })
       .join("");
@@ -1271,7 +1287,10 @@
     showPanel();
     renderActivePanel();
   });
-  if (state.meta.sinifId && state.ogrenciler.length === 0) {
+  const baslangicKayitId = Number(new URLSearchParams(window.location.search).get("kayit") || 0);
+  if (Number.isFinite(baslangicKayitId) && baslangicKayitId > 0) {
+    sunucuKaydiYukle(baslangicKayitId, true);
+  } else if (state.meta.sinifId && state.ogrenciler.length === 0) {
     sinifListesiYukle();
   }
 })();

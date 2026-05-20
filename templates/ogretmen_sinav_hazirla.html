@@ -272,15 +272,41 @@
     .choice-row { grid-template-columns: 36px minmax(0, 1fr); }
     .choice-row button { grid-column: 2; }
   }
+  @page { margin: 0; }
   @media print {
-    body { background: #fff !important; }
+    html,
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: #fff !important;
+    }
     body > header,
     .teacher-mobile-tabbar,
     #exam-tabs,
     .no-print { display: none !important; }
-    main { max-width: none !important; padding: 0 !important; }
+    main {
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: #fff !important;
+    }
     .exam-card { box-shadow: none !important; border: 0 !important; }
-    .exam-print { display: block !important; }
+    .exam-print,
+    #exam-print-area {
+      display: block !important;
+      margin: 0 !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      padding: 0 !important;
+    }
     .question-media-preview { break-inside: avoid; page-break-inside: avoid; }
     .question-image { max-height: 260px; }
     .student-answer-space { break-inside: avoid; page-break-inside: avoid; }
@@ -296,6 +322,8 @@
   const API_KAYDET = "/api/sinav-hazirlama/kaydet";
   const API_KAYIT = (id) => "/api/sinav-hazirlama/kayit/" + id;
   const API_KAYIT_SIL = (id) => "/api/sinav-hazirlama/kayit/" + id + "/sil";
+  const ANALIZ_LS_KEY = "eco_sinav_analiz_v2";
+  const ANALIZ_URL = "/ogretmen/sinav-analiz";
   const SINIFLAR = {{ siniflar | default([]) | tojson }};
   const DERSLER = {{ dersler | default([]) | tojson }};
   const OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
@@ -1153,6 +1181,10 @@
           <div><h2 class="text-lg font-black text-slate-950">Kayıtlar</h2><p class="text-xs text-slate-500">Hazırladığınız sınavlar öğretmen hesabınıza kaydedilir.</p></div>
           <button type="button" class="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white" data-server-save>${currentKayitId ? "Güncelle" : "Kaydet"}</button>
         </div>
+        ${state.meta.analizKayitId ? `<div class="mt-3 flex flex-col gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 sm:flex-row sm:items-center sm:justify-between">
+          <span><b>Sınav analizi hazır.</b> Sorular, kazanımlar ve puanlar analiz ekranına aktarıldı.</span>
+          <a class="rounded-lg bg-emerald-700 px-3 py-2 text-center font-black text-white" href="${ANALIZ_URL}?kayit=${esc(state.meta.analizKayitId)}">Sınav analizinde aç</a>
+        </div>` : ""}
         <div class="mt-3 grid gap-2" id="kayit-listesi">
           ${serverKayitlar.length ? serverKayitlar.map(kayitCard).join("") : `<div class="rounded-lg border border-dashed border-slate-300 p-5 text-sm text-slate-500">Henüz kayıt yok.</div>`}
         </div>
@@ -1222,6 +1254,10 @@
     if (j.analiz_kayit && j.analiz_kayit.id) state.meta.analizKayitId = j.analiz_kayit.id;
     localStorage.setItem(LS_KEY + "_server_id", String(currentKayitId));
     localStorage.setItem(LS_KEY, JSON.stringify(state));
+    if (j.analiz_state && j.analiz_kayit && j.analiz_kayit.id) {
+      localStorage.setItem(ANALIZ_LS_KEY, JSON.stringify(j.analiz_state));
+      localStorage.setItem(ANALIZ_LS_KEY + "_server_id", String(j.analiz_kayit.id));
+    }
     await kayitlariYukle();
     renderAll();
   }
