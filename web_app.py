@@ -1451,6 +1451,14 @@ def _sinav_hazirlama_baslik(meta: dict) -> str:
     return " · ".join([p for p in parcalar if p]) or "Sınav hazırlığı"
 
 
+def _payload_kayit_id(veri: dict) -> int | None:
+    try:
+        kayit_id = int(veri.get("id") or veri.get("kayit_id") or 0)
+    except (TypeError, ValueError):
+        kayit_id = 0
+    return kayit_id if kayit_id > 0 else None
+
+
 def _sinav_analiz_default_notu() -> str:
     return (
         "Hata yapılan soruların ait olduğu öğrenme çıktılarının tekrarı için 2 ders saati süre ayrılmıştır. "
@@ -1606,7 +1614,9 @@ def api_sinav_analiz_kaydet():
         sinif_id_int = int(sinif_id) if sinif_id not in (None, "", 0, "0") else None
     except (TypeError, ValueError):
         sinif_id_int = None
-    if sinif_id_int and not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int):
+    kayit_id = _payload_kayit_id(veri)
+    paylasimli_kayit = bool(kayit_id and sinav_analiz_oku(kayit_id, session["ogretmen_id"]))
+    if sinif_id_int and not paylasimli_kayit and not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int):
         return jsonify({"ok": False, "sebep": "Bu sınıfa erişim yetkiniz yok."}), 403
 
     try:
@@ -1624,7 +1634,7 @@ def api_sinav_analiz_kaydet():
         ders=meta.get("ders") or "",
         sinav_adi=meta.get("sinavAdi") or "",
         egitim_yili=meta.get("egitimYili") or "",
-        kayit_id=veri.get("id") or veri.get("kayit_id"),
+        kayit_id=kayit_id,
     )
     if not sonuc.get("ok"):
         return jsonify(sonuc), 404
@@ -1679,7 +1689,9 @@ def api_sinav_hazirlama_kaydet():
         sinif_id_int = int(sinif_id) if sinif_id not in (None, "", 0, "0") else None
     except (TypeError, ValueError):
         sinif_id_int = None
-    if sinif_id_int and not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int):
+    kayit_id = _payload_kayit_id(veri)
+    paylasimli_kayit = bool(kayit_id and sinav_hazirlama_oku(kayit_id, session["ogretmen_id"]))
+    if sinif_id_int and not paylasimli_kayit and not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int):
         return jsonify({"ok": False, "sebep": "Bu sınıfa erişim yetkiniz yok."}), 403
 
     try:
@@ -1697,7 +1709,7 @@ def api_sinav_hazirlama_kaydet():
         ders=meta.get("ders") or "",
         sinav_adi=meta.get("sinavAdi") or "",
         egitim_yili=meta.get("egitimYili") or "",
-        kayit_id=veri.get("id") or veri.get("kayit_id"),
+        kayit_id=kayit_id,
     )
     if not sonuc.get("ok"):
         return jsonify(sonuc), 404

@@ -1323,28 +1323,29 @@
     }
   }
   async function sunucuyaKaydet() {
-    const r = await fetch(API_KAYDET, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
-      credentials: "same-origin",
-      body: JSON.stringify({ id: currentKayitId, state }),
-    });
-    const j = await r.json();
-    if (!j.ok) {
-      alert(j.sebep || "Kayıt yapılamadı.");
-      return;
+    try {
+      const r = await fetch(API_KAYDET, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin",
+        body: JSON.stringify({ id: currentKayitId, state }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.sebep || "Kayıt yapılamadı.");
+      currentKayitId = j.kayit.id;
+      state.meta.hazirlamaKayitId = j.kayit.id;
+      if (j.analiz_kayit && j.analiz_kayit.id) state.meta.analizKayitId = j.analiz_kayit.id;
+      localStorage.setItem(LS_KEY + "_server_id", String(currentKayitId));
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      if (j.analiz_state && j.analiz_kayit && j.analiz_kayit.id) {
+        localStorage.setItem(ANALIZ_LS_KEY, JSON.stringify(j.analiz_state));
+        localStorage.setItem(ANALIZ_LS_KEY + "_server_id", String(j.analiz_kayit.id));
+      }
+      await kayitlariYukle();
+      renderAll();
+    } catch (e) {
+      alert(e.message || String(e));
     }
-    currentKayitId = j.kayit.id;
-    state.meta.hazirlamaKayitId = j.kayit.id;
-    if (j.analiz_kayit && j.analiz_kayit.id) state.meta.analizKayitId = j.analiz_kayit.id;
-    localStorage.setItem(LS_KEY + "_server_id", String(currentKayitId));
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
-    if (j.analiz_state && j.analiz_kayit && j.analiz_kayit.id) {
-      localStorage.setItem(ANALIZ_LS_KEY, JSON.stringify(j.analiz_state));
-      localStorage.setItem(ANALIZ_LS_KEY + "_server_id", String(j.analiz_kayit.id));
-    }
-    await kayitlariYukle();
-    renderAll();
   }
   async function kayitAc(id) {
     const r = await fetch(API_KAYIT(id), { credentials: "same-origin" });
