@@ -112,6 +112,9 @@
   let activeTab = "bilgi";
   let currentKayitId = null;
   let serverKayitlar = [];
+  let excelPasteOpen = true;
+  let excelPasteText = "";
+  let excelImportMessage = "";
 
   function mergeMetaDefaults() {
     const d = defaultState().meta;
@@ -714,6 +717,17 @@
     renderActivePanel();
   }
 
+  function ogrenciSatirSil(i) {
+    const removed = state.ogrenciler[i];
+    if (!removed) return;
+    const sk = studentKey(removed);
+    state.ogrenciler.splice(i, 1);
+    delete state.notlar[sk];
+    state.ogrenciler.forEach((o, idx) => { o.sira = idx + 1; });
+    scheduleSave();
+    renderActivePanel();
+  }
+
   function patchOgrenci(i, k, v) {
     if (!state.ogrenciler[i]) return;
     state.ogrenciler[i][k] = v;
@@ -760,6 +774,149 @@
     if (v === "" || v == null) delete bag[colId];
     else bag[colId] = v;
     scheduleSave();
+  }
+
+  function temizOgrNo(v) {
+    return String(v ?? "")
+      .trim()
+      .replace(/\.0$/, "")
+      .replace(/[^\dA-Za-z]/g, "")
+      .toUpperCase();
+  }
+
+  function puanDegeri(v, max) {
+    const raw = String(v ?? "").trim();
+    if (!raw) return { empty: true };
+    if (/^(g|k|kat[iı]lmad[iı]|gelmedi)$/i.test(raw)) return { absent: true };
+    const cleaned = raw.replace(",", ".").replace(/[^\d.-]/g, "");
+    if (!cleaned) return { empty: true };
+    const n = Number(cleaned);
+    if (!Number.isFinite(n)) return { invalid: true, raw };
+    const ust = Number(max);
+    const clipped = Number.isFinite(ust) && ust > 0 ? Math.min(Math.max(n, 0), ust) : Math.max(n, 0);
+    return { value: clipped, clipped: clipped !== n };
+  }
+
+  function excelSatirHucreleri(line) {
+    const text = String(line || "").trim();
+    if (!text) return [];
+    if (text.includes("\t")) return text.split("\t").map((x) => x.trim());
+    if (text.includes(";")) return text.split(";").map((x) => x.trim());
+    return text.split(/\s+/).map((x) => x.trim());
+  }
+
+  function ogrenciPuanOzeti(o, fq) {
+    if (!o || o.katilmadi) return { total: 0, any: false, label: "G" };
+    const sk = studentKey(o);
+    let total = 0;
+    let any = false;
+    fq.forEach((c) => {
+      const v = state.notlar[sk] && state.notlar[sk][c.colId];
+      if (v !== "" && v != null && Number.isFinite(Number(v))) {
+        total += Number(v);
+        any = true;
+      }
+    });
+    return { total, any, label: any ? String(Math.round(total * 100) / 100) : "G" };
+  }
+
+  function excelPuanlariniIsle(raw) {
+    const fq = flatQuestions();
+    const rows = String(raw || "").split(/\r?\n/).map((r) => r.trim()).filter(Boolean);
+    if (!state.ogrenciler.length) {
+      excelImportMessage = "Önce sınıf listesini yükleyin.";
+      renderActivePanel();
+      return;
+    }
+    if (!fq.length) {
+      excelImportMessage = "Önce öğrenme çıktısı / soru kolonlarını oluşturun.";
+      renderActivePanel();
+      return;
+    }
+    if (!rows.length) {
+      excelImportMessage = "Excel’den kopyaladığınız satırları kutuya yapıştırın.";
+      renderActivePanel();
+      return;
+    }
+
+    const ogrByNo = new Map();
+    state.ogrenciler.forEach((o) => {
+      const key = temizOgrNo(o.ogrNo);
+      if (key) ogrByNo.set(key, o);
+    });
+
+    let matched = 0;
+    let scoreCount = 0;
+    let absentCount = 0;
+    let clippedCount = 0;
+    const missing = [];
+    const invalid = [];
+
+    rows.forEach((line, rowIdx) => {
+      const cells = excelSatirHucreleri(line);
+      if (!cells.length) return;
+      let noKey = temizOgrNo(cells[0]);
+      let ogr = ogrByNo.get(noKey);
+      let noCellIndex = 0;
+      if (!ogr && cells.length > 1) {
+        const ikinciNo = temizOgrNo(cells[1]);
+        const ikinciOgr = ogrByNo.get(ikinciNo);
+        if (ikinciOgr) {
+          noKey = ikinciNo;
+          ogr = ikinciOgr;
+          noCellIndex = 1;
+        }
+      }
+      if (!ogr) {
+        missing.push(cells[0] || `${rowIdx + 1}. satır`);
+        return;
+      }
+      matched += 1;
+      const sk = studentKey(ogr);
+      const bag = ensureNotlar(sk);
+      let absent = false;
+      let scoreStart = noCellIndex + 1;
+      if (fq.length && cells.length > scoreStart + 1) {
+        const ilkAday = puanDegeri(cells[scoreStart], fq[0].q.puan);
+        const sonrakiAday = puanDegeri(cells[scoreStart + 1], fq[0].q.puan);
+        if (ilkAday.invalid && !sonrakiAday.invalid) scoreStart += 1;
+      }
+      fq.forEach((c, idx) => {
+        const cell = cells[idx + scoreStart];
+        const parsed = puanDegeri(cell, c.q.puan);
+        if (parsed.absent) {
+          absent = true;
+          return;
+        }
+        if (parsed.empty || cell === undefined) return;
+        if (parsed.invalid) {
+          invalid.push(`${ogr.ogrNo} / S${idx + 1}: ${parsed.raw}`);
+          return;
+        }
+        bag[c.colId] = String(parsed.value);
+        scoreCount += 1;
+        if (parsed.clipped) clippedCount += 1;
+      });
+      if (absent) {
+        ogr.katilmadi = true;
+        Object.keys(bag).forEach((k) => delete bag[k]);
+        absentCount += 1;
+      } else {
+        ogr.katilmadi = false;
+      }
+    });
+    state.meta.sinavaKatilan = String(state.ogrenciler.filter((o) => !o.katilmadi).length);
+
+    excelImportMessage = [
+      `${matched} öğrenci eşleşti`,
+      `${scoreCount} puan işlendi`,
+      absentCount ? `${absentCount} öğrenci G yapıldı` : "",
+      clippedCount ? `${clippedCount} puan soru üst sınırına çekildi` : "",
+      missing.length ? `Eşleşmeyen no: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "..." : ""}` : "",
+      invalid.length ? `Geçersiz değer: ${invalid.slice(0, 5).join(", ")}${invalid.length > 5 ? "..." : ""}` : "",
+    ].filter(Boolean).join(" · ");
+    scheduleSave();
+    renderActivePanel();
   }
 
   function renderTabs() {
@@ -1093,7 +1250,7 @@
     }
   }
 
-  function renderNot() {
+  function renderNotLegacy() {
     const el = document.getElementById("panel-not");
     const fq = flatQuestions();
     const head = fq
@@ -1155,6 +1312,138 @@
       btn.addEventListener("click", () => {
         notHucre(btn.getAttribute("data-n-set"), btn.getAttribute("data-n-col"), btn.getAttribute("data-n-val"));
         renderActivePanel();
+      });
+    });
+  }
+
+  function renderNot() {
+    const el = document.getElementById("panel-not");
+    const fq = flatQuestions();
+    const seciliSinif = String(state.meta.sinifId || "");
+    const excelOrder = `[Öğrenci No] ${fq.map((_, i) => `[S${i + 1}]`).join(" ") || "[Puan 1] [Puan 2]"}`;
+    const head = fq.map((c, idx) => {
+      const tam = soruAnalizMetni(c.q);
+      return `<th class="border border-slate-200 bg-slate-800 px-3 py-3 text-center text-white" title="${esc(tam)}">
+        <div class="text-sm font-black">S${idx + 1}</div>
+        <div class="mt-0.5 text-[10px] font-bold text-slate-300">${esc(c.q.puan)} p</div>
+      </th>`;
+    }).join("");
+    const body = state.ogrenciler.map((o, i) => {
+      const sk = studentKey(o);
+      const oz = ogrenciPuanOzeti(o, fq);
+      const cells = fq.map((c, idx) => {
+        const v = (state.notlar[sk] && state.notlar[sk][c.colId]) ?? "";
+        return `<td class="border border-slate-100 px-3 py-2 text-center">
+          <input class="h-10 w-20 rounded-lg border border-slate-300 bg-white px-2 text-center text-sm font-bold text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100"
+            data-not-score="${escAttr(sk)}" data-not-col="${escAttr(c.colId)}" data-not-max="${escAttr(c.q.puan)}" value="${escAttr(v)}" ${o.katilmadi ? "disabled" : ""} aria-label="S${idx + 1} puanı">
+        </td>`;
+      }).join("");
+      return `<tr class="${o.katilmadi ? "bg-slate-50 text-slate-500" : "bg-white"}">
+        <td class="border border-slate-100 px-3 py-2 text-center text-sm">${i + 1}</td>
+        <td class="border border-slate-100 px-3 py-2">
+          <input class="h-10 w-28 rounded-lg border border-slate-300 bg-white px-2 text-center text-sm font-bold text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" value="${escAttr(o.ogrNo)}" data-not-o="${i}" data-not-k="ogrNo">
+        </td>
+        <td class="border border-slate-100 px-3 py-2">
+          <input class="h-10 w-full min-w-[220px] rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" value="${escAttr(o.adSoyad)}" data-not-o="${i}" data-not-k="adSoyad">
+        </td>
+        ${cells}
+        <td class="border border-slate-100 px-3 py-2 text-center text-sm font-black ${oz.any ? "text-slate-900" : "text-slate-400"}">${esc(oz.label)}</td>
+        <td class="border border-slate-100 px-3 py-2 text-center">
+          <button type="button" class="rounded-lg bg-red-500 px-2.5 py-1.5 text-xs font-black text-white hover:bg-red-600" data-not-del="${i}">X</button>
+        </td>
+      </tr>`;
+    }).join("");
+    const pastePanel = excelPasteOpen ? `
+      <div class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-5">
+        <div class="text-center">
+          <div class="text-base font-black text-sky-700">Şu anki görünüme göre verileri kopyalayın:</div>
+          <div class="mt-1 text-sm font-semibold text-slate-700">${esc(excelOrder)} sıralamasıyla yapıştırın.</div>
+        </div>
+        <textarea id="excel-puan-ta" class="mt-3 h-36 w-full rounded-lg border-2 border-slate-900 bg-white p-3 font-mono text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100" placeholder="101&#9;80&#9;90&#9;70&#10;102&#9;75&#9;88&#9;91">${esc(excelPasteText)}</textarea>
+        <div class="mt-3 flex flex-wrap justify-center gap-2">
+          <button type="button" id="btn-excel-isle" class="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-black text-white hover:bg-sky-700">Puanları işle</button>
+          <button type="button" id="btn-excel-kapat" class="rounded-lg bg-slate-700 px-5 py-2.5 text-sm font-black text-white hover:bg-slate-800">Kapat</button>
+        </div>
+        ${excelImportMessage ? `<div class="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-center text-xs font-bold text-sky-900">${esc(excelImportMessage)}</div>` : ""}
+      </div>` : "";
+
+    el.innerHTML = `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex flex-wrap items-center gap-3">
+            <h2 class="text-lg font-black uppercase tracking-tight text-slate-800">🎓 BÖLÜM 2: ÖĞRENCİ LİSTESİ VE NOTLAR</h2>
+            <select id="not-sinif-select" class="rounded-lg border-2 border-red-400 bg-white px-4 py-2 text-base font-black text-red-700 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100">
+              <option value="">Sınıf seçin</option>
+              ${SINIFLAR.map((s) => `<option value="${s.id}" ${seciliSinif === String(s.id) ? "selected" : ""}>${esc(s.sinif_adi)}</option>`).join("")}
+            </select>
+          </div>
+          <button type="button" id="btn-excel-ac" class="rounded-lg bg-purple-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-purple-700">📋 Excel'den Puan Kopyala</button>
+        </div>
+        ${pastePanel}
+        <div class="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+          <table class="min-w-[900px] w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">No</th>
+                <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">Numara</th>
+                <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">Adı Soyadı</th>
+                ${head}
+                <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">PUAN</th>
+                <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">Sil</th>
+              </tr>
+            </thead>
+            <tbody>${body || `<tr><td colspan="${5 + fq.length}" class="p-5 text-center text-sm font-bold text-slate-500">Sınıf listesi boş. Sınıf seçip listeyi sistemden yükleyin.</td></tr>`}</tbody>
+          </table>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button type="button" id="btn-not-sinif-yukle" class="rounded-lg bg-okul-800 px-4 py-2 text-xs font-black text-white">Sistemden sınıfı yenile</button>
+          <button type="button" id="btn-not-ogr-ekle" class="rounded-lg border border-slate-300 px-4 py-2 text-xs font-black text-slate-700">Satır ekle</button>
+        </div>
+      </div>`;
+
+    el.querySelector("#btn-excel-ac")?.addEventListener("click", () => {
+      excelPasteOpen = true;
+      renderActivePanel();
+    });
+    el.querySelector("#btn-excel-kapat")?.addEventListener("click", () => {
+      excelPasteOpen = false;
+      renderActivePanel();
+    });
+    const ta = el.querySelector("#excel-puan-ta");
+    if (ta) ta.addEventListener("input", () => { excelPasteText = ta.value; });
+    el.querySelector("#btn-excel-isle")?.addEventListener("click", () => {
+      excelPasteText = ta ? ta.value : excelPasteText;
+      excelPuanlariniIsle(excelPasteText);
+    });
+    el.querySelector("#btn-not-sinif-yukle")?.addEventListener("click", () => sinifListesiYukle());
+    el.querySelector("#btn-not-ogr-ekle")?.addEventListener("click", () => ogrenciSatirEkle());
+    const sinifSel = el.querySelector("#not-sinif-select");
+    if (sinifSel) {
+      sinifSel.addEventListener("change", async () => {
+        state.meta.sinifId = parseInt(sinifSel.value, 10) || null;
+        syncSinifFromSelect();
+        await sinifListesiYukle();
+      });
+    }
+    el.querySelectorAll("[data-not-o]").forEach((inp) => {
+      const i = parseInt(inp.getAttribute("data-not-o"), 10);
+      const k = inp.getAttribute("data-not-k");
+      inp.addEventListener("input", () => patchOgrenci(i, k, inp.value));
+    });
+    el.querySelectorAll("[data-not-score]").forEach((inp) => {
+      const upd = () => {
+        const parsed = puanDegeri(inp.value, inp.getAttribute("data-not-max"));
+        if (parsed.invalid || parsed.absent) return;
+        notHucre(inp.getAttribute("data-not-score"), inp.getAttribute("data-not-col"), parsed.empty ? "" : String(parsed.value));
+        renderActivePanel();
+      };
+      inp.addEventListener("change", upd);
+      inp.addEventListener("blur", upd);
+    });
+    el.querySelectorAll("[data-not-del]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (!confirm("Bu öğrenci satırı silinsin mi?")) return;
+        ogrenciSatirSil(parseInt(btn.getAttribute("data-not-del"), 10));
       });
     });
   }
