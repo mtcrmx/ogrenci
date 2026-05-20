@@ -1451,6 +1451,127 @@ def _sinav_hazirlama_baslik(meta: dict) -> str:
     return " · ".join([p for p in parcalar if p]) or "Sınav hazırlığı"
 
 
+def _sinav_analiz_default_notu() -> str:
+    return (
+        "Hata yapılan soruların ait olduğu öğrenme çıktılarının tekrarı için 2 ders saati süre ayrılmıştır. "
+        "Sınav soruları sınıfta çözülerek kağıtlar öğrencilere dağıtılmış ve hatalarını görmeleri sağlanmıştır. "
+        "Bu belirtilen konularla ilgili ödevlendirme yapılmıştır. Ayrıca her öğrencinin tek tek eksik öğrenme çıktısı veya "
+        "öğrenme çıktıları tespit edilerek \"Öğrenci Bazlı Sınav Analizi\" hazırlanıp bu rapora eklenmiştir."
+    )
+
+
+def _sinav_hazirlama_analiz_kaydi_bul(ogretmen_id: int, hazirlama_kayit_id: int | None) -> tuple[int | None, dict | None]:
+    if not hazirlama_kayit_id:
+        return None, None
+    for kayit in sinav_analiz_listesi(ogretmen_id, 200):
+        row = sinav_analiz_oku(kayit["id"], ogretmen_id)
+        if not row:
+            continue
+        try:
+            state = json.loads(row.get("state_json") or "{}")
+        except (TypeError, json.JSONDecodeError):
+            continue
+        meta = state.get("meta") if isinstance(state.get("meta"), dict) else {}
+        kaynak_id = meta.get("hazirlamaKayitId") or meta.get("kaynakHazirlamaId")
+        if str(kaynak_id or "") == str(hazirlama_kayit_id):
+            return int(kayit["id"]), state
+    return None, None
+
+
+def _hazirlik_sorusunu_analiz_sorusuna(soru: dict, idx: int) -> dict:
+    metin = (
+        str(soru.get("kazanim") or "").strip()
+        or str(soru.get("kazanimText") or "").strip()
+        or str(soru.get("metin") or "").strip()
+        or f"{idx + 1}. soru öğrenme çıktısı"
+    )
+    konu = str(soru.get("konu") or soru.get("tip") or "").strip()
+    try:
+        puan = float(soru.get("puan") or 0)
+    except (TypeError, ValueError):
+        puan = 0
+    if puan <= 0:
+        puan = 1
+    if puan.is_integer():
+        puan = int(puan)
+    soru_id = str(soru.get("id") or f"hazirlik_{idx + 1}").strip()
+    return {
+        "id": soru_id,
+        "unite": konu,
+        "konu": konu,
+        "metin": metin,
+        "puan": puan,
+    }
+
+
+def _sinav_hazirliktan_analiz_state(
+    hazirlik_state: dict,
+    ogretmen_adi: str,
+    sinif_id: int | None,
+    hazirlama_kayit_id: int | None,
+    analiz_kayit_id: int | None = None,
+    onceki_analiz_state: dict | None = None,
+) -> dict:
+    hazirlik_meta = hazirlik_state.get("meta") if isinstance(hazirlik_state.get("meta"), dict) else {}
+    onceki_meta = onceki_analiz_state.get("meta") if isinstance(onceki_analiz_state, dict) and isinstance(onceki_analiz_state.get("meta"), dict) else {}
+    onceki_sinif_id = onceki_meta.get("sinifId")
+
+    ogrenciler = []
+    if isinstance(onceki_analiz_state, dict) and str(onceki_sinif_id or "") == str(sinif_id or ""):
+        eski_ogrenciler = onceki_analiz_state.get("ogrenciler")
+        if isinstance(eski_ogrenciler, list) and eski_ogrenciler:
+            ogrenciler = eski_ogrenciler
+    if not ogrenciler and sinif_id:
+        ogrenciler = [
+            {
+                "dbId": int(row["id"]),
+                "sira": i + 1,
+                "ogrNo": row.get("ogr_no"),
+                "adSoyad": row.get("ad_soyad") or "",
+                "katilmadi": False,
+            }
+            for i, row in enumerate(sinif_ogrencileri(sinif_id))
+        ]
+
+    sorular = hazirlik_state.get("sorular") if isinstance(hazirlik_state.get("sorular"), list) else []
+    analiz_sorular = [_hazirlik_sorusunu_analiz_sorusuna(s, i) for i, s in enumerate(sorular) if isinstance(s, dict)]
+    toplam_puan = sum(float(q.get("puan") or 0) for q in analiz_sorular)
+    basari_esik = onceki_meta.get("basariEsik") or ("50" if toplam_puan <= 100 else str(round(toplam_puan * 0.5, 2)))
+
+    meta = {
+        "okulAdi": hazirlik_meta.get("okulAdi") or "Erenler Cumhuriyet Ortaokulu",
+        "ders": hazirlik_meta.get("ders") or "",
+        "ogretmen": hazirlik_meta.get("ogretmen") or ogretmen_adi or "",
+        "mudur": onceki_meta.get("mudur") or "ADEM AKGÜL",
+        "sinavAdi": hazirlik_meta.get("sinavAdi") or "Sınav",
+        "egitimYili": hazirlik_meta.get("egitimYili") or "",
+        "analizTuru": onceki_meta.get("analizTuru") or "genel",
+        "sinifId": sinif_id,
+        "sinifAdi": hazirlik_meta.get("sinifAdi") or "",
+        "sinifMevcudu": str(len(ogrenciler) or onceki_meta.get("sinifMevcudu") or ""),
+        "sinavaKatilan": str(len([o for o in ogrenciler if not o.get("katilmadi")]) or onceki_meta.get("sinavaKatilan") or ""),
+        "basariEsik": str(basari_esik),
+        "zayifKazanimEsik": str(onceki_meta.get("zayifKazanimEsik") or "60"),
+        "degerlendirmeEk": onceki_meta.get("degerlendirmeEk") or _sinav_analiz_default_notu(),
+        "kaynak": "sinav_hazirlama",
+        "hazirlamaKayitId": hazirlama_kayit_id,
+        "analizKayitId": analiz_kayit_id,
+    }
+
+    onceki_notlar = onceki_analiz_state.get("notlar") if isinstance(onceki_analiz_state, dict) and isinstance(onceki_analiz_state.get("notlar"), dict) else {}
+    return {
+        "_v": 3,
+        "meta": meta,
+        "ogrenciler": ogrenciler,
+        "sorular": {
+            "yazili": analiz_sorular,
+            "dinleme": [],
+            "konusma": [],
+        },
+        "notlar": onceki_notlar,
+    }
+
+
 @app.route("/api/sinav-analiz/kayitlar")
 @giris_zorunlu
 def api_sinav_analiz_kayitlar():
@@ -1568,6 +1689,58 @@ def api_sinav_hazirlama_kaydet():
     )
     if not sonuc.get("ok"):
         return jsonify(sonuc), 404
+    hazirlama_kayit_id = int(sonuc["kayit"]["id"])
+    analiz_kayit_id = None
+    onceki_analiz_state = None
+    try:
+        aday_id = meta.get("analizKayitId") or meta.get("analiz_kayit_id")
+        analiz_kayit_id = int(aday_id) if aday_id else None
+    except (TypeError, ValueError):
+        analiz_kayit_id = None
+    if analiz_kayit_id:
+        row = sinav_analiz_oku(analiz_kayit_id, session["ogretmen_id"])
+        if row:
+            try:
+                onceki_analiz_state = json.loads(row.get("state_json") or "{}")
+            except (TypeError, json.JSONDecodeError):
+                onceki_analiz_state = None
+        else:
+            analiz_kayit_id = None
+    if not analiz_kayit_id:
+        analiz_kayit_id, onceki_analiz_state = _sinav_hazirlama_analiz_kaydi_bul(
+            session["ogretmen_id"],
+            hazirlama_kayit_id,
+        )
+
+    analiz_state = _sinav_hazirliktan_analiz_state(
+        state,
+        session.get("ogretmen_adi", "") or "",
+        sinif_id_int,
+        hazirlama_kayit_id,
+        analiz_kayit_id,
+        onceki_analiz_state,
+    )
+    try:
+        analiz_state_json = json.dumps(analiz_state, ensure_ascii=False)
+    except (TypeError, ValueError):
+        analiz_state_json = ""
+    if analiz_state_json:
+        analiz_sonuc = sinav_analiz_kaydet(
+            ogretmen_id=session["ogretmen_id"],
+            ogretmen_adi=session.get("ogretmen_adi", "") or "",
+            state_json=analiz_state_json,
+            baslik=_sinav_analiz_baslik(analiz_state.get("meta", {})),
+            sinif_id=sinif_id_int,
+            sinif_adi=meta.get("sinifAdi") or "",
+            ders=meta.get("ders") or "",
+            sinav_adi=meta.get("sinavAdi") or "",
+            egitim_yili=meta.get("egitimYili") or "",
+            kayit_id=analiz_kayit_id,
+        )
+        if analiz_sonuc.get("ok"):
+            sonuc["analiz_kayit"] = analiz_sonuc.get("kayit") or {}
+        else:
+            sonuc["analiz_hata"] = analiz_sonuc.get("sebep") or "Analiz kaydı oluşturulamadı."
     return jsonify(sonuc)
 
 

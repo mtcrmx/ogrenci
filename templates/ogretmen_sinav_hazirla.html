@@ -9,7 +9,7 @@
         <p class="text-[11px] font-black uppercase tracking-widest text-sky-700">ECO Sınav Hazırlama</p>
         <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Kazanım tabanlı sınav planlayıcı</h1>
         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Sınıf, ders ve kazanımları seç; soru dağılımını otomatik oluştur; cevap anahtarı ve yazdırılabilir sınav taslağını tek yerden hazırla.
+          Sınıf, ders ve kazanımları seç; soru dağılımını otomatik oluştur; cevap alanlı yazdırılabilir sınav taslağını tek yerden hazırla.
         </p>
       </div>
       <div class="grid grid-cols-3 gap-2 text-center">
@@ -187,12 +187,6 @@
     border-radius: 8px;
     padding: 8px 10px;
   }
-  .answer-key-line {
-    border: 1px solid rgba(148, 163, 184, .24);
-    border-radius: 8px;
-    background: #f8fafc;
-    padding: 8px 10px;
-  }
   .question-table-preview {
     margin-top: 10px;
     width: 100%;
@@ -207,6 +201,12 @@
   }
   .exam-optic-sheet {
     margin: 0 0 24px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
     break-inside: avoid;
     page-break-inside: avoid;
   }
@@ -222,9 +222,11 @@
     display: block;
     width: 100%;
     max-width: 100%;
-    border: 0;
-    border-radius: 0;
-    background: #fff;
+    border: 0 !important;
+    border-radius: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
   .exam-question-text {
     min-height: 42px;
@@ -232,6 +234,21 @@
     border-radius: 8px;
     padding: 12px;
     white-space: pre-wrap;
+  }
+  .student-answer-space {
+    margin-top: 10px;
+    min-height: 4cm;
+    border: 1px solid rgba(148, 163, 184, .46);
+    border-radius: 8px;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        #fff 0,
+        #fff 27px,
+        rgba(148, 163, 184, .48) 28px
+      );
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
   .exam-print-title {
     margin: 18px 0 14px;
@@ -267,11 +284,6 @@
   .exam-teacher-note strong {
     font-weight: 900;
   }
-  .answer-key-page {
-    margin-top: 28px;
-    border-top: 1px solid rgba(148, 163, 184, .34);
-    padding-top: 16px;
-  }
   @media (max-width: 640px) {
     .exam-input { font-size: 16px; }
     .question-media-preview { grid-template-columns: 1fr; }
@@ -289,7 +301,7 @@
     .exam-print { display: block !important; }
     .question-media-preview { break-inside: avoid; page-break-inside: avoid; }
     .question-image { max-height: 260px; }
-    .answer-key-page { break-before: page; page-break-before: always; }
+    .student-answer-space { break-inside: avoid; page-break-inside: avoid; }
     .exam-teacher-note { break-inside: avoid; page-break-inside: avoid; }
   }
 </style>
@@ -370,6 +382,7 @@
         sure: "40",
         soruSayisi: "10",
         toplamPuan: "100",
+        cevapAlaniCm: "4",
         sinavTuru: "Karma",
         aciklama: "Sorular kazanım dağılımı dikkate alınarak hazırlanmıştır.",
       },
@@ -401,6 +414,7 @@
     s.etiketler = s.etiketler || "";
     s.cozum = s.cozum || "";
     s.not = s.not || "";
+    if (s.cevapAlaniCm === undefined || s.cevapAlaniCm === null) s.cevapAlaniCm = "";
     s.secimSayisi = Math.min(6, Math.max(2, parseInt(s.secimSayisi, 10) || 4));
     s.dogruSecenek = s.dogruSecenek || "A";
     s.dogruYanlis = s.dogruYanlis || "Doğru";
@@ -459,6 +473,29 @@
       ${options.map((o) => `<option value="${esc(o.value ?? o)}" ${String(state.meta[name]) === String(o.value ?? o) ? "selected" : ""}>${esc(o.label ?? o)}</option>`).join("")}
     </select></label>`;
   }
+  function clampCm(value, fallback) {
+    const num = Number(String(value ?? "").replace(",", "."));
+    const base = Number.isFinite(num) && num > 0 ? num : fallback;
+    return Math.min(12, Math.max(1.5, base || 4));
+  }
+  function globalAnswerSpaceCm() {
+    return clampCm(state.meta.cevapAlaniCm, 4);
+  }
+  function questionAnswerSpaceCm(s) {
+    return clampCm(s?.cevapAlaniCm, globalAnswerSpaceCm());
+  }
+  function answerSpaceHtml(s) {
+    const height = questionAnswerSpaceCm(s).toFixed(1).replace(/\.0$/, "");
+    return `<div class="student-answer-space" data-answer-space="${esc(s.id)}" style="min-height:${height}cm"></div>`;
+  }
+  function updatePreviewAnswerSpaces() {
+    document.querySelectorAll("[data-answer-space]").forEach((el) => {
+      const s = state.sorular.find((q) => q.id === el.getAttribute("data-answer-space"));
+      if (!s) return;
+      const height = questionAnswerSpaceCm(s).toFixed(1).replace(/\.0$/, "");
+      el.style.minHeight = `${height}cm`;
+    });
+  }
   function newQuestion(overrides) {
     const selected = state.kazanimlar[0] || { key: "", text: "", konu: "" };
     return normalizeQuestion(Object.assign({
@@ -478,6 +515,7 @@
       cevap: "",
       cozum: "",
       not: "",
+      cevapAlaniCm: "",
       secimSayisi: 4,
       dogruSecenek: "A",
       dogruYanlis: "Doğru",
@@ -673,7 +711,7 @@
     </div>`).join("");
     return `<section class="question-type-panel mt-3">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div><div class="text-xs font-black uppercase tracking-widest text-slate-500">Eşleştirme çiftleri</div><p class="mt-1 text-xs text-slate-500">Sol ve sağ tarafı girin; cevap anahtarında doğru eşleşmeler görünür.</p></div>
+        <div><div class="text-xs font-black uppercase tracking-widest text-slate-500">Eşleştirme çiftleri</div><p class="mt-1 text-xs text-slate-500">Sol ve sağ tarafı girin; doğru eşleşmeler öğretmen kaydında tutulur.</p></div>
         <button type="button" class="question-tool" data-add-match="${esc(s.id)}">Satır ekle</button>
       </div>
       <div class="mt-3 grid gap-2">${rows}</div>
@@ -824,15 +862,6 @@
     </section>`;
   }
 
-  function answerKeyHtml() {
-    return `<section class="answer-key-page">
-      <h3 class="text-sm font-black">Cevap anahtarı</h3>
-      <div class="mt-2 grid gap-1 text-xs sm:grid-cols-2">
-        ${state.sorular.map((s) => `<div class="answer-key-line"><b>${esc(s.no)}.</b> ${esc(answerText(s))}</div>`).join("")}
-      </div>
-    </section>`;
-  }
-
   function tabHtml() {
     return TABS.map(([id, no, label]) => `<button type="button" class="exam-tab ${id === activeTab ? "is-active" : ""}" data-tab="${id}"><span>${no}</span>${label}</button>`).join("");
   }
@@ -850,6 +879,7 @@
             ${input("sure", "Süre (dk)", "number")}
             ${input("soruSayisi", "Hedef soru", "number")}
             ${input("toplamPuan", "Toplam puan", "number")}
+            <label class="exam-label">Cevap alanı (cm)<input class="exam-input" type="number" min="1.5" max="12" step="0.5" value="${esc(state.meta.cevapAlaniCm)}" data-meta="cevapAlaniCm"></label>
             ${select("sinavTuru", "Soru tipi", ["Karma", ...TIPLER])}
           </div>
           <label class="exam-label mt-3">Açıklama<textarea class="exam-input min-h-[94px]" data-meta="aciklama">${esc(state.meta.aciklama)}</textarea></label>
@@ -987,12 +1017,13 @@
           <button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-question="${esc(s.id)}">Sil</button>
         </div>
       </div>
-      <div class="mt-3 grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_150px] md:items-end">
+      <div class="mt-3 grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_130px_150px] md:items-end">
         <label class="exam-label">No<input class="exam-input" type="number" data-soru-field="no" value="${esc(s.no || i + 1)}"></label>
         <label class="exam-label">Kazanım<select class="exam-input" data-soru-field="kazanimKey"><option value="">Genel</option>${kazOpts}</select></label>
         <label class="exam-label">Tip<select class="exam-input" data-soru-field="tip">${typeOptions}</select></label>
         <label class="exam-label">Zorluk<select class="exam-input" data-soru-field="zorluk">${zorlukOptions}</select></label>
         <label class="exam-label">Puan<input class="exam-input" type="number" data-soru-field="puan" value="${esc(s.puan)}"></label>
+        <label class="exam-label">Cevap alanı<input class="exam-input" type="number" min="1.5" max="12" step="0.5" data-soru-field="cevapAlaniCm" value="${esc(s.cevapAlaniCm)}" placeholder="${esc(globalAnswerSpaceCm())}"></label>
         <label class="exam-label">Bilişsel<select class="exam-input" data-soru-field="bilissel">${bilisselOptions}</select></label>
       </div>
       <div class="mt-2 grid gap-2 md:grid-cols-4">
@@ -1045,12 +1076,13 @@
       </div>
     </article>`;
     return `<article class="rounded-lg border border-slate-200 bg-white p-3" data-soru="${esc(s.id)}">
-      <div class="grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_auto] md:items-end">
+      <div class="grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_130px_auto] md:items-end">
         <label class="exam-label">No<input class="exam-input" type="number" data-soru-field="no" value="${esc(s.no || i + 1)}"></label>
         <label class="exam-label">Kazanım<select class="exam-input" data-soru-field="kazanimKey"><option value="">Genel</option>${kazOpts}</select></label>
         <label class="exam-label">Tip<select class="exam-input" data-soru-field="tip">${TIPLER.map((t) => `<option ${s.tip === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>
         <label class="exam-label">Zorluk<select class="exam-input" data-soru-field="zorluk">${ZORLUK.map((z) => `<option ${s.zorluk === z ? "selected" : ""}>${z}</option>`).join("")}</select></label>
         <label class="exam-label">Puan<input class="exam-input" type="number" data-soru-field="puan" value="${esc(s.puan)}"></label>
+        <label class="exam-label">Cevap alanı<input class="exam-input" type="number" min="1.5" max="12" step="0.5" data-soru-field="cevapAlaniCm" value="${esc(s.cevapAlaniCm)}" placeholder="${esc(globalAnswerSpaceCm())}"></label>
         <button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-question="${esc(s.id)}">Sil</button>
       </div>
       <div class="mt-2 grid gap-2 md:grid-cols-2">
@@ -1107,6 +1139,11 @@
           <div class="mt-3 grid gap-2 text-sm">
             ${Object.entries(byKaz).map(([k, n]) => `<div class="flex justify-between gap-3 rounded-lg bg-slate-50 p-2"><span>${esc(k.slice(0, 80))}</span><b>${n}</b></div>`).join("") || `<p class="text-slate-500">Soru yok.</p>`}
           </div>
+          <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Sayfa ayarı</h3>
+            <label class="exam-label mt-2">Genel cevap alanı (cm)<input class="exam-input" type="number" min="1.5" max="12" step="0.5" value="${esc(state.meta.cevapAlaniCm)}" data-meta="cevapAlaniCm"></label>
+            <p class="mt-2 text-xs leading-5 text-slate-500">Soru kartındaki cevap alanı boş bırakılırsa bu ölçü kullanılır.</p>
+          </div>
           <div class="mt-4 grid gap-2">
             <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-black text-white" data-print>Yazdır</button>
             <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-700" data-download-html>HTML indir</button>
@@ -1124,10 +1161,10 @@
           <div class="exam-question-text text-sm"><b>${esc(s.no)}.</b> ${esc(String(s.metin || "").trim())}</div>
           ${questionExtraPreviewHtml(s)}
           ${questionMediaHtml(s)}
+          ${answerSpaceHtml(s)}
         </li>`).join("")}
       </ol>
-      ${teacherNoteHtml()}
-      ${answerKeyHtml()}`;
+      ${teacherNoteHtml()}`;
   }
   async function renderKayit() {
     document.getElementById("panel-kayit").innerHTML = `
@@ -1201,7 +1238,10 @@
       return;
     }
     currentKayitId = j.kayit.id;
+    state.meta.hazirlamaKayitId = j.kayit.id;
+    if (j.analiz_kayit && j.analiz_kayit.id) state.meta.analizKayitId = j.analiz_kayit.id;
     localStorage.setItem(LS_KEY + "_server_id", String(currentKayitId));
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
     await kayitlariYukle();
     renderAll();
   }
@@ -1236,7 +1276,7 @@
     scheduleSave();
   }
   function downloadHtml() {
-    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option,.answer-key-line{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-sheet{margin:0 0 24px;break-inside:avoid;page-break-inside:avoid}.exam-optic-image{display:block;width:100%;max-width:100%;border:0;border-radius:0;background:#fff}.exam-print-title{margin:18px 0 14px;border-bottom:1px solid #bbb;padding-bottom:12px;text-align:center;color:#111}.exam-print-title .school{font-size:13px;font-weight:900;text-transform:uppercase}.exam-print-title .exam-name{margin-top:4px;font-size:17px;font-weight:900}.exam-print-title .exam-meta{margin-top:4px;font-size:12px;color:#555}.exam-question-text{min-height:42px;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #bbb;padding-top:14px;font-size:13px}.exam-teacher-note strong{font-weight:900}.answer-key-page{margin-top:28px;border-top:1px solid #bbb;padding-top:16px;break-before:page;page-break-before:always}</style></head><body>${previewHtml()}</body></html>`;
+    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-sheet{margin:0 0 24px;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;padding:0!important;break-inside:avoid;page-break-inside:avoid}.exam-optic-image{display:block;width:100%;max-width:100%;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}.exam-print-title{margin:18px 0 14px;border-bottom:1px solid #bbb;padding-bottom:12px;text-align:center;color:#111}.exam-print-title .school{font-size:13px;font-weight:900;text-transform:uppercase}.exam-print-title .exam-name{margin-top:4px;font-size:17px;font-weight:900}.exam-print-title .exam-meta{margin-top:4px;font-size:12px;color:#555}.exam-question-text{min-height:42px;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap}.student-answer-space{margin-top:10px;min-height:4cm;border:1px solid #bbb;border-radius:8px;background:repeating-linear-gradient(to bottom,#fff 0,#fff 27px,#cbd5e1 28px);break-inside:avoid;page-break-inside:avoid}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #bbb;padding-top:14px;font-size:13px}.exam-teacher-note strong{font-weight:900}</style></head><body>${previewHtml()}</body></html>`;
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -1247,7 +1287,11 @@
 
   document.addEventListener("input", (e) => {
     const meta = e.target.getAttribute?.("data-meta");
-    if (meta) setMeta(meta, e.target.value, false);
+    if (meta) {
+      setMeta(meta, e.target.value, false);
+      if (meta === "cevapAlaniCm") updatePreviewAnswerSpaces();
+      return;
+    }
     if (e.target.id === "kazanim-ara") renderKazanim();
     const [targetQuestion] = questionFromElement(e.target);
     const choiceIndex = e.target.getAttribute?.("data-choice-index");
@@ -1307,7 +1351,10 @@
       return;
     }
     const meta = e.target.getAttribute?.("data-meta");
-    if (meta) setMeta(meta, e.target.value, ["sinifId", "ders", "sinavTuru"].includes(meta));
+    if (meta) {
+      setMeta(meta, e.target.value, ["sinifId", "ders", "sinavTuru"].includes(meta));
+      if (meta === "cevapAlaniCm") updatePreviewAnswerSpaces();
+    }
     const [targetQuestion] = questionFromElement(e.target);
     if (targetQuestion && e.target.getAttribute?.("data-correct-choice") !== null && e.target.checked) {
       targetQuestion.dogruSecenek = e.target.value;

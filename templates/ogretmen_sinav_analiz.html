@@ -437,10 +437,7 @@
   }
 
   function soruAnalizMetni(q) {
-    const parcalar = [];
-    if (q.konu) parcalar.push("Konu/İçerik: " + q.konu);
-    if (q.metin) parcalar.push("Öğrenme Çıktısı: " + q.metin);
-    return parcalar.join(" | ") || "(Tanımsız öğrenme çıktısı)";
+    return String(q && q.metin ? q.metin : "").trim() || "(Tanımsız öğrenme çıktısı)";
   }
 
   function destekCalismaMetni(it) {
@@ -506,7 +503,6 @@
         no++;
         return `<tr>
           <td style="text-align:center">${no}</td>
-          <td>${esc(q.q.konu || "")}</td>
           <td>${esc(q.q.metin || "")}</td>
           <td style="text-align:center">${q.q.puan}</td>
           <td style="text-align:center">${q.n ? q.ort.toFixed(2) : "—"}</td>
@@ -514,7 +510,7 @@
         </tr>`;
       }).join("");
       return `<h2 style="font-size:13pt;margin:16px 0 8px">${TUR_RAPOR_BASLIK[tur] || tur}</h2>
-        <table><thead><tr><th>No</th><th>Konu/İçerik Çerçevesi</th><th>Öğrenme Çıktısı</th><th>Puan</th><th>Ort.</th><th>Başarı %</th></tr></thead>
+        <table><thead><tr><th>No</th><th>Öğrenme Çıktısı</th><th>Puan</th><th>Ort.</th><th>Başarı %</th></tr></thead>
         <tbody>${satirlar}</tbody></table>`;
     }).join("");
 
@@ -600,8 +596,6 @@
   let soruPanelTur = "yazili";
   let mufredatFilter = "";
   let mufredatSeciliDers = "";
-  let mufredatSeciliTema = "";
-  let mufredatSeciliKonu = "";
   let curriculumPromise = null;
 
   async function fetchCurriculum() {
@@ -624,8 +618,6 @@
     state.meta[k] = v;
     if (k === "ders") {
       mufredatSeciliDers = curriculumDersAdi(v);
-      mufredatSeciliTema = "";
-      mufredatSeciliKonu = "";
     }
     scheduleSave();
   }
@@ -642,10 +634,6 @@
     return ders || "";
   }
 
-  function curriculumTemaEtiketi(tema) {
-    return String(tema || "").replace(/^Drive\s*·\s*/i, "").trim();
-  }
-
   function curriculumBloklar(ders) {
     const dersler = (curriculumCache && curriculumCache.dersler) || {};
     return ders ? (dersler[ders] || []) : [];
@@ -658,21 +646,6 @@
     }
     const tek = parcalar[0] || String(baslik || "").trim();
     return { tema: tek, icerik: tek };
-  }
-
-  function curriculumTemaListesi(ders) {
-    const gorulen = new Set();
-    const temalar = [];
-    curriculumBloklar(ders).forEach((bl) => {
-      (bl.konular || []).forEach((kon) => {
-        const bolum = curriculumKonuBol(kon.baslik);
-        if (bolum.tema && !gorulen.has(bolum.tema)) {
-          gorulen.add(bolum.tema);
-          temalar.push(bolum.tema);
-        }
-      });
-    });
-    return temalar;
   }
 
   function curriculumKonular(ders, tema) {
@@ -984,14 +957,12 @@
           <p class="text-[11px] font-bold text-amber-900">Öğrenme çıktıları havuzu</p>
           <div class="flex flex-wrap gap-2 items-end">
             <label class="text-[11px] font-bold text-slate-600">Ders<select id="muf-ders" class="${inputClass(true)} ml-1 min-w-[140px]"><option value="">—</option></select></label>
-            <label class="text-[11px] font-bold text-slate-600">Konu/Tema<select id="muf-tema" class="${inputClass(true)} ml-1 min-w-[200px]"><option value="">Tümü</option></select></label>
-            <label class="text-[11px] font-bold text-slate-600">Konu/İçerik Çerçevesi<select id="muf-konu" class="${inputClass(true)} ml-1 min-w-[220px]"><option value="">Tümü</option></select></label>
             <label class="text-[11px] font-bold text-slate-600 flex-1 min-w-[120px]">Filtre<input id="muf-filt" class="${inputClass(true)} ml-1 w-full" placeholder=" öğrenme çıktısında ara…" value="${esc(mufredatFilter)}"/></label>
           </div>
           <div id="muf-sonuc" class="max-h-64 overflow-auto text-[11px] border border-slate-200 rounded-lg bg-white">
             <div class="p-2 text-slate-500">Öğrenme çıktıları yükleniyor...</div>
           </div>
-          <p class="text-[10px] text-slate-500">Dersiniz otomatik seçilir; konu ve filtre alanları sadece listeyi daraltır. Seçilen öğrenme çıktısı aktif sınav bölümüne (${tur}) eklenir.</p>
+          <p class="text-[10px] text-slate-500">Listede yalnızca öğrenme çıktıları gösterilir. Seçilen öğrenme çıktısı aktif sınav bölümüne (${tur}) eklenir.</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" id="btn-soru-ekle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2">Boş öğrenme çıktısı ekle</button>
@@ -1023,8 +994,6 @@
     });
 
     const mfDers = el.querySelector("#muf-ders");
-    const mfTema = el.querySelector("#muf-tema");
-    const mfKonu = el.querySelector("#muf-konu");
     const mfFilt = el.querySelector("#muf-filt");
     const mfOut = el.querySelector("#muf-sonuc");
 
@@ -1038,57 +1007,20 @@
         dersAdlari.map((d) => `<option value="${escAttr(d)}"${mufredatSeciliDers === d ? " selected" : ""}>${esc(d)}</option>`).join("");
     }
 
-    function mufredatSecenekleriDoldur() {
-      if (!curriculumCache) return;
-      const ders = (mfDers && mfDers.value) || mufredatSeciliDers || curriculumDersAdi(state.meta.ders);
-      mufredatSeciliDers = ders;
-      const temalar = curriculumTemaListesi(ders);
-      const temaVar = temalar.includes(mufredatSeciliTema);
-      if (!temaVar) {
-        mufredatSeciliTema = "";
-        mufredatSeciliKonu = "";
-      }
-      if (mfTema) {
-        mfTema.innerHTML =
-          `<option value="">Tüm konu/temalar</option>` +
-          temalar
-            .map((tema) => `<option value="${escAttr(tema)}"${mufredatSeciliTema === tema ? " selected" : ""}>${esc(tema)}</option>`)
-            .join("");
-      }
-      const konular = curriculumKonular(ders, mufredatSeciliTema);
-      const konuVar = konular.some((kon) => (kon.baslik || "") === mufredatSeciliKonu);
-      if (!konuVar) mufredatSeciliKonu = "";
-      if (mfKonu) {
-        mfKonu.innerHTML =
-          `<option value="">Tüm konu/içerikler</option>` +
-          konular
-            .map((kon) => {
-              const baslik = kon.baslik || "";
-              const etiket = kon.konuIcerik || baslik;
-              return `<option value="${escAttr(baslik)}"${mufredatSeciliKonu === baslik ? " selected" : ""}>${esc(etiket)}</option>`;
-            })
-            .join("");
-      }
-    }
-
     function mufredatCiz() {
       if (!curriculumCache || !mfOut) return;
       mufredatDersleriDoldur();
-      mufredatSecenekleriDoldur();
       const ders = (mfDers && mfDers.value) || mufredatSeciliDers || "";
-      const tema = mufredatSeciliTema;
-      const konuBaslik = mufredatSeciliKonu;
       const flt = (mufredatFilter || "").toLowerCase().trim();
       const sat = [];
-      curriculumKonular(ders, tema).forEach((kon) => {
-        if (konuBaslik && (kon.baslik || "") !== konuBaslik) return;
+      curriculumKonular(ders, "").forEach((kon) => {
           const kb = kon.baslik || "";
           (kon.ciktilar || []).forEach((c) => {
             const metin = (c || "").trim();
             if (!metin) return;
-            const arama = [tema, kb, metin].join(" ").toLowerCase();
+            const arama = metin.toLowerCase();
             if (flt && arama.indexOf(flt) === -1) return;
-            sat.push({ tema: kon.konuTema || tema || kon.kaynakTema || "", konu: kb, icerik: kon.konuIcerik || kb, metin });
+            sat.push({ metin });
           });
       });
       if (!ders) {
@@ -1104,7 +1036,6 @@
           (r, i) =>
             `<div class="border-b border-slate-100 px-2 py-1.5 hover:bg-amber-50/80">
               <button type="button" class="text-left w-full" data-muf-pick="${i}">
-                <span class="block text-[10px] font-bold text-amber-800">${esc(curriculumTemaEtiketi(r.tema) || "Genel")} · ${esc(r.icerik || r.konu || "Öğrenme çıktısı")}</span>
                 <span class="text-slate-800">${esc(r.metin)}</span>
               </button>
             </div>`
@@ -1114,7 +1045,7 @@
         btn.addEventListener("click", () => {
           const i = parseInt(btn.getAttribute("data-muf-pick"), 10);
           const row = sat[i];
-          if (row) soruEkle(soruPanelTur, row.metin, 10, { unite: row.tema, konu: row.konu });
+          if (row) soruEkle(soruPanelTur, row.metin, 10, {});
         });
       });
     }
@@ -1122,21 +1053,6 @@
     if (mfDers) {
       mfDers.addEventListener("change", () => {
         mufredatSeciliDers = mfDers.value;
-        mufredatSeciliTema = "";
-        mufredatSeciliKonu = "";
-        mufredatCiz();
-      });
-    }
-    if (mfTema) {
-      mfTema.addEventListener("change", () => {
-        mufredatSeciliTema = mfTema.value;
-        mufredatSeciliKonu = "";
-        mufredatCiz();
-      });
-    }
-    if (mfKonu) {
-      mfKonu.addEventListener("change", () => {
-        mufredatSeciliKonu = mfKonu.value;
         mufredatCiz();
       });
     }
@@ -1184,9 +1100,16 @@
         const hucre = fq
           .map((c) => {
             const v = (state.notlar[sk] && state.notlar[sk][c.colId]) ?? "";
-            return `<td class="p-0 border border-slate-100"><input class="w-full min-w-[3rem] text-center text-[11px] py-1 border-0" data-n-sk="${escAttr(sk)}" data-n-col="${escAttr(
-              c.colId
-            )}" value="${escAttr(v)}"/></td>`;
+            const tam = String(c.q.puan);
+            const yapti = v !== "" && !isNaN(Number(v)) && Number(v) >= Number(c.q.puan);
+            const yapmadi = v !== "" && !isNaN(Number(v)) && Number(v) <= 0;
+            return `<td class="p-1 border border-slate-100">
+              <div class="flex min-w-[6.5rem] items-center justify-center gap-1">
+                <button type="button" data-n-set="${escAttr(sk)}" data-n-col="${escAttr(c.colId)}" data-n-val="${escAttr(tam)}" class="rounded-md border px-1.5 py-0.5 text-[10px] font-black ${yapti ? "border-emerald-600 bg-emerald-600 text-white" : "border-emerald-200 text-emerald-700"}" title="Yaptı">✓</button>
+                <button type="button" data-n-set="${escAttr(sk)}" data-n-col="${escAttr(c.colId)}" data-n-val="0" class="rounded-md border px-1.5 py-0.5 text-[10px] font-black ${yapmadi ? "border-red-600 bg-red-600 text-white" : "border-red-200 text-red-700"}" title="Yapmadı">0</button>
+                <input class="w-12 rounded-md border border-slate-200 py-0.5 text-center text-[11px]" data-n-sk="${escAttr(sk)}" data-n-col="${escAttr(c.colId)}" value="${escAttr(v)}" title="Puan"/>
+              </div>
+            </td>`;
           })
           .join("");
         return `<tr><td class="p-1 border border-slate-100 text-[10px] font-mono">${esc(o.ogrNo)}</td><td class="p-1 border border-slate-100 text-[10px] whitespace-nowrap">${esc(
@@ -1211,6 +1134,12 @@
       const upd = () => notHucre(inp.getAttribute("data-n-sk"), inp.getAttribute("data-n-col"), inp.value);
       inp.addEventListener("change", upd);
       inp.addEventListener("blur", upd);
+    });
+    el.querySelectorAll("[data-n-set]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        notHucre(btn.getAttribute("data-n-set"), btn.getAttribute("data-n-col"), btn.getAttribute("data-n-val"));
+        renderActivePanel();
+      });
     });
   }
 
