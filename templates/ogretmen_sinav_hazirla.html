@@ -135,9 +135,102 @@
     font-weight: 800;
     color: #64748b;
   }
+  .question-tool {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, .32);
+    background: #fff;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 900;
+    color: #334155;
+  }
+  .question-tool:hover {
+    border-color: rgba(14, 165, 233, .5);
+    color: #075985;
+  }
+  .question-type-panel {
+    border: 1px solid rgba(148, 163, 184, .24);
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 12px;
+  }
+  .choice-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .choice-badge {
+    display: inline-flex;
+    height: 34px;
+    width: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #0f2144;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+  }
+  .preview-options {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .preview-option {
+    border: 1px solid rgba(148, 163, 184, .35);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .answer-key-line {
+    border: 1px solid rgba(148, 163, 184, .24);
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 8px 10px;
+  }
+  .question-table-preview {
+    margin-top: 10px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .question-table-preview td,
+  .question-table-preview th {
+    border: 1px solid rgba(148, 163, 184, .42);
+    padding: 7px 8px;
+    text-align: left;
+  }
+  .exam-optic-sheet {
+    margin-top: 24px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .exam-optic-title {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .exam-optic-image {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid rgba(148, 163, 184, .34);
+    border-radius: 8px;
+    background: #fff;
+  }
   @media (max-width: 640px) {
     .exam-input { font-size: 16px; }
     .question-media-preview { grid-template-columns: 1fr; }
+    .choice-row { grid-template-columns: 36px minmax(0, 1fr); }
+    .choice-row button { grid-column: 2; }
   }
   @media print {
     body { background: #fff !important; }
@@ -150,6 +243,7 @@
     .exam-print { display: block !important; }
     .question-media-preview { break-inside: avoid; page-break-inside: avoid; }
     .question-image { max-height: 260px; }
+    .exam-optic-image { border: 0; border-radius: 0; }
   }
 </style>
 
@@ -165,11 +259,12 @@
   const DERSLER = {{ dersler | default([]) | tojson }};
   const OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
   const OGRETMEN = {{ (ogretmen_adi or "") | tojson }};
+  const OPTIK_URL = {{ url_for("static", filename="exam/optik_acik_uclu.jpg") | tojson }};
 
   const TABS = [
     ["bilgi", "1", "Bilgiler"],
     ["kazanim", "2", "Kazanımlar"],
-    ["soru", "3", "Soru planı"],
+    ["soru", "3", "Soru girişi"],
     ["onizleme", "4", "Önizleme"],
     ["kayit", "5", "Kayıtlar"],
   ];
@@ -180,6 +275,16 @@
     ["line", "Çizgi"],
     ["pie", "Pasta"],
   ];
+  const SECENEK_HARFLERI = ["A", "B", "C", "D", "E", "F"];
+  const BILISSEL_DUZEYLER = ["Hatırlama", "Anlama", "Uygulama", "Analiz", "Değerlendirme", "Yaratma"];
+  const SORU_SABLONLARI = [
+    ["coktan", "Çoktan seçmeli"],
+    ["yorum", "Yorum sorusu"],
+    ["problem", "Problem"],
+    ["grafik", "Grafik yorumlama"],
+    ["eslestirme", "Eşleştirme"],
+  ];
+  const SEMBOLLER = ["²", "³", "½", "⅓", "¼", "√", "≤", "≥", "≠", "≈", "°", "π", "₺", "→"];
   let activeTab = "bilgi";
   let curriculum = null;
   let currentKayitId = null;
@@ -242,6 +347,24 @@
     if (!s.tip) s.tip = TIPLER[0];
     if (!s.zorluk) s.zorluk = "Orta";
     if (s.puan === undefined || s.puan === null || s.puan === "") s.puan = 10;
+    s.konu = s.konu || "";
+    s.altKonu = s.altKonu || "";
+    s.bilissel = s.bilissel || "Anlama";
+    s.kaynak = s.kaynak || "";
+    s.etiketler = s.etiketler || "";
+    s.cozum = s.cozum || "";
+    s.not = s.not || "";
+    s.secimSayisi = Math.min(6, Math.max(2, parseInt(s.secimSayisi, 10) || 4));
+    s.dogruSecenek = s.dogruSecenek || "A";
+    s.dogruYanlis = s.dogruYanlis || "Doğru";
+    s.boslukCevaplari = s.boslukCevaplari || "";
+    s.eslestirmeler = Array.isArray(s.eslestirmeler) && s.eslestirmeler.length
+      ? s.eslestirmeler.slice(0, 8).map((p) => ({ sol: p.sol || "", sag: p.sag || "" }))
+      : [{ sol: "", sag: "" }, { sol: "", sag: "" }, { sol: "", sag: "" }];
+    s.tablo = Array.isArray(s.tablo) ? s.tablo.slice(0, 8).map((row) => Array.isArray(row) ? row.slice(0, 6) : []) : [];
+    s.secenekler = Array.isArray(s.secenekler) ? s.secenekler.slice(0, 6) : [];
+    while (s.secenekler.length < s.secimSayisi) s.secenekler.push("");
+    s.secenekler = s.secenekler.map((v) => String(v || ""));
     if (!s.gorsel || !s.gorsel.dataUrl) s.gorsel = null;
     if (!s.grafik || !Array.isArray(s.grafik.labels) || !Array.isArray(s.grafik.values)) s.grafik = null;
     if (s.grafik) {
@@ -288,6 +411,38 @@
     return `<label class="exam-label">${label}<select class="exam-input" data-meta="${name}">
       ${options.map((o) => `<option value="${esc(o.value ?? o)}" ${String(state.meta[name]) === String(o.value ?? o) ? "selected" : ""}>${esc(o.label ?? o)}</option>`).join("")}
     </select></label>`;
+  }
+  function newQuestion(overrides) {
+    const selected = state.kazanimlar[0] || { key: "", text: "", konu: "" };
+    return normalizeQuestion(Object.assign({
+      id: uid("soru"),
+      no: state.sorular.length + 1,
+      tip: TIPLER[0],
+      zorluk: "Orta",
+      puan: 10,
+      kazanimKey: selected.key || "",
+      kazanim: selected.text || "",
+      konu: selected.konu || "",
+      altKonu: "",
+      bilissel: "Anlama",
+      kaynak: "",
+      etiketler: "",
+      metin: "",
+      cevap: "",
+      cozum: "",
+      not: "",
+      secimSayisi: 4,
+      dogruSecenek: "A",
+      dogruYanlis: "Doğru",
+      boslukCevaplari: "",
+      eslestirmeler: [{ sol: "", sag: "" }, { sol: "", sag: "" }, { sol: "", sag: "" }],
+      tablo: [],
+      gorsel: null,
+      grafik: null,
+    }, overrides || {}), state.sorular.length);
+  }
+  function renumberQuestions() {
+    state.sorular = state.sorular.map((s, i) => Object.assign(s, { no: i + 1 }));
   }
 
   function splitCsv(value) {
@@ -424,6 +579,186 @@
     renderAll();
     scheduleSave();
   }
+  function questionFromElement(el) {
+    const box = el.closest?.("[data-soru]");
+    if (!box) return [null, null];
+    return [state.sorular.find((x) => x.id === box.getAttribute("data-soru")), box];
+  }
+  function typeIsChoice(s) {
+    return s.tip === "Çoktan seçmeli";
+  }
+  function typeIsMatching(s) {
+    return s.tip === "Eşleştirme";
+  }
+  function typeIsTrueFalse(s) {
+    return s.tip === "Doğru/Yanlış";
+  }
+  function typeIsBlank(s) {
+    return s.tip === "Boşluk doldurma";
+  }
+  function choiceEditorHtml(s) {
+    if (!typeIsChoice(s)) return "";
+    const rows = s.secenekler.slice(0, s.secimSayisi).map((value, i) => {
+      const letter = SECENEK_HARFLERI[i];
+      return `<div class="choice-row">
+        <span class="choice-badge">${letter}</span>
+        <input class="exam-input !mt-0" data-choice-index="${i}" value="${esc(value)}" placeholder="${letter} seçeneği">
+        <label class="exam-pill justify-center"><input type="radio" name="dogru-${esc(s.id)}" value="${letter}" data-correct-choice ${s.dogruSecenek === letter ? "checked" : ""}> Doğru</label>
+      </div>`;
+    }).join("");
+    return `<section class="question-type-panel mt-3">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div><div class="text-xs font-black uppercase tracking-widest text-slate-500">Şıklar</div><p class="mt-1 text-xs text-slate-500">Doğru seçeneği işaretleyin; boş şıklar sınav kağıdında görünmez.</p></div>
+        <div class="flex gap-2">
+          <button type="button" class="question-tool" data-add-choice="${esc(s.id)}">Şık ekle</button>
+          <button type="button" class="question-tool" data-remove-choice="${esc(s.id)}">Şık azalt</button>
+        </div>
+      </div>
+      <div class="mt-3 grid gap-2">${rows}</div>
+    </section>`;
+  }
+  function matchingEditorHtml(s) {
+    if (!typeIsMatching(s)) return "";
+    const rows = s.eslestirmeler.map((pair, i) => `<div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+      <input class="exam-input !mt-0" data-match-index="${i}" data-match-side="sol" value="${esc(pair.sol)}" placeholder="Sol taraf ${i + 1}">
+      <input class="exam-input !mt-0" data-match-index="${i}" data-match-side="sag" value="${esc(pair.sag)}" placeholder="Sağ taraf ${i + 1}">
+      <button type="button" class="question-tool" data-remove-match="${i}">Sil</button>
+    </div>`).join("");
+    return `<section class="question-type-panel mt-3">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div><div class="text-xs font-black uppercase tracking-widest text-slate-500">Eşleştirme çiftleri</div><p class="mt-1 text-xs text-slate-500">Sol ve sağ tarafı girin; cevap anahtarında doğru eşleşmeler görünür.</p></div>
+        <button type="button" class="question-tool" data-add-match="${esc(s.id)}">Satır ekle</button>
+      </div>
+      <div class="mt-3 grid gap-2">${rows}</div>
+    </section>`;
+  }
+  function trueFalseHtml(s) {
+    if (!typeIsTrueFalse(s)) return "";
+    return `<section class="question-type-panel mt-3">
+      <label class="exam-label">Doğru cevap<select class="exam-input" data-soru-field="dogruYanlis">
+        ${["Doğru", "Yanlış"].map((v) => `<option ${s.dogruYanlis === v ? "selected" : ""}>${v}</option>`).join("")}
+      </select></label>
+    </section>`;
+  }
+  function blankAnswerHtml(s) {
+    if (!typeIsBlank(s)) return "";
+    return `<section class="question-type-panel mt-3">
+      <label class="exam-label">Boşluk cevapları<input class="exam-input" data-soru-field="boslukCevaplari" value="${esc(s.boslukCevaplari)}" placeholder="Cevapları virgül veya noktalı virgül ile ayırın"></label>
+    </section>`;
+  }
+  function tableEditorHtml(s) {
+    const rows = Array.isArray(s.tablo) ? s.tablo : [];
+    const table = rows.length ? `<div class="mt-3 overflow-x-auto"><table class="question-table-preview">
+      ${rows.map((row, r) => `<tr>${row.map((cell, c) => `<td><input class="w-full bg-transparent outline-none" data-table-row="${r}" data-table-col="${c}" value="${esc(cell)}" placeholder="${r === 0 ? "Başlık" : "Veri"}"></td>`).join("")}</tr>`).join("")}
+    </table></div>` : `<div class="mt-3 rounded-lg border border-dashed border-slate-300 bg-white p-4 text-xs font-semibold text-slate-500">Tablo eklendiğinde burada düzenlenir.</div>`;
+    return `<section class="question-type-panel mt-3">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div><div class="text-xs font-black uppercase tracking-widest text-slate-500">Tablo / veri</div><p class="mt-1 text-xs text-slate-500">Sayısal veri, okuma tablosu veya deney sonucu ekleyin.</p></div>
+        <div class="flex gap-2">
+          <button type="button" class="question-tool" data-insert-table="${esc(s.id)}">3x3 tablo</button>
+          ${rows.length ? `<button type="button" class="question-tool" data-clear-table="${esc(s.id)}">Temizle</button>` : ""}
+        </div>
+      </div>
+      ${table}
+    </section>`;
+  }
+  function typeSpecificHtml(s) {
+    return choiceEditorHtml(s) + trueFalseHtml(s) + blankAnswerHtml(s) + matchingEditorHtml(s) + tableEditorHtml(s);
+  }
+  function questionToolsHtml(s) {
+    const presets = SORU_SABLONLARI.map(([value, label]) => `<button type="button" class="question-tool" data-question-preset="${value}">${esc(label)}</button>`).join("");
+    const symbols = SEMBOLLER.map((symbol) => `<button type="button" class="question-tool" data-insert-symbol="${esc(symbol)}">${esc(symbol)}</button>`).join("");
+    return `<div class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div class="flex flex-wrap gap-2">${presets}</div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <button type="button" class="question-tool" data-insert-token="____">Boşluk</button>
+        <button type="button" class="question-tool" data-insert-token="\\nVerilenler:\\nÇözüm:\\nSonuç:">Problem iskeleti</button>
+        ${symbols}
+      </div>
+    </div>`;
+  }
+  function applyQuestionPreset(btn) {
+    const [s] = questionFromElement(btn);
+    if (!s) return;
+    const kind = btn.getAttribute("data-question-preset");
+    if (kind === "coktan") Object.assign(s, { tip: "Çoktan seçmeli", metin: s.metin || "Aşağıdaki seçeneklerden hangisi doğrudur?", secimSayisi: 4, dogruSecenek: "A" });
+    if (kind === "yorum") Object.assign(s, { tip: "Açık uçlu", metin: s.metin || "Aşağıdaki durumu açıklayınız ve gerekçenizi yazınız.", bilissel: "Analiz" });
+    if (kind === "problem") Object.assign(s, { tip: "Açık uçlu", metin: s.metin || "Verilenler:\\n\\nİstenen:\\n\\nÇözüm:", bilissel: "Uygulama" });
+    if (kind === "grafik") Object.assign(s, { tip: "Açık uçlu", metin: s.metin || "Grafikte verilen bilgileri yorumlayınız.", grafik: s.grafik || { type: "bar", title: "Grafik", labels: ["A", "B", "C"], values: [10, 15, 8] }, bilissel: "Analiz" });
+    if (kind === "eslestirme") Object.assign(s, { tip: "Eşleştirme", metin: s.metin || "Aşağıdaki kavramları doğru açıklamalarla eşleştiriniz." });
+    normalizeQuestion(s, (parseInt(s.no, 10) || 1) - 1);
+    renderAll();
+    scheduleSave();
+  }
+  function insertIntoActiveQuestion(btn, text) {
+    const [s, box] = questionFromElement(btn);
+    if (!s || !box) return;
+    const textarea = box.querySelector('[data-soru-field="metin"]');
+    const start = textarea?.selectionStart ?? String(s.metin || "").length;
+    const end = textarea?.selectionEnd ?? start;
+    s.metin = String(s.metin || "").slice(0, start) + text + String(s.metin || "").slice(end);
+    renderAll();
+    scheduleSave();
+  }
+  function duplicateQuestion(id) {
+    const index = state.sorular.findIndex((s) => s.id === id);
+    if (index < 0) return;
+    const copy = JSON.parse(JSON.stringify(state.sorular[index]));
+    copy.id = uid("soru");
+    copy.no = index + 2;
+    state.sorular.splice(index + 1, 0, copy);
+    renumberQuestions();
+    renderAll();
+    scheduleSave();
+  }
+  function moveQuestion(id, delta) {
+    const index = state.sorular.findIndex((s) => s.id === id);
+    const next = index + delta;
+    if (index < 0 || next < 0 || next >= state.sorular.length) return;
+    const [item] = state.sorular.splice(index, 1);
+    state.sorular.splice(next, 0, item);
+    renumberQuestions();
+    renderAll();
+    scheduleSave();
+  }
+  function answerText(s) {
+    if (typeIsChoice(s)) return `${s.dogruSecenek || "-"}${s.cevap ? " - " + s.cevap : ""}`;
+    if (typeIsTrueFalse(s)) return s.dogruYanlis || "-";
+    if (typeIsBlank(s)) return s.boslukCevaplari || s.cevap || "-";
+    if (typeIsMatching(s)) {
+      const pairs = s.eslestirmeler.filter((p) => p.sol || p.sag).map((p) => `${p.sol || "?"} → ${p.sag || "?"}`);
+      return pairs.join("; ") || s.cevap || "-";
+    }
+    return s.cevap || "-";
+  }
+  function questionExtraPreviewHtml(s) {
+    const parts = [];
+    if (typeIsChoice(s)) {
+      const opts = s.secenekler.slice(0, s.secimSayisi).map((opt, i) => [SECENEK_HARFLERI[i], opt]).filter(([, opt]) => String(opt || "").trim());
+      if (opts.length) parts.push(`<div class="preview-options">${opts.map(([letter, opt]) => `<div class="preview-option"><b>${letter})</b> ${esc(opt)}</div>`).join("")}</div>`);
+    }
+    if (typeIsMatching(s)) {
+      const rows = s.eslestirmeler.filter((p) => p.sol || p.sag);
+      if (rows.length) parts.push(`<table class="question-table-preview">${rows.map((p, i) => `<tr><td>${i + 1}. ${esc(p.sol)}</td><td>( ) ${esc(p.sag)}</td></tr>`).join("")}</table>`);
+    }
+    if (Array.isArray(s.tablo) && s.tablo.length) {
+      parts.push(`<table class="question-table-preview">${s.tablo.map((row, r) => `<tr>${row.map((cell) => r === 0 ? `<th>${esc(cell)}</th>` : `<td>${esc(cell)}</td>`).join("")}</tr>`).join("")}</table>`);
+    }
+    return parts.join("");
+  }
+  function opticImageUrl() {
+    try {
+      return new URL(OPTIK_URL, window.location.origin).href;
+    } catch (e) {
+      return OPTIK_URL;
+    }
+  }
+  function opticSheetHtml() {
+    return `<section class="exam-optic-sheet">
+      <div class="exam-optic-title">Açık uçlu sınav cevap kağıdı</div>
+      <img class="exam-optic-image" src="${esc(opticImageUrl())}" alt="Açık uçlu sınav cevap kağıdı">
+    </section>`;
+  }
 
   function tabHtml() {
     return TABS.map(([id, no, label]) => `<button type="button" class="exam-tab ${id === activeTab ? "is-active" : ""}" data-tab="${id}"><span>${no}</span>${label}</button>`).join("");
@@ -529,7 +864,7 @@
     state.sorular = Array.from({ length: count }, (_, i) => {
       const kazan = selected[i % selected.length];
       const tip = state.meta.sinavTuru === "Karma" ? TIPLER[i % 3] : state.meta.sinavTuru;
-      return {
+      return newQuestion({
         id: uid("soru"),
         no: i + 1,
         tip,
@@ -537,11 +872,10 @@
         puan: base + (i < remainder ? 1 : 0),
         kazanimKey: kazan.key,
         kazanim: kazan.text,
+        konu: kazan.konu || "",
         metin: "",
         cevap: "",
-        gorsel: null,
-        grafik: null,
-      };
+      });
     });
     activeTab = "soru";
     renderAll();
@@ -551,7 +885,7 @@
     document.getElementById("panel-soru").innerHTML = `
       <section class="exam-card p-4">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div><h2 class="text-lg font-black text-slate-950">Soru planı</h2><p class="text-xs text-slate-500">Her satırı düzenleyebilir, soru metni ve cevap anahtarı ekleyebilirsiniz.</p></div>
+          <div><h2 class="text-lg font-black text-slate-950">Soru girişi</h2><p class="text-xs text-slate-500">Tam editör: soru, şık, cevap, çözüm, tablo, görsel ve grafik tek kartta.</p></div>
           <div class="flex gap-2">
             <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700" data-add-question>Boş soru ekle</button>
             <button type="button" class="rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white" data-build-plan>Plan oluştur</button>
@@ -564,6 +898,79 @@
   }
   function soruRow(s, i) {
     const kazOpts = state.kazanimlar.map((k) => `<option value="${esc(k.key)}" ${s.kazanimKey === k.key ? "selected" : ""}>${esc(k.text.slice(0, 90))}</option>`).join("");
+    const typeOptions = TIPLER.map((t) => `<option ${s.tip === t ? "selected" : ""}>${t}</option>`).join("");
+    const zorlukOptions = ZORLUK.map((z) => `<option ${s.zorluk === z ? "selected" : ""}>${z}</option>`).join("");
+    const bilisselOptions = BILISSEL_DUZEYLER.map((z) => `<option ${s.bilissel === z ? "selected" : ""}>${z}</option>`).join("");
+    return `<article class="rounded-lg border border-slate-200 bg-white p-3" data-soru="${esc(s.id)}">
+      <div class="flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <div class="text-[10px] font-black uppercase tracking-widest text-sky-700">Soru ${esc(s.no || i + 1)}</div>
+          <h3 class="truncate text-base font-black text-slate-950">${esc(s.kazanim || "Genel soru")}</h3>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="question-tool" data-move-question="${esc(s.id)}" data-dir="-1">Yukarı</button>
+          <button type="button" class="question-tool" data-move-question="${esc(s.id)}" data-dir="1">Aşağı</button>
+          <button type="button" class="question-tool" data-duplicate-question="${esc(s.id)}">Kopyala</button>
+          <button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-question="${esc(s.id)}">Sil</button>
+        </div>
+      </div>
+      <div class="mt-3 grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_150px] md:items-end">
+        <label class="exam-label">No<input class="exam-input" type="number" data-soru-field="no" value="${esc(s.no || i + 1)}"></label>
+        <label class="exam-label">Kazanım<select class="exam-input" data-soru-field="kazanimKey"><option value="">Genel</option>${kazOpts}</select></label>
+        <label class="exam-label">Tip<select class="exam-input" data-soru-field="tip">${typeOptions}</select></label>
+        <label class="exam-label">Zorluk<select class="exam-input" data-soru-field="zorluk">${zorlukOptions}</select></label>
+        <label class="exam-label">Puan<input class="exam-input" type="number" data-soru-field="puan" value="${esc(s.puan)}"></label>
+        <label class="exam-label">Bilişsel<select class="exam-input" data-soru-field="bilissel">${bilisselOptions}</select></label>
+      </div>
+      <div class="mt-2 grid gap-2 md:grid-cols-4">
+        <label class="exam-label">Konu<input class="exam-input" data-soru-field="konu" value="${esc(s.konu)}" placeholder="Konu"></label>
+        <label class="exam-label">Alt konu<input class="exam-input" data-soru-field="altKonu" value="${esc(s.altKonu)}" placeholder="Alt konu"></label>
+        <label class="exam-label">Kaynak<input class="exam-input" data-soru-field="kaynak" value="${esc(s.kaynak)}" placeholder="Kitap / sayfa / kazanım kodu"></label>
+        <label class="exam-label">Etiket<input class="exam-input" data-soru-field="etiketler" value="${esc(s.etiketler)}" placeholder="grafik, problem, yorum"></label>
+      </div>
+      ${questionToolsHtml(s)}
+      <div class="mt-3 grid gap-2 md:grid-cols-2">
+        <label class="exam-label">Soru metni<textarea class="exam-input min-h-[120px]" data-soru-field="metin">${esc(s.metin)}</textarea></label>
+        <div class="grid gap-2">
+          <label class="exam-label">Cevap / anahtar<textarea class="exam-input min-h-[72px]" data-soru-field="cevap">${esc(s.cevap)}</textarea></label>
+          <label class="exam-label">Açıklamalı çözüm<textarea class="exam-input min-h-[72px]" data-soru-field="cozum">${esc(s.cozum)}</textarea></label>
+        </div>
+      </div>
+      ${typeSpecificHtml(s)}
+      <label class="exam-label mt-3">Öğretmen notu<input class="exam-input" data-soru-field="not" value="${esc(s.not)}" placeholder="Bu alan sınav kağıdında görünmez."></label>
+      <div class="mt-3 grid gap-3 lg:grid-cols-2">
+        <section class="question-media-editor">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-black uppercase tracking-widest text-slate-500">Görsel</div>
+              <p class="mt-1 text-xs text-slate-500">Fotoğraf, şekil, harita, diyagram veya grafik görseli ekleyin.</p>
+            </div>
+            ${s.gorsel ? `<button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-image="${esc(s.id)}">Kaldır</button>` : ""}
+          </div>
+          <input class="exam-input" type="file" accept="image/*" data-upload-image="${esc(s.id)}">
+          ${s.gorsel ? questionMediaHtml({ gorsel: s.gorsel, grafik: null }) : `<div class="mt-3 rounded-lg border border-dashed border-slate-300 bg-white p-4 text-xs font-semibold text-slate-500">Görsel eklendiğinde burada önizleme görünür.</div>`}
+        </section>
+        <section class="question-media-editor">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-black uppercase tracking-widest text-slate-500">Grafik</div>
+              <p class="mt-1 text-xs text-slate-500">Etiket ve değer girerek yazdırılabilir grafik oluşturun.</p>
+            </div>
+            ${s.grafik ? `<button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-chart="${esc(s.id)}">Kaldır</button>` : ""}
+          </div>
+          <div class="mt-2 grid gap-2 sm:grid-cols-[130px_1fr]">
+            <label class="exam-label">Tür<select class="exam-input" data-chart-kind>${GRAFIK_TIPLERI.map(([value, label]) => `<option value="${value}" ${s.grafik?.type === value ? "selected" : ""}>${esc(label)}</option>`).join("")}</select></label>
+            <label class="exam-label">Başlık<input class="exam-input" data-chart-title value="${esc(s.grafik?.title || "")}" placeholder="Örn. Aylık yağış"></label>
+          </div>
+          <div class="mt-2 grid gap-2 sm:grid-cols-2">
+            <label class="exam-label">Etiketler<input class="exam-input" data-chart-labels value="${esc((s.grafik?.labels || []).join(", "))}" placeholder="Ocak, Şubat, Mart"></label>
+            <label class="exam-label">Değerler<input class="exam-input" data-chart-values value="${esc((s.grafik?.values || []).join(", "))}" placeholder="12, 18, 9"></label>
+          </div>
+          <button type="button" class="mt-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white" data-apply-chart="${esc(s.id)}">Grafik uygula</button>
+          ${s.grafik ? questionMediaHtml({ gorsel: null, grafik: s.grafik }) : `<div class="mt-3 rounded-lg border border-dashed border-slate-300 bg-white p-4 text-xs font-semibold text-slate-500">Grafik verileri girildiğinde burada önizleme görünür.</div>`}
+        </section>
+      </div>
+    </article>`;
     return `<article class="rounded-lg border border-slate-200 bg-white p-3" data-soru="${esc(s.id)}">
       <div class="grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_auto] md:items-end">
         <label class="exam-label">No<input class="exam-input" type="number" data-soru-field="no" value="${esc(s.no || i + 1)}"></label>
@@ -651,13 +1058,15 @@
         ${state.sorular.map((s) => `<li class="pl-1">
           <div class="flex justify-between gap-3 text-sm font-black"><span>${esc(s.no)}. ${esc(s.tip)} · ${esc(s.zorluk)}</span><span>${esc(s.puan)} puan</span></div>
           <div class="mt-1 min-h-[42px] rounded border border-slate-200 p-3 text-sm">${esc(s.metin || "Soru metni buraya yazılacak.")}</div>
+          ${questionExtraPreviewHtml(s)}
           ${questionMediaHtml(s)}
         </li>`).join("")}
       </ol>
+      ${opticSheetHtml()}
       <div class="mt-6 border-t border-slate-300 pt-3">
         <h3 class="text-sm font-black">Cevap anahtarı</h3>
         <div class="mt-2 grid gap-1 text-xs sm:grid-cols-2">
-          ${state.sorular.map((s) => `<div><b>${esc(s.no)}.</b> ${esc(s.cevap || "-")}</div>`).join("")}
+          ${state.sorular.map((s) => `<div class="answer-key-line"><b>${esc(s.no)}.</b> ${esc(answerText(s))}${s.cozum ? `<div class="mt-1 text-slate-500"><b>Çözüm:</b> ${esc(s.cozum)}</div>` : ""}</div>`).join("")}
         </div>
       </div>`;
   }
@@ -763,12 +1172,12 @@
     planOlustur();
   }
   function addBlankQuestion() {
-    state.sorular.push({ id: uid("soru"), no: state.sorular.length + 1, tip: TIPLER[0], zorluk: "Orta", puan: 10, kazanimKey: "", kazanim: "", metin: "", cevap: "", gorsel: null, grafik: null });
+    state.sorular.push(newQuestion());
     renderAll();
     scheduleSave();
   }
   function downloadHtml() {
-    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.box{border:1px solid #ddd;padding:10px;min-height:36px}</style></head><body>${previewHtml()}</body></html>`;
+    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option,.answer-key-line{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-sheet{margin-top:24px;break-inside:avoid;page-break-inside:avoid}.exam-optic-title{margin-bottom:10px;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.exam-optic-image{display:block;width:100%;max-width:100%;border:1px solid #bbb;border-radius:8px;background:#fff}</style></head><body>${previewHtml()}</body></html>`;
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -781,6 +1190,32 @@
     const meta = e.target.getAttribute?.("data-meta");
     if (meta) setMeta(meta, e.target.value, false);
     if (e.target.id === "kazanim-ara") renderKazanim();
+    const [targetQuestion] = questionFromElement(e.target);
+    const choiceIndex = e.target.getAttribute?.("data-choice-index");
+    if (targetQuestion && choiceIndex !== null) {
+      targetQuestion.secenekler[parseInt(choiceIndex, 10)] = e.target.value;
+      scheduleSave();
+      return;
+    }
+    const matchIndex = e.target.getAttribute?.("data-match-index");
+    const matchSide = e.target.getAttribute?.("data-match-side");
+    if (targetQuestion && matchIndex !== null && matchSide) {
+      const idx = parseInt(matchIndex, 10);
+      targetQuestion.eslestirmeler[idx] = targetQuestion.eslestirmeler[idx] || { sol: "", sag: "" };
+      targetQuestion.eslestirmeler[idx][matchSide] = e.target.value;
+      scheduleSave();
+      return;
+    }
+    const tableRow = e.target.getAttribute?.("data-table-row");
+    const tableCol = e.target.getAttribute?.("data-table-col");
+    if (targetQuestion && tableRow !== null && tableCol !== null) {
+      const r = parseInt(tableRow, 10);
+      const c = parseInt(tableCol, 10);
+      targetQuestion.tablo[r] = targetQuestion.tablo[r] || [];
+      targetQuestion.tablo[r][c] = e.target.value;
+      scheduleSave();
+      return;
+    }
     const box = e.target.closest?.("[data-soru]");
     const field = e.target.getAttribute?.("data-soru-field");
     if (box && field) {
@@ -790,6 +1225,7 @@
         if (field === "kazanimKey") {
           const k = state.kazanimlar.find((item) => item.key === e.target.value);
           s.kazanim = k ? k.text : "";
+          if (k && !s.konu) s.konu = k.konu || "";
         }
         renderMetrics();
         scheduleSave();
@@ -813,6 +1249,12 @@
     }
     const meta = e.target.getAttribute?.("data-meta");
     if (meta) setMeta(meta, e.target.value, ["sinifId", "ders", "sinavTuru"].includes(meta));
+    const [targetQuestion] = questionFromElement(e.target);
+    if (targetQuestion && e.target.getAttribute?.("data-correct-choice") !== null && e.target.checked) {
+      targetQuestion.dogruSecenek = e.target.value;
+      scheduleSave();
+      return;
+    }
     const box = e.target.closest?.("[data-soru]");
     const field = e.target.getAttribute?.("data-soru-field");
     if (box && field) {
@@ -822,8 +1264,11 @@
         if (field === "kazanimKey") {
           const k = state.kazanimlar.find((item) => item.key === e.target.value);
           s.kazanim = k ? k.text : "";
+          if (k && !s.konu) s.konu = k.konu || "";
         }
-        renderMetrics();
+        normalizeQuestion(s, (parseInt(s.no, 10) || 1) - 1);
+        if (["tip", "kazanimKey"].includes(field)) renderAll();
+        else renderMetrics();
         scheduleSave();
       }
     }
@@ -847,6 +1292,73 @@
     if (template) return applyTemplate(template);
     if (e.target.closest("[data-build-plan]")) return planOlustur();
     if (e.target.closest("[data-add-question]")) return addBlankQuestion();
+    const presetBtn = e.target.closest("[data-question-preset]");
+    if (presetBtn) return applyQuestionPreset(presetBtn);
+    const symbol = e.target.closest("[data-insert-symbol]")?.getAttribute("data-insert-symbol");
+    if (symbol) return insertIntoActiveQuestion(e.target, symbol);
+    const token = e.target.closest("[data-insert-token]")?.getAttribute("data-insert-token");
+    if (token) return insertIntoActiveQuestion(e.target, token.replace(/\\n/g, "\n"));
+    const dupQ = e.target.closest("[data-duplicate-question]")?.getAttribute("data-duplicate-question");
+    if (dupQ) return duplicateQuestion(dupQ);
+    const moveBtn = e.target.closest("[data-move-question]");
+    if (moveBtn) return moveQuestion(moveBtn.getAttribute("data-move-question"), parseInt(moveBtn.getAttribute("data-dir"), 10) || 0);
+    const addChoice = e.target.closest("[data-add-choice]")?.getAttribute("data-add-choice");
+    if (addChoice) {
+      const s = state.sorular.find((x) => x.id === addChoice);
+      if (s && s.secimSayisi < 6) {
+        s.secimSayisi += 1;
+        s.secenekler.push("");
+        renderAll(); scheduleSave();
+      }
+      return;
+    }
+    const removeChoice = e.target.closest("[data-remove-choice]")?.getAttribute("data-remove-choice");
+    if (removeChoice) {
+      const s = state.sorular.find((x) => x.id === removeChoice);
+      if (s && s.secimSayisi > 2) {
+        s.secimSayisi -= 1;
+        s.secenekler = s.secenekler.slice(0, s.secimSayisi);
+        if (!SECENEK_HARFLERI.slice(0, s.secimSayisi).includes(s.dogruSecenek)) s.dogruSecenek = "A";
+        renderAll(); scheduleSave();
+      }
+      return;
+    }
+    const addMatch = e.target.closest("[data-add-match]")?.getAttribute("data-add-match");
+    if (addMatch) {
+      const s = state.sorular.find((x) => x.id === addMatch);
+      if (s && s.eslestirmeler.length < 8) {
+        s.eslestirmeler.push({ sol: "", sag: "" });
+        renderAll(); scheduleSave();
+      }
+      return;
+    }
+    const removeMatch = e.target.closest("[data-remove-match]")?.getAttribute("data-remove-match");
+    if (removeMatch !== undefined && removeMatch !== null) {
+      const [s] = questionFromElement(e.target);
+      if (s && s.eslestirmeler.length > 1) {
+        s.eslestirmeler.splice(parseInt(removeMatch, 10), 1);
+        renderAll(); scheduleSave();
+      }
+      return;
+    }
+    const insertTable = e.target.closest("[data-insert-table]")?.getAttribute("data-insert-table");
+    if (insertTable) {
+      const s = state.sorular.find((x) => x.id === insertTable);
+      if (s) {
+        s.tablo = [["Başlık 1", "Başlık 2", "Başlık 3"], ["", "", ""], ["", "", ""]];
+        renderAll(); scheduleSave();
+      }
+      return;
+    }
+    const clearTable = e.target.closest("[data-clear-table]")?.getAttribute("data-clear-table");
+    if (clearTable) {
+      const s = state.sorular.find((x) => x.id === clearTable);
+      if (s) {
+        s.tablo = [];
+        renderAll(); scheduleSave();
+      }
+      return;
+    }
     const rmQ = e.target.closest("[data-remove-question]")?.getAttribute("data-remove-question");
     if (rmQ) {
       state.sorular = state.sorular.filter((s) => s.id !== rmQ).map((s, i) => Object.assign(s, { no: i + 1 }));

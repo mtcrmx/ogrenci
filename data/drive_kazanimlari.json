@@ -1,214 +1,397 @@
 {
-  "kaynak": "Google Drive / Yıllık Planlar klasörü: ders alt klasörlerindeki 2025-2026 yıllık planlardan derlenen ünite/tema, konu/içerik çerçevesi ve öğrenme çıktısı/kazanımlar",
-  "surum": "2026-05-16-yillik-plan-genisletilmis",
-  "kaynak_klasor_url": "https://drive.google.com/drive/u/0/folders/1oNUUtXiVm4A5o9l884WvwbhwQIbjEesd",
-  "kaynak_dosyalar": [
-    "Matematik: 2025 5.Sınıf matematik Yıllık Plan.docx",
-    "Matematik: 2025 7.Sınıf matematik Yıllık Plan.docx",
-    "Matematik: 2025-2026 8.Sınıflar Matematik Dersi Yıllık Plan.docx",
-    "Türkçe: MEB YAYINLARI 5. SINIF TÜRKÇE DERSİ YILLIK PLAN.pdf",
-    "Türkçe: GÜNCELLENEN 6. SINIF MEB YAYINLARI TÜRKÇE YILLIK PLANI (YLZ) 2025-2026.DOCX",
-    "Türkçe: 7.SINIF-OZGUN-2026.docx",
-    "Fen Bilimleri: 2025-2026 5.SINIF FEN BİLİMLERİ PLAN.docx",
-    "Sosyal Bilgiler: 2025-2026-5.-Sinif-Sosyal-Bilgiler-Yillik-Plani-WORD.docx",
-    "Sosyal Bilgiler: 2025-2026-6.-Sinif-Sosyal-Bilgiler-Yillik-Plani-WORD.docx",
-    "Din Kültürü ve Ahlak Bilgisi: 2024-2025 ERENLER CUMHURİYET ORT- DKAB 5- YILLIK PLAN.docx",
-    "Müzik: 5_Sinif_Muzik_Yillik_Plan.docx",
-    "Müzik: 2025-2026 Eğitim Öğretim Yılı Müzik-7 dersi Yıllık Planı Document.PDF",
-    "İngilizce: 5. sınıf İngilizce yıllık plan.docx",
-    "İngilizce: 6. sınıf İngilizce yıllık plan.docx",
-    "İngilizce: 7. sınıf İngilizce yıllık plan.docx",
-    "Bilişim Teknolojileri ve Yazılım: 5-sinif-bil-tek-ve-yazilim-maarif-m-yillik-plan-ogretmenevrak-1775381163.docx",
-    "Türkçe: HECCE YAYINLARI 8.SINIF YILLIK PLAN.pdf",
-    "Matematik: 2025-2026 6.Sınıflar Matematik Dersi Yıllık Plan.docx",
-    "Fen Bilimleri: 6.SINIFLAR FEN BİLİMLERİ DERSİ YILLIK PLANI.docx",
-    "Fen Bilimleri: 2025-2026 7.SINIF FEN BİLİMLERİ PLAN.docx",
-    "Fen Bilimleri: 8.SINIFLAR FEN BİLİMLERİ DERSİ YILLIK PLANI.docx",
-    "Sosyal Bilgiler: 2025-2026-7.-Sinif-Sosyal-Bilgiler-Yillik-Plani-YILDIRIM-Yayinlari.docx",
-    "T.C. İnkılap Tarihi ve Atatürkçülük: 2025-2026-8.-Sinif-T.C.-Inkilap-Tarihi-Yillik-Plani-DERSDESTEK.docx",
-    "Din Kültürü ve Ahlak Bilgisi: 2024-2025 ERENLER CUMHURİYET ORT- DKAB 6- YILLIK PLAN.docx",
-    "Din Kültürü ve Ahlak Bilgisi: 2024-2025 ERENLER CUMHURİYET ORT- DKAB 7- YILLIK PLAN.docx",
-    "Din Kültürü ve Ahlak Bilgisi: 2024-2025 ERENLER CUMHURİYET ORT- DKAB 8- YILLIK PLAN.docx",
-    "İngilizce: 8. sınıf İngilizce yıllık plan.docx",
-    "Bilişim Teknolojileri ve Yazılım: 6-sinif-bilisim-teknolojileri-ve-yazilim-yusuf-erturk-yillik-plan-ogretmenevrak-1775381222.docx",
-    "Beden Eğitimi ve Spor: 5-8. sınıf yıllık planları",
-    "Görsel Sanatlar: 5-8. sınıf yıllık planları",
-    "Teknoloji ve Tasarım: 7-8. sınıf yıllık planları"
-  ],
+  "kaynak": "C:\\Users\\METE\\Downloads\\ÖĞRENME ÇIKTI 2.xlsx",
+  "aciklama": "ÖĞRENME ÇIKTI 2.xlsx dosyasından ders ders güncellenen öğrenme çıktıları. Eski çıktı havuzları temizlenmiştir.",
+  "surum": "2026-05-20-ogrenme-cikti-2",
   "dersler": {
     "Türkçe": [
       {
-        "tema": "Drive · 5. sınıf Türkçe · 2025-2026 yıllık plan",
+        "tema": "5. sınıf - Türkçe - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Oyun Dünyası · Dinleme/izleme, okuma, konuşma ve yazma",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
               "T.D.5.1. Dinlemede/izlemede materyal seçimini yönetebilme",
+              "T.D.5.2. Dinlemede/izlemede strateji ve yöntem seçimlerini yönetebilme",
+              "T.D.5.3. Dinleyeceğinin/izleyeceğinin içeriğine yönelik tahminde bulunabilme",
               "T.D.5.4. Dinlediğinde/izlediğinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
               "T.D.5.5. Dinlediğinin/izlediğinin yüzey anlamını belirleyebilme",
+              "T.D.5.6. Görselle iletilen anlamı belirleyebilme",
+              "T.D.5.7. Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik basit çıkarımlar yapabilme",
+              "T.D.5.8. Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme",
+              "T.D.5.9. Dinlediğini/izlediğini kendi içinde karşılaştırabilme",
+              "T.D.5.10. Dinledikleri/izledikleri arasında karşılaştırma yapabilme",
+              "T.D.5.11. Dinlediğindeki/izlediğindeki unsurları sınıflandırabilme",
+              "T.D.5.12. Dinlediğini/izlediğini yorumlayabilme",
+              "T.D.5.13. Öyküleyici metinlerdeki hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme",
+              "T.D.5.14. Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme",
+              "T.D.5.15. Bilgilendirici metinde anahtar kelimeleri belirlemeye yönelik çözümleme yapabilme",
+              "T.D.5.16. Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme",
+              "T.D.5.17. Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme",
+              "T.D.5.18. Dinlediğindeki/izlediğindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme",
               "T.D.5.19. Dinlediğinden/izlediğinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
+              "T.D.5.20. Çoklu ortam ögelerine yönelik çözümleme yapabilme",
+              "T.D.5.21. Dinlediğini/izlediğini özetleyebilme",
+              "T.D.5.22. Dinlediğini/izlediğini değerlendirebilme",
+              "T.D.5.23. Dinlediğini/izlediğini eleştirebilme",
+              "T.D.5.24. Dinlediğindeki/izlediğindeki probleme çözüm üretebilme",
               "T.D.5.25. Dinleme/izleme sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
               "T.O.5.1. Okumada materyal seçimini yönetebilme",
               "T.O.5.2. Sesli ve sessiz okurken akıcı okuma unsurlarını yönetebilme",
               "T.O.5.3. Okumada strateji ve yöntem seçimlerini yönetebilme",
+              "T.O.5.4. Okuyacağı metnin içeriğine yönelik tahminde bulunabilme",
               "T.O.5.5. Metinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
               "T.O.5.6. Metnin yüzey anlamını belirleyebilme",
+              "T.O.5.7. Görselle iletilen anlamı belirleyebilme",
+              "T.O.5.8. Metnin derin anlamını belirlemeye yönelik basit çıkarımlar yapabilme",
+              "T.O.5.9. Metnin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme",
+              "T.O.5.10. Metin içi karşılaştırma yapabilme",
+              "T.O.5.11. Metinler arası karşılaştırma yapabilme",
+              "T.O.5.12. Metindeki unsurları sınıflandırabilme",
+              "T.O.5.13. Metni yorumlayabilme",
+              "T.O.5.14. Öyküleyici metinlerdeki hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme",
+              "T.O.5.15. Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme",
+              "T.O.5.16. Bilgilendirici metinde anahtar kelimeleri belirlemeye yönelik çözümleme yapabilme",
+              "T.O.5.17. Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme",
+              "T.O.5.18. Şiirin biçim özelliklerini belirlemeye yönelik çözümleme yapabilme",
+              "T.O.5.19. Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme",
+              "T.O.5.20. Metindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme",
               "T.O.5.21. Metinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
+              "T.O.5.22. Çoklu ortam ögelerine yönelik çözümleme yapabilme",
+              "T.O.5.23. Okuduğunu özetleyebilme",
+              "T.O.5.24. Okuduğunu değerlendirebilme",
+              "T.O.5.25. Metni eleştirebilme",
+              "T.O.5.26. Metindeki probleme çözüm üretebilme",
               "T.O.5.27. Okuma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
               "T.K.5.1. Konuşma sürecini yönetebilme",
+              "T.K.5.2. Konuşma yöntem ve tekniklerine yönelik seçimlerini yönetebilme",
               "T.K.5.3. Konuşmasında amaç ve içeriğe yönelik seçimlerini yönetebilme",
               "T.K.5.4. Konuşmasında ön bilgilerinden yararlanabilme",
+              "T.K.5.5. Konuşmasında uygun tepki verebilme",
+              "T.K.5.6. Konuşmasında çoklu ortam ögeleriyle içerik oluşturabilme",
+              "T.K.5.7. Yaratıcı konuşma yapabilme",
+              "T.K.5.8. Hazırlıksız konuşma yapabilme",
               "T.K.5.9. Konuşmasında sesini uygun şekilde kullanabilme",
+              "T.K.5.10. Sözlü sunum yapabilme",
+              "T.K.5.11. Konuşmasında tahminlerinden yararlanabilme",
+              "T.K.5.12. Konuşmasında karşılaştırma yapabilme",
+              "T.K.5.13. Konuşmasında sınıflandırma yapabilme",
+              "T.K.5.14. Yorumunu sözlü olarak ifade edebilme",
+              "T.K.5.15. Sözlü olarak özetleyebilme",
+              "T.K.5.16. Değerlendirmesini sözlü olarak ifade edebilme",
+              "T.K.5.17. Sözlü olarak tartışmaya katılabilme",
+              "T.K.5.18. Eleştirisini sözlü olarak ifade edebilme",
+              "T.K.5.19. Problem çözümüne yönelik konuşma yapabilme",
+              "T.K.5.20. Hazırlıklı konuşmasını yapılandırabilme",
+              "T.K.5.21. Konuşmasında düşünceyi geliştirme yollarını kullanabilme",
               "T.K.5.22. Konuşmasını zenginleştirecek biçimde söz varlığını kullanabilme",
+              "T.K.5.23. Konuşmasında açık ve örtük ifadeleri kullanabilme",
+              "T.K.5.24. Uygun geçiş ve bağlantı ifadelerini kullanabilme",
+              "T.K.5.25. Konuşmasında beden dilini ve mekânı etkili kullanabilme",
               "T.K.5.26. Konuşma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
               "T.Y.5.1. Yazma sürecini yönetebilme",
+              "T.Y.5.2. Yazma strateji, yöntem ve tekniklerine yönelik seçimlerini yönetebilme",
               "T.Y.5.3. Yazısında içerik ve yapıya yönelik seçimlerini yönetebilme",
               "T.Y.5.4. Yazılı üretim ve yazılı etkileşiminde ön bilgilerinden yararlanabilme",
+              "T.Y.5.5. Yazılı etkileşiminde uygun tepki verebilme",
+              "T.Y.5.6. Yazısında çoklu ortam ögeleriyle içerik oluşturabilme",
+              "T.Y.5.7. Yaratıcı yazı yazabilme",
+              "T.Y.5.8. Yazılı üretim ve yazılı etkileşiminde tahminlerinden yararlanabilme",
+              "T.Y.5.9. Yazısında karşılaştırma yapabilme",
+              "T.Y.5.10. Yazısında sınıflandırma yapabilme",
+              "T.Y.5.11. Yorumunu yazılı olarak ifade edebilme",
+              "T.Y.5.12. Yazılı olarak özetleyebilme",
+              "T.Y.5.13. Değerlendirmesini yazılı olarak ifade edebilme",
+              "T.Y.5.14. Yazılı üretiminde ve yazılı etkileşiminde tartışabilme",
+              "T.Y.5.15. Eleştirisini yazılı olarak ifade edebilme",
+              "T.Y.5.16. Problem çözümüne yönelik yazabilme",
+              "T.Y.5.17. Yazısında düşünceyi geliştirme yollarını kullanabilme",
               "T.Y.5.18. Yazısını zenginleştirecek biçimde söz varlığını kullanabilme",
+              "T.Y.5.19. Yazısında açık ve örtük ifade etmeye yönelik yapıları kullanabilme",
+              "T.Y.5.20. Uygun geçiş ve bağlantı ifadelerini kullanabilme",
               "T.Y.5.21. Yazım kuralları ve noktalama işaretlerini uygulayabilme",
               "T.Y.5.22. Yazma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme"
             ]
-          },
-          {
-            "baslik": "Sağlıklı Yaşıyorum · Bilgilendirici metin, çoklu ortam ve değerlendirme",
-            "ciktilar": [
-              "T.D.5.14. Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme",
-              "T.D.5.20. Çoklu ortam ögelerine yönelik çözümleme yapabilme",
-              "T.D.5.22. Dinlediğini/izlediğini değerlendirebilme",
-              "T.D.5.23. Dinlediğini/izlediğini eleştirebilme",
-              "T.O.5.15. Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme",
-              "T.O.5.22. Çoklu ortam ögelerine yönelik çözümleme yapabilme",
-              "T.O.5.24. Okuduğunu değerlendirebilme",
-              "T.O.5.25. Metni eleştirebilme",
-              "T.K.5.6. Konuşmasında çoklu ortam ögeleriyle içerik oluşturabilme",
-              "T.K.5.10. Sözlü sunum yapabilme",
-              "T.K.5.14. Yorumunu sözlü olarak ifade edebilme",
-              "T.K.5.16. Değerlendirmesini sözlü olarak ifade edebilme",
-              "T.K.5.18. Eleştirisini sözlü olarak ifade edebilme",
-              "T.Y.5.6. Yazısında çoklu ortam ögeleriyle içerik oluşturabilme",
-              "T.Y.5.11. Yorumunu yazılı olarak ifade edebilme",
-              "T.Y.5.13. Değerlendirmesini yazılı olarak ifade edebilme",
-              "T.Y.5.15. Eleştirisini yazılı olarak ifade edebilme"
-            ]
           }
         ]
       },
       {
-        "tema": "Drive · 6. sınıf Türkçe · 2025-2026 yıllık plan",
+        "tema": "6. sınıf - Türkçe - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Dilimizin Zenginlikleri · Dinleme/izleme, okuma, konuşma ve yazma",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
               "T.D.6.1. Dinlemede/izlemede materyal seçimini yönetebilme",
-              "T.D.6.4. Dinlediğinde/izlediğinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
-              "T.D.6.5. Dinlediğinin/izlediğinin yüzey anlamını belirleyebilme",
+              "T.D.6.10. Dinledikleri/izledikleri arasında karşılaştırma yapabilme",
+              "T.D.6.11. Dinlediğindeki/izlediğindeki unsurları sınıflandırabilme",
+              "T.D.6.12. Dinlediğini/izlediğini yorumlayabilme",
+              "T.D.6.13. Öyküleyici metinlerdeki hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme",
+              "T.D.6.14. Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme",
+              "T.D.6.15. Bilgilendirici metinde anahtar kelimeleri belirlemeye yönelik çözümleme yapabilme",
+              "T.D.6.16. Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme",
+              "T.D.6.17. Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme",
+              "T.D.6.18. Dinlediğindeki/izlediğindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme",
               "T.D.6.19. Dinlediğinden/izlediğinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
-              "T.D.6.25. Dinleme/izleme sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
-              "T.O.6.1. Okumada materyal seçimini yönetebilme",
-              "T.O.6.2. Sesli ve sessiz okurken akıcı okuma unsurlarını yönetebilme",
-              "T.O.6.4. Okuyacağı metnin içeriğine yönelik tahminde bulunabilme",
-              "T.O.6.5. Metinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
-              "T.O.6.6. Metnin yüzey anlamını belirleyebilme",
-              "T.O.6.21. Metinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
-              "T.O.6.27. Okuma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
-              "T.K.6.1. Konuşma sürecini yönetebilme",
-              "T.K.6.22. Konuşmasını zenginleştirecek biçimde söz varlığını kullanabilme",
-              "T.K.6.26. Konuşma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
-              "T.Y.6.1. Yazma sürecini yönetebilme",
-              "T.Y.6.18. Yazısını zenginleştirecek biçimde söz varlığını kullanabilme",
-              "T.Y.6.21. Yazım kuralları ve noktalama işaretlerini uygulayabilme",
-              "T.Y.6.22. Yazma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme"
-            ]
-          },
-          {
-            "baslik": "Lider Ruhlar · Değerlendirme, eleştiri ve problem çözme",
-            "ciktilar": [
+              "T.D.6.2. Dinlemede/izlemede strateji ve yöntem seçimlerini yönetebilme",
+              "T.D.6.20. Çoklu ortam ögelerine yönelik çözümleme yapabilme",
+              "T.D.6.21. Dinlediğini/izlediğini özetleyebilme",
               "T.D.6.22. Dinlediğini/izlediğini değerlendirebilme",
               "T.D.6.23. Dinlediğini/izlediğini eleştirebilme",
               "T.D.6.24. Dinlediğindeki/izlediğindeki probleme çözüm üretebilme",
+              "T.D.6.25. Dinleme/izleme sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
+              "T.D.6.3. Dinleyeceğinin/izleyeceğinin içeriğine yönelik tahminde bulunabilme",
+              "T.D.6.4. Dinlediğinde/izlediğinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
+              "T.D.6.5. Dinlediğinin/izlediğinin yüzey anlamını belirleyebilme",
+              "T.D.6.6. Görselle iletilen anlamı belirleyebilme",
+              "T.D.6.7. Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik basit çıkarımlar yapabilme",
+              "T.D.6.8. Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme",
+              "T.D.6.9. Dinlediğini/izlediğini kendi içinde karşılaştırabilme",
+              "T.K.6.1. Konuşma sürecini yönetebilme",
+              "T.K.6.10. Sözlü sunum yapabilme",
+              "T.K.6.11. Konuşmasında tahminlerinden yararlanabilme",
+              "T.K.6.12. Konuşmasında karşılaştırma yapabilme",
+              "T.K.6.13. Konuşmasında sınıflandırma yapabilme",
+              "T.K.6.14. Yorumunu sözlü olarak ifade edebilme",
+              "T.K.6.15. Sözlü olarak özetleyebilme",
+              "T.K.6.16. Değerlendirmesini sözlü olarak ifade edebilme",
+              "T.K.6.17. Sözlü olarak tartışmaya katılabilme",
+              "T.K.6.18. Eleştirisini sözlü olarak ifade edebilme",
+              "T.K.6.19. Problem çözümüne yönelik konuşma yapabilme",
+              "T.K.6.2. Konuşma yöntem ve tekniklerine yönelik seçimlerini yönetebilme",
+              "T.K.6.20. Hazırlıklı konuşmasını yapılandırabilme",
+              "T.K.6.21. Konuşmasında düşünceyi geliştirme yollarını kullanabilme",
+              "T.K.6.22. Konuşmasını zenginleştirecek biçimde söz varlığını kullanabilme",
+              "T.K.6.23. Konuşmasında açık ve örtük ifadeleri kullanabilme",
+              "T.K.6.24. Uygun geçiş ve bağlantı ifadelerini kullanabilme",
+              "T.K.6.25. Konuşmasında beden dilini ve mekânı etkili kullanabilme",
+              "T.K.6.26. Konuşma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
+              "T.K.6.3. Konuşmasında amaç ve içeriğe yönelik seçimlerini yönetebilme",
+              "T.K.6.4. Konuşmasında ön bilgilerinden yararlanabilme",
+              "T.K.6.5. Konuşmasında uygun tepki verebilme",
+              "T.K.6.6. Konuşmasında çoklu ortam ögeleriyle içerik oluşturabilme",
+              "T.K.6.7. Yaratıcı konuşma yapabilme",
+              "T.K.6.8. Hazırlıksız konuşma yapabilme",
+              "T.K.6.9. Konuşmasında sesini uygun şekilde kullanabilme",
+              "T.O.6.1. Okumada materyal seçimini yönetebilme",
+              "T.O.6.10. Metin içi karşılaştırma yapabilme",
+              "T.O.6.11. Metinler arası karşılaştırma yapabilme",
+              "T.O.6.12. Metindeki unsurları sınıflandırabilme",
+              "T.O.6.13. Metni yorumlayabilme",
+              "T.O.6.14. Öyküleyici metinlerdeki hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme",
+              "T.O.6.15. Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme",
+              "T.O.6.16. Bilgilendirici metinde anahtar kelimeleri belirlemeye yönelik çözümleme yapabilme",
+              "T.O.6.17. Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme",
+              "T.O.6.18. Şiirin biçim özelliklerini belirlemeye yönelik çözümleme yapabilme",
+              "T.O.6.19. Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme",
+              "T.O.6.2. Sesli ve sessiz okurken akıcı okuma unsurlarını yönetebilme",
+              "T.O.6.20. Metindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme",
+              "T.O.6.21. Metinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme",
+              "T.O.6.22. Çoklu ortam ögelerine yönelik çözümleme yapabilme",
+              "T.O.6.23. Okuduğunu özetleyebilme",
               "T.O.6.24. Okuduğunu değerlendirebilme",
               "T.O.6.25. Metni eleştirebilme",
               "T.O.6.26. Metindeki probleme çözüm üretebilme",
-              "T.K.6.16. Değerlendirmesini sözlü olarak ifade edebilme",
-              "T.K.6.18. Eleştirisini sözlü olarak ifade edebilme",
-              "T.K.6.19. Problem çözümüne yönelik konuşma yapabilme",
+              "T.O.6.27. Okuma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
+              "T.O.6.3. Okumada strateji ve yöntem seçimlerini yönetebilme",
+              "T.O.6.4. Okuyacağı metnin içeriğine yönelik tahminde bulunabilme",
+              "T.O.6.5. Metinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme",
+              "T.O.6.6. Metnin yüzey anlamını belirleyebilme",
+              "T.O.6.7. Görselle iletilen anlamı belirleyebilme",
+              "T.O.6.8. Metnin derin anlamını belirlemeye yönelik basit çıkarımlar yapabilme",
+              "T.O.6.9. Metnin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme",
+              "T.Y.6.1. Yazma sürecini yönetebilme",
+              "T.Y.6.10. Yazısında sınıflandırma yapabilme",
+              "T.Y.6.11. Yorumunu yazılı olarak ifade edebilme",
+              "T.Y.6.12. Yazılı olarak özetleyebilme",
               "T.Y.6.13. Değerlendirmesini yazılı olarak ifade edebilme",
+              "T.Y.6.14. Yazılı üretiminde ve yazılı etkileşiminde tartışabilme",
               "T.Y.6.15. Eleştirisini yazılı olarak ifade edebilme",
-              "T.Y.6.16. Problem çözümüne yönelik yazabilme"
+              "T.Y.6.16. Problem çözümüne yönelik yazabilme",
+              "T.Y.6.17. Yazısında düşünceyi geliştirme yollarını kullanabilme",
+              "T.Y.6.18. Yazısını zenginleştirecek biçimde söz varlığını kullanabilme",
+              "T.Y.6.19. Yazısında açık ve örtük ifade etmeye yönelik yapıları kullanabilme",
+              "T.Y.6.2. Yazma strateji, yöntem ve tekniklerine yönelik seçimlerini yönetebilme",
+              "T.Y.6.20. Uygun geçiş ve bağlantı ifadelerini kullanabilme",
+              "T.Y.6.21. Yazım kuralları ve noktalama işaretlerini uygulayabilme",
+              "T.Y.6.22. Yazma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme",
+              "T.Y.6.3. Yazısında içerik ve yapıya yönelik seçimlerini yönetebilme",
+              "T.Y.6.4. Yazılı üretim ve yazılı etkileşiminde ön bilgilerinden yararlanabilme",
+              "T.Y.6.5. Yazılı etkileşiminde uygun tepki verebilme",
+              "T.Y.6.6. Yazısında çoklu ortam ögeleriyle içerik oluşturabilme",
+              "T.Y.6.7. Yaratıcı yazı yazabilme",
+              "T.Y.6.8. Yazılı üretim ve yazılı etkileşiminde tahminlerinden yararlanabilme",
+              "T.Y.6.9. Yazısında karşılaştırma yapabilme"
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 7. sınıf Türkçe · 2025-2026 yıllık plan",
+        "tema": "7. sınıf - Türkçe - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Bilim ve Teknoloji · Okuma, dinleme/izleme, konuşma ve yazma kazanımları",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
+              "T.7.1.1. Dinlediklerinde/izlediklerinde geçen olayların gelişimi ve sonucu hakkında tahminde bulunur.",
+              "T.7.1.2. Dinlediklerinde/izlediklerinde geçen, bilmediği kelimelerin anlamını tahmin eder.",
+              "T.7.1.3. Dinlediklerini/izlediklerini özetler.",
+              "T.7.1.4. Dinledikleri/izlediklerine yönelik soruları cevaplar.",
+              "T.7.1.5. Dinlediklerinin/izlediklerinin konusunu belirler.",
+              "T.7.1.6. Dinlediklerinin/izlediklerinin ana fikrini/ana duygusunu belirler.",
+              "T.7.1.7. Dinlediklerine/izlediklerine yönelik farklı başlıklar önerir.",
+              "T.7.1.8. Dinlediği/izlediği hikâye edici metinleri canlandırır.",
+              "T.7.1.9. Dinlediklerinde/izlediklerinde başvurulan düşünceyi geliştirme yollarını tespit eder.",
+              "T.7.1.10. Dinlediklerinde/izlediklerinde tutarlılığı sorgular.",
+              "T.7.1.11. Dinledikleriyle/izledikleriyle ilgili görüşlerini bildirir.",
+              "T.7.1.12. Dinlediklerinin/izlediklerinin içeriğini değerlendirir.",
+              "T.7.1.13. Dinleme stratejilerini uygular.",
+              "T.7.1.14. Konuşmacının sözlü olmayan mesajlarını kavrar.",
+              "T.7.2.1. Hazırlıklı konuşma yapar.",
+              "T.7.2.2. Hazırlıksız konuşma yapar.",
+              "T.7.2.3. Konuşma stratejilerini uygular.",
+              "T.7.2.4. Konuşmalarında beden dilini etkili bir şekilde kullanır.",
+              "T.7.2.5. Kelimeleri anlamlarına uygun kullanır.",
+              "T.7.2.6. Konuşmalarında uygun geçiş ve bağlantı ifadelerini kullanır.",
+              "T.7.2.7. Konuşmalarında yabancı dillerden alınmış, dilimize henüz yerleşmemiş kelimelerin Türkçelerini kullanır.",
               "T.7.3.1. Noktalama işaretlerine dikkat ederek sesli ve sessiz okur.",
+              "T.7.3.2. Metni türün özelliklerine uygun biçimde okur.",
+              "T.7.3.3. Farklı yazı karakterleri ile yazılmış yazıları okur.",
+              "T.7.3.4. Okuma stratejilerini kullanır.",
               "T.7.3.5. Bağlamdan hareketle bilmediği kelime ve kelime gruplarının anlamını tahmin eder.",
+              "T.7.3.6. Deyim ve atasözlerinin metne katkısını belirler.",
+              "T.7.3.7. Metni oluşturan unsurlar arasındaki geçiş ve bağlantı ifadelerinin anlama olan katkısını",
+              "T.7.3.8. Metindeki söz sanatlarını tespit eder.",
+              "T.7.3.9. Çekim eklerinin işlevlerini ayırt eder.",
+              "T.7.3.10. Basit, türemiş ve birleşik fiilleri ayırt eder.",
+              "T.7.3.11. Zarfların metnin anlamına olan katkısını açıklar.",
               "T.7.3.12. Fiillerin anlam özelliklerini fark eder.",
+              "T.7.3.13. Anlatım bozukluklarını tespit eder.",
+              "T.7.3.14. Görsellerden ve başlıktan hareketle okuyacağı metnin konusunu tahmin eder.",
+              "T.7.3.15. Okuduklarını özetler.",
+              "T.7.3.16. Metnin konusunu belirler.",
               "T.7.3.17. Metnin ana fikrini/ana duygusunu belirler.",
               "T.7.3.18. Metindeki yardımcı fikirleri belirler.",
-              "T.7.3.27. Metinde önemli noktaların vurgulanış biçimlerini kavrar.",
-              "T.7.3.28. Okudukları ile ilgili çıkarımlarda bulunur.",
-              "T.7.3.37. Metinde kullanılan düşünceyi geliştirme yollarını belirler.",
-              "T.7.1.4. Dinledikleri/izlediklerine yönelik soruları cevaplar.",
-              "T.7.1.12. Dinlediklerinin/izlediklerinin içeriğini değerlendirir.",
-              "T.7.2.3. Konuşma stratejilerini uygular.",
-              "T.7.4.4. Yazma stratejilerini uygular."
-            ]
-          },
-          {
-            "baslik": "Milli Mücadele ve Atatürk · Metin anlama ve üretim kazanımları",
-            "ciktilar": [
-              "T.7.3.6. Deyim ve atasözlerinin metne katkısını belirler.",
-              "T.7.3.16. Metnin konusunu belirler.",
               "T.7.3.19. Metinle ilgili soruları cevaplar.",
-              "T.7.3.21. Metindeki hikaye unsurlarını belirler.",
-              "T.7.3.30. Görsellerle ilgili soruları cevaplar.",
-              "T.7.3.34. Grafik, tablo ve çizelgeyle sunulan bilgileri yorumlar.",
-              "T.7.3.36. Metindeki anlatım biçimlerini belirler.",
-              "T.7.2.4. Konuşmalarında beden dilini etkili bir şekilde kullanır.",
-              "T.7.4.2. Bilgilendirici metin yazar.",
-              "T.7.4.6. Bir işi işlem basamaklarına göre yazar.",
-              "T.7.4.14. Araştırmalarının sonuçlarını yazılı olarak sunar.",
-              "T.7.4.16. Yazdıklarını düzenler."
-            ]
-          },
-          {
-            "baslik": "Okuma Kültürü, Sağlık ve Spor, Doğa ve Evren · Yorumlama ve değerlendirme kazanımları",
-            "ciktilar": [
-              "T.7.3.13. Anlatım bozukluklarını tespit eder.",
+              "T.7.3.20. Metinle ilgili sorular sorar.",
+              "T.7.3.21. Metindeki hikâye unsurlarını belirler.",
               "T.7.3.22. Metnin içeriğini yorumlar.",
+              "T.7.3.23. Metnin içeriğine uygun başlık/başlıklar belirler.",
               "T.7.3.24. Metinde ele alınan sorunlara farklı çözümler üretir.",
               "T.7.3.25. Metinler arasında karşılaştırma yapar.",
+              "T.7.3.26. Metindeki gerçek ve kurgusal unsurları ayırt eder.",
+              "T.7.3.27. Metinde önemli noktaların vurgulanış biçimlerini kavrar.",
+              "T.7.3.28. Okudukları ile ilgili çıkarımlarda bulunur.",
+              "T.7.3.29. Metin türlerini ayırt eder.",
+              "T.7.3.30. Görsellerle ilgili soruları cevaplar.",
               "T.7.3.31. Medya metinlerini değerlendirir.",
+              "T.7.3.32. Bilgi kaynaklarını etkili bir şekilde kullanır.",
+              "T.7.3.33. Bilgi kaynaklarının güvenilirliğini sorgular.",
+              "T.7.3.34. Grafik, tablo ve çizelgeyle sunulan bilgileri yorumlar.",
+              "T.7.3.35. Metinlerin yazılı hâli ile medya sunumlarını karşılaştırır.",
+              "T.7.3.36. Metindeki anlatım biçimlerini belirler.",
+              "T.7.3.37. Metinde kullanılan düşünceyi geliştirme yollarını belirler.",
               "T.7.3.38. Metindeki iş ve işlem basamaklarını kavrar.",
-              "T.7.1.6. Dinlediklerinin/izlediklerinin ana fikrini/ana duygusunu belirler.",
-              "T.7.1.8. Dinlediği/izlediği hikaye edici metinleri canlandırır.",
-              "T.7.1.13. Dinleme stratejilerini uygular.",
               "T.7.4.1. Şiir yazar.",
+              "T.7.4.2. Bilgilendirici metin yazar.",
+              "T.7.4.3. Hikâye edici metin yazar.",
+              "T.7.4.4. Yazma stratejilerini uygular.",
+              "T.7.4.5. Anlatımı desteklemek için grafik ve tablo kullanır.",
+              "T.7.4.6. Bir işi işlem basamaklarına göre yazar.",
+              "T.7.4.7. Yazılarını zenginleştirmek için atasözleri, deyimler ve özdeyişler kullanır.",
+              "T.7.4.8. Yazılarında anlatım biçimlerini kullanır.",
+              "T.7.4.9. Yazdıklarında yabancı dillerden alınmış, dilimize henüz yerleşmemiş kelimelerin Türkçelerini kullanır.",
               "T.7.4.10. Formları yönergelerine uygun doldurur.",
-              "T.7.4.15. Yazılarında uygun geçiş ve bağlantı ifadelerini kullanır."
+              "T.7.4.11. Kısa metinler yazar.",
+              "T.7.4.12. Yazdıklarının içeriğine uygun başlık belirler.",
+              "T.7.4.13. Ek fiili işlevlerine uygun olarak kullanır.",
+              "T.7.4.14. Araştırmalarının sonuçlarını yazılı olarak sunar.",
+              "T.7.4.15. Yazılarında uygun geçiş ve bağlantı ifadelerini kullanır.",
+              "T.7.4.16. Yazdıklarını düzenler.",
+              "T.7.4.17. Yazdıklarını paylaşır."
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 8. sınıf Türkçe · 2025-2026 yıllık plan",
+        "tema": "8. sınıf - Türkçe - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Erdemler / Doğa ve Evren / Bilim ve Teknoloji · Okuma, dinleme/izleme, konuşma ve yazma",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
+              "T.8.1.1. Dinlediklerinde/izlediklerinde geçen olayların gelişimi ve sonucu hakkında tahminde bulunur.",
+              "T.8.1.2. Dinlediklerinde/izlediklerinde geçen bilmediği kelimelerin anlamını tahmin eder.",
+              "T.8.1.3. Dinlediklerini/izlediklerini özetler.",
+              "T.8.1.4. Dinledikleri/izlediklerine yönelik sorulara cevap verir.",
+              "T.8.1.5. Dinlediklerinin/izlediklerinin konusunu tespit eder.",
+              "T.8.1.6. Dinlediklerinin/izlediklerinin ana fikrini/ana duygusunu tespit eder.",
+              "T.8.1.7. Dinlediklerine/izlediklerine yönelik farklı başlıklar önerir.",
+              "T.8.1.8. Dinlediği/izlediği hikâye edici metinleri canlandırır.",
+              "T.8.1.9. Dinlediklerinde/izlediklerinde tutarlılığı sorgular.",
+              "T.8.1.10. Dinledikleriyle/izledikleriyle ilgili görüşlerini bildirir.",
+              "T.8.1.11. Dinledikleri/izledikleri medya metinlerini değerlendirir.",
+              "T.8.1.12. Dinlediklerinde/izlediklerinde başvurulan düşünceyi geliştirme yollarını tespit eder.",
+              "T.8.1.13. Konuşmacının sözlü olmayan mesajlarını kavrar.",
+              "T.8.1.14. Dinleme stratejilerini uygular.",
+              "T.8.2.1. Hazırlıklı konuşma yapar.",
+              "T.8.2.2. Hazırlıksız konuşma yapar.",
+              "T.8.2.3. Konuşma stratejilerini uygular.",
+              "T.8.2.4. Konuşmalarında beden dilini etkili bir şekilde kullanır.",
+              "T.8.2.5. Kelimeleri anlamlarına uygun kullanır.",
+              "T.8.2.6. Konuşmalarında yabancı dillerden alınmış, dilimize henüz yerleşmemiş kelimelerin Türkçelerini kullanır.",
+              "T.8.2.7. Konuşmalarında uygun geçiş ve bağlantı ifadelerini kullanır.",
               "T.8.3.1. Noktalama işaretlerine dikkat ederek sesli ve sessiz okur.",
+              "T.8.3.2. Metni türün özelliklerine uygun biçimde okur.",
+              "T.8.3.3. Farklı yazı karakterleri ile yazılmış yazıları okur.",
+              "T.8.3.4. Okuma stratejilerini kullanır.",
               "T.8.3.5. Bağlamdan yararlanarak bilmediği kelime ve kelime gruplarının anlamını tahmin eder.",
+              "T.8.3.6. Deyim, atasözü ve özdeyişlerin metne katkısını belirler.",
+              "T.8.3.7. Metindeki söz sanatlarını tespit eder.",
+              "T.8.3.8. Metindeki anlatım bozukluklarını belirler.",
+              "T.8.3.9. Fiilimsilerin cümledeki işlevlerini kavrar.",
+              "T.8.3.10. Geçiş ve bağlantı ifadelerinin metnin anlamına olan katkısını değerlendirir.",
+              "T.8.3.11. Metindeki anlatım biçimlerini belirler.",
+              "T.8.3.12. Görsel ve başlıktan hareketle okuyacağı metnin konusunu tahmin eder.",
+              "T.8.3.13. Okuduklarını özetler.",
               "T.8.3.14. Metinle ilgili soruları cevaplar.",
+              "T.8.3.15. Metinle ilgili sorular sorar.",
+              "T.8.3.16. Metnin konusunu belirler.",
               "T.8.3.17. Metnin ana fikrini/ana duygusunu belirler.",
+              "T.8.3.18. Metindeki yardımcı fikirleri belirler.",
+              "T.8.3.19. Metnin içeriğine uygun başlık/başlıklar belirler.",
+              "T.8.3.20.Okuduğu metinlerdeki hikâye unsurlarını belirler.",
+              "T.8.3.21. Metnin içeriğini yorumlar.",
+              "T.8.3.22. Metinde ele alınan sorunlara farklı çözümler üretir.",
+              "T.8.3.23. Metinler arasında karşılaştırma yapar.",
+              "T.8.3.24. Metindeki gerçek ve kurgusal unsurları ayırt eder.",
+              "T.8.3.25. Okudukları ile ilgili çıkarımlarda bulunur.",
+              "T.8.3.26. Metin türlerini ayırt eder.",
+              "T.8.3.27. Görsellerle ilgili soruları cevaplar.",
+              "T.8.3.28. Metinde önemli noktaların vurgulanış biçimlerini kavrar.",
+              "T.8.3.29. Medya metinlerini analiz eder.",
+              "T.8.3.30. Bilgi kaynaklarını etkili bir şekilde kullanır.",
+              "T.8.3.31. Bilgi kaynaklarının güvenilirliğini sorgular.",
               "T.8.3.32. Grafik, tablo ve çizelgeyle sunulan bilgileri yorumlar.",
+              "T.8.3.33. Edebî eserin yazılı metni ile medya sunumunu karşılaştırır.",
+              "T.8.3.34. Okuduklarında kullanılan düşünceyi geliştirme yollarını belirler.",
+              "T.8.3.35. Metindeki iş ve işlem basamaklarını kavrar.",
+              "T.8.4.1. Şiir yazar.",
               "T.8.4.2. Bilgilendirici metin yazar.",
-              "T.8.4.3. Hikaye edici metin yazar.",
-              "T.8.4.16. Yazdıklarını düzenler."
+              "T.8.4.3. Hikâye edici metin yazar.",
+              "T.8.4.4. Yazma stratejilerini uygular.",
+              "T.8.4.5. Anlatımı desteklemek için grafik ve tablo kullanır.",
+              "T.8.4.6. Bir işi işlem basamaklarına göre yazar.",
+              "T.8.4.7. Yazılarını zenginleştirmek için atasözleri, deyimler ve özdeyişler kullanır.",
+              "T.8.4.8. Yazılarında mizahi ögeler kullanır.",
+              "T.8.4.9. Yazılarında anlatım biçimlerini kullanır.",
+              "T.8.4.10. Yazdıklarında yabancı dillerden alınmış, dilimize henüz yerleşmemiş kelimelerin Türkçelerini kullanır.",
+              "T.8.4.11. Formları yönergelerine uygun doldurur.",
+              "T.8.4.12. Kısa metinler yazar.",
+              "T.8.4.13. Yazdıklarının içeriğine uygun başlık belirler.",
+              "T.8.4.14. Araştırmalarının sonuçlarını yazılı olarak sunar.",
+              "T.8.4.15. Yazılarında uygun geçiş ve bağlantı ifadelerini kullanır.",
+              "T.8.4.16. Yazdıklarını düzenler.",
+              "T.8.4.17. Yazdıklarını paylaşır.",
+              "T.8.4.18. Cümlenin ögelerini ayırt eder.",
+              "T.8.4.19. Cümle türlerini tanır.",
+              "T.8.4.20. Fiillerin çatı özelliklerinin anlama olan katkısını kavrar."
             ]
           }
         ]
@@ -216,171 +399,188 @@
     ],
     "Matematik": [
       {
-        "tema": "Drive · 5. sınıf Matematik · 2025-2026 yıllık plan",
+        "tema": "5. sınıf - Matematik - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Geometrik şekiller · Temel geometrik çizimler, açılar, çokgenler ve çember",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "MAT.5.3.1. Temel geometrik çizimler için matematiksel araç ve teknolojiden yararlanabilme",
-              "MAT.5.3.2. Temel geometrik çizimlere dayalı deneyimlerini yansıtabilme",
-              "MAT.5.3.3. Açıları ölçmek için matematiksel araç ve teknolojiden yararlanabilme",
-              "MAT.5.3.4. Düzlemde iki veya üç doğrunun birbirine göre durumuna bağlı olarak oluşabilecek açılara dair çıkarım yapabilme",
-              "MAT.5.3.5. Çokgenleri düzlemde ardışık olarak kesişen doğruların oluşturduğu kapalı şekiller olarak yorumlayabilme",
-              "MAT.5.3.6. Çokgenlerin özellikleri ile ilgili edindiği deneyimleri yansıtabilme",
-              "MAT.5.3.7. Matematiksel araç ve teknoloji yardımıyla düzlemde iki noktada kesişen çember çiftinin merkezleri ve kesişim noktalarından biri ile inşa edilen üçgenlerin kenar özelliklerine yönelik muhakeme yapabilme"
-            ]
-          },
-          {
-            "baslik": "İstatistiksel araştırma süreci · Kategorik veri dağılımları",
-            "ciktilar": [
-              "MAT.5.5.1. Kategorik veri ile çalışabilir ve veriye dayalı karar verebilir.",
-              "MAT.5.5.2. Başkaları tarafından oluşturulan kategorik veriye dayalı istatistiksel sonuç veya yorumları tartışabilme"
-            ]
-          },
-          {
-            "baslik": "İşlemlerle cebirsel düşünme",
-            "ciktilar": [
-              "MAT.5.2.1. Eşitliğin korunumuna ve işlem özelliklerine yönelik çıkarım yapabilme",
+              "MAT.5.1.1. Altı basamaklı sayıları okuma ve yazmayı daha çok basamaklı sayılara genelleyebilme",
+              "MAT.5.1.2. Doğal sayılar ve işlemler içeren gerçek yaşam problemlerini çözebilme",
+              "MAT.5.1.3. Gerçek yaşam durumlarına karşılık gelen kesirleri farklı biçimlerde temsil edebilme",
+              "MAT.5.1.4. Farklı gösterimlerle ifade edilen kesirlerin karşılaştırılmasına yönelik çıkarım yapabilme",
+              "MAT.5.2.1. Eşitliğin korunumu ve işlem özelliklerine ilişkin çıkarım yapabilme",
               "MAT.5.2.2. Karşılaştığı günlük hayat ya da matematiksel durumlarda işlem önceliğini yorumlayabilme",
               "MAT.5.2.3. Sayı ve şekil örüntülerinin kuralına ilişkin muhakeme yapabilme",
-              "MAT.5.2.4. Temel aritmetik işlem içeren durumlardaki algoritmaları yorumlayabilme"
-            ]
-          },
-          {
-            "baslik": "Veriden olasılığa · Öznel olasılık",
-            "ciktilar": [
-              "MAT.5.6.1. Herhangi bir olayın olasılığının 0 (imkânsız) ile 1 (kesin) arasında olduğunu yorumlayabilme",
+              "MAT.5.2.4. Temel aritmetik işlem içeren durumlardaki algoritmaları yorumlayabilme",
+              "MAT.5.3.1. Doğrular, doğru parçaları ve ışınlar arasındaki ilişkileri çözümleyebilme",
+              "MAT.5.3.2. Temel geometrik çizimlere dayalı deneyimlerini yansıtabilme",
+              "MAT.5.3.3. Açıları ölçmek için matematiksel araç ve teknolojiden yararlanabilme",
+              "MAT.5.3.4. Düzlemde iki veya üç doğrunun birbirine göre durumuna bağlı olarak oluşabilecek açılara ilişkin çıkarım yapabilme",
+              "MAT.5.3.5. Çokgenleri düzlemde ardışık olarak kesişen doğruların oluşturduğu kapalı şekiller olarak yorumlayabilme",
+              "MAT.5.3.6. Çokgenlerin özellikleri ile ilgili edindiği deneyimleri yansıtabilme",
+              "MAT.5.3.7. Matematiksel araç ve teknoloji yardımıyla düzlemde iki noktada kesişen çemberleri inceleyebilme",
+              "MAT.5.4.1. Standart ölçme araçlarıyla uzunluk ölçme sürecini değerlendirebilme",
+              "MAT.5.4.2. Birim karelerden yola çıkarak dikdörtgenin alanını değerlendirebilme",
+              "MAT.5.4.3. Kenar uzunlukları doğal sayı olan bir dikdörtgenin alanının ölçüsü verildiğinde kenar uzunluklarına ilişkin çıkarım yapabilme",
+              "MAT.5.4.4. Dikdörtgenin çevre uzunluğu ve alanı ile ilgili problemleri çözebilme",
+              "MAT.5.5.1. Başkaları tarafından oluşturulan kategorik veriye dayalı istatistiksel sonuç veya yorumları tartışabilme",
+              "MAT.5.5.2. Başkaları tarafından oluşturulan kategorik veriye dayalı istatistiksel sonuç veya yorumları değerlendirebilme",
+              "MAT.5.6.1. Olasılık gerektiren durumlarda olası ve kesin olayları ayırt edebilme",
               "MAT.5.6.2. Olayları az ya da çok olasılıklı şeklinde yapılandırabilme"
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 7. sınıf Matematik · 2025-2026 yıllık plan",
+        "tema": "6. sınıf - Matematik - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Sayılar ve işlemler · Tam sayılar ve rasyonel sayılar",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "M.7.1.1.1. Tam sayılarla toplama ve çıkarma işlemlerini yapar, ilgili problemleri çözer.",
-              "M.7.1.1.2. Toplama işleminin özelliklerini akıcı işlem yapmak için birer strateji olarak kullanır.",
+              "MAT.6.1.1. Karşılaştığı problem durumlarında bir doğal sayının çarpan ve katlarına yönelik muhakeme yapabilme",
+              "MAT.6.1.2. Bir doğal sayının 2, 3, 4, 5, 6, 9 ve 10 ile tam bölünebilme kriterlerine ilişkin çıkarım yapabilme",
+              "MAT.6.1.3. Bir doğal sayının asal olma durumunu ve asal çarpanlarını çözümleyebilme",
+              "MAT.6.1.4. Günlük hayat problemleri ya da matematiksel durumlar üzerinden ortak kat ve ortak böleni yorumlayabilme",
+              "MAT.6.1.5. Kesirlerle işlem yapmayı gerektiren gerçek yaşam problemlerini çözebilme",
+              "MAT.6.1.6. Kesir ve bölme işlemi arasındaki ilişkiye yönelik tümevarımsal akıl yürütebilme",
+              "MAT.6.1.7. Ondalık gösterimlerin basamak değerlerini kesirlerden yararlanarak yorumlayabilme",
+              "MAT.6.1.8. Kesir, ondalık gösterim ve yüzde kullanmayı gerektiren gerçek yaşam problemlerini çözebilme",
+              "MAT.6.2.1. Cebirsel ifadelerin anlamını çözümleyebilme",
+              "MAT.6.2.2. Cebirsel ifadelerin değerini değişkenin alacağı farklı doğal sayı değerleri için yorumlayabilme",
+              "MAT.6.2.3. Temel aritmetik işlem içeren algoritmaları çözümleyebilme",
+              "MAT.6.3.1. Açılarla ilgili çıkarım ve değerlendirmeler yapabilme",
+              "MAT.6.3.2. Üçgenlerin temel elemanlarını ve özelliklerini yorumlayabilme",
+              "MAT.6.3.3. Paralelkenar, yamuk ve eşkenar dörtgeni özellikleri bakımından karşılaştırabilme",
+              "MAT.6.3.4. Alan korunumuna ilişkin çıkarım yapabilme",
+              "MAT.6.4.1. Üçgenin alanını yorumlayabilme",
+              "MAT.6.4.2. Arazi ölçme birimlerini yapılandırabilme",
+              "MAT.6.4.3. Paralelkenar ve yamuğun alan bağıntılarını oluşturabilme",
+              "MAT.6.4.4. Alan ölçmeyi gerektiren problemleri çözebilme",
+              "MAT.6.4.5. Hacim ölçmeyi gerektiren problemleri çözebilme",
+              "MAT.6.4.6. Sıvı ölçme birimlerini yapılandırabilme",
+              "MAT.6.5.1. İstatistiksel araştırma sürecini yorumlayabilme",
+              "MAT.6.5.2. Bir araştırma sorusuna yönelik veri toplama sürecini değerlendirebilme",
+              "MAT.6.6.1. Olasılık gerektiren olayların olma olasılığına ilişkin deneysel çıkarım yapabilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf - Matematik - Öğrenme çıktıları",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "M.7.1.1.1. Tam sayılarla toplama ve çıkarma işlemlerini yapar, ilgili problemleri çözer",
+              "M.7.1.1.2. Toplama işleminin özelliklerini akıcı işlem yapmak için birer strateji olarak kullanır",
               "M.7.1.1.3. Tam sayılarla çarpma ve bölme işlemlerini yapar.",
               "M.7.1.1.4. Tam sayıların kendileri ile tekrarlı çarpımını üslü nicelik olarak ifade eder.",
               "M.7.1.1.5. Tam sayılarla işlemler yapmayı gerektiren problemleri çözer.",
               "M.7.1.2.1. Rasyonel sayıları tanır ve sayı doğrusunda gösterir.",
               "M.7.1.2.2. Rasyonel sayıları ondalık gösterimle ifade eder.",
               "M.7.1.2.3. Devirli olan ve olmayan ondalık gösterimleri rasyonel sayı olarak ifade eder.",
-              "M.7.1.2.4. Rasyonel sayıları sıralar ve karşılaştırır.",
-              "M.7.1.3.1. Rasyonel sayılarla toplama ve çıkarma işlemlerini yapar."
-            ]
-          },
-          {
-            "baslik": "Geometri ve ölçme · Alan, çember, daire ve görünümler",
-            "ciktilar": [
+              "M.7.1.2.4. Rasyonel sayıları sıralar ve karşılaştırır",
+              "M.7.1.3.1. Rasyonel sayılarla toplama ve çıkarma işlemlerini yapar.",
+              "M.7.1.3.2. Rasyonel sayılarla çarpma ve bölme işlemlerini yapar",
+              "M.7.1.3.3. Rasyonel sayılarla çok adımlı işlemleri yapar",
+              "M.7.1.3.4. Rasyonel sayıların kare ve küplerini hesaplar.",
+              "M.7.1.3.5. Rasyonel sayılarla işlem yapmayı gerektiren problemleri çözer.",
+              "M.7.2.1.1. Cebirsel ifadelerle toplama ve çıkarma işlemleri yapar",
+              "M.7.2.1.2. Bir doğal sayı ile bir cebirsel ifadeyi çarpar.",
+              "M.7.2.1.3. Sayı örüntülerinin kuralını harfle ifade eder, kuralı harfle ifade edilen örüntünün istenilen terimini bulur.",
+              "M.7.2.2.1. Eşitliğin korunumu ilkesini anlar.",
+              "M.7.2.2.2. Birinci dereceden bir bilinmeyenli denklemi tanır ve verilen gerçek hayat durumlarına uygun birinci dereceden bir bilinmeyenli denklem kurar.",
+              "M.7.2.2.3. Birinci dereceden bir bilinmeyenli denklemleri çözer.",
+              "M.7.2.2.4. Birinci dereceden bir bilinmeyenli denklem kurmayı gerektiren problemleri çözer.",
+              "M.7.1.4.1. Oranda çokluklardan birinin 1 olması durumunda diğerinin alacağı değeri belirler",
+              "M.7.1.4.2. Birbirine oranı verilen iki çokluktan biri verildiğinde diğerini bulur.",
+              "M.7.1.4.3. Gerçek hayat durumlarını inceleyerek iki çokluğun orantılı olup olmadığına karar verir.",
+              "M.7.1.4.4. Doğru orantılı iki çokluk arasındaki ilişkiyi ifade eder.",
+              "M.7.1.4.5. Doğru orantılı iki çokluğa ait orantı sabitini belirler ve yorumlar.",
+              "M.7.1.4.6. Gerçek hayat durumlarını inceleyerek iki çokluğun ters orantılı olup olmadığına karar verir",
+              "M.7.1.4.7. Doğru ve ters orantıyla ilgili problemleri çözer",
+              "M.7.1.5.1. Bir çokluğun belirtilen bir yüzdesine karşılık gelen miktarını ve belirli bir yüzdesi verilen çokluğun tamamını bulur",
+              "M.7.1.5.2. Bir çokluğu diğer bir çokluğun yüzdesi olarak hesaplar.",
+              "M.7.1.5.3. Bir çokluğu belirli bir yüzde ile arttırmaya veya azaltmaya yönelik hesaplamalar yapar.",
+              "M.7.1.5.4. Yüzde ile ilgili problemleri çözer.",
+              "M.7.3.1.1. Bir açıyı iki eş açıya ayırarak açıortayı belirler.",
+              "M.7.3.1.2. İki paralel doğruyla bir keseninin oluşturduğu yöndeş, ters, iç ters, dış ters açıları belirleyerek özelliklerini inceler oluşan açıların eş veya bütünler olanlarını belirler ilgili problemleri çözer.",
+              "M.7.3.2.1. Düzgün çokgenlerin kenar ve açı özelliklerini açıklar.",
+              "M.7.3.2.2. Çokgenlerin köşegenlerini, iç ve dış açılarını belirler iç açılarının ve dış açılarının ölçüleri toplamını hesaplar.",
+              "M.7.3.2.3. Dikdörtgen, paralelkenar, yamuk ve eşkenar dörtgeni tanır açı özelliklerini belirler.",
+              "M.7.3.2.4. Eşkenar dörtgen ve yamuğun alan bağıntılarını oluşturur, ilgili problemleri çözer.",
               "M.7.3.2.5. Alan ile ilgili problemleri çözer.",
               "M.7.3.3.1. Çemberde merkez açıları, gördüğü yayları ve açı ölçüleri arasındaki ilişkileri belirler.",
               "M.7.3.3.2. Çemberin ve çember parçasının uzunluğunu hesaplar.",
-              "M.7.3.3.3. Dairenin ve daire diliminin alanını hesaplar.",
-              "M.7.3.4.2. Farklı yönlerden görünümlerine ilişkin çizimleri verilen yapıları oluşturur."
-            ]
-          },
-          {
-            "baslik": "Veri işleme · Veri analizi",
-            "ciktilar": [
-              "M.7.4.1.1. Verilere ilişkin çizgi grafiği oluşturur ve yorumlar.",
+              "M.7.3.3.3. Dairenin ve daire diliminin alanını hesaplar",
+              "M.7.4.1.1. Verilere ilişkin çizgi grafiği oluşturur ve yorumlar",
               "M.7.4.1.2. Bir veri grubuna ait ortalama, ortanca ve tepe değeri bulur ve yorumlar.",
-              "M.7.4.1.3. Bir veri grubuna ilişkin daire grafiğini oluşturur ve yorumlar.",
-              "M.7.4.1.4. Verileri sütun, daire veya çizgi grafiği ile gösterir ve bu gösterimler arasında uygun olan dönüşümleri yapar."
+              "M.7.4.1.3. Bir veri grubuna ilişkin daire grafiğini oluşturur ve yorumlar",
+              "M.7.4.1.4. Verileri sütun, daire veya çizgi grafiği ile gösterir ve bu gösterimler arasında uygun olan dönüşümleri yapar.",
+              "M.7.3.4.1. Üç boyutlu cisimlerin farklı yönlerden iki boyutlu görünümlerini çizer",
+              "M.7.3.4.2. Farklı yönlerden görünümlerine ilişkin çizimleri verilen yapıları oluşturur"
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 8. sınıf Matematik · Ünitelendirilmiş yıllık plan",
+        "tema": "8. sınıf - Matematik - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Sayılar ve işlemler · Çarpanlar ve katlar",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "M.8.1.1.1. Verilen pozitif tam sayıların pozitif tam sayı çarpanlarını bulur; pozitif tam sayıların pozitif tam sayı çarpanlarını üslü ifadelerin çarpımı şeklinde yazar.",
-              "M.8.1.1.2. İki doğal sayının en büyük ortak bölenini ve en küçük ortak katını hesaplar; ilgili problemleri çözer.",
-              "M.8.1.1.3. Verilen iki doğal sayının aralarında asal olup olmadığını belirler."
-            ]
-          },
-          {
-            "baslik": "Sayılar ve işlemler · Üslü ifadeler",
-            "ciktilar": [
-              "M.8.1.2.1. Tam sayıların tam sayı kuvvetlerini hesaplar.",
-              "M.8.1.2.2. Üslü ifadelerle ilgili temel kuralları anlar, birbirine denk ifadeler oluşturur.",
-              "M.8.1.2.3. Sayıların ondalık gösterimlerini 10'un tam sayı kuvvetlerini kullanarak çözümler.",
-              "M.8.1.2.4. Verilen bir sayıyı 10'un farklı tam sayı kuvvetlerini kullanarak ifade eder.",
-              "M.8.1.2.5. Çok büyük ve çok küçük sayıları bilimsel gösterimle ifade eder ve karşılaştırır."
-            ]
-          },
-          {
-            "baslik": "Sayılar ve işlemler · Kareköklü ifadeler",
-            "ciktilar": [
-              "M.8.1.3.1. Tam kare pozitif tam sayılarla bu sayıların karekökleri arasındaki ilişkiyi belirler.",
-              "M.8.1.3.2. Tam kare olmayan kareköklü bir sayının hangi iki doğal sayı arasında olduğunu belirler.",
-              "M.8.1.3.3. Kareköklü bir ifadeyi a√b şeklinde yazar ve a√b şeklindeki ifadede katsayıyı kök içine alır.",
-              "M.8.1.3.4. Kareköklü ifadelerde çarpma ve bölme işlemlerini yapar.",
-              "M.8.1.3.5. Kareköklü ifadelerde toplama ve çıkarma işlemlerini yapar.",
-              "M.8.1.3.8. Kareköklü ifadeleri içeren ve sonucu doğal sayı olan problemleri çözer."
-            ]
-          },
-          {
-            "baslik": "Veri analizi ve olasılık",
-            "ciktilar": [
-              "M.8.4.1.1. En fazla üç veri grubuna ait çizgi ve sütun grafiklerini yorumlar.",
-              "M.8.4.1.2. Verileri sütun, daire veya çizgi grafiği ile gösterir ve bu gösterimler arasında uygun dönüşümler yapar.",
-              "M.8.5.1.1. Bir olaya ait olası durumları belirler.",
-              "M.8.5.1.2. Daha fazla, eşit ve daha az olasılıklı olayları ayırt eder; örnek verir.",
-              "M.8.5.1.5. Basit bir olayın olma olasılığını hesaplar."
-            ]
-          },
-          {
-            "baslik": "Cebir · Cebirsel ifadeler, özdeşlikler, denklemler ve eşitsizlikler",
-            "ciktilar": [
-              "M.8.2.1.1. Basit cebirsel ifadeleri anlar ve farklı biçimlerde yazar.",
-              "M.8.2.1.2. Cebirsel ifadelerin çarpımını yapar.",
-              "M.8.2.1.3. Özdeşlikleri modellerle açıklar.",
-              "M.8.2.1.4. Cebirsel ifadeleri çarpanlara ayırır.",
-              "M.8.2.2.1. Birinci dereceden bir bilinmeyenli denklemleri çözer.",
-              "M.8.2.2.6. Doğrusal ilişki içeren gerçek yaşam durumlarına ait denklemi, tabloyu ve grafiği oluşturur.",
-              "M.8.2.3.1. Birinci dereceden bir bilinmeyenli eşitsizlik içeren günlük yaşam durumlarına uygun matematik cümleleri yazar.",
-              "M.8.2.3.3. Birinci dereceden bir bilinmeyenli eşitsizlikleri çözer."
-            ]
-          },
-          {
-            "baslik": "Geometri ve ölçme",
-            "ciktilar": [
-              "M.8.3.1.1. Üçgende kenarortay, açıortay ve yüksekliği inşa eder.",
-              "M.8.3.1.2. Üçgenin iki kenar uzunluğunun toplamı veya farkı ile üçüncü kenar uzunluğu arasındaki ilişkiyi belirler.",
-              "M.8.3.1.3. Üçgenin kenar uzunlukları ile açı ölçüleri arasındaki ilişkiyi belirler.",
-              "M.8.3.1.5. Pisagor bağıntısını oluşturur ve ilgili problemleri çözer.",
-              "M.8.3.2.1. Nokta, doğru parçası ve diğer şekillerin öteleme sonucundaki görüntülerini çizer.",
-              "M.8.3.3.1. Eşlik ve benzerliği ilişkilendirir; eş ve benzer şekillerin kenar ve açı ilişkilerini belirler.",
-              "M.8.3.4.1. Dik prizmaları tanır, temel elemanlarını belirler, inşa eder ve açınımını çizer."
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 6. sınıf Matematik · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "1. Tema: Sayılar ve Nicelikler · Çarpanlar, katlar ve bölünebilme",
-            "ciktilar": [
-              "MAT.6.1.1. Karşılaştığı problem durumlarında bir doğal sayının çarpan ve katlarına yönelik muhakeme yapabilme",
-              "MAT.6.1.2. Bir doğal sayının 2, 3, 4, 5, 6, 9 ve 10 ile tam bölünebilme kriterlerine ilişkin çıkarım yapabilme",
-              "MAT.6.1.3. Bir doğal sayının asal olma durumunu ve asal çarpanlarını çözümleyebilme",
-              "MAT.6.1.4. Günlük hayat problemleri ya da matematiksel durumlar üzerinden ortak kat ve ortak böleni yorumlayabilme"
-            ]
-          },
-          {
-            "baslik": "7. Tema: Geometrik Nicelikler · Uzunluk, alan ve çember",
-            "ciktilar": [
-              "MAT.6.4.1. Uzunluk ve alan ölçme birimleri arasındaki ilişkilerle ilgili analojik akıl yürütebilme",
-              "MAT.6.4.2. Dikdörtgenin alan bağıntısına yönelik deneyimlerini paralelkenar ve üçgenin alan bağıntılarına yansıtabilme",
-              "MAT.6.4.4. Çemberin uzunluğu ile çap uzunluğu arasındaki ilişkiye yönelik çıkarım yapabilme"
+              "8.1.1.1. Verilen pozitif tam sayıların pozitif tam sayı çarpanlarını bulur, pozitif tam sayıların pozitif tam sayı çarpanlarını üslü ifadelerin çarpımı şeklinde yazar",
+              "8.1.1.2 İki doğal sayının en büyük ortak bölenini (EBOB) ve en küçük ortak katını (EKOK) hesaplar, ilgili problemleri çözer.",
+              "8.1.1.3 Verilen iki doğal sayının aralarında asal olup olmadığını belirler.",
+              "8.1.2.1 Tam sayıların, tam sayı kuvvetlerini hesaplar.",
+              "8.1.2.2 Üslü ifadelerle ilgili temel kuralları anlar, birbirine denk ifadeler oluşturur.",
+              "8.1.2.3 Sayıların ondalık gösterimlerini 10’un tam sayı kuvvetlerini kullanarak çözümler",
+              "8.1.2.4 Verilen bir sayıyı 10’un farklı tam sayı kuvvetlerini kullanarak ifade eder.",
+              "8.1.2.5 Çok büyük ve çok küçük sayıları bilimsel gösterimle ifade eder ve karşılaştırır.",
+              "8.1.3.1 Tam kare pozitif tam sayılarla bu sayıların karekökleri arasındaki ilişkiyi belirler.",
+              "8.1.3.2 Tam kare olmayan kareköklü bir sayının hangi iki doğal sayı arasında olduğunu belirler.",
+              "8.1.3.3 Kareköklü bir ifadeyi a b şeklinde yazar ve a b şeklindeki ifadede katsayıyı kök içine alır.",
+              "8.1.3.4 Kareköklü ifadelerde çarpma ve bölme işlemlerini yapar.",
+              "8.1.3.5 Kareköklü ifadelerde toplama ve çıkarma işlemlerini yapar.",
+              "8.1.3.6 Kareköklü bir ifade ile çarpıldığında, sonucu bir doğal sayı yapan çarpanlara örnek verir.",
+              "8.1.3.7 Ondalık ifadelerin kareköklerini belirler",
+              "8.1.3.8 Gerçek sayıları tanır, rasyonel ve irrasyonel sayılarla ilişkilendirir.",
+              "8.4.1.1 En fazla üç veri grubuna ait çizgi ve sütun grafiklerini yorumlar.",
+              "8.4.1.2 Verileri sütun, daire veya çizgi grafiği ile gösterir ve bu gösterimler arasında uygun olan dönüşümleri yapar.",
+              "8.5.1.1 Bir olaya ait olası durumları belirler.",
+              "8.5.1.2 “Daha fazla”, “eşit”, “daha az” olasılıklı olayları ayırt eder, örnek verir.",
+              "8.5.1.3 Eşit şansa sahip olan olaylarda her bir çıktının olasılık değerinin eşit olduğunu ve bu değerin 1/n olduğunu açıklar.",
+              "8.5.1.4 Olasılık değerinin 0 ile 1 arasında (0 ve 1 dâhil) olduğunu anlar",
+              "8.5.1.5 Basit bir olayın olma olasılığını hesaplar",
+              "8.2.1.1 Basit cebirsel ifadeleri anlar ve farklı biçimlerde yazar.",
+              "8.2.1.2 Cebirsel ifadelerin çarpımını yapar.",
+              "8.2.1.3 Özdeşlikleri modellerle açıklar.",
+              "8.2.1.4 Cebirsel ifadeleri çarpanlara ayırır.",
+              "8.2.2.1 Birinci dereceden bir bilinmeyenli denklemleri çözer.",
+              "8.2.2.2 Koordinat sistemini özellikleriyle tanır ve sıralı ikilileri gösterir.",
+              "8.2.2.3 Aralarında doğrusal ilişki bulunan iki değişkenden birinin diğerine bağlı olarak nasıl değiştiğini tablo ve denklem ile ifade eder",
+              "8.2.2.4 Doğrusal denklemlerin grafiğini çizer.",
+              "8.2.2.5 Doğrusal ilişki içeren gerçek hayat durumlarına ait denklem, tablo ve grafiği oluşturur ve yorumlar",
+              "8.2.2.6 Doğrunun eğimini modellerle açıklar, doğrusal denklemleri ve grafiklerini eğimle ilişkilendirir",
+              "8.2.3.1. Birinci dereceden bir bilinmeyenli eşitsizlik içeren günlük hayat durumlarına uygun matematik cümleleri yazar.",
+              "8.2.3.2. Birinci dereceden bir bilinmeyenli eşitsizlikleri sayı doğrusunda gösterir.",
+              "8.2.3.3. Birinci dereceden bir bilinmeyenli eşitsizlikleri çözer.",
+              "8.3.1.1 Üçgende kenarortay, açıortay ve yüksekliği inşa eder.",
+              "8.3.1.2 Üçgenin iki kenar uzunluğunun toplamı veya farkı ile üçüncü kenarının uzunluğunu ilişkilendirir",
+              "8.3.1.3 Üçgenin kenar uzunlukları ile bu kenarların karşısındaki açıların ölçülerini ilişkilendirir.",
+              "8.3.1.4 Yeterli sayıda elemanının ölçüleri verilen bir üçgeni çizer.",
+              "8.3.1.5 Pisagor bağıntısını oluşturur, ilgili problemleri çözer.",
+              "8.3.3.1 Eşlik ve benzerliği ilişkilendirir, eş ve benzer şekillerin kenar ve açı ilişkilerini belirler",
+              "8.3.3.2 Benzer çokgenlerin benzerlik oranını belirler, bir çokgene eş ve benzer çokgenler oluşturur.",
+              "8.3.2.1 Nokta, doğru parçası ve diğer şekillerin öteleme sonucundaki görüntülerini çizer",
+              "8.3.2.2 Nokta, doğru parçası ve diğer şekillerin yansıma sonucu oluşan görüntüsünü oluşturur",
+              "8.3.2.3 Çokgenlerin öteleme ve yansımalar sonucunda ortaya çıkan görüntüsünü oluşturur",
+              "8.3.4.1 Dik prizmaları tanır, temel elemanlarını belirler, inşa eder ve açınımını çizer.",
+              "8.3.4.2 Dik dairesel silindirin temel elemanlarını belirler, inşa eder ve açınımını çizer",
+              "8.3.4.3 Dik dairesel silindirin yüzey alanı bağıntısını oluşturur, ilgili problemleri çözer.",
+              "8.3.4.4 Dik dairesel silindirin hacim bağıntısını oluşturur ilgili problemleri çözer",
+              "8.3.4.5 Dik piramidi tanır, temel elemanlarını belirler, inşa eder ve açınımını çizer",
+              "8.3.4.6 Dik koniyi tanır, temel elemanlarını belirler, inşa eder ve açınımını çizer."
             ]
           }
         ]
@@ -388,35 +588,37 @@
     ],
     "Fen Bilimleri": [
       {
-        "tema": "Drive · 5. sınıf Fen Bilimleri · 2025-2026 yıllık plan",
+        "tema": "5. sınıf - Fen Bilimleri - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Gökyüzündeki komşularımız ve biz",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
               "FB.5.1.1.1. Güneş’in yapısı ve dönme hareketi ile ilgili bilgileri toplayabilme",
               "FB.5.1.2.1. Ay’ın özellikleri, dönme ve dolanma hareketleri ile ilgili bilimsel çıkarım yapabilme",
               "FB.5.1.2.2. Ay’ın evrelerini temsil eden bilimsel model oluşturabilme",
-              "FB.5.1.3.1. Güneş, Dünya ve Ay’ın birbirlerine göre hareketlerini ve hacimsel büyüklüklerini temsil eden bilimsel model oluşturabilme"
-            ]
-          },
-          {
-            "baslik": "Kuvveti tanıyalım",
-            "ciktilar": [
-              "FB.5.2.1.1. Kuvveti büyüklüğü ile tanımlayabilme"
-            ]
-          },
-          {
-            "baslik": "Canlıların yapısı ve ışığın dünyası",
-            "ciktilar": [
+              "FB.5.1.3.1. Güneş, Dünya ve Ay’ın birbirlerine göre hareketlerini ve hacimsel büyüklüklerini temsil eden bilimsel model oluşturabilme",
+              "FB.5.2.1.1. Kuvveti büyüklüğü ile tanımlayabilme",
+              "FB.5.2.1.2. Basit araç gereçler kullanarak bir dinamometre modeli tasarlayabilme",
+              "FB.5.2.2.1. Kütleye etki eden yer çekimi kuvvetini ağırlık olarak tanımlayabilme",
+              "FB.5.2.3.1. Sürtünme kuvvetinin çeşitli ortamlardaki etkilerine yönelik tümevarımsal akıl yürütebilme",
+              "FB.5.2.3.2. Günlük yaşamda sürtünmeyi artırma veya azaltmaya yönelik bilimsel bir model tasarlayabilme",
+              "FB.5.3.1.1. Bitki ve hayvan hücrelerini temel kısımları ve özellikleri açısından karşılaştırabilme",
+              "FB.5.3.1.2. Hücre-doku-organ-sistem-organizma kavramlarını yapılandırabilme",
+              "FB.5.3.2.1. Destek ve hareket sistemine ait yapıları sınıflandırabilme",
               "FB.5.3.2.2. Destek ve hareket sisteminin sağlığı için yapılması gerekenler konusunda bilgi toplayabilme",
               "FB.5.4.1.1. Bir kaynaktan çıkan ışığın her yönde doğrusal bir yol izlediğini gözlem yoluyla açıklayabilme",
               "FB.5.4.2.1. Maddeleri ışığı geçirme durumlarına göre sınıflandırabilme",
-              "FB.5.4.3.1. Tam gölgeye yönelik bilimsel gözlem yapabilme"
-            ]
-          },
-          {
-            "baslik": "Sürdürülebilir yaşam ve geri dönüşüm",
-            "ciktilar": [
+              "FB.5.4.3.1. Tam gölgeye yönelik bilimsel gözlem yapabilme",
+              "FB.5.5.1.1. Maddeleri tanecikli, boşluklu ve hareketli yapısına göre sınıflandırabilme",
+              "FB.5.5.2.1. Isı ve sıcaklık kavramlarını karşılaştırabilme",
+              "FB.5.5.2.2. Sıcaklığı farklı olan sıvıların karıştırılması sonucu ısı alışverişi olduğuna yönelik bilimsel çıkarım yapabilme",
+              "FB.5.5.3.1. Maddenin ısı etkisiyle hâl değiştirebileceğini bilimsel gözleme dayalı tahmin edebilme",
+              "FB.5.5.4.1. Maddeleri ısı iletimi bakımından sınıflandırabilme",
+              "FB.5.5.4.2. Isı yalıtımını gösteren model oluşturabilme",
+              "FB.5.6.1.1. Bir elektrik devresindeki elemanları sembollerinin olup olmamasına göre sınıflandırabilme",
+              "FB.5.6.1.2. Şemasını çizdiği elektrik devresine uygun deney yapabilme",
+              "FB.5.6.2.1. Bir elektrik devresindeki ampul parlaklığını etkileyen değişkenlerin neler olduğuna ilişkin hipotez oluşturabilme",
+              "FB.5.7.1.1. Evsel atıklarda geri dönüştürülebilen ve dönüştürülemeyen maddeleri sınıflandırabilme",
               "FB.5.7.1.2. Kaynakların etkili kullanımı konusunda geri dönüşümün önemli olduğuna yönelik bilimsel çıkarımda bulunabilme",
               "FB.5.7.1.3. Yakın çevresinde atık yönetiminin uygulanabilirliğine ilişkin deneyimlerini yansıtabilme"
             ]
@@ -424,70 +626,197 @@
         ]
       },
       {
-        "tema": "Drive · 6. sınıf Fen Bilimleri · 2025-2026 yıllık plan",
+        "tema": "6. sınıf - Fen Bilimleri - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "FB.6.1. Güneş Sistemi ve Tutulmalar",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
               "FB.6.1.1.1. Güneş sistemindeki gezegenleri niteliklerine göre sınıflandırabilme",
               "FB.6.1.1.2. Güneş sistemi ile ilgili bilimsel model oluşturabilme",
-              "FB.6.1.2.1. Güneş ve Ay tutulması ile ilgili bilimsel çıkarım yapabilme"
-            ]
-          },
-          {
-            "baslik": "FB.6.2-7. Kuvvet, canlı sistemleri, elektrik ve çevre",
-            "ciktilar": [
+              "FB.6.1.2.1. Güneş ve Ay tutulması ile ilgili bilimsel çıkarım yapabilme",
+              "FB.6.1.2.2. Güneş ve Ay tutulması ile ilgili bilimsel model oluşturabilme",
+              "FB.6.2.1.1. Bir cisme etki eden aynı doğrultudaki kuvvetler arasındaki ilişkileri açıklayarak bileşke kuvveti yapılandırabilme",
+              "FB.6.2.1.2. Dengelenmiş ve dengelenmemiş kuvvetlerin etkisi altındaki bir cismin hareketine yönelik deney yapabilme",
               "FB.6.2.2.1. Sürat ve hız kavramlarını karşılaştırabilme",
               "FB.6.3.1.1. Eşeyli ve eşeysiz üremeyi karşılaştırabilme",
+              "FB.6.3.1.2. Bitkilerde üreme, büyüme ve gelişme hakkında bilimsel çıkarım yapabilme",
+              "FB.6.3.1.3. Tohumun çimlenmesine etki eden faktörlere ilişkin hipotez oluşturabilme",
+              "FB.6.3.1.4. Hayvanlarda üreme, büyüme ve gelişme hakkında bilimsel çıkarım yapabilme",
+              "FB.6.3.1.5. İnsanda üremeyi sağlayan yapı ve organlar arasındaki ilişkileri çözümleyebilme",
+              "FB.6.3.2.1. Sinir sisteminin görevlerini model üzerinde gözlemleyebilme",
+              "FB.6.3.2.2. İç salgı bezlerinin vücut için önemini yapılandırabilme",
+              "FB.6.3.2.3. Çocukluktan ergenliğe geçişte oluşan bedensel ve ruhsal değişimleri genelleyebilme",
+              "FB.6.3.2.4. Denetleyici ve düzenleyici sistemlerin sağlığı için yapılması gerekenlerle ilgili bilgi toplayabilme",
+              "FB.6.4.1.1. Işığın farklı yüzeylerdeki yansıma olaylarına ilişkin bilimsel çıkarım yapabilme",
+              "FB.6.4.1.2. Işığın yansımasında gelen ışın, yansıyan ışın ve yüzeyin normali arasındaki ilişkiyi kanıt kullanarak açıklayabilme",
+              "FB.6.4.2.1. Günlük hayattaki ayna çeşitlerine ilişkin bilimsel çıkarım yapabilme",
+              "FB.6.4.3.1. Işığın madde ile etkileşimi sonucunda soğurulabileceğini gözlemleyebilme",
+              "FB.6.4.3.2. Beyaz ışığın tüm ışık renklerinin bileşiminden oluştuğuna ilişkin bilimsel çıkarım yapabilme",
+              "FB.6.4.3.3. Cisimlerin siyah, beyaz ve renkli görünmesinin nedenini gözlem verileriyle açıklayabilme",
+              "FB.6.4.3.4. Güneş enerjisinin günlük hayat ve teknolojideki yenilikçi uygulamalarına ilişkin eleştirel düşünebilme",
+              "FB.6.5.1.1. Isı etkisiyle maddelerin genleşip büzüleceğine yönelik bilimsel gözleme dayalı tahmin edebilme",
+              "FB.6.5.2.1. Maddelerin erime, donma ve kaynama noktasını gösteren deney yapabilme",
+              "FB.6.5.3.1. Yoğunluğa ilişkin hesaplamalar yaparak bilimsel veriye dayalı tahmin edebilme",
+              "FB.6.5.3.2. Deneyler sonucunda çeşitli maddelerin yoğunluklarına ilişkin tümdengelimsel akıl yürütebilme",
+              "FB.6.5.3.3. Suyun katı ve sıvı hâllerine ait yoğunlukları karşılaştırarak bu durumun canlılar için önemi hakkında bilimsel çıkarımlar yapabilme",
+              "FB.6.5.3.4. Yoğunluk ile ilgili bilimsel model oluşturabilme",
               "FB.6.6.1.1. Maddelerin elektriği iletme durumlarını gösteren deney yapabilme",
-              "FB.6.7.2.2. Yakın çevresindeki veya ülkemizdeki bir çevre problemine ilişkin çözüm üretebilme"
+              "FB.6.6.2.1. Elektrik devresindeki ampulün parlaklığının bağlı olduğu değişkenleri belirlemeye yönelik deney yapabilme",
+              "FB.6.6.2.2. Ayarlanabilir direncin ampulün parlaklığına etkilerine yönelik bilimsel çıkarım yapabilme",
+              "FB.6.7.1.1. Biyoçeşitliliğin doğal yaşam için önemini sorgulayabilme",
+              "FB.6.7.1.2. Biyoçeşitliliği tehdit eden faktörleri araştırma verilerine dayalı tahmin edebilme",
+              "FB.6.7.2.1. Isınma amaçlı yakıt kullanımının insan ve çevre üzerine etkilerini tartışabilme",
+              "FB.6.7.2.2. Yakın çevresindeki veya ülkemizdeki bir çevre problemine ilişkin çözüm"
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 7. sınıf Fen Bilimleri · 2025-2026 yıllık plan",
+        "tema": "7. sınıf - Fen Bilimleri - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "1-2. Üniteler · Güneş Sistemi ve Ötesi / Hücre ve Bölünmeler",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "F.7.1.1.4. Teleskobun yapısını ve ne işe yaradığını açıklar.",
-              "F.7.1.2.1. Yıldız oluşum sürecinin farkına varır.",
+              "F.7.1.1.1. Uzay teknolojilerini açıklar.",
+              "F.7.1.1.2. Uzay kirliliğinin nedenlerini ifade ederek bu kirliliğin yol açabileceği olası sonuçları tahmin eder.",
+              "F.7.1.1.3. Teknoloji ile uzay araştırmaları arasındaki ilişkiyi açıklar.",
+              "F.7.1.1.4. Teleskobun yapısını ve ne işe yaradığını açıkla",
+              "F.7.1.1.5. Teleskobun gök bilimin gelişimindeki önemine yönelik çıkarımda bulunur.",
+              "F.7.1.1.6. Basit bir teleskop modeli hazırlayarak sunar.",
+              "F.7.1.2.1 Yıldız oluşum sürecinin farkına varır.",
+              "F.7.1.2.2. Yıldız kavramını açıklar.",
               "F.7.1.2.3. Galaksilerin yapısını açıklar.",
+              "F.7.1.2.4 Evren kavramını açıklar.",
               "F.7.2.1.1. Hayvan ve bitki hücrelerini, temel kısımları ve görevleri açısından karşılaştırır.",
-              "F.7.2.3.3. Mayoz ve mitoz arasındaki farkları karşılaştırır."
-            ]
-          },
-          {
-            "baslik": "3-7. Üniteler · Kuvvet, enerji, üreme ve elektrik",
-            "ciktilar": [
-              "F.7.3.1.2. Kütle ve ağırlık kavramlarını karşılaştırır.",
+              "F.7.2.1.2 Geçmişten günümüze, hücrenin yapısı ile ilgili görüşleri teknolojik gelişmelerle ilişkilendirerek tartışır.",
+              "F.7.2.1.3. Hücre-doku-organ-sistem-organizma ilişkisini açıklar.",
+              "F.7.2.2.1. Mitozun canlılar için önemini açıklar.",
+              "F.7.2.2.2 Mitozun birbirini takip eden farklı evrelerden oluştuğunu açıklar.",
+              "F.7.2.3.1. Mayozun canlılar için önemini açıklar",
+              "F.7.2.3.2. Üreme ana hücrelerinde mayozun nasıl gerçekleştiğini model üzerinde gösterir.",
+              "F.7.2.3.3. Mayoz ve mitoz arasındaki farkları karşılaştırır",
+              "F.7.3.1.1. Kütleye etki eden yer çekimi kuvvetini ağırlık olarak adlandırır.",
+              "F.7.3.1.2 Kütle ve ağırlık kavramlarını karşılaştırır.",
+              "F.7.3.1.3 Yer çekimini kütle çekimi olarak gök cisimleri temelinde açıklar.",
+              "F.7.3.2.1. Fiziksel anlamda yapılan işin, uygulanan kuvvet ve alınan yolla ilişkili olduğunu açıklar.",
+              "F.7.3.2.2. Enerjiyi iş kavramı ile ilişkilendirerek, kinetik ve potansiyel enerji olarak sınıflandırır",
               "F.7.3.3.1. Kinetik ve potansiyel enerji türlerinin birbirine dönüşümünden hareketle enerjinin korunduğu sonucunu çıkarır.",
+              "F.7.3.3.2 Sürtünme kuvvetinin kinetik enerji üzerindeki etkisini örneklerle açıklar.",
+              "F.7.3.3.3. Hava veya su direncinin etkisini azaltmaya yönelik bir araç tasarlar.",
+              "F.7.4.1.1 Atomun yapısını ve yapısındaki temel parçacıklarını söyler.",
+              "F.7.4.1.2. Geçmişten günümüze atom kavramı ile ilgili düşüncelerin nasıl değiştiğini sorgular.",
+              "F.7.4.1.3 Aynı veya farklı atomların bir araya gelerek molekül oluşturacağını ifade eder.",
+              "F.7.4.1.4. Çeşitli molekül modelleri oluşturarak sunar.",
+              "F.7.4.2.1. Saf maddeleri, element ve bileşik olarak sınıflandırarak örnekler verir",
+              "F.7.4.2.2 2. Periyodik sistemdeki ilk 18 elementin ve yaygın elementlerin (altın, gümüş, bakır, çinko, kurşun, civa, platin, demir ve iyot) isimlerini, sembollerini ve bazı kullanım alanlarını ifade eder.",
+              "F.7.4.2.3. Yaygın bileşiklerin formüllerini, isimlerini ve bazı kullanım alanlarını ifade eder.",
+              "F.7.4.3.1. Karışımları, homojen ve heterojen olarak sınıflandırarak örnekler verir.",
+              "F.7.4.3.2. Günlük yaşamda karşılaştığı çözücü ve çözünenleri kullanarak çözelti hazırlar.",
+              "F.7.4.3.3. Çözünme hızına etki eden faktörleri deney yaparak belirler.",
+              "F.7.4.4.1 Karışımların ayrılması için kullanılabilecek yöntemlerden uygun olanı seçerek uygular.",
+              "F.7.4.5.1. Evsel atıklarda geri dönüştürülebilen ve dönüştürülemeyen maddeleri ayırt eder.",
+              "F.7.4.5.2 Evsel katı ve sıvı atıkların geri dönüşümüne ilişkin proje tasarlar.",
+              "F.7.4.5.3 Geri dönüşümü, kaynakların etkili kullanımı açısından sorgular.",
+              "F.7.4.5.4. Yakın çevresinde atık kontrolüne özen gösterir",
+              "F.7.4.5.5. Yeniden kullanılabilecek eşyalarını, ihtiyacı olanlara iletmeye yönelik proje geliştirir.",
+              "F.7.5.1.1. Işığın madde ile etkileşimi sonucunda madde tarafından soğurulabileceğini keşfeder.",
+              "F.7.5.1.2. Beyaz ışığın tüm ışık renklerinin bileşiminden oluştuğu sonucunu çıkarır",
+              "F.7.5.1.3 Gözlemleri sonucunda cisimlerin, siyah, beyaz ve renkli görünmesinin nedenini, ışığın yansıması ve soğurulmasıyla ilişkilendirir.",
+              "F.7.5.1.4. Güneş enerjisinin günlük yaşam ve teknolojideki yenilikçi uygulamalarına örnekler verir.",
+              "F.7.5.1.5 Güneş enerjisinden gelecekte nasıl yararlanılacağına ilişkin ürettiği fikirleri tartışır.",
+              "F.7.5.2.1 Ayna çeşitlerini gözlemleyerek kullanım alanlarına örnekler verir",
+              "F.7.5.2.2. Düz, çukur ve tümsek aynalarda oluşan görüntüleri karşılaştırır.",
+              "F.7.5.3.1. Ortam değiştiren ışığın izlediği yolu gözlemleyerek kırılma olayının sebebini ortam değişikliği ile ilişkilendirir.",
+              "F.7.5.3.2. Işığın kırılmasını, ince ve kalın kenarlı mercekler kullanarak deneyle gözlemler.",
+              "F.7.5.3.3 İnce ve kalın kenarlı merceklerin odak noktalarını deneyerek belirler.",
+              "F.7.5.3.4. Merceklerin günlük yaşam ve teknolojideki kullanım alanlarına örnekler verir",
+              "F.7.5.3.5 Ayna veya mercekleri kullanarak bir görüntüleme aracı tasarlar",
               "F.7.6.1.1. İnsanda üremeyi sağlayan yapı ve organları şema üzerinde göstererek açıklar.",
-              "F.7.7.1.1. Seri bağlı ampullerden oluşan devre şeması çizer."
+              "F.7.6.1.2 Sperm, yumurta, zigot, embriyo, fetüs ve bebek arasındaki ilişkiyi açıklar.",
+              "F.7.6.1.3 Embriyonun sağlıklı gelişebilmesi için alınması gereken tedbirleri, araştırma verilerine dayalı olarak",
+              "F.7.6.2.1. Bitki ve hayvanlardaki üreme çeşitlerini karşılaştırır.",
+              "F.7.6.2.2. Bitki ve hayvanlardaki büyüme ve gelişme süreçlerini örnekler vererek açıklar.",
+              "F.7.6.2.3. Bitki ve hayvanlarda büyüme ve gelişmeye etki eden temel faktörleri açıklar.",
+              "F.7.6.2.4 Bir bitki veya hayvanın bakımını üstlenir ve gelişim sürecini rapor eder.",
+              "F.7.7.1.1 Seri ve paralel bağlı ampullerden oluşan bir devre şeması çizer",
+              "F.7.7.1.2. Ampullerin seri ve paralel bağlandığı durumlardaki parlaklıklarını devre üzerinde gözlemleyerek çıkarımda bulunur.",
+              "F.7.7.1.3. Elektrik akımını tanımlar.",
+              "F.7.7.1.4. Elektrik enerjisinin devrelere akım yoluyla aktarıldığını açıklar.",
+              "F.7.7.1.5 Bir devre elemanının uçları arasındaki gerilim ile üzerinden geçen akımı ilişkilendirir.",
+              "F.7.7.1.6. Özgün bir aydınlatma aracı tasarlar."
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 8. sınıf Fen Bilimleri · 2025-2026 yıllık plan",
+        "tema": "8. sınıf - Fen Bilimleri - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "F.8.1. Mevsimler ve İklim",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "F.8.1.1.1. Mevsimlerin oluşumuna yönelik tahminlerde bulunur.",
-              "F.8.1.2.1. İklim ve hava olayları arasındaki farkı açıklar.",
-              "F.8.1.2.2. İklim biliminin bir bilim dalı olduğunu ve klimatologları söyler."
-            ]
-          },
-          {
-            "baslik": "F.8.2. DNA ve Genetik Kod",
-            "ciktilar": [
+              "F.8.1.1.1 Mevsimlerin oluşumuna yönelik tahminlerde bulunur.",
+              "F.8.1.2.1. İklim ve hava olayları arasındaki farkı açıklar",
+              "F.8.1.2.2. İklim biliminin (klimatoloji) bir bilim dalı olduğunu ve bu alanda çalışan uzmanlara iklim bilimci (klimatolog) adı verildiğini söyler.",
               "F.8.2.1.1. Nükleotid, gen, DNA ve kromozom kavramlarını açıklayarak bu kavramlar arasında ilişki kurar.",
-              "F.8.2.1.2. DNA’nın yapısını model üzerinde gösterir.",
-              "F.8.2.2.2. Tek karakter çaprazlamaları ile ilgili problemler çözerek sonuçlar hakkında yorum yapar.",
-              "F.8.2.3.3. Mutasyonla modifikasyon arasındaki farklar ile ilgili çıkarımda bulunur.",
-              "F.8.2.4.1. Canlıların yaşadıkları çevreye uyumlarını gözlem yaparak açıklar."
+              "F.8.2.1.2 DNA’nın yapısını model üzerinde gösterir.",
+              "F.8.2.1.3. DNA’nın kendini nasıl eşlediğini ifade eder.",
+              "F.8.2.2.1 Kalıtım ile ilgili kavramları tanımlar.",
+              "F.8.2.2.2. Tek karakter çaprazlamaları ile ilgili problemler çözerek sonuçlar hakkında yorum yapar",
+              "F.8.2.2.3. Akraba evliliklerinin genetik sonuçlarını tartışı",
+              "F.8.2.3.1. Örneklerden yola çıkarak mutasyonu açıklar.",
+              "F.8.2.3.2. Örneklerden yola çıkarak modifikasyonu açıklar",
+              "F.8.2.3.3. Mutasyonla modifikasyon arasındaki farklar ile ilgili çıkarımda bulunur",
+              "F.8.2.4.1. Canlıların yaşadıkları çevreye uyumlarını gözlem yaparak açıklar",
+              "F.8.2.5.1. Genetik mühendisliğini ve biyoteknolojiyi ilişkilendirir.",
+              "F.8.2.5.2. Biyoteknolojik uygulamalar kapsamında oluşturulan ikilemlerle bu uygulamaların insanlık için yararlı ve zararlı yönlerini tartışır.",
+              "F.8.2.5.3. Gelecekteki genetik mühendisliği ve biyoteknoloji uygulamalarının neler olabileceği hakkında tahminde bulunur.",
+              "F.8.3.1.1. Katı basıncını etkileyen değişkenleri deneyerek keşfeder",
+              "F.8.3.1.2. Sıvı basıncını etkileyen değişkenleri tahmin eder ve tahminlerini test eder.",
+              "F.8.3.1.3. Katı, sıvı ve gazların basınç özelliklerinin günlük yaşam ve teknolojideki uygulamalarına örnekler verir",
+              "F.8.4.1.1. Periyodik sistemde, grup ve periyotların nasıl oluşturulduğunu açıklar",
+              "F.8.4.1.2 Elementleri periyodik tablo üzerinde metal, yarımetal ve ametal olarak sınıflandırır.",
+              "F.8.4.2.1. Fiziksel ve kimyasal değişim arasındaki farkları, çeşitli olayları gözlemleyerek açıklar.",
+              "F.8.4.3.1. Bileşiklerin kimyasal tepkime sonucunda oluştuğunu bilir.",
+              "F.8.4.4.1. Asit ve bazların genel özelliklerini ifade eder.",
+              "F.8.4.4.2. Asit ve bazlara günlük yaşamdan örnekler verir",
+              "F.8.4.4.3. Günlük hayatta ulaşılabilecek malzemeleri asit-baz ayracı olarak kullanır.",
+              "F.8.4.4.4. Maddelerin asitlik ve bazlık durumlarına ilişkin pH değerlerini kullanarak çıkarımda bulunur.",
+              "F.8.4.4.5. Asit ve bazların çeşitli maddeler üzerindeki etkilerini gözlemler.",
+              "F.8.4.4.6 Asit ve bazların temizlik malzemesi olarak kullanılması esnasında oluşabilecek tehlikelerle ilgili gerekli tedbirleri alır.",
+              "F.8.4.4.7. Asit yağmurlarının önlenmesine yönelik çözüm önerileri sunar.",
+              "F.8.4.5.1. Isınmanın maddenin cinsine, kütlesine ve/veya sıcaklık değişimine bağlı olduğunu deney yaparak keşfeder.",
+              "F.8.4.5.2 Hâl değiştirmek için gerekli ısının maddenin cinsi ve kütlesiyle ilişkili olduğunu deney yaparak keşfeder.",
+              "F.8.4.5.3 Maddelerin hâl değişimi ve ısınma grafiğini çizerek yorumlar.",
+              "F.8.4.5.4. Günlük yaşamda meydana gelen hâl değişimleri ile ısı alışverişini ilişkilendirir",
+              "F.8.4.6.1. Geçmişten günümüze Türkiye’deki kimya endüstrisinin gelişimini araştırır.",
+              "F.8.4.6.2. Kimya endüstrisinde meslek dallarını araştırır ve gelecekteki yeni meslek alanları hakkında öneriler sunar.",
+              "F.8.5.1.1. Basit makinelerin sağladığı avantajları örnekler üzerinden açıklar.",
+              "F.8.5.1.2. Basit makinelerden yararlanarak günlük yaşamda iş kolaylığı sağlayacak bir düzenek tasarlar.",
+              "F.8.6.1.1 Besin zincirindeki üretici, tüketici, ayrıştırıcılara örnekler verir.",
+              "F.8.6.2.1. Bitkilerde besin üretiminde fotosentezin önemini fark eder",
+              "F.8.6.2.2 Fotosentez hızını etkileyen faktörler ile ilgili çıkarımlarda bulunur.",
+              "F.8.6.2.3. Canlılarda solunumun önemini belirtir.",
+              "F.8.6.3.1. Madde döngülerini şema üzerinde göstererek açıklar.",
+              "F.8.6.3.2. Madde döngülerinin yaşam açısından önemini sorgular.",
+              "F.8.6.3.2 Madde döngülerinin yaşam açısından önemini sorgular.",
+              "F.8.6.3.3. Küresel iklim değişikliklerinin nedenlerini ve olası sonuçlarını tartışır.",
+              "F.8.6.4.1. Kaynakların kullanımında tasarruflu davranmaya özen gösterir.",
+              "F.8.6.4.2. Kaynakların tasarruflu kullanımına yönelik proje tasarlar.",
+              "F.8.6.4.3 Geri dönüşüm için katı atıkların ayrıştırılmasının önemini açıklar.",
+              "F.8.6.4.4 Geri dönüşümün ülke ekonomisine katkısına ilişkin araştırma verilerini kullanarak çözüm önerileri sunar.",
+              "F.8.6.4.5 Kaynakların tasarruflu kullanılmaması durumunda gelecekte karşılaşılabilecek problemleri belirterek çözüm önerileri sunar.",
+              "F.8.6.4.6 Kaynakların tasarruflu kullanılmaması durumunda gelecekte karşılaşılabilecek problemleri belirterek çözüm önerileri sunar.",
+              "F.8.7.1.1. Elektriklenmeyi, bazı doğa olayları ve teknolojideki uygulama örnekleri ile açıklar.",
+              "F.8.7.1.2. Elektrik yüklerini sınıflandırarak aynı ve farklı cins elektrik yüklerinin birbirlerine etkisini açıklar.",
+              "F.8.7.1.3. Deneyler yaparak elektriklenme çeşitlerini fark eder.",
+              "F.8.7.2.1. Cisimleri, sahip oldukları elektrik yükleri bakımından sınıflandırır",
+              "F.8.7.2.2 Topraklamayı açıklar.",
+              "F.8.7.3.1. Elektrik enerjisinin ısı, ışık ve hareket enerjisine dönüştüğü uygulamalara örnekler verir.",
+              "F.8.7.3.2. Elektirik enerjisinin ısı, ışık veya hareket enerjisine dönüşümü temel alan bir model tasarlar.",
+              "F.8.7.3.3 Güç santrallerinde elektrik enerjisinin nasıl üretildiğini açıklar.",
+              "F.8.7.3.4. Güç santrallerinin avantaj ve dezavantajları konusunda fikirler üretir",
+              "F.8.7.3.5. Elektrik enerjisinin bilinçli ve tasarruflu kullanılmasının aile ve ülke ekonomisi bakımından önemini tartışır.",
+              "F.8.7.3.6. Evlerde elektriği tasarruflu kullanmaya özen gösterir."
             ]
           }
         ]
@@ -495,454 +824,99 @@
     ],
     "Sosyal Bilgiler": [
       {
-        "tema": "Drive · 5. sınıf Sosyal Bilgiler · 2025-2026 yıllık plan",
+        "tema": "5. sınıf - Sosyal Bilgiler - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Birlikte Yaşamak · Gruplar, roller, kültürel özellikler ve dayanışma",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "SB.5.1.1. Dahil olduğu gruplar ve bu gruplardaki rolleri arasındaki ilişkileri çözümleyebilme",
+              "SB.5.1.1. Dâhil olduğu gruplar ve bu gruplardaki rolleri arasındaki ilişkileri çözümleyebilme",
               "SB.5.1.2. Kültürel özelliklere saygı duymanın birlikte yaşamaya etkisini yorumlayabilme",
-              "SB.5.1.3. Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetlerine katkı sağlayabilme"
-            ]
-          },
-          {
-            "baslik": "Evimiz Dünya · Yaşadığı ilin göreceli konumu",
-            "ciktilar": [
-              "SB.5.2.1. Yaşadığı ilin göreceli konum özelliklerini belirleyebilme"
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 6. sınıf Sosyal Bilgiler · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "Birlikte Yaşamak · Roller, milli değerler ve toplumsal sorunlar",
-            "ciktilar": [
-              "SB.6.1.1. Dahil olduğu grupların ve bu gruplardaki rollerinin zaman içerisinde değişebileceğine ilişkin çıkarım yapabilme",
-              "SB.6.1.2. Kültürel bağlarımızın ve milli değerlerimizin toplumsal birliğe etkisini yorumlayabilme",
-              "SB.6.1.3. Toplumsal hayatta karşılaşılan sorunlara yönelik çözüm önerilerini müzakere edebilme"
-            ]
-          },
-          {
-            "baslik": "Evimiz Dünya · Ülkemizin, kıtaların ve okyanusların konum özellikleri",
-            "ciktilar": [
-              "SB.6.2.1. Ülkemizin, kıtaların ve okyanusların göreceli konum özelliklerini belirleyebilme"
+              "SB.5.1.3. Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetlerine katkı sağlayabilme",
+              "SB.5.2.1. Yaşadığı ilin göreceli konum özelliklerini belirleyebilme",
+              "SB.5.2.2. Yaşadığı ilde doğal ve beşerî çevredeki değişimi neden ve sonuçlarıyla yorumlayabilme",
+              "SB.5.2.3. Yaşadığı ilde meydana gelebilecek afetlerin etkilerini azaltmaya yönelik farkındalık etkinlikleri düzenleyebilme",
+              "SB.5.2.4. Ülkemize komşu devletler hakkında bilgi toplayabilme",
+              "SB.5.3.1. Yaşadığı ildeki ortak miras ögelerine ilişkin oluşturduğu ürünü paylaşabilme",
+              "SB.5.3.2. Anadolu’da ilk yerleşimleri kuran toplumların sosyal hayatlarına yönelik bakış açısı geliştirebilme",
+              "SB.5.3.3. Mezopotamya ve Anadolu medeniyetlerinin ortak mirasa katkılarını karşılaştırabilme",
+              "SB.5.4.1. Demokrasi ve cumhuriyet kavramları arasındaki ilişkiyi çözümleyebilme",
+              "SB.5.4.2. Toplum düzenine etkisi bakımından etkin vatandaş olmanın önemine yönelik çıkarımda bulunabilme",
+              "SB.5.4.3. Temel insan hak ve sorumluluklarının önemini sorgulayabilme",
+              "SB.5.4.4. Bir ihtiyaç hâlinde veya sorun karşısında başvuru yapılabilecek kurumlar hakkında bilgi toplayabilme",
+              "SB.5.5.1. Kaynakları verimli kullanmanın doğa ve insanlar üzerindeki etkisini yorumlayabilme",
+              "SB.5.5.2. İhtiyaç ve isteklerini karşılamak için gerekli bütçeyi planlayabilme",
+              "SB.5.5.3. Yaşadığı ildeki ekonomik faaliyetleri özetleyebilme",
+              "SB.5.6.1.Teknolojik gelişmelerin toplum hayatına etkilerini tartışabilme",
+              "SB.5.6.2. Teknolojik ürünlerin bilinçli kullanımının önemine ilişkin ürün oluşturabilme"
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 7. sınıf Sosyal Bilgiler · 2025-2026 yıllık plan",
+        "tema": "6. sınıf - Sosyal Bilgiler - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "1. Birey, Toplum ve İletişim",
+            "baslik": "Öğrenme çıktıları",
+            "ciktilar": [
+              "SB.6.1.1. Dâhil olduğu grupların ve bu gruplardaki rollerinin zaman içerisinde değişebileceğine ilişkin çıkarım yapabilme",
+              "SB.6.1.2. Kültürel bağlarımızın ve millî değerlerimizin toplumsal birliğe etkisini yorumlayabilme",
+              "SB.6.1.3. Toplumsal hayatta karşılaşılan sorunlara yönelik çözüm önerilerini müzakere edebilme",
+              "SB.6.2.1. Ülkemizin, kıtaların ve okyanusların konum özelliklerini belirleyebilme",
+              "SB.6.2.2. Ülkemizin doğal ve beşerî çevre özellikleri arasındaki ilişkiyi çözümleyebilme",
+              "SB.6.2.3. Ülkemizin Türk dünyasıyla kültürel iş birliklerini yorumlayabilme",
+              "SB.6.3.1. Türkistan’da kurulan ilk Türk devletlerinin medeniyetimize katkılarını sorgulayabilme",
+              "SB.6.3.2. VII-XIII. yüzyıllar arasında İslam medeniyetinin eğitim, bilim, hukuk, kültür, sanat ve mimari alanlarında insanlığın ortak mirasına katkılarına dair akıl yürütebilme",
+              "SB.6.3.3. İslamiyet’in kabulüyle Türklerin sosyal ve kültürel hayatlarında meydana gelen değişimi dönemin bakış açısıyla değerlendirebilme",
+              "SB.6.3.4. XI-XIII. yüzyıllar arasında meydana gelen siyasi faaliyetler ve askerî mücadelelerin Anadolu’nun Türkleşmesi ve İslamlaşmasına etkisini özetleyebilme",
+              "SB.6.4.1. Yönetimin karar alma sürecini etkileyen unsurları çözümleyebilme",
+              "SB.6.4.2. Toplumsal düzenin sürdürülmesinde temel hak ve sorumlulukların önemini yorumlayabilme",
+              "SB.6.4.3. Vatandaşlık haklarının kullanımında dijitalleşme ve teknolojik gelişmelerin etkilerini sorgulayabilme",
+              "SB.6.5.1. Ülkemizin kaynakları ile ekonomik faaliyetler arasındaki ilişkiyi çözümleyebilme",
+              "SB.6.5.2. Ekonomik faaliyetler ve meslekler arasındaki ilişki hakkında çıkarımda bulunabilme",
+              "SB.6.5.3. Tasarladığı bir ürün için yatırım ve pazarlama proje önerisi hazırlayabilme",
+              "SB.6.6.1. Ulaşım ve iletişim teknolojilerindeki gelişmelerin kültürel etkileşimdeki rolünü yapılandırabilme",
+              "SB.6.6.2. Bir ürün veya fikrin telif ve patent süreçleriyle ilgili bilgi toplayabilme"
+            ]
+          }
+        ]
+      },
+      {
+        "tema": "7. sınıf - Sosyal Bilgiler - Öğrenme çıktıları",
+        "konular": [
+          {
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
               "SB.7.1.1. İletişimi etkileyen tutum ve davranışları analiz ederek kendi tutum ve davranışlarını sorgular.",
               "SB.7.1.2. Bireysel ve toplumsal ilişkilerde olumlu iletişim yollarını kullanır.",
-              "SB.7.1.3. Medyanın sosyal değişim ve etkileşimdeki rolünü tartışır."
-            ]
-          },
-          {
-            "baslik": "2. Osmanlı Devleti ve Kültür / 6-7. Demokrasi ve küresel bağlantılar",
-            "ciktilar": [
+              "SB.7.1.3. Medyanın sosyal değişim ve etkileşimdeki rolünü tartışır.",
+              "SB.7.1.4. İletişim araçlarından yararlanırken haklarını kullanır ve sorumluluklarını yerine getirir.",
               "SB.7.2.1. Osmanlı Devleti’nin siyasi güç olarak ortaya çıkış sürecini ve bu süreci etkileyen faktörleri açıklar.",
               "SB.7.2.2. Osmanlı Devleti’nin fetih siyasetini örnekler üzerinden analiz eder.",
+              "SB.7.2.3. Avrupa’daki gelişmelerle bağlantılı olarak Osmanlı Devleti’ni değişime zorlayan süreçleri kavrar.",
+              "SB.7.2.4. Osmanlı Devleti’nde ıslahat hareketleri sonucu ortaya çıkan kurumlardan hareketle toplumsal ve ekonomik değişim hakkında çıkarımlarda bulunur.",
+              "SB.7.2.5. Osmanlı kültür, sanat ve estetik anlayışına örnekler verir.",
+              "SB.7.3.1. Örnek incelemeler yoluyla geçmişten günümüze, yerleşmeyi etkileyen faktörler hakkında çıkarımlarda bulunur.",
+              "SB.7.3.2. Türkiye’de nüfusun dağılışını etkileyen faktörlerden hareketle ürkiye’nin demografik özelliklerini yorumlar.",
+              "SB.7.3.3. Örnek incelemeler yoluyla göçün neden ve sonuçlarını tartışır.",
+              "SB.7.3.4. Temel haklardan yerleşme ve seyahat özgürlüğünün kısıtlanması halinde ortaya çıkacak olumsuz durumlara örnekler gösterir.",
+              "SB.7.4.1. Bilginin korunması, yaygınlaştırılması ve aktarılmasında değişim ve sürekliliği inceler.",
+              "SB.7.4.2. Türk-İslam medeniyetinde yetişen bilginlerin bilimsel gelişme sürecine katkılarını tartışır.",
+              "SB.7.4.3. XV-XX. yüzyıllar arasında Avrupa’da yaşanan gelişmelerin günümüz bilimsel birikiminin oluşmasına etkisini analiz eder.",
+              "SB.7.4.4. Özgür düşüncenin bilimsel gelişmelere katkısını değerlendirir.",
+              "SB.7.5.1. Üretimde ve yönetimde toprağın önemini geçmişten ve günümüzden örneklerle açıklar.",
+              "SB.7.5.2. Üretim teknolojisindeki gelişmelerin sosyal ve ekonomik hayata etkilerini değerlendirir.",
+              "SB.7.5.3. Kurumların ve sivil toplum kuruluşlarının çalışmalarına ve sosyal yaşamdaki rollerine örnekler verir.",
+              "SB.7.5.4. Tarih boyunca Türklerde meslek edindirme ve meslek etiği kazandırmada rol oynayan kurumları tanır.",
+              "SB.7.5.5. Dünyadaki gelişmelere bağlı olarak ortaya çıkan yeni meslekleri dikkate alarak mesleki tercihlerine yönelik planlama yapar.",
+              "SB.7.5.6. Dijital teknolojilerin üretim, dağıtım ve tüketim ağında meydana getirdiği değişimleri analiz eder.",
+              "SB.7.6.1. Demokrasinin ortaya çıkışını, gelişim evrelerini ve günümüzde ifade ettiği anlamları açıklar.",
+              "SB.7.6.2. Atatürk’ün Türk demokrasisinin gelişimine katkılarını açıklar.",
               "SB.7.6.3. Türkiye Cumhuriyeti Devleti’nin temel niteliklerini toplumsal hayattaki uygulamalarla ilişkilendirir.",
+              "SB.7.6.4. Demokrasinin uygulanma süreçlerinde karşılaşılan sorunları analiz eder.",
+              "SB.7.7.1. Türkiye’nin üyesi olduğu uluslararası kuruluşlara örnekler verir.",
+              "SB.7.7.2. Türkiye’nin ilişkide olduğu ekonomik bölge ve kuruluşları tanır.",
+              "SB.7.7.3. Çeşitli kültürlere yönelik kalıp yargıları sorgular.",
               "SB.7.7.4. Arkadaşlarıyla birlikte küresel sorunların çözümüne yönelik fikir önerileri geliştirir."
-            ]
-          }
-        ]
-      }
-    ],
-    "Din Kültürü": [
-      {
-        "tema": "Drive · 5. sınıf Din Kültürü ve Ahlak Bilgisi · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "Allah İnancı · Evrendeki düzen, tevhit ve İhlas suresi",
-            "ciktilar": [
-              "5.1.1. Evrendeki mükemmel düzene ilişkin akıl yürütebilme",
-              "5.1.2. Evrendeki mükemmel düzeni gözlem yoluyla fark edip Allah'ın (cc) varlığı ve birliğini gözleme dayalı tahmin edebilme",
-              "5.1.3. Allah'ın (cc) güzel isimleri hakkında bilgi toplayabilme",
-              "5.1.4. İhlas suresini ve bu surenin anlamını okuyarak yorumlayabilme"
-            ]
-          },
-          {
-            "baslik": "Namaz, Peygamber Kıssaları ve Mimarimizde Dini Motifler",
-            "ciktilar": [
-              "5.2.1. Namaz ibadetini özetleyebilme",
-              "5.4.1. Peygamberlik hakkında akıl yürütebilme",
-              "5.4.2. Peygamber kıssalarında verilen öğütleri sentezleyebilme",
-              "5.4.3. Kureyş suresini ve bu surenin anlamını okuyarak yorumlayabilme",
-              "5.5.1. Dinin mimarimize etkisini çözümleyebilme",
-              "5.5.2. Camilerin bölümlerini tanıyabilme",
-              "5.5.3. Kültürümüzde yer alan cami örneklerini karşılaştırabilme"
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 6. sınıf Din Kültürü ve Ahlak Bilgisi · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "1. Peygamber ve İlahi Kitap İnancı",
-            "ciktilar": [
-              "DKAB.6.1.1. Peygamberlerin insanlara rehber olarak gönderilmesi hakkında bilgi toplayabilme",
-              "DKAB.6.1.2. Vahiylerin insanlara ilettiği mesajları yapılandırabilme",
-              "DKAB.6.1.3. İlahi kitaplarla ilgili bilgileri çözümleyebilme",
-              "DKAB.6.1.4. Felak suresini ve bu surenin anlamını okuyarak yorumlayabilme"
-            ]
-          },
-          {
-            "baslik": "2-5. Ramazan, Hz. Muhammed ve kültürümüzde dini motifler",
-            "ciktilar": [
-              "DKAB.6.2.1. Ramazan ayının oruç ve Kur’an ayı olduğunu çözümleyebilme",
-              "DKAB.6.4.3. Hz. Muhammed’in (sav) gençlik yılları hakkındaki bilgileri yapılandırabilme",
-              "DKAB.6.5.1. Geleneğimizde, edebiyatımızda ve musikimizde dinin izlerini özetleyebilme"
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 7. sınıf Din Kültürü ve Ahlak Bilgisi · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "1-3. Melek ve Ahiret İnancı / Hac ve Kurban / Ahlaki Davranışlar",
-            "ciktilar": [
-              "7.1.1. Varlıklar alemini özelliklerine göre ayırt eder.",
-              "7.1.2. Melekleri özellikleri ve görevlerine göre sınıflandırır.",
-              "7.1.3. Dünya hayatı ile ahiret hayatı arasındaki ilişkiyi yorumlar.",
-              "7.2.1. İslam’da hac ibadetinin önemini ayet ve hadisler ışığında yorumlar.",
-              "7.2.3. Kurban ibadetini İslam’ın yardımlaşma ve dayanışmaya verdiği önem açısından değerlendirir.",
-              "7.3.1. Güzel ahlaki tutum ve davranışları örneklerle açıklar."
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 8. sınıf Din Kültürü ve Ahlak Bilgisi · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "1. Kader İnancı",
-            "ciktilar": [
-              "8.1.1. Kader ve kaza inancını ayet ve hadislerle açıklar.",
-              "8.1.2. İnsanın ilmi, iradesi, sorumluluğu ile kader arasında ilişki kurar.",
-              "8.1.3. Kaza ve kader ile ilgili kavramları analiz eder.",
-              "8.1.6. Ayet el-Kürsi’yi okur, anlamını söyler."
-            ]
-          },
-          {
-            "baslik": "2-5. Zekat, Hz. Muhammed’in örnekliği ve Kur’an-ı Kerim",
-            "ciktilar": [
-              "8.2.1. İslam’ın paylaşma ve yardımlaşmaya verdiği önemi ayet ve hadisler ışığında yorumlar.",
-              "8.2.2. Zekat ve sadaka ibadetini ayet ve hadislerle açıklar.",
-              "8.4.7. Hz. Muhammed’in (sav) örnek davranışlarının toplumsal hayattaki önemini değerlendirir.",
-              "8.5.2. Ayetlerden hareketle Kur’an’ın ana konularını sınıflandırır."
-            ]
-          }
-        ]
-      }
-    ],
-    "İngilizce": [
-      {
-        "tema": "Drive · 5. sınıf İngilizce · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "SCHOOL LIFE · People, places and rules at school",
-            "ciktilar": [
-              "ENG.5.1.L1. Get ready for the listening/watching comprehension process",
-              "ENG.5.1.R1. Get ready for the reading-comprehension process",
-              "ENG.5.1.W1. Get ready for the writing-expression process",
-              "ENG.5.1.S1. Get ready for the speaking-expression process",
-              "ENG.5.1.V1. Select and use target vocabulary related to people, places and rules at school",
-              "ENG.5.1.G1. Select and use target grammatical elements related to school life",
-              "ENG.5.1.L2. Determine the purpose, context and topic of the listening/watching text",
-              "ENG.5.1.R2. Determine the purpose, context and topic of the reading text",
-              "ENG.5.1.W2. Produce a short written text about school life",
-              "ENG.5.1.S2. Speak about people, places and rules at school"
-            ]
-          },
-          {
-            "baslik": "LIFE IN THE UNIVERSE / FUTURE · School holidays, places, activities and plans",
-            "ciktilar": [
-              "ENG.5.8.L1. Get ready for listening/watching texts about holidays and future plans",
-              "ENG.5.8.R1. Get ready for reading texts about holidays and future plans",
-              "ENG.5.8.W1. Get ready for writing about holiday activities and plans",
-              "ENG.5.8.S1. Get ready for speaking about holiday activities and plans",
-              "ENG.5.8.V1. Select and use target vocabulary related to holidays, places, activities and plans",
-              "ENG.5.8.G1. Select and use target grammatical elements related to future plans",
-              "ENG.5.8.L2. Determine the purpose, context and topic of listening/watching texts",
-              "ENG.5.8.R2. Determine the purpose, context and topic of reading texts",
-              "ENG.5.8.W2. Produce a short written text about future plans",
-              "ENG.5.8.S2. Speak about future plans and holiday activities"
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 6. sınıf İngilizce · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "Life, Yummy Breakfast and Downtown",
-            "ciktilar": [
-              "E6.1.L1. Recognize phrases, words and expressions related to repeated actions",
-              "E6.1.SI1. Talk about repeated actions and daily routines",
-              "E6.1.SP1. Talk about repeated actions and routines",
-              "E6.1.SP2. Tell the time and dates",
-              "E6.1.R1. Understand short and simple texts about daily routines",
-              "E6.2.L1. Recognize phrases and expressions about food and drinks",
-              "E6.2.SI1. Accept and refuse offers about food and drinks",
-              "E6.2.SP1. Talk about breakfast preferences",
-              "E6.2.R1. Understand short texts about food and drinks",
-              "E6.3.L1. Recognize expressions about places in a town",
-              "E6.3.SI1. Talk about locations and people in a town",
-              "E6.3.SP1. Describe places and compare people or places"
-            ]
-          },
-          {
-            "baslik": "Weather, Holidays, Bookworms, Saving the Planet and Democracy",
-            "ciktilar": [
-              "E6.4.L1. Recognize words and expressions about weather and emotions",
-              "E6.4.SI1. Talk about weather conditions and emotions",
-              "E6.7.L1. Recognize words and expressions about holidays",
-              "E6.7.SI1. Talk about past holiday activities",
-              "E6.7.W1. Write short and simple texts about holidays",
-              "E6.8.L1. Recognize words and expressions about books and reading habits",
-              "E6.8.R1. Understand short texts about bookworms",
-              "E6.8.W1. Write short texts about reading habits",
-              "E6.9.L1. Recognize words and expressions about environmental problems",
-              "E6.9.SI1. Talk about saving the planet",
-              "E6.9.W1. Write short texts about environmental protection",
-              "E6.10.L1. Recognize words and expressions about democracy",
-              "E6.10.SI1. Talk about elections and classroom democracy",
-              "E6.10.W1. Write short texts about democratic choices"
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 7. sınıf İngilizce · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "Appearance and Personality, Sports and Biographies",
-            "ciktilar": [
-              "E7.1.L1. Recognize phrases and expressions about appearance and personality",
-              "E7.1.SI1. Talk about appearance and personality",
-              "E7.1.SP1. Describe people and personal qualities",
-              "E7.1.R1. Understand short texts about personal descriptions",
-              "E7.1.W1. Write short descriptions of people",
-              "E7.2.L1. Recognize expressions about sports",
-              "E7.2.SI1. Talk about sports and routines",
-              "E7.2.W1. Write short texts about sports activities",
-              "E7.3.L1. Recognize expressions about biographies",
-              "E7.3.SI1. Talk about past events in biographies",
-              "E7.3.W1. Write a short biography"
-            ]
-          },
-          {
-            "baslik": "Wild Animals, Environment and Planets",
-            "ciktilar": [
-              "E7.4.L1. Recognize expressions about wild animals",
-              "E7.4.SI1. Talk about wild animals and their habitats",
-              "E7.4.W1. Write short texts about wild animals",
-              "E7.7.L1. Recognize expressions about dreams and future expectations",
-              "E7.7.SI1. Talk about dreams and predictions",
-              "E7.8.L1. Recognize expressions about public buildings",
-              "E7.8.SI1. Talk about public buildings and purposes",
-              "E7.9.L1. Recognize expressions about environment",
-              "E7.9.SI1. Talk about environmental problems and solutions",
-              "E7.9.W1. Write short texts about environmental protection",
-              "E7.10.L1. Recognize expressions about planets and space",
-              "E7.10.SI1. Talk about planets and space",
-              "E7.10.W1. Write short texts about planets"
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 8. sınıf İngilizce · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "Friendship / Teen Life / In the Kitchen / On the Phone",
-            "ciktilar": [
-              "E8.1.L1. Students will be able to understand the main points of short, clear, simple messages about friendship.",
-              "E8.1.SI1. Students will be able to interact with reasonable ease in structured situations and short conversations about friendship.",
-              "E8.2.SP1. Students will be able to express what they prefer, like and dislike.",
-              "E8.3.R1. Students will be able to understand short and simple texts about cooking and recipes.",
-              "E8.4.L1. Students will be able to understand phrases and expressions about telephone conversations."
-            ]
-          },
-          {
-            "baslik": "Chores / Science / Natural Forces",
-            "ciktilar": [
-              "E8.8.SP1. Students will be able to express responsibilities.",
-              "E8.9.R1. Students will be able to understand short texts about scientific achievements.",
-              "E8.10.SP1. Students will be able to talk about predictions concerning natural forces."
-            ]
-          }
-        ]
-      }
-    ],
-    "Bilişim Teknolojileri ve Yazılım": [
-      {
-        "tema": "Drive · 5. sınıf Bilişim Teknolojileri ve Yazılım · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "Bilişim Teknolojilerinin Hayatımızdaki Yeri",
-            "ciktilar": [
-              "BTY.5.1.1. Günlük yaşamda kullanılan bilişim teknolojilerini sınıflandırabilme",
-              "BTY.5.1.2. Bilişim teknolojilerinin birey ve toplum üzerindeki etkilerini özetleyebilme",
-              "BTY.5.1.3. Dijital vatandaşlık uygulamalarını sınıflandırabilme",
-              "BTY.5.1.4. Yapay zeka ile ilgili temel kavramları ve özellikleri sorgulayabilme",
-              "BTY.5.1.5. Bilgisayar sistemlerini çözümleyebilme",
-              "BTY.5.1.6. Dosya ve klasör yönetimi ile ilgili temel işlemlerle çalışabilme"
-            ]
-          },
-          {
-            "baslik": "Dijital Ürün Tasarımı ve Geliştirme",
-            "ciktilar": [
-              "BTY.5.2.1. Görsel düzenleme programlarından yararlanabilme",
-              "BTY.5.2.2. Görsel için kurgu oluşturabilme",
-              "BTY.5.2.3. Görsel dosyası geliştirebilme",
-              "BTY.5.2.4. Kelime işlemci programlarından yararlanabilme",
-              "BTY.5.2.5. Kelime işlemci dosyası geliştirebilme",
-              "BTY.5.2.6. Sunum programlarından yararlanabilme",
-              "BTY.5.2.7. Sunum dosyası geliştirebilme"
-            ]
-          },
-          {
-            "baslik": "Yazılım Tasarımı ve Programlama",
-            "ciktilar": [
-              "BTY.5.6.2. Algoritma oluşturmada test edebilme-hata ayıklayabilme",
-              "BTY.5.6.3. Yazılım geliştirme sürecinde kullanılan bileşenlerden yararlanabilme",
-              "BTY.5.6.4. Blok tabanlı ortamda yazılım geliştirme sürecini yönetebilme"
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 6. sınıf Bilişim Teknolojileri ve Yazılım · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "BT.6.1-3. Bilişim teknolojileri, etik, güvenlik ve araştırma",
-            "ciktilar": [
-              "BT.6.1.1.1. Bilişim teknolojilerinin günlük yaşamdaki önemini değerlendirir.",
-              "BT.6.1.1.3. Bilişim teknolojilerinin beden ve ruh sağlığına etkilerini yorumlar.",
-              "BT.6.2.1.1. İnternet etiğinin önemini ifade eder.",
-              "BT.6.2.3.1. Gizlilik açısından önemli olan bileşenleri belirler.",
-              "BT.6.3.2.1. Arama motorlarını kullanarak ileri düzeyde araştırma yapar."
-            ]
-          },
-          {
-            "baslik": "BT.6.4-5. Ürün oluşturma ve programlama",
-            "ciktilar": [
-              "BT.6.4.1.1. Tablolama programının arayüzünü ve özelliklerini tanır.",
-              "BT.6.4.2.1. Ses ve video dosya biçimlerini bilir.",
-              "BT.6.5.1.1. Verilen bir problemi analiz eder.",
-              "BT.6.5.2.1. Blok tabanlı programlama aracının arayüzünü ve özelliklerini tanır."
-            ]
-          }
-        ]
-      }
-    ],
-    "Müzik": [
-      {
-        "tema": "Drive · 5. sınıf Müzik · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "Müzik dili",
-            "ciktilar": [
-              "MÜZ.5.1.1. İstiklâl Marşını ezgisine dikkat ederek söyleyebilme",
-              "MÜZ.5.1.2. Farklı türdeki eserleri söyleyebilme",
-              "MÜZ.5.1.3. Belirli gün ve haftalarla ilgili eserleri söyleyebilme",
-              "MÜZ.5.1.4. Ortak repertuvardaki eserleri söyleyebilme",
-              "MÜZ.5.1.5. Müzik eserlerine bedensel hareketlerle eşlik edebilme",
-              "MÜZ.5.1.6. Müzik yazısını çözümleyebilme",
-              "MÜZ.5.1.7. Güzel sanatlarla ilgili kavramları sınıflandırabilme"
-            ]
-          },
-          {
-            "baslik": "Müzik kültürü",
-            "ciktilar": [
-              "MÜZ.5.2.1. Atatürk’ün güzel sanatlara verdiği önemi özetleyebilme",
-              "MÜZ.5.2.2. Farklı türdeki eserleri söyleyebilme",
-              "MÜZ.5.2.3. Nefesli çalgıların özelliklerini karşılaştırabilme",
-              "MÜZ.5.2.4. Klavyeli çalgıların özelliklerini karşılaştırabilme",
-              "MÜZ.5.2.5. Belirli gün ve haftalarla ilgili eserleri söyleyebilme",
-              "MÜZ.5.2.6. Popüler müzik türlerini karşılaştırabilme",
-              "MÜZ.5.2.7. Ortak repertuvardaki eserleri söyleyebilme",
-              "MÜZ.5.2.8. Müzik eserlerine bedensel hareketlerle eşlik edebilme"
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 6-8. sınıf Müzik · 2025-2026 yıllık plan kazanımları",
-        "konular": [
-          {
-            "baslik": "5-8. sınıf müzik kazanımları",
-            "ciktilar": [
-              "MÜZ.6.1.5. Müzik eserlerine bedensel hareketlerle eşlik edebilme",
-              "Mü.8.A.1. İstiklâl Marşı'nı doğru söyler.",
-              "Mü.8.B.1. Temel müzik yazı ve ögelerini kullanır.",
-              "Mü.8.D.6. Atatürk'ün güzel sanatlar içinde müziğe verdiği yeri ve önemi kavrar.",
-              "Mü.8.A.6. Müzik eserlerini hız belirteci (metronom) kullanarak uygun hızlarda seslendirir.",
-              "Mü.8.A.2. Toplum hayatımızda önemli yer tutan marşlarımızı doğru söyler.",
-              "Mü.8.C.2. Farklı ve tekrarlanan bölümlerden oluşan ritim kalıpları oluşturur.",
-              "Mü.8.C.3. Kendi oluşturduğu ezgileri seslendirir.",
-              "Mü.8.D.3. Müziğin diğer sanatlarla ilişkisini kavrar.",
-              "Mü.8.D.8. Sanat, sanatçı ve sanat eseri kavramlarını açıklar.",
-              "Mü.8.B.2. Müzikte dizileri tanır.",
-              "Mü.8.A.4. Türk müziğinin makamsal bir yapıda olduğunu fark eder.",
-              "Mü.8.A.5. Yurdumuza ait müzik türlerinden eserler seslendirir.",
-              "Mü.8.D.1. Türk müziği biçimlerini tanır."
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 7. sınıf Müzik · Ünitelendirilmiş yıllık plan",
-        "konular": [
-          {
-            "baslik": "Dinleme ve söyleme",
-            "ciktilar": [
-              "Mü.7.A.1. İstiklâl Marşı'nı doğru söyler.",
-              "Mü.7.A.2. Millî birlik ve beraberlik duygusunu güçlendiren marşlarımızı doğru söyler.",
-              "Mü.7.A.3. Müzikte hız ve gürlük basamaklarını uygular.",
-              "Mü.7.A.4. Türk müziğinin makamsal bir yapıda olduğunu fark eder.",
-              "Mü.7.A.5. Yurdumuza ait müzik türlerinden eserler seslendirir.",
-              "Mü.7.A.6. Ses grupları oluşturmaya istekli olur.",
-              "Mü.7.A.7. Müzik çalışmalarını sergiler."
-            ]
-          },
-          {
-            "baslik": "Müziksel algı ve bilgilenme",
-            "ciktilar": [
-              "Mü.7.B.1. Temel müzik yazı ve ögelerini kullanır.",
-              "Mü.7.B.2. Müzikte dizileri tanır.",
-              "Mü.7.B.3. İnsan sesi ve ses topluluklarını ayırt eder.",
-              "Mü.7.B.4. Çalgı türleri ve çalgı topluluklarını ayırt eder."
-            ]
-          },
-          {
-            "baslik": "Müziksel yaratıcılık",
-            "ciktilar": [
-              "Mü.7.C.1. Müziklere kendi oluşturduğu ritim kalıbı ile eşlik eder.",
-              "Mü.7.C.2. Kendi oluşturduğu ezgileri seslendirir.",
-              "Mü.7.C.3. Dinlediği farklı türdeki müziklerle ilgili duygu ve düşüncelerini ifade eder.",
-              "Mü.7.C.5. Müzikle ilgili araştırma ve çalışmalarında bilişim teknolojilerinden yararlanır."
-            ]
-          },
-          {
-            "baslik": "Müzik kültürü",
-            "ciktilar": [
-              "Mü.7.D.1. Atatürk'ün müziğin geliştirilmesine verdiği önemi açıklar.",
-              "Mü.7.D.2. Dünya müziklerini tanır.",
-              "Mü.7.D.3. Dinlediği çeşitli türlerdeki müziklerden hem bireysel hem de ortak sınıf arşivini geliştirir.",
-              "Mü.7.D.4. Dinlediği uluslararası müzikleri türlerine göre ayırt eder.",
-              "Mü.7.D.5. Türkülerin yaşanmış öykülerini araştırır.",
-              "Mü.7.D.6. Türk müziği kültürünü tanır."
             ]
           }
         ]
@@ -950,186 +924,337 @@
     ],
     "T.C. İnkılap Tarihi ve Atatürkçülük": [
       {
-        "tema": "Drive · 8. sınıf T.C. İnkılap Tarihi ve Atatürkçülük · 2025-2026 yıllık plan",
+        "tema": "8. sınıf - T.C. İnkılap Tarihi ve Atatürkçülük - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "1. Ünite: Bir Kahraman Doğuyor",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
               "İTA.8.1.1. Avrupa’daki gelişmelerin yansımaları bağlamında Osmanlı Devleti’nin yirminci yüzyılın başlarındaki siyasi ve sosyal durumunu kavrar.",
               "İTA.8.1.2. Mustafa Kemal’in çocukluk ve öğrenim hayatından hareketle onun kişilik özelliklerinin oluşumu hakkında çıkarımlarda bulunur.",
-              "İTA.8.1.4. Mustafa Kemal’in askerlik hayatı ile ilgili olayları ve olguları onun kişilik özellikleri ile ilişkilendirir."
-            ]
-          },
-          {
-            "baslik": "2. Ünite: Milli Uyanış",
-            "ciktilar": [
+              "İTA.8.1.3. Gençlik döneminde Mustafa Kemal’in fikir hayatını etkileyen önemli kişileri ve olayları kavrar.",
+              "İTA.8.1.4. Mustafa Kemal’in askerlik hayatı ile ilgili olayları ve olguları onun kişilik özellikleri ile ilişkilendirir.",
               "İTA.8.2.1. Birinci Dünya Savaşı’nın sebeplerini ve savaşın başlamasına yol açan gelişmeleri kavrar.",
+              "İTA.8.2.2. Birinci Dünya Savaşı’nda Osmanlı Devleti’nin durumu hakkında çıkarımlarda bulunur.",
               "İTA.8.2.3. Mondros Ateşkes Antlaşması’nın imzalanması ve uygulanması karşısında Osmanlı yönetiminin, Mustafa Kemal’in ve halkın tutumunu analiz eder.",
-              "İTA.8.2.5. Milli Mücadele’nin hazırlık döneminde Mustafa Kemal’in yaptığı çalışmaları analiz eder."
-            ]
-          },
-          {
-            "baslik": "6-7. Üniteler · Dış politika ve Atatürk sonrası Türkiye",
-            "ciktilar": [
+              "İTA.8.2.4. Kuvâ-yı Millîye’nin oluşum sürecini ve sonrasında meydana gelen gelişmeleri kavrar.",
+              "İTA.8.2.5. Millî Mücadele’nin hazırlık döneminde Mustafa Kemal’in yaptığı çalışmaları analiz eder.",
+              "İTA.8.2.6. Misakımilli’nin kabulünü ve Büyük Millet Meclisinin açılışını vatanın bütünlüğü esası ile “ulusal egemenlik” ve “tam bağımsızlık” ilkeleri ile ilişkilendirir.",
+              "İTA.8.2.7. Büyük Millet Meclisine karşı ayaklanmalar ile ayaklanmaların bastırılması için alınan tedbirleri analiz eder.",
+              "İTA.8.2.8. Mustafa Kemal’in ve Türk milletinin Sevr Antlaşması’na karşı tepkilerini değerlendirir.",
+              "İTA.8.3.1. Millî Mücadele Dönemi’nde Doğu Cephesi ve Güney Cephesi’nde meydana gelen gelişmeleri kavrar.",
+              "İTA.8.3.2. Millî Mücadele Dönemi’nde Batı Cephesi’nde meydana gelen gelişmeleri kavrar.",
+              "İTA.8.3.3. Millî Mücadele’nin zor bir döneminde Maarif Kongresi yapan Atatürk’ün, millî ve çağdaş eğitime verdiği önemi kavrar.",
+              "İTA.8.3.4. Türk milletinin millî birlik, beraberlik ve dayanışmasının bir örneği olarak Tekalif-i Millîye Emirleri doğrultusunda yapılan uygulamaları analiz eder.",
+              "İTA.8.3.5. Sakarya Meydan Savaşı’nın kazanılmasında ve Büyük Taarruz’un başarılı olmasında Mustafa Kemal’in rolüne ilişkin çıkarımlarda bulunur.",
+              "İTA.8.3.6. Lozan Antlaşması’nın sağladığı kazanımları analiz eder.",
+              "İTA.8.3.7. Millî Mücadele Dönemi’nin siyasi, sosyal ve kültürel olaylarının sanat ve edebiyat ürünlerine yansımalarına kanıtlar gösterir.",
+              "İTA.8.4.1. Çağdaşlaşan Türkiye’nin temeli olan Atatürk ilkelerini açıklar.",
+              "İTA.8.4.2. Siyasi alanda meydana gelen gelişmeleri kavrar.",
+              "İTA.8.4.3. Hukuk alanında meydana gelen gelişmelerin toplumsal hayata yansımalarını kavrar.",
+              "İTA.8.4.4. Eğitim ve kültür alanında yapılan inkılapları ve gelişmeleri kavrar.",
+              "İTA.8.4.5. Toplumsal alanda yapılan inkılapları ve meydana gelen gelişmeleri kavrar.",
+              "İTA.8.4.6. Ekonomi alanında meydana gelen gelişmeleri kavrar.",
+              "İTA.8.4.7. Atatürk Dönemi’nde sağlık alanında yapılan çalışmaları devletin temel görevleri ile ilişkilendirir.",
+              "İTA.8.4.8. Cumhuriyet’in sağladığı kazanımları ve Atatürk’ün Türk milleti için gösterdiği hedefleri analiz eder.",
+              "İTA.8.4.9. Atatürk ilke ve inkılaplarını oluşturan temel esasları kavrar.",
+              "İTA.8.5.1. Atatürk Dönemi’ndeki demokratikleşme yolunda atılan adımları açıklar.",
+              "İTA.8.5.2. Mustafa Kemal’e suikast girişimini analiz eder.",
+              "İTA.8.5.3. Cumhuriyetin ilk yıllarında Türkiye Cumhuriyetine yönelik tehditleri analiz eder.",
+              "İTA.8.6.1. Atatürk Dönemi Türk dış politikasının temel ilkelerini ve amaçlarını açıklar.",
               "İTA.8.6.2. Atatürk Dönemi Türk dış politikasında yaşanan gelişmeleri analiz eder.",
+              "İTA.8.6.3. Atatürk’ün Hatay’ı ülkemize katmak konusunda yaptıklarına ve bu uğurda gösterdiği özveriye kanıtlar gösterir.",
               "İTA.8.7.1. Atatürk’ün ölümüne ilişkin yansıma ve değerlendirmelerden hareketle onun fikir ve eserlerinin evrensel değerine ilişkin çıkarımlarda bulunur.",
+              "İTA.8.7.2. Atatürk’ün Türk Milleti’ne bıraktığı eserlerinden örnekler verir.",
+              "İTA.8.7.3. Atatürk’ün İkinci Dünya Savaşı öncesi tespitleri ve girişimleri Türkiye’nin savaşta izlediği denge siyaseti ile ilişkilendirilir.",
+              "İTA.8.7.4. İkinci Dünya Savaşı’ndaki gelişmelerin ve bu savaşın sonuçlarının Türkiye’ye etkilerini analiz eder.",
               "İTA.8.7.5. Türkiye’de çok partili siyasi hayata geçişi hızlandıran gelişmeleri, demokrasinin gerekleri açısından analiz eder."
             ]
           }
         ]
       }
     ],
-    "Beden Eğitimi ve Spor": [
+    "İngilizce": [
       {
-        "tema": "Drive · 5. sınıf Beden Eğitimi ve Spor · 2025-2026 yıllık plan",
+        "tema": "7. sınıf - İngilizce - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Hareket Yetkinliği / Aktif ve Sağlıklı Hayat",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "BE.5.1.1.1. Yer değiştirme hareketlerini artan bir doğrulukla yapar.",
-              "BE.5.1.1.2. Dengeleme hareketlerini artan bir doğrulukla yapar.",
-              "BE.5.1.1.3. Nesne kontrolü gerektiren hareketleri artan bir doğrulukla yapar.",
-              "BE.5.2.1.1. Fiziksel etkinliklere düzenli olarak katılır."
+              "E7.1.L1 Students will be able to understand clear, standard speech on appearances and personalities.",
+              "E7.1.SI1 Students will be able to talk about other people’s appearances and personalities.",
+              "E7.1.SP1 Students will be able to report on apperances and personalities of other people.",
+              "E7.1.R1 Students will be able to understand a simple text about appearances, personalities, and comparisons including explanations and reasons",
+              "E7.1.W1. Students will be able to write simple pieces to compare people.",
+              "E7.2.L1 Students will be able to recognize frequency adverbs in simple oral text",
+              "E7.2.SI1 Students will be able to ask questions related to the frequency of events",
+              "E7.2.SP1 Students will be able to talk about routines/daily activities by using frequency adverbs and giving explanations and reasons.",
+              "E7.2.R1 Students will be able to understand short and simple texts on sports.",
+              "E7.2.W1. Students will be able to write pieces about routines/daily activities by using frequency adverbs.",
+              "E7.3.L1 Students will be able to recognize specific information in oral texts dealing with past events and dates",
+              "E7.3.SI1 Students will be able to talk about past events with definite time.",
+              "E7.3.SP1 Students will be able to describe past events and experiences.",
+              "E7.3.R1 Students will be able to spot specific information about names and dates in past events in written texts",
+              "E7.3.W1. Students will be able to write a short and simple report about past events.",
+              "E7.4.L1 Students will be able to understand past and present events in oral texts.",
+              "E7.4.L2 Students will be able to identify the names of wild animals in simple oral texts",
+              "E7.4.SI1 Students will be able to ask people questions about characteristics of wild animals",
+              "E7.4.SP1 Students will be able to make simple suggestions.",
+              "E7.4.SP2 Students will be able to report on past and present events.",
+              "E7.4.R1 Students will be able to understand past and present events in simple texts including explanations and reasons.",
+              "E7.4.R2 Students will be able to spot the names of wild animals in simple texts.",
+              "E7.4.W1. Students will be able to write pieces describing wildlife.",
+              "E7.5.L1 Students will be able to understand simple oral texts about daily routines and preferences.",
+              "E7.5.SI1 Students will be able to ask questions about preferences of other people.",
+              "E7.5.SI2 Students will be able to talk about past events and personal experiences",
+              "E7.5.SP1 Students will be able to state their preferences",
+              "E7.5.SP2 Students will be able to describe past events in a simple way",
+              "E7.5.R1 Students will be able to understand simple texts about daily routines and preferences",
+              "E7.5.R2 Students will be able to understand simple texts about past events",
+              "E7.5.W1. Students will be able to write pieces about daily routines and preferences.",
+              "E7.6.L1 Students will be able to recognize utterances related to suggestions, needs and quantity of things.",
+              "E7.6.SI1 Students will be able to talk about arrangements and sequences of actions.",
+              "E7.6.SP1 Students will be able to make suggestions.",
+              "E7.6.SP2 Students will be able to express needs and quantity.",
+              "E7.6.R1 Students will be able to understand texts about celebrations.",
+              "E7.6.W1. Students will be able to write invitation cards.",
+              "E7.7.L1 Students will be able to understand utterances about predictions and future events in simple oral texts.",
+              "E7.7.SI1 Students will be able to talk about simple predictions.",
+              "E7.7.SP1 Students will be able to report on simple predictions.",
+              "E7.7.R1 Students will be able to understand short and simple texts about predictions",
+              "E7.7.W1. Students will be able to write pieces about predictions and future events.",
+              "E7.8.L1 Students will be able to recognize the names of the public buildings",
+              "E7.8.L2 Students will be able to understand explanations with reasons.",
+              "E7.8.SI1 Students will be able to give explanations with reasons.",
+              "E7.8.SP1 Students will be able to report on explanations with reasons.",
+              "E7.8.R1 Students will be able to understand simple expressions and recognize familiar words about explanations with reasons.",
+              "E7.8.W1. Students will be able to write pieces about explanations with reasons.",
+              "E7.9.L1 Students will be able to understand phrases and the highest frequency vocabulary about environment.",
+              "E7.9.L2 Students will be able to follow how a simple process is described in clear oral texts.",
+              "E7.9L2 Students will be able to follow how a simple process is described in clear oral texts.",
+              "E7.9.SI1 Students will be able to talk about obligations",
+              "E7.9.SI2 Students will be able to give simple instructions for a specific process.",
+              "E7.9.SP1 Students will be able to give a simple description or presentation of a process.",
+              "E7.9.R1 Students will be able to identify specific information in various texts about environment.",
+              "E7.9.W1. Students will be able to write short, simple messages about environment.",
+              "E7.9.W2. Students will be able to write short description of a process.",
+              "E7.10.L1 Students will be able to identify the discussion topic about popular science in simple oral texts",
+              "E7.10.SI1 Students will be able to make simple comparisons",
+              "E7.10.SI2 Students will be able to talk about past events.",
+              "E7.10.SP1 Students will be able to report on general truths in various ways.",
+              "E7.10.R1 Students will be able to identify specific information in various texts about facts and general truths.",
+              "E7.10.R2 Students will be able to identify specific information about past events.",
+              "E7.10.W1. Students will be able to write short and basic descriptions of facts and general truths"
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 6. sınıf Beden Eğitimi ve Spor · 2025-2026 yıllık plan",
+        "tema": "8. sınıf - İngilizce - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Hareket Yetkinliği / Aktif ve Sağlıklı Hayat",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "BE.6.1.1.1. Bireysel sporlara hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini sergiler.",
-              "BE.6.1.1.2. Takım sporlarına hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini sergiler.",
-              "BE.6.1.2.1. Spor ve etkinliklere hazırlayıcı oyunlarda hareket kavramlarını yerinde kullanır.",
-              "BE.6.2.2.3. Fiziksel etkinlikler sırasında kendisinin ve başkalarının güvenliğini sağlayacak davranışlar sergiler."
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 7. sınıf Beden Eğitimi ve Spor · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "7.1. Hareket Yetkinliği / 7.2. Aktif ve Sağlıklı Hayat",
-            "ciktilar": [
-              "BE.7.1.1.1. Bireysel sporlara hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini artan bir doğrulukla sergiler.",
-              "BE.7.1.1.2. Takım sporlarına hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini artan bir doğrulukla sergiler.",
-              "BE.7.1.3.1. Sporlara hazırlayıcı oyunlardaki strateji ve taktikleri çözümler.",
-              "BE.7.2.1.1. Uyguladığı planın etkilerini gözleyerek fiziksel etkinliklere katılır.",
-              "BE.7.2.2.4. Temel ilk yardım uygulamalarını gösterir."
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 8. sınıf Beden Eğitimi ve Spor · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "Hareket Yetkinliği / Aktif ve Sağlıklı Hayat",
-            "ciktilar": [
-              "BE.8.1.1.1. Bireysel sporlara hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini sergiler.",
-              "BE.8.1.1.2. Takım sporlarına hazırlayıcı oyun ve etkinliklerdeki hareket becerilerini sergiler.",
-              "BE.8.2.1.1. Fiziksel etkinlik planı hazırlar ve uygular.",
-              "BE.8.2.3.1. Bayram, kutlama ve törenler için etkinlikler hazırlar."
+              "E8.1.L1 Students will be able to understand the specific information in short conversations on everyday topics, such as accepting and refusing an offer/invitation, apologizing and making simple inquiries.",
+              "E8.1.SI1 Students will be able to interact with reasonable ease in structured situations and short conversations involving accepting and refusing an offer/invitation, apologizing and making simple inquiries.",
+              "E8.1.SP1 Students will be able to structure a talk to make simple inquiries, give explanations and reasons.",
+              "E8.1.R1 Students will be able to understand short and simple texts about friendship",
+              "E8.1.R2 Students will be able to understand short and simple invitation letters, cards and e-mails.",
+              "E8.1.W1. Students will be able to write a short and simple letter apologizing and giving reasons for not attending a party in response to an invitation.",
+              "E8.2.L1 Students will be able to understand phrases and expressions about regular activities of teenagers.",
+              "E8.2.SI1 Students will be able to talk about regular activities of teenagers.",
+              "E8.2.SP1 Students will be able to express what they prefer, like and dislike.",
+              "E8.2.SP2 Students will be able to give a simple description of daily activities in a simple way.",
+              "E8.2.R1 Students will be able to understand short and simple texts about regular activities of teenagers.",
+              "E8.2.W1. Students will be able to write a short and simple paragraph about regular activities of teenagers.",
+              "E8.3.L1 Students will be able to get the gist of short, clear, simple descriptions of a process",
+              "E8.3.SI1 Students will be able to ask and answer questions and exchange ideas and information on a topic related to how something is processed.",
+              "E8.3.SP1 Students will be able to give a simple description about a process.",
+              "E8.3.R1 Students will be able to understand the overall meaning of short texts about a process",
+              "E8.3.R2 Students will be able to guess the meaning of unknown words from the text.",
+              "E8.3.W1. Students will be able to write a series of simple phrases and sentences by using linkers to describe a process.",
+              "E8.4.L1 Students will be able to understand phrases and related vocabulary items.",
+              "E8.4.L2 Students will be able to follow a phone conversation.",
+              "E8.4.SI1 Students will be able to make a simple phone call asking and responding to questions.",
+              "E8.4.SP1 Students will be able to express their decisions taken at the moment of conversation.",
+              "E8.4.R1 Students will be able to understand short and simple texts with related vocabulary.",
+              "E8.4.W1. Students will be able to write short and simple conversations.",
+              "E8.5.L1 Students will be able to understand the gist of oral texts",
+              "E8.5.L2 Students will be able to comprehend phrases and related vocabulary items.",
+              "E8.5.SI1 Students will be able to talk about their Internet habits.",
+              "E8.5.SI2 Students will be able to exchange information about the Internet.",
+              "E8.5.SP1 Students will be able to make excuses, and to accept and refuse offers by using a series of phrases and simple sentences.",
+              "E8.5.R1 students will be able to identify main ideas in short and simple texts about internet habits.",
+              "E8.5.R2 Students will be able to find specific information about the Internet in various texts.",
+              "E8.5.W1. Students will be able to write a basic paragraph to describe their internet habits.",
+              "E8.6.L1 Students will be able to follow a discussion on adventures",
+              "E8.6.L2 Students will be able to understand the main points of simple messages.",
+              "E8.6.SI1 Students will be able to interact with reasonable ease in short conversations",
+              "E8.6.SI2 Students will be able to talk about comparisons, preferences and their reasons.",
+              "E8.6.SP1 Students will be able to make comparisons about sports and games by using simple descriptive language.",
+              "E8.6.R1 Students will be able to understand short and simple texts to find the main points about adventures",
+              "E8.6.W1. Students will be able to write a short and simple paragraph comparing two objects.",
+              "E8.7.L1 Students will be able to understand and extract the specific information from short and simple oral texts.",
+              "E8.7.SI1 Students will be able to exchange information about tourism.",
+              "E8.7.SI2 udents will be able to talk about their favorite tourist attractions by giving details",
+              "E8.7.SP1 Students will be able to express their preferences for particular tourist attractions and give reasons",
+              "E8.7.SP2 Students will be able to make simple comparisons between different tourist attractions",
+              "E8.7.SP3 Students will be able to express their experiences about places",
+              "E8.7.R1 Students will be able to find specific information from various texts about tourism.",
+              "E8.7.W1. Students will be able to design a brochure, advertisement or a postcard about their favorite tourist attraction(s).",
+              "E8.8.L1 Students will be able to identify the main points of a short talk describing the responsibilities of people",
+              "E8.8.L2 Students will be able to understand obligations, likes and dislikes in various oral texts.",
+              "E8.8.L3 Students will be able to follow topic change during factual, short talks.",
+              "E8.8.SI1 Students will be able to interact during simple, routine tasks requiring a direct exchange of information",
+              "E8.8.SI2 Students will be able to talk about responsibilities",
+              "E8.8.SP1 Students will be able to express their obligations, likes and dislikes in simple terms",
+              "E8.8.R1 Students will be able to understand various short and simple texts about responsibilities.",
+              "E8.8.W1. Students will be able to write short and simple poems/stories about their feelings and responsibilities",
+              "E8.9.L1 Students will be able to recognize main ideas and key information in short oral texts about science",
+              "E8.9.SI1 Students will be able to talk about actions happening currently and in the past.",
+              "E8.9.SI2 Students will be able to involve in simple discussions about scientific achievements.",
+              "E8.9.SP1 Students will be able to describe actions happening currently.",
+              "E8.9.SP2 Students will be able to present information about scientific achievements in a simple way.",
+              "E8.9.R1 Students will be able to understand short and simple texts about actions happening currently and in the past.",
+              "E8.9.R2 Students will be able to identify main ideas and supporting details in short texts about science.",
+              "E8.9.W1. Students will be able to write simple descriptions of scientific achievements in a short paragraph.",
+              "E8.10.L1 Students will be able to identify the main points of TV news about natural forces and disasters",
+              "E8.10.SI1 Students will be able to talk about predictions concerning future of the Earth.",
+              "E8.10.SI2 Students will be able to negotiate reasons and results to support their predictions about natural forces and disasters.",
+              "E8.10.SP1 Students will be able to express predictions concerning future of the Earth.",
+              "E8.10.SP2 Students will be able to give reasons and results to support their predictions about natural forces and disasters.",
+              "E8.10.R1 Students will be able to identify specific information in simple texts about natural forces and disasters.",
+              "E8.10.W1. Students will be able to write a short and simple paragraph about reasons and results of natural forces and disasters."
             ]
           }
         ]
       }
     ],
-    "Görsel Sanatlar": [
+    "Din Kültürü": [
       {
-        "tema": "Drive · 5. sınıf Görsel Sanatlar · 2025-2026 yıllık plan",
+        "tema": "5. sınıf - Din Kültürü - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Hayat ve Sanat / Müze ve Kültür",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "GS.5.1.1. Edebi metinlerden ve yazı düzeninden faydalanarak çevre duyarlılığını yansıtan resimleme yapabilme",
-              "GS.1.1.1. Çevresindeki nesnelerin renklerini ve geometrik şekillerini algılayabilme",
-              "GS.1.1.2. Farklı renkler ve geometrik şekillerdeki doğal ve yapay malzemelerle kolaj yapabilme",
-              "GS.5.7.2. Okulunda arkeoloji müzesi yapabilme"
+              "DKAB.5.1.1. Evrendeki mükemmel düzene ilişkin akıl yürütebilme",
+              "DKAB.5.1.2. Evrendeki mükemmel düzeni gözlem yoluyla fark edip Allah’ın (cc) varlığı ve birliğini gözleme dayalı tahmin edebilme",
+              "DKAB.5.1.3. Allah’ın (cc) güzel isimleri hakkında bilgi toplayabilme",
+              "DKAB.5.1.4. İhlas suresini ve bu surenin anlamını okuyarak yorumlayabilme",
+              "DKAB.5.2.1. Namaz ibadetini özetleyebilme",
+              "DKAB.5.2.2. Namazın kılınışını gözlemleyebilme",
+              "DKAB.5.2.3. Namazın insan hayatına etkileri hakkında düşünebilme",
+              "DKAB.5.2.4. Tahiyyat duasını ve bu duanın anlamını okuyarak yorumlayabilme",
+              "DKAB.5.3.1. Kur’an-ı Kerim’in iç düzenini çözümleyebilme",
+              "DKAB.5.3.2. Kur’an-ı Kerim’in temel özellikleri hakkında bilgi toplayabilme",
+              "DKAB.5.3.3. Kuran-ı Kerim’in ana konularını sınıflandırabilme",
+              "DKAB.5.3.4. Kevser suresini ve bu surenin anlamını okuyarak yorumlayabilme",
+              "DKAB.5.4.1. Peygamberlik hakkında akıl yürütebilme",
+              "DKAB.5.4.2. Peygamber kıssalarında verilen öğütleri sentezleyebilme",
+              "DKAB.5.4.3. Kureyş suresini ve bu surenin anlamını okuyarak yorumlayabilme",
+              "DKAB.5.5.1. Dinin mimarimize etkisini çözümleyebilme",
+              "DKAB.5.5.2. Camilerin bölümlerini tanıyabilme",
+              "DKAB.5.5.3. Kültürümüzde yer alan cami örneklerini karşılaştırabilme"
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 6. sınıf Görsel Sanatlar · 2025-2026 yıllık plan",
+        "tema": "6. sınıf - Din Kültürü - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Görsel İletişim, biçimlendirme ve kültürel miras",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "GS.6.1.1. Görsel sanat çalışmalarında sanat elemanlarını ve tasarım ilkelerini kullanır.",
-              "GS.6.1.2. Görsel sanat çalışmasını oluştururken farklı materyal ve tekniklerden yararlanır.",
-              "GS.6.2.1. Sanat eserlerini dönem, üslup ve konu özellikleri açısından inceler."
+              "DKAB.6.1.1. Peygamberlerin insanlara rehber olarak gönderilmesi hakkında bilgi toplayabilme",
+              "DKAB.6.1.2. Vahiylerin insanlara ilettiği mesajları yapılandırabilme",
+              "DKAB.6.1.3. İlahi kitaplarla ilgili bilgileri çözümleyebilme",
+              "DKAB.6.1.4. Felak suresini ve bu surenin anlamını okuyarak yorumlayabilme",
+              "DKAB.6.2.1. Ramazan ayının oruç ve Kur’an ayı olduğunu çözümleyebilme",
+              "DKAB.6.2.2. Oruç ibadeti hakkında bilgi toplayabilme",
+              "DKAB.6.2.3. Oruç ibadetinin insana kazandırdıklarını yapılandırabilme",
+              "DKAB.6.2.4. İftar duasını ve bu duanın anlamını okuyarak yorumlayabilme",
+              "DKAB.6.3.1. Doğru sözlü olmayı kendi hayatına yansıtabilme",
+              "DKAB.6.3.2. Merhametli olmayı yorumlayabilme",
+              "DKAB.6.3.3. Adap ve nezaket kurallarını özetleyebilme",
+              "DKAB.6.3.4. Vatanını sevmenin önemi hakkında çıkarım yapabilme",
+              "DKAB.6.3.5. Kunut dualarını ve bu duaların anlamlarını okuyarak yorumlayabilme",
+              "DKAB.6.4.1. Hz. Muhammed’in (sav) doğduğu çevreyi tarihsel bağlamda değerlendirebilme",
+              "DKAB.6.4.2. Hz. Muhammed’in (sav) çocukluk yılları hakkında verilen bilgileri yorumlayabilme",
+              "DKAB.6.4.3. Hz. Muhammed’in (sav) gençlik yılları hakkında verilen bilgileri yapılandırabilme",
+              "DKAB.6.4.4. Fil suresini ve bu surenin anlamını okuyarak yorumlayabilme",
+              "DKAB.6.5.1. Geleneğimizde, edebiyatımızda ve musikimizde dinin izlerini özetleyebilme"
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 7. sınıf Görsel Sanatlar · 2025-2026 yıllık plan",
+        "tema": "7. sınıf - Din Kültürü - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Görsel İletişim, özgün tasarım ve sanat eleştirisi",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "GS.7.1.1. Görsel sanat çalışmalarında farklı teknikleri bir arada kullanır.",
-              "GS.7.1.2. Görsel sanat çalışmasını oluştururken gözlem, araştırma ve deneyimlerinden yararlanır.",
-              "GS.7.2.1. Sanat eserlerini içerik, biçim ve teknik özellikleri bakımından değerlendirir."
+              "7.1.1. Varlıklar âlemini özelliklerine göre ayırt eder.",
+              "7.1.2. Melekleri özellikleri ve görevlerine göre sınıflandırır.",
+              "7.1.3. Dünya hayatı ile ahiret hayatı arasındaki ilişkiyi yorumlar.",
+              "7.1.4. Ahiret hayatının aşamalarını açıklar.",
+              "7.1.5. Allah’ın (c.c.) adil, merhametli ve affedici olması ile ahiret inancı arasında ilişki kurar.",
+              "7.1.6. Hz. İsa’nın (a.s.) hayatını ana hatlarıyla tanır.",
+              "7.1.7. Nâs suresini okur, anlamını söyler.",
+              "7.2.1. İslam’da hac ibadetinin önemini ayet ve hadisler ışığında yorumlar.",
+              "7.2.2. Haccın yapılışını özetler.",
+              "7.2.3. Umre ibadeti ve önemini açıklar.",
+              "7.2.4. Kurban ibadetini İslam’ın yardımlaşma ve dayanışmaya verdiği önem açısından değerlendirir.",
+              "7.2.5. Hz. İsmail’in (a.s.) hayatını ana hatlarıyla tanır.",
+              "7.2.6. En’âm suresi 162. ayeti okur, anlamını söyler.",
+              "7.3.1. Güzel ahlaki tutum ve davranışları örneklerle açıklar.",
+              "7.3.2. Örnek tutum ve davranışların, birey ve toplumların ahlaki gelişimine olan katkısını değerlendirir.",
+              "7.3.3. Tutum ve davranışlarında ölçülü olmaya özen gösterir.",
+              "7.3.4. Hz. Salih’in (a.s.) hayatını ana hatlarıyla tanır.",
+              "7.3.5. Felak suresini okur, anlamını söyler.",
+              "7.4.1. Hz. Muhammed’in (s.a.v.) insani yönünü ayetlerden hareketle yorumlar.",
+              "7.4.2. Hz. Muhammed’in (s.a.v.) peygamberlik yönüyle ilgili özelliklerini ayırt eder.",
+              "7.4.3. Kâfirun suresini okur, anlamını söyler.",
+              "7.5.1. Dinin farklı yorum biçimleri olabileceğinin farkına varır.",
+              "7.5.2. İslam düşüncesinde ortaya çıkan yorum biçimlerini sınıflandırır.",
+              "7.5.3. Kültürümüzde etkin olan tasavvufi yorumları ayırt eder.",
+              "7.5.4. Alevilik-Bektaşilikle ilgili temel kavram ve erkânları açıklar."
             ]
           }
         ]
       },
       {
-        "tema": "Drive · 8. sınıf Görsel Sanatlar · 2025-2026 yıllık plan",
+        "tema": "8. sınıf - Din Kültürü - Öğrenme çıktıları",
         "konular": [
           {
-            "baslik": "Sanatsal ifade, sanat eleştirisi ve müze bilinci",
+            "baslik": "Öğrenme çıktıları",
             "ciktilar": [
-              "GS.8.1.1. Görsel sanat çalışmalarında duygu, düşünce ve izlenimlerini özgün biçimde yansıtır.",
-              "GS.8.1.2. Görsel sanat çalışmasını oluştururken sanat elemanları ve tasarım ilkelerini amacına uygun kullanır.",
-              "GS.8.2.1. Sanat eserlerini bağlam, tema ve teknik özellikleri bakımından çözümler."
-            ]
-          }
-        ]
-      }
-    ],
-    "Teknoloji ve Tasarım": [
-      {
-        "tema": "Drive · 7. sınıf Teknoloji ve Tasarım · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "7.A-7.B. Teknoloji ve tasarımın temelleri / Tasarım süreci",
-            "ciktilar": [
-              "TT.7.A.1.2. Teknoloji ve tasarım arasındaki ilişkiyi ifade eder.",
-              "TT.7.A.1.4. Ülkemizdeki teknolojik gelişmeleri değerlendirir.",
-              "TT.7.A.2.5. Sanat/tasarım elemanlarını ve tasarım ilkelerini kullanarak bir tasarım oluşturur.",
-              "TT.7.B.1.4. Tasarım sürecinin araştırma basamaklarını söyler.",
-              "TT.7.B.2.2. Taslak çizimlerini bilgisayar yardımıyla iki boyutlu görsellere dönüştürür."
-            ]
-          },
-          {
-            "baslik": "7.C-7.D. Yapılı çevre, ihtiyaçlar ve teknolojik çözüm",
-            "ciktilar": [
-              "TT.7.C.1.2. Yakın çevresindeki mimari yapıları işlevsel farklılıklarına göre karşılaştırır.",
-              "TT.7.C.2.3. Ergonomik bir ürün tasarlar.",
-              "TT.7.Ç.1.2. Doğal kaynaklar yoluyla enerji elde edilebilen bir ürün tasarlar.",
-              "TT.7.Ç.2.3. Özel gereksinimli bireyler için yaşama kolaylığı sağlayacak bir ürün çizerek tasarlar.",
-              "TT.7.D.2.1. Sergileyeceği ürün veya ürünlerini sunar."
-            ]
-          }
-        ]
-      },
-      {
-        "tema": "Drive · 8. sınıf Teknoloji ve Tasarım · 2025-2026 yıllık plan",
-        "konular": [
-          {
-            "baslik": "8. sınıf · Tasarım problemi, ürün geliştirme ve sunum",
-            "ciktilar": [
-              "TT.8.A.1.1. Teknoloji, tasarım ve inovasyon kavramları arasındaki ilişkiyi açıklar.",
-              "TT.8.B.1.1. Tasarım problemini belirler ve çözüm önerileri geliştirir.",
-              "TT.8.B.1.2. Tasarım süreci için araştırma yapar ve verileri düzenler.",
-              "TT.8.C.1.1. Tasarımını model, maket veya prototip olarak oluşturur.",
-              "TT.8.D.1.1. Tasarım ürününü etkili biçimde sunar."
+              "8.1.1. Kader ve kaza inancını ayet ve hadislerle açıklar.",
+              "8.1.2. İnsanın ilmi, iradesi, sorumluluğu ile kader arasında ilişki kurar.",
+              "8.1.3. Kaza ve kader ile ilgili kavramları analiz eder.",
+              "8.1.4. Toplumda kader ve kaza ile ilgili yaygın olan yanlış anlayışları sorgular",
+              "8.1.5. Hz. Musa’nın (a.s.) hayatını ana hatlarıyla tanır.",
+              "8.1.6. Ayet el-Kürsi'yi okur, anlamını söyler.",
+              "8.2.1. İslam’ın paylaşma ve yardımlaşmaya verdiği önemi ayet ve hadisler ışığında yorumlar.",
+              "8.2.2. Zekât ve sadaka ibadetini ayet ve hadislerle açıklar.",
+              "8.2.3. Zekât, infak ve sadakanın bireysel ve toplumsal önemini fark eder.",
+              "8.2.4. Hz. Şuayb’in (a.s.) hayatını ana hatlarıyla tanır.",
+              "8.2.5. Maûn suresini okur, anlamını söyler.",
+              "8.3.1. Din, birey ve toplum arasındaki ilişkiyi yorumlar.",
+              "8.3.2. İslam dininin can, nesil, akıl, mal ve din emniyetiyle ilgili ortaya koyduğu ilke ve hedefleri analiz eder.",
+              "8.3.3. Hz. Yusuf’un (a.s.) örnek hayatından ilkeler çıkarır.",
+              "8.3.4. Asr suresini okur, anlamını söyler.",
+              "8.4.1. Hz. Muhammed’in (s.a.v.) doğruluğu ve güvenilir kişiliği ile peygamberlerin özellikleri arasında ilişki kurar.",
+              "8.4.2. Hz. Muhammed’in (s.a.v.) merhametli ve affedici oluşunu davranışlarında yansıtmaya özen gösterir.",
+              "8.4.3. Hz. Muhammed’in (s.a.v.) istişareye verdiği önemi ortaya koyan örnek olaylardan hareketle gündelik hayatla ilgili çıkarımlarda bulunur.",
+              "8.4.4. Hz. Muhammed’in (s.a.v.) cesaret ve kararlılığını örnek olaylarla açıklar.",
+              "8.4.5. Hz. Muhammed’in (s.a.v.) hakkı gözetmedeki hassasiyetine örnekler verir.",
+              "8.4.6. Hz. Muhammed’in (s.a.v.) insanlara verdiği değeri örneklerle açıklar.",
+              "8.4.7. Hz. Muhammed’in (s.a.v.) örnek davranışlarının toplumsal hayattaki önemini değerlendirir.",
+              "8.4.8. Hz. Muhammed’in (s.a.v.) hikmetli söz ve davranışlarıyla insanları iyiye ve güzele yönlendirdiğini fark eder.",
+              "8.4.9. Kureyş suresini okur, anlamını söyler.",
+              "8.5.1. İslam dininin temel kaynaklarını tanır.",
+              "8.5.2. Ayetlerden hareketle Kur’an’ın ana konularını sınıflandırır",
+              "8.5.3. Kur’an-ı Kerim’in temel özelliklerini değerlendirir.",
+              "8.5.4. Hz. Nuh’un (a.s.) tevhide davetini özetler."
             ]
           }
         ]
