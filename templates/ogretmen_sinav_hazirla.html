@@ -1001,13 +1001,14 @@
   }
   function renderKazanim() {
     const q = String(document.getElementById("kazanim-ara")?.value || "").toLowerCase();
-    const rows = flattenCurriculum().filter((r) => !q || `${r.tema} ${r.konu} ${r.text}`.toLowerCase().includes(q)).slice(0, 80);
+    const allRows = flattenCurriculum();
+    const rows = allRows.filter((r) => !q || `${r.tema} ${r.konu} ${r.text}`.toLowerCase().includes(q));
     const selectedIds = new Set(state.kazanimlar.map((k) => k.key));
     document.getElementById("panel-kazanim").innerHTML = `
       <div class="grid gap-3 lg:grid-cols-[1fr_360px]">
         <section class="exam-card p-4">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div><h2 class="text-lg font-black text-slate-950">Kazanım havuzu</h2><p class="text-xs text-slate-500">${esc(state.meta.ders)} · ${esc(state.meta.sinifAdi)}</p></div>
+            <div><h2 class="text-lg font-black text-slate-950">Kazanım havuzu</h2><p class="text-xs text-slate-500">${esc(state.meta.ders)} · ${esc(state.meta.sinifAdi)} · ${rows.length}/${allRows.length} öğrenme çıktısı</p></div>
             <input id="kazanim-ara" class="exam-input sm:max-w-xs" placeholder="Kazanım ara..." value="${esc(q)}">
           </div>
           <div class="mt-3 grid max-h-[58svh] gap-2 overflow-y-auto pr-1">
