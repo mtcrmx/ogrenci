@@ -212,6 +212,9 @@
     break-inside: avoid;
     page-break-inside: avoid;
   }
+  .exam-after-optic {
+    display: block;
+  }
   .exam-question-text {
     min-height: 42px;
     border: 1px solid rgba(148, 163, 184, .26);
@@ -306,6 +309,10 @@
       box-shadow: none !important;
       background: transparent !important;
       padding: 0 !important;
+    }
+    .exam-after-optic {
+      break-before: page;
+      page-break-before: always;
     }
     .question-media-preview { break-inside: avoid; page-break-inside: avoid; }
     .question-image { max-height: 260px; }
@@ -1162,17 +1169,19 @@
   function previewHtml() {
     return `
       ${opticSheetHtml()}
-      ${examTitleHtml()}
-      <p class="mt-3 text-sm text-slate-700">Sorular kazanım dağılımı dikkate alınarak hazırlanmıştır.</p>
-      <ol class="mt-4 space-y-4">
-        ${state.sorular.map((s) => `<li class="pl-1">
-          <div class="exam-question-text text-sm"><b>${esc(s.no)}.</b> ${esc(String(s.metin || "").trim())}</div>
-          ${questionExtraPreviewHtml(s)}
-          ${questionMediaHtml(s)}
-          ${answerSpaceHtml(s)}
-        </li>`).join("")}
-      </ol>
-      ${teacherNoteHtml()}`;
+      <div class="exam-after-optic">
+        ${examTitleHtml()}
+        <p class="mt-3 text-sm text-slate-700">Sorular kazanım dağılımı dikkate alınarak hazırlanmıştır.</p>
+        <ol class="mt-4 space-y-4">
+          ${state.sorular.map((s) => `<li class="pl-1">
+            <div class="exam-question-text text-sm"><b>${esc(s.no)}.</b> ${esc(String(s.metin || "").trim())}</div>
+            ${questionExtraPreviewHtml(s)}
+            ${questionMediaHtml(s)}
+            ${answerSpaceHtml(s)}
+          </li>`).join("")}
+        </ol>
+        ${teacherNoteHtml()}
+      </div>`;
   }
   async function renderKayit() {
     document.getElementById("panel-kayit").innerHTML = `
@@ -1292,7 +1301,7 @@
     scheduleSave();
   }
   function downloadHtml() {
-    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-image{display:block;width:100%;max-width:100%;margin:0 0 24px;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;break-inside:avoid;page-break-inside:avoid}.exam-print-title{margin:18px 0 14px;text-align:center;color:#111}.exam-print-title .school{font-size:13px;font-weight:900;text-transform:uppercase}.exam-print-title .exam-name{margin-top:4px;font-size:17px;font-weight:900}.exam-print-title .exam-meta{margin-top:4px;font-size:12px;color:#555}.exam-question-text{min-height:42px;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap}.student-answer-space{margin-top:10px;min-height:4cm;border:1px solid #bbb;border-radius:8px;background:repeating-linear-gradient(to bottom,#fff 0,#fff 27px,#cbd5e1 28px);break-inside:avoid;page-break-inside:avoid}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #bbb;padding-top:14px;font-size:13px}.exam-teacher-note strong{font-weight:900}</style></head><body>${previewHtml()}</body></html>`;
+    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>@page{margin:0}body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-image{display:block;width:100%;max-width:100%;margin:0 0 24px;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;break-inside:avoid;page-break-inside:avoid}.exam-after-optic{break-before:page;page-break-before:always}.exam-print-title{margin:18px 0 14px;text-align:center;color:#111}.exam-print-title .school{font-size:13px;font-weight:900;text-transform:uppercase}.exam-print-title .exam-name{margin-top:4px;font-size:17px;font-weight:900}.exam-print-title .exam-meta{margin-top:4px;font-size:12px;color:#555}.exam-question-text{min-height:42px;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap}.student-answer-space{margin-top:10px;min-height:4cm;border:1px solid #bbb;border-radius:8px;background:repeating-linear-gradient(to bottom,#fff 0,#fff 27px,#cbd5e1 28px);break-inside:avoid;page-break-inside:avoid}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #bbb;padding-top:14px;font-size:13px}.exam-teacher-note strong{font-weight:900}</style></head><body>${previewHtml()}</body></html>`;
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
