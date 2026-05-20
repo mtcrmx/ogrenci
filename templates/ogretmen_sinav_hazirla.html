@@ -1,0 +1,618 @@
+{% extends "base.html" %}
+{% block title %}Sınav Hazırlama{% endblock %}
+
+{% block body %}
+<main class="mx-auto max-w-7xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
+  <header class="overflow-hidden rounded-xl border border-sky-200 bg-white shadow-sm">
+    <div class="grid gap-4 p-4 lg:grid-cols-[1.4fr_.8fr] lg:items-center">
+      <div>
+        <p class="text-[11px] font-black uppercase tracking-widest text-sky-700">ECO Sınav Hazırlama</p>
+        <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Kazanım tabanlı sınav planlayıcı</h1>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          Sınıf, ders ve kazanımları seç; soru dağılımını otomatik oluştur; cevap anahtarı ve yazdırılabilir sınav taslağını tek yerden hazırla.
+        </p>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div class="text-[10px] font-black uppercase text-slate-500">Soru</div>
+          <div class="mt-1 text-2xl font-black text-slate-950" id="metric-soru">0</div>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div class="text-[10px] font-black uppercase text-slate-500">Puan</div>
+          <div class="mt-1 text-2xl font-black text-emerald-700" id="metric-puan">0</div>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div class="text-[10px] font-black uppercase text-slate-500">Kazanım</div>
+          <div class="mt-1 text-2xl font-black text-sky-700" id="metric-kazanim">0</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="sticky top-14 z-20 -mx-1 mt-3 overflow-x-auto border-y border-slate-200 bg-slate-100/95 px-1 py-2 backdrop-blur">
+    <nav class="flex min-w-max gap-1" id="exam-tabs"></nav>
+  </div>
+
+  <section id="panel-bilgi" class="exam-panel mt-3"></section>
+  <section id="panel-kazanim" class="exam-panel mt-3 hidden"></section>
+  <section id="panel-soru" class="exam-panel mt-3 hidden"></section>
+  <section id="panel-onizleme" class="exam-panel mt-3 hidden"></section>
+  <section id="panel-kayit" class="exam-panel mt-3 hidden"></section>
+</main>
+
+<style>
+  .exam-card {
+    border: 1px solid rgba(148, 163, 184, .28);
+    border-radius: 8px;
+    background: rgba(255,255,255,.94);
+    box-shadow: 0 18px 44px rgba(15, 23, 42, .08);
+  }
+  .exam-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 900;
+    color: #475569;
+  }
+  .exam-input {
+    margin-top: 6px;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, .38);
+    background: #fff;
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+  }
+  .exam-input:focus {
+    border-color: rgba(14, 165, 233, .7);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, .14);
+  }
+  .exam-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    padding: 9px 12px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .exam-tab.is-active {
+    border-color: rgba(14, 165, 233, .32);
+    background: #0f2144;
+    color: #fff;
+  }
+  .exam-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, .32);
+    background: #fff;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .exam-print {
+    color: #111827;
+    background: #fff;
+  }
+  @media print {
+    body { background: #fff !important; }
+    body > header,
+    .teacher-mobile-tabbar,
+    #exam-tabs,
+    .no-print { display: none !important; }
+    main { max-width: none !important; padding: 0 !important; }
+    .exam-card { box-shadow: none !important; border: 0 !important; }
+    .exam-print { display: block !important; }
+  }
+</style>
+
+<script>
+(function () {
+  const LS_KEY = "eco_sinav_hazirlama_v1";
+  const API_MUFREDAT = "/api/curriculum/drive-kazanimlari";
+  const API_KAYITLAR = "/api/sinav-hazirlama/kayitlar";
+  const API_KAYDET = "/api/sinav-hazirlama/kaydet";
+  const API_KAYIT = (id) => "/api/sinav-hazirlama/kayit/" + id;
+  const API_KAYIT_SIL = (id) => "/api/sinav-hazirlama/kayit/" + id + "/sil";
+  const SINIFLAR = {{ siniflar | default([]) | tojson }};
+  const DERSLER = {{ dersler | default([]) | tojson }};
+  const OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
+  const OGRETMEN = {{ (ogretmen_adi or "") | tojson }};
+
+  const TABS = [
+    ["bilgi", "1", "Bilgiler"],
+    ["kazanim", "2", "Kazanımlar"],
+    ["soru", "3", "Soru planı"],
+    ["onizleme", "4", "Önizleme"],
+    ["kayit", "5", "Kayıtlar"],
+  ];
+  const TIPLER = ["Çoktan seçmeli", "Açık uçlu", "Kısa cevap", "Doğru/Yanlış", "Eşleştirme", "Boşluk doldurma"];
+  const ZORLUK = ["Kolay", "Orta", "Zor"];
+  let activeTab = "bilgi";
+  let curriculum = null;
+  let currentKayitId = null;
+  let serverKayitlar = [];
+  let saveTid = null;
+
+  function uid(prefix) {
+    return (prefix || "id") + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+  }
+  function esc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  }
+  function today() {
+    return new Date().toISOString().slice(0, 10);
+  }
+  function sinifAdi(id) {
+    return (SINIFLAR.find((s) => String(s.id) === String(id)) || {}).sinif_adi || "";
+  }
+  function sinifSeviye() {
+    const m = String(state.meta.sinifAdi || "").match(/\d+/);
+    return m ? m[0] : "";
+  }
+  function defaultState() {
+    const ilkSinif = SINIFLAR[0] || {};
+    return {
+      _v: 1,
+      meta: {
+        okulAdi: OKUL,
+        ogretmen: OGRETMEN,
+        sinifId: ilkSinif.id || "",
+        sinifAdi: ilkSinif.sinif_adi || "",
+        ders: DERSLER[0] || "",
+        sinavAdi: "2. Dönem 1. Yazılı",
+        egitimYili: "2025-2026",
+        tarih: today(),
+        sure: "40",
+        soruSayisi: "10",
+        toplamPuan: "100",
+        sinavTuru: "Karma",
+        aciklama: "Sorular kazanım dağılımı dikkate alınarak hazırlanmıştır.",
+      },
+      kazanimlar: [],
+      sorular: [],
+    };
+  }
+  let state = defaultState();
+
+  function normalize() {
+    const d = defaultState();
+    state.meta = Object.assign(d.meta, state.meta || {});
+    state.kazanimlar = Array.isArray(state.kazanimlar) ? state.kazanimlar : [];
+    state.sorular = Array.isArray(state.sorular) ? state.sorular : [];
+    if (!state.meta.sinifAdi) state.meta.sinifAdi = sinifAdi(state.meta.sinifId);
+  }
+  function loadLocal() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      const kid = parseInt(localStorage.getItem(LS_KEY + "_server_id") || "", 10);
+      currentKayitId = Number.isFinite(kid) && kid > 0 ? kid : null;
+      if (raw) state = Object.assign(defaultState(), JSON.parse(raw));
+    } catch (e) {
+      state = defaultState();
+      currentKayitId = null;
+    }
+    normalize();
+  }
+  function scheduleSave() {
+    clearTimeout(saveTid);
+    saveTid = setTimeout(() => {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+        if (currentKayitId) localStorage.setItem(LS_KEY + "_server_id", String(currentKayitId));
+      } catch (e) {}
+    }, 250);
+  }
+  function setMeta(key, value, shouldRender) {
+    state.meta[key] = value;
+    if (key === "sinifId") state.meta.sinifAdi = sinifAdi(value);
+    if (shouldRender) renderAll();
+    else renderMetrics();
+    scheduleSave();
+  }
+  function input(name, label, type) {
+    return `<label class="exam-label">${label}<input class="exam-input" type="${type || "text"}" value="${esc(state.meta[name])}" data-meta="${name}"></label>`;
+  }
+  function select(name, label, options) {
+    return `<label class="exam-label">${label}<select class="exam-input" data-meta="${name}">
+      ${options.map((o) => `<option value="${esc(o.value ?? o)}" ${String(state.meta[name]) === String(o.value ?? o) ? "selected" : ""}>${esc(o.label ?? o)}</option>`).join("")}
+    </select></label>`;
+  }
+
+  function tabHtml() {
+    return TABS.map(([id, no, label]) => `<button type="button" class="exam-tab ${id === activeTab ? "is-active" : ""}" data-tab="${id}"><span>${no}</span>${label}</button>`).join("");
+  }
+  function renderBilgi() {
+    document.getElementById("panel-bilgi").innerHTML = `
+      <div class="grid gap-3 lg:grid-cols-[1fr_320px]">
+        <section class="exam-card p-4">
+          <h2 class="text-lg font-black text-slate-950">Sınav bilgileri</h2>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            ${select("sinifId", "Sınıf", SINIFLAR.map((s) => ({ value: s.id, label: s.sinif_adi })))}
+            ${select("ders", "Ders", DERSLER)}
+            ${input("sinavAdi", "Sınav adı")}
+            ${input("egitimYili", "Eğitim yılı")}
+            ${input("tarih", "Tarih", "date")}
+            ${input("sure", "Süre (dk)", "number")}
+            ${input("soruSayisi", "Hedef soru", "number")}
+            ${input("toplamPuan", "Toplam puan", "number")}
+            ${select("sinavTuru", "Soru tipi", ["Karma", ...TIPLER])}
+          </div>
+          <label class="exam-label mt-3">Açıklama<textarea class="exam-input min-h-[94px]" data-meta="aciklama">${esc(state.meta.aciklama)}</textarea></label>
+        </section>
+        <aside class="exam-card p-4">
+          <h2 class="text-sm font-black uppercase tracking-widest text-slate-500">Hızlı şablon</h2>
+          <div class="mt-3 grid gap-2">
+            <button class="rounded-lg bg-sky-700 px-3 py-2 text-left text-sm font-black text-white" data-template="yazili">Klasik yazılı</button>
+            <button class="rounded-lg bg-emerald-700 px-3 py-2 text-left text-sm font-black text-white" data-template="test">20 soruluk test</button>
+            <button class="rounded-lg bg-amber-600 px-3 py-2 text-left text-sm font-black text-white" data-template="karma">Karma değerlendirme</button>
+          </div>
+          <p class="mt-3 text-xs leading-5 text-slate-500">Şablonlar soru sayısı, puan ve soru tipini doldurur; kazanımları ikinci adımda seçersiniz.</p>
+        </aside>
+      </div>`;
+  }
+  function flattenCurriculum() {
+    if (!curriculum || !curriculum.dersler) return [];
+    const ders = curriculum.dersler[state.meta.ders] || [];
+    const grade = sinifSeviye();
+    const rows = [];
+    ders.forEach((tema) => {
+      (tema.konular || []).forEach((konu) => {
+        (konu.ciktilar || []).forEach((cikti) => {
+          const text = `${tema.tema || ""} ${konu.baslik || ""} ${cikti || ""}`.toLowerCase();
+          const gradeOk = !grade || text.includes(`${grade}.`) || text.includes(`${grade}. sınıf`) || text.includes(`${grade}.sinif`);
+          if (gradeOk) rows.push({ id: uid("kz"), tema: tema.tema || "Tema", konu: konu.baslik || "Konu", text: cikti });
+        });
+      });
+    });
+    return rows.length ? rows : ders.flatMap((tema) => (tema.konular || []).flatMap((konu) => (konu.ciktilar || []).map((cikti) => ({ id: uid("kz"), tema: tema.tema || "Tema", konu: konu.baslik || "Konu", text: cikti }))));
+  }
+  function renderKazanim() {
+    const q = String(document.getElementById("kazanim-ara")?.value || "").toLowerCase();
+    const rows = flattenCurriculum().filter((r) => !q || `${r.tema} ${r.konu} ${r.text}`.toLowerCase().includes(q)).slice(0, 80);
+    const selectedIds = new Set(state.kazanimlar.map((k) => k.key));
+    document.getElementById("panel-kazanim").innerHTML = `
+      <div class="grid gap-3 lg:grid-cols-[1fr_360px]">
+        <section class="exam-card p-4">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div><h2 class="text-lg font-black text-slate-950">Kazanım havuzu</h2><p class="text-xs text-slate-500">${esc(state.meta.ders)} · ${esc(state.meta.sinifAdi)}</p></div>
+            <input id="kazanim-ara" class="exam-input sm:max-w-xs" placeholder="Kazanım ara..." value="${esc(q)}">
+          </div>
+          <div class="mt-3 grid max-h-[58svh] gap-2 overflow-y-auto pr-1">
+            ${rows.map((r) => {
+              const key = `${r.tema}|${r.konu}|${r.text}`;
+              const on = selectedIds.has(key);
+              return `<button type="button" class="rounded-lg border p-3 text-left ${on ? "border-sky-400 bg-sky-50" : "border-slate-200 bg-white hover:bg-slate-50"}" data-add-kazanim="${esc(key)}" data-tema="${esc(r.tema)}" data-konu="${esc(r.konu)}" data-text="${esc(r.text)}">
+                <div class="text-[10px] font-black uppercase text-sky-700">${esc(r.tema)}</div>
+                <div class="mt-1 text-xs font-bold text-slate-500">${esc(r.konu)}</div>
+                <div class="mt-1 text-sm font-semibold text-slate-900">${esc(r.text)}</div>
+              </button>`;
+            }).join("") || `<div class="rounded-lg border border-dashed border-slate-300 p-5 text-sm text-slate-500">Bu ders için kazanım bulunamadı.</div>`}
+          </div>
+        </section>
+        <aside class="exam-card p-4">
+          <h2 class="text-sm font-black uppercase tracking-widest text-slate-500">Seçilen kazanımlar</h2>
+          <div class="mt-3 grid gap-2" id="secili-kazanimlar">
+            ${state.kazanimlar.map((k) => `<div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div class="text-sm font-bold text-slate-900">${esc(k.text)}</div>
+              <div class="mt-1 text-[11px] text-slate-500">${esc(k.konu)}</div>
+              <button type="button" class="mt-2 text-xs font-black text-rose-700" data-remove-kazanim="${esc(k.key)}">Kaldır</button>
+            </div>`).join("") || `<p class="text-sm text-slate-500">Henüz kazanım seçilmedi.</p>`}
+          </div>
+        </aside>
+      </div>`;
+  }
+  function addKazanim(btn) {
+    const key = btn.getAttribute("data-add-kazanim");
+    if (state.kazanimlar.some((k) => k.key === key)) return;
+    state.kazanimlar.push({
+      key,
+      tema: btn.getAttribute("data-tema") || "",
+      konu: btn.getAttribute("data-konu") || "",
+      text: btn.getAttribute("data-text") || "",
+    });
+    renderAll();
+    scheduleSave();
+  }
+  function planOlustur() {
+    const count = Math.max(1, parseInt(state.meta.soruSayisi, 10) || 10);
+    const total = Math.max(1, parseInt(state.meta.toplamPuan, 10) || 100);
+    const selected = state.kazanimlar.length ? state.kazanimlar : [{ key: "", text: "Genel tekrar", konu: "Genel" }];
+    const base = Math.floor(total / count);
+    const remainder = total - base * count;
+    state.sorular = Array.from({ length: count }, (_, i) => {
+      const kazan = selected[i % selected.length];
+      const tip = state.meta.sinavTuru === "Karma" ? TIPLER[i % 3] : state.meta.sinavTuru;
+      return {
+        id: uid("soru"),
+        no: i + 1,
+        tip,
+        zorluk: ZORLUK[i % ZORLUK.length],
+        puan: base + (i < remainder ? 1 : 0),
+        kazanimKey: kazan.key,
+        kazanim: kazan.text,
+        metin: "",
+        cevap: "",
+      };
+    });
+    activeTab = "soru";
+    renderAll();
+    scheduleSave();
+  }
+  function renderSorular() {
+    document.getElementById("panel-soru").innerHTML = `
+      <section class="exam-card p-4">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div><h2 class="text-lg font-black text-slate-950">Soru planı</h2><p class="text-xs text-slate-500">Her satırı düzenleyebilir, soru metni ve cevap anahtarı ekleyebilirsiniz.</p></div>
+          <div class="flex gap-2">
+            <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700" data-add-question>Boş soru ekle</button>
+            <button type="button" class="rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white" data-build-plan>Plan oluştur</button>
+          </div>
+        </div>
+        <div class="mt-3 grid gap-3">
+          ${state.sorular.map((s, i) => soruRow(s, i)).join("") || `<div class="rounded-lg border border-dashed border-slate-300 p-5 text-sm text-slate-500">Kazanım seçip “Plan oluştur” düğmesine basın.</div>`}
+        </div>
+      </section>`;
+  }
+  function soruRow(s, i) {
+    const kazOpts = state.kazanimlar.map((k) => `<option value="${esc(k.key)}" ${s.kazanimKey === k.key ? "selected" : ""}>${esc(k.text.slice(0, 90))}</option>`).join("");
+    return `<article class="rounded-lg border border-slate-200 bg-white p-3" data-soru="${esc(s.id)}">
+      <div class="grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_auto] md:items-end">
+        <label class="exam-label">No<input class="exam-input" type="number" data-soru-field="no" value="${esc(s.no || i + 1)}"></label>
+        <label class="exam-label">Kazanım<select class="exam-input" data-soru-field="kazanimKey"><option value="">Genel</option>${kazOpts}</select></label>
+        <label class="exam-label">Tip<select class="exam-input" data-soru-field="tip">${TIPLER.map((t) => `<option ${s.tip === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+        <label class="exam-label">Zorluk<select class="exam-input" data-soru-field="zorluk">${ZORLUK.map((z) => `<option ${s.zorluk === z ? "selected" : ""}>${z}</option>`).join("")}</select></label>
+        <label class="exam-label">Puan<input class="exam-input" type="number" data-soru-field="puan" value="${esc(s.puan)}"></label>
+        <button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-question="${esc(s.id)}">Sil</button>
+      </div>
+      <div class="mt-2 grid gap-2 md:grid-cols-2">
+        <label class="exam-label">Soru metni<textarea class="exam-input min-h-[72px]" data-soru-field="metin">${esc(s.metin)}</textarea></label>
+        <label class="exam-label">Cevap / anahtar<textarea class="exam-input min-h-[72px]" data-soru-field="cevap">${esc(s.cevap)}</textarea></label>
+      </div>
+    </article>`;
+  }
+  function renderPreview() {
+    const byKaz = {};
+    state.sorular.forEach((s) => {
+      const key = s.kazanim || "Genel";
+      byKaz[key] = (byKaz[key] || 0) + 1;
+    });
+    document.getElementById("panel-onizleme").innerHTML = `
+      <div class="grid gap-3 lg:grid-cols-[1fr_320px]">
+        <section class="exam-card exam-print p-5" id="exam-print-area">
+          ${previewHtml()}
+        </section>
+        <aside class="exam-card no-print p-4">
+          <h2 class="text-sm font-black uppercase tracking-widest text-slate-500">Dağılım</h2>
+          <div class="mt-3 grid gap-2 text-sm">
+            ${Object.entries(byKaz).map(([k, n]) => `<div class="flex justify-between gap-3 rounded-lg bg-slate-50 p-2"><span>${esc(k.slice(0, 80))}</span><b>${n}</b></div>`).join("") || `<p class="text-slate-500">Soru yok.</p>`}
+          </div>
+          <div class="mt-4 grid gap-2">
+            <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-black text-white" data-print>Yazdır</button>
+            <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-700" data-download-html>HTML indir</button>
+          </div>
+        </aside>
+      </div>`;
+  }
+  function previewHtml() {
+    const m = state.meta;
+    return `
+      <div class="border-b border-slate-300 pb-3 text-center">
+        <div class="text-sm font-black uppercase">${esc(m.okulAdi)}</div>
+        <div class="mt-1 text-lg font-black">${esc(m.sinavAdi)} Sınav Taslağı</div>
+        <div class="mt-1 text-xs text-slate-600">${esc(m.egitimYili)} · ${esc(m.sinifAdi)} · ${esc(m.ders)} · ${esc(m.tarih)} · ${esc(m.sure)} dk</div>
+      </div>
+      <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div>Ad Soyad: ........................................</div>
+        <div>No: .............</div>
+      </div>
+      <p class="mt-3 text-sm text-slate-700">${esc(m.aciklama)}</p>
+      <ol class="mt-4 space-y-4">
+        ${state.sorular.map((s) => `<li class="pl-1">
+          <div class="flex justify-between gap-3 text-sm font-black"><span>${esc(s.no)}. ${esc(s.tip)} · ${esc(s.zorluk)}</span><span>${esc(s.puan)} puan</span></div>
+          <div class="mt-1 min-h-[42px] rounded border border-slate-200 p-3 text-sm">${esc(s.metin || "Soru metni buraya yazılacak.")}</div>
+        </li>`).join("")}
+      </ol>
+      <div class="mt-6 border-t border-slate-300 pt-3">
+        <h3 class="text-sm font-black">Cevap anahtarı</h3>
+        <div class="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+          ${state.sorular.map((s) => `<div><b>${esc(s.no)}.</b> ${esc(s.cevap || "-")}</div>`).join("")}
+        </div>
+      </div>`;
+  }
+  async function renderKayit() {
+    document.getElementById("panel-kayit").innerHTML = `
+      <section class="exam-card p-4">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div><h2 class="text-lg font-black text-slate-950">Kayıtlar</h2><p class="text-xs text-slate-500">Hazırladığınız sınavlar öğretmen hesabınıza kaydedilir.</p></div>
+          <button type="button" class="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white" data-server-save>${currentKayitId ? "Güncelle" : "Kaydet"}</button>
+        </div>
+        <div class="mt-3 grid gap-2" id="kayit-listesi">
+          ${serverKayitlar.length ? serverKayitlar.map(kayitCard).join("") : `<div class="rounded-lg border border-dashed border-slate-300 p-5 text-sm text-slate-500">Henüz kayıt yok.</div>`}
+        </div>
+      </section>`;
+  }
+  function kayitCard(k) {
+    const alt = [k.sinif_adi, k.ders, k.sinav_adi, k.egitim_yili].filter(Boolean).join(" · ");
+    return `<article class="rounded-lg border border-slate-200 bg-white p-3">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0"><h3 class="truncate text-sm font-black text-slate-900">${esc(k.baslik)}</h3><p class="text-xs text-slate-500">${esc(alt)} · ${esc(k.guncelleme || "")}</p></div>
+        <div class="flex gap-2">
+          <button type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-black" data-load-record="${k.id}">Aç</button>
+          <button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-delete-record="${k.id}">Sil</button>
+        </div>
+      </div>
+    </article>`;
+  }
+  function renderMetrics() {
+    const total = state.sorular.reduce((sum, s) => sum + (parseFloat(s.puan) || 0), 0);
+    document.getElementById("metric-soru").textContent = String(state.sorular.length);
+    document.getElementById("metric-puan").textContent = String(total);
+    document.getElementById("metric-kazanim").textContent = String(state.kazanimlar.length);
+  }
+  function renderAll() {
+    normalize();
+    document.getElementById("exam-tabs").innerHTML = tabHtml();
+    document.querySelectorAll(".exam-panel").forEach((p) => p.classList.add("hidden"));
+    document.getElementById("panel-" + activeTab)?.classList.remove("hidden");
+    renderBilgi();
+    if (activeTab === "kazanim") renderKazanim();
+    if (activeTab === "soru") renderSorular();
+    if (activeTab === "onizleme") renderPreview();
+    if (activeTab === "kayit") renderKayit();
+    renderMetrics();
+  }
+  async function loadCurriculum() {
+    try {
+      const r = await fetch(API_MUFREDAT, { credentials: "same-origin" });
+      curriculum = await r.json();
+    } catch (e) {
+      curriculum = { dersler: {} };
+    }
+  }
+  async function kayitlariYukle() {
+    try {
+      const r = await fetch(API_KAYITLAR, { credentials: "same-origin" });
+      const j = await r.json();
+      serverKayitlar = Array.isArray(j.kayitlar) ? j.kayitlar : [];
+    } catch (e) {
+      serverKayitlar = [];
+    }
+  }
+  async function sunucuyaKaydet() {
+    const r = await fetch(API_KAYDET, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+      body: JSON.stringify({ id: currentKayitId, state }),
+    });
+    const j = await r.json();
+    if (!j.ok) {
+      alert(j.sebep || "Kayıt yapılamadı.");
+      return;
+    }
+    currentKayitId = j.kayit.id;
+    localStorage.setItem(LS_KEY + "_server_id", String(currentKayitId));
+    await kayitlariYukle();
+    renderAll();
+  }
+  async function kayitAc(id) {
+    const r = await fetch(API_KAYIT(id), { credentials: "same-origin" });
+    const j = await r.json();
+    if (!j.ok) return alert(j.sebep || "Kayıt açılamadı.");
+    state = j.state || defaultState();
+    currentKayitId = j.kayit.id;
+    activeTab = "bilgi";
+    scheduleSave();
+    renderAll();
+  }
+  async function kayitSil(id) {
+    if (!confirm("Bu sınav hazırlığı silinsin mi?")) return;
+    const r = await fetch(API_KAYIT_SIL(id), { method: "DELETE", credentials: "same-origin" });
+    const j = await r.json();
+    if (!j.ok) return alert(j.sebep || "Silinemedi.");
+    if (String(currentKayitId) === String(id)) currentKayitId = null;
+    await kayitlariYukle();
+    renderAll();
+  }
+  function applyTemplate(type) {
+    if (type === "test") Object.assign(state.meta, { soruSayisi: "20", toplamPuan: "100", sinavTuru: "Çoktan seçmeli", sure: "40" });
+    if (type === "yazili") Object.assign(state.meta, { soruSayisi: "10", toplamPuan: "100", sinavTuru: "Açık uçlu", sure: "40" });
+    if (type === "karma") Object.assign(state.meta, { soruSayisi: "12", toplamPuan: "100", sinavTuru: "Karma", sure: "40" });
+    planOlustur();
+  }
+  function addBlankQuestion() {
+    state.sorular.push({ id: uid("soru"), no: state.sorular.length + 1, tip: TIPLER[0], zorluk: "Orta", puan: 10, kazanimKey: "", kazanim: "", metin: "", cevap: "" });
+    renderAll();
+    scheduleSave();
+  }
+  function downloadHtml() {
+    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.box{border:1px solid #ddd;padding:10px;min-height:36px}</style></head><body>${previewHtml()}</body></html>`;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "sinav-hazirligi.html";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  document.addEventListener("input", (e) => {
+    const meta = e.target.getAttribute?.("data-meta");
+    if (meta) setMeta(meta, e.target.value, false);
+    if (e.target.id === "kazanim-ara") renderKazanim();
+    const box = e.target.closest?.("[data-soru]");
+    const field = e.target.getAttribute?.("data-soru-field");
+    if (box && field) {
+      const s = state.sorular.find((x) => x.id === box.getAttribute("data-soru"));
+      if (s) {
+        s[field] = e.target.value;
+        if (field === "kazanimKey") {
+          const k = state.kazanimlar.find((item) => item.key === e.target.value);
+          s.kazanim = k ? k.text : "";
+        }
+        renderMetrics();
+        scheduleSave();
+      }
+    }
+  });
+  document.addEventListener("change", (e) => {
+    const meta = e.target.getAttribute?.("data-meta");
+    if (meta) setMeta(meta, e.target.value, ["sinifId", "ders", "sinavTuru"].includes(meta));
+    const box = e.target.closest?.("[data-soru]");
+    const field = e.target.getAttribute?.("data-soru-field");
+    if (box && field) {
+      const s = state.sorular.find((x) => x.id === box.getAttribute("data-soru"));
+      if (s) {
+        s[field] = e.target.value;
+        if (field === "kazanimKey") {
+          const k = state.kazanimlar.find((item) => item.key === e.target.value);
+          s.kazanim = k ? k.text : "";
+        }
+        renderMetrics();
+        scheduleSave();
+      }
+    }
+  });
+  document.addEventListener("click", async (e) => {
+    const tab = e.target.closest("[data-tab]")?.getAttribute("data-tab");
+    if (tab) {
+      activeTab = tab;
+      if (tab === "kayit") await kayitlariYukle();
+      renderAll();
+      return;
+    }
+    const add = e.target.closest("[data-add-kazanim]");
+    if (add) return addKazanim(add);
+    const rmKaz = e.target.closest("[data-remove-kazanim]")?.getAttribute("data-remove-kazanim");
+    if (rmKaz) {
+      state.kazanimlar = state.kazanimlar.filter((k) => k.key !== rmKaz);
+      renderAll(); scheduleSave(); return;
+    }
+    const template = e.target.closest("[data-template]")?.getAttribute("data-template");
+    if (template) return applyTemplate(template);
+    if (e.target.closest("[data-build-plan]")) return planOlustur();
+    if (e.target.closest("[data-add-question]")) return addBlankQuestion();
+    const rmQ = e.target.closest("[data-remove-question]")?.getAttribute("data-remove-question");
+    if (rmQ) {
+      state.sorular = state.sorular.filter((s) => s.id !== rmQ).map((s, i) => Object.assign(s, { no: i + 1 }));
+      renderAll(); scheduleSave(); return;
+    }
+    if (e.target.closest("[data-print]")) return window.print();
+    if (e.target.closest("[data-download-html]")) return downloadHtml();
+    if (e.target.closest("[data-server-save]")) return sunucuyaKaydet();
+    const loadId = e.target.closest("[data-load-record]")?.getAttribute("data-load-record");
+    if (loadId) return kayitAc(loadId);
+    const deleteId = e.target.closest("[data-delete-record]")?.getAttribute("data-delete-record");
+    if (deleteId) return kayitSil(deleteId);
+  });
+
+  loadLocal();
+  Promise.all([loadCurriculum(), kayitlariYukle()]).then(renderAll);
+})();
+</script>
+{% endblock %}

@@ -60,6 +60,7 @@ from database import (
     rapor_arsiv_kaydet, rapor_arsiv_listesi, rapor_arsiv_pdf_oku,
     rapor_arsiv_tumunu_yedekle_ve_sil, rapor_arsiv_yedek_gruplari, rapor_arsiv_grubu_geri_yukle,
     sinav_analiz_kaydet, sinav_analiz_listesi, sinav_analiz_oku, sinav_analiz_sil,
+    sinav_hazirlama_kaydet, sinav_hazirlama_listesi, sinav_hazirlama_oku, sinav_hazirlama_sil,
     tik_kayitlari_siniflarda,
     ogretmen_yetki_al, ogretmen_yetki_guncelle,
     randevu_talep_ekle, randevu_talep_by_id, randevu_listesi_siniflar, randevu_durum_guncelle,
@@ -180,10 +181,12 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "analiz_merkezi",
     "rapor_haftalik", "rapor_karsilastir", "rapor_anonim_sinif",
     "manifest", "service_worker",
-    "ogretmen_sinav_analiz",
+    "ogretmen_sinav_analiz", "ogretmen_sinav_hazirla",
     "api_sinav_analiz_sinif", "api_sinav_analiz_kayitlar", "api_sinav_analiz_kaydet",
     "api_sinav_analiz_kayit_oku", "api_sinav_analiz_kayit_sil",
-    "api_curriculum_temel_egitim",
+    "api_sinav_hazirlama_kayitlar", "api_sinav_hazirlama_kaydet",
+    "api_sinav_hazirlama_kayit_oku", "api_sinav_hazirlama_kayit_sil",
+    "api_curriculum_temel_egitim", "api_curriculum_drive_kazanimlari",
 })
 
 
@@ -1383,6 +1386,30 @@ def ogretmen_sinav_analiz():
     )
 
 
+def _sinav_dersleri() -> list[str]:
+    return [
+        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler",
+        "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü",
+        "Müzik", "Bilişim Teknolojileri ve Yazılım", "Beden Eğitimi ve Spor",
+        "Görsel Sanatlar", "Teknoloji ve Tasarım",
+    ]
+
+
+@app.route("/ogretmen/sinav-hazirla")
+@giris_zorunlu
+def ogretmen_sinav_hazirla():
+    """Defterdoldur benzeri sınav hazırlama akışı: bilgi, kazanım, soru planı, önizleme."""
+    oid = session["ogretmen_id"]
+    siniflar = ogretmen_siniflari(oid)
+    return render_template(
+        "ogretmen_sinav_hazirla.html",
+        siniflar=siniflar,
+        ogretmen_adi=session.get("ogretmen_adi", "") or "",
+        okul_adi="Erenler Cumhuriyet Ortaokulu",
+        dersler=_sinav_dersleri(),
+    )
+
+
 @app.route("/api/sinav-analiz/sinif/<int:sinif_id>")
 @giris_zorunlu
 def api_sinav_analiz_sinif(sinif_id: int):
@@ -1412,6 +1439,16 @@ def _sinav_analiz_baslik(meta: dict) -> str:
         str(meta.get("egitimYili") or "").strip(),
     ]
     return " · ".join([p for p in parcalar if p]) or "Sınav analizi"
+
+
+def _sinav_hazirlama_baslik(meta: dict) -> str:
+    parcalar = [
+        str(meta.get("sinifAdi") or "").strip(),
+        str(meta.get("ders") or "").strip(),
+        str(meta.get("sinavAdi") or "").strip(),
+        str(meta.get("egitimYili") or "").strip(),
+    ]
+    return " · ".join([p for p in parcalar if p]) or "Sınav hazırlığı"
 
 
 @app.route("/api/sinav-analiz/kayitlar")
@@ -1482,6 +1519,79 @@ def api_sinav_analiz_kayit_oku(kayit_id: int):
 @giris_zorunlu
 def api_sinav_analiz_kayit_sil(kayit_id: int):
     sonuc = sinav_analiz_sil(kayit_id, session["ogretmen_id"])
+    if sonuc.get("silinen", 0) < 1:
+        return jsonify({"ok": False, "sebep": "Kayıt bulunamadı.", "silinen": 0}), 404
+    return jsonify(sonuc)
+
+
+@app.route("/api/sinav-hazirlama/kayitlar")
+@giris_zorunlu
+def api_sinav_hazirlama_kayitlar():
+    return jsonify({
+        "ok": True,
+        "kayitlar": sinav_hazirlama_listesi(session["ogretmen_id"], 60),
+    })
+
+
+@app.route("/api/sinav-hazirlama/kaydet", methods=["POST"])
+@giris_zorunlu
+def api_sinav_hazirlama_kaydet():
+    veri = request.get_json(silent=True) or {}
+    state = veri.get("state")
+    if not isinstance(state, dict):
+        return jsonify({"ok": False, "sebep": "Sınav hazırlığı verisi eksik."}), 400
+    meta = state.get("meta") if isinstance(state.get("meta"), dict) else {}
+    sinif_id = meta.get("sinifId")
+    try:
+        sinif_id_int = int(sinif_id) if sinif_id not in (None, "", 0, "0") else None
+    except (TypeError, ValueError):
+        sinif_id_int = None
+    if sinif_id_int and not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int):
+        return jsonify({"ok": False, "sebep": "Bu sınıfa erişim yetkiniz yok."}), 403
+
+    try:
+        state_json = json.dumps(state, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "sebep": "Sınav hazırlığı kaydedilebilir formatta değil."}), 400
+
+    sonuc = sinav_hazirlama_kaydet(
+        ogretmen_id=session["ogretmen_id"],
+        ogretmen_adi=session.get("ogretmen_adi", "") or "",
+        state_json=state_json,
+        baslik=_sinav_hazirlama_baslik(meta),
+        sinif_id=sinif_id_int,
+        sinif_adi=meta.get("sinifAdi") or "",
+        ders=meta.get("ders") or "",
+        sinav_adi=meta.get("sinavAdi") or "",
+        egitim_yili=meta.get("egitimYili") or "",
+        kayit_id=veri.get("id") or veri.get("kayit_id"),
+    )
+    if not sonuc.get("ok"):
+        return jsonify(sonuc), 404
+    return jsonify(sonuc)
+
+
+@app.route("/api/sinav-hazirlama/kayit/<int:kayit_id>")
+@giris_zorunlu
+def api_sinav_hazirlama_kayit_oku(kayit_id: int):
+    row = sinav_hazirlama_oku(kayit_id, session["ogretmen_id"])
+    if not row:
+        return jsonify({"ok": False, "sebep": "Kayıt bulunamadı."}), 404
+    try:
+        state = json.loads(row["state_json"])
+    except (TypeError, json.JSONDecodeError):
+        return jsonify({"ok": False, "sebep": "Kayıt verisi okunamadı."}), 500
+    kayit = {k: row[k] for k in (
+        "id", "olusturma", "guncelleme", "baslik", "sinif_id", "sinif_adi",
+        "ders", "sinav_adi", "egitim_yili",
+    )}
+    return jsonify({"ok": True, "kayit": kayit, "state": state})
+
+
+@app.route("/api/sinav-hazirlama/kayit/<int:kayit_id>/sil", methods=["DELETE", "POST"])
+@giris_zorunlu
+def api_sinav_hazirlama_kayit_sil(kayit_id: int):
+    sonuc = sinav_hazirlama_sil(kayit_id, session["ogretmen_id"])
     if sonuc.get("silinen", 0) < 1:
         return jsonify({"ok": False, "sebep": "Kayıt bulunamadı.", "silinen": 0}), 404
     return jsonify(sonuc)

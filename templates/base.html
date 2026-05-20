@@ -616,6 +616,11 @@
               <span><span class="block font-black">Sınav analizi</span>
               <span class="block text-[11px] font-medium text-slate-500">Kazanım ve sınıf analizi</span></span>
             </a>
+            <a href="{{ url_for('ogretmen_sinav_hazirla') }}" class="nav-link">
+              <span class="nav-mark mark-sky">SH</span>
+              <span><span class="block font-black">Sınav hazırlama</span>
+              <span class="block text-[11px] font-medium text-slate-500">Kazanım, soru planı ve cevap anahtarı</span></span>
+            </a>
             <a href="{{ url_for('rapor_excel', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('rapor_excel') }}" class="nav-link">
               <span class="nav-mark mark-slate">XL</span>
               <span><span class="block font-black">Excel raporu</span>
@@ -688,6 +693,7 @@
       <h2 class="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Rapor ve Analiz</h2>
       <div class="grid gap-2">
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">AN</span><span>Analiz merkezi</span></a>
+        <a href="{{ url_for('ogretmen_sinav_hazirla') }}" class="mobile-link"><span class="nav-mark mark-sky">SH</span><span>Sınav hazırlama</span></a>
         <a href="{{ url_for('ogretmen_sinav_analiz') }}" class="mobile-link"><span class="nav-mark mark-amber">SA</span><span>Sınav analizi</span></a>
         <a href="{{ url_for('rapor_excel', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('rapor_excel') }}" class="mobile-link"><span class="nav-mark mark-slate">XL</span><span>Excel raporu</span></a>
       </div>
@@ -711,8 +717,8 @@
     <span class="tab-icon">☰</span>
     <span>Liste</span>
   </button>
-  <a href="{{ url_for('ogretmen_sinav_analiz') }}"
-     class="{{ 'is-active' if request.endpoint == 'ogretmen_sinav_analiz' else '' }}">
+  <a href="{{ url_for('ogretmen_sinav_hazirla') }}"
+     class="{{ 'is-active' if request.endpoint in ['ogretmen_sinav_hazirla', 'ogretmen_sinav_analiz'] else '' }}">
     <span class="tab-icon">▣</span>
     <span>Sınav</span>
   </a>
