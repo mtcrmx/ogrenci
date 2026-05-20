@@ -3,7 +3,7 @@
 
 {% block body %}
 <main class="mx-auto max-w-7xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
-  <header class="overflow-hidden rounded-xl border border-sky-200 bg-white shadow-sm">
+  <header class="no-print overflow-hidden rounded-xl border border-sky-200 bg-white shadow-sm">
     <div class="grid gap-4 p-4 lg:grid-cols-[1.4fr_.8fr] lg:items-center">
       <div>
         <p class="text-[11px] font-black uppercase tracking-widest text-sky-700">ECO Sınav Hazırlama</p>
@@ -29,7 +29,7 @@
     </div>
   </header>
 
-  <div class="sticky top-14 z-20 -mx-1 mt-3 overflow-x-auto border-y border-slate-200 bg-slate-100/95 px-1 py-2 backdrop-blur">
+  <div class="no-print sticky top-14 z-20 -mx-1 mt-3 overflow-x-auto border-y border-slate-200 bg-slate-100/95 px-1 py-2 backdrop-blur">
     <nav class="flex min-w-max gap-1" id="exam-tabs"></nav>
   </div>
 
@@ -232,6 +232,28 @@
     border-radius: 8px;
     padding: 12px;
     white-space: pre-wrap;
+  }
+  .exam-print-title {
+    margin: 18px 0 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, .34);
+    padding-bottom: 12px;
+    text-align: center;
+    color: #0f172a;
+  }
+  .exam-print-title .school {
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .exam-print-title .exam-name {
+    margin-top: 4px;
+    font-size: 17px;
+    font-weight: 900;
+  }
+  .exam-print-title .exam-meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #475569;
   }
   .exam-teacher-note {
     margin-top: 22px;
@@ -784,6 +806,16 @@
     </section>`;
   }
 
+  function examTitleHtml() {
+    const m = state.meta;
+    const meta = [m.sinifAdi, m.ders, m.egitimYili, m.tarih, m.sure ? `${m.sure} dk` : ""].filter(Boolean).join(" · ");
+    return `<section class="exam-print-title">
+      <div class="school">${esc(m.okulAdi || OKUL || "")}</div>
+      <div class="exam-name">${esc(m.sinavAdi || "Sınav")} Sınav Kağıdı</div>
+      <div class="exam-meta">${esc(meta)}</div>
+    </section>`;
+  }
+
   function teacherNoteHtml() {
     const teacher = String(state.meta.ogretmen || OGRETMEN || "").trim();
     return `<section class="exam-teacher-note">
@@ -1085,6 +1117,7 @@
   function previewHtml() {
     return `
       ${opticSheetHtml()}
+      ${examTitleHtml()}
       <p class="mt-3 text-sm text-slate-700">Sorular kazanım dağılımı dikkate alınarak hazırlanmıştır.</p>
       <ol class="mt-4 space-y-4">
         ${state.sorular.map((s) => `<li class="pl-1">
@@ -1203,7 +1236,7 @@
     scheduleSave();
   }
   function downloadHtml() {
-    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option,.answer-key-line{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-sheet{margin:0 0 24px;break-inside:avoid;page-break-inside:avoid}.exam-optic-image{display:block;width:100%;max-width:100%;border:0;border-radius:0;background:#fff}.exam-question-text{min-height:42px;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #bbb;padding-top:14px;font-size:13px}.exam-teacher-note strong{font-weight:900}.answer-key-page{margin-top:28px;border-top:1px solid #bbb;padding-top:16px;break-before:page;page-break-before:always}</style></head><body>${previewHtml()}</body></html>`;
+    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option,.answer-key-line{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-sheet{margin:0 0 24px;break-inside:avoid;page-break-inside:avoid}.exam-optic-image{display:block;width:100%;max-width:100%;border:0;border-radius:0;background:#fff}.exam-print-title{margin:18px 0 14px;border-bottom:1px solid #bbb;padding-bottom:12px;text-align:center;color:#111}.exam-print-title .school{font-size:13px;font-weight:900;text-transform:uppercase}.exam-print-title .exam-name{margin-top:4px;font-size:17px;font-weight:900}.exam-print-title .exam-meta{margin-top:4px;font-size:12px;color:#555}.exam-question-text{min-height:42px;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #bbb;padding-top:14px;font-size:13px}.exam-teacher-note strong{font-weight:900}.answer-key-page{margin-top:28px;border-top:1px solid #bbb;padding-top:16px;break-before:page;page-break-before:always}</style></head><body>${previewHtml()}</body></html>`;
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

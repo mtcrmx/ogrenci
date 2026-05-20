@@ -599,20 +599,34 @@
 
   let soruPanelTur = "yazili";
   let mufredatFilter = "";
+  let mufredatSeciliDers = "";
   let mufredatSeciliTema = "";
   let mufredatSeciliKonu = "";
+  let curriculumPromise = null;
 
   async function fetchCurriculum() {
     if (curriculumCache) return curriculumCache;
-    const r = await fetch(API_MUFREDAT, { credentials: "same-origin" });
-    if (!r.ok) throw new Error("Müfredat yüklenemedi (" + r.status + ")");
-    curriculumCache = await r.json();
-    return curriculumCache;
+    if (curriculumPromise) return curriculumPromise;
+    curriculumPromise = fetch(API_MUFREDAT, { credentials: "same-origin" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Öğrenme çıktıları yüklenemedi (" + r.status + ")");
+        curriculumCache = await r.json();
+        return curriculumCache;
+      })
+      .finally(() => {
+        curriculumPromise = null;
+      });
+    return curriculumPromise;
   }
 
   function setMeta(k, v) {
     if (k === "mudur") v = DEFAULT_MUDUR;
     state.meta[k] = v;
+    if (k === "ders") {
+      mufredatSeciliDers = curriculumDersAdi(v);
+      mufredatSeciliTema = "";
+      mufredatSeciliKonu = "";
+    }
     scheduleSave();
   }
 
@@ -967,16 +981,17 @@
             .join("")}
         </div>
         <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3 space-y-2">
-          <p class="text-[11px] font-bold text-amber-900">Drive öğrenme çıktısı havuzu</p>
+          <p class="text-[11px] font-bold text-amber-900">Öğrenme çıktıları havuzu</p>
           <div class="flex flex-wrap gap-2 items-end">
-            <button type="button" id="btn-muf-yukle" class="rounded-lg bg-slate-800 text-white text-xs font-bold px-3 py-2">Drive öğrenme çıktılarını yükle</button>
             <label class="text-[11px] font-bold text-slate-600">Ders<select id="muf-ders" class="${inputClass(true)} ml-1 min-w-[140px]"><option value="">—</option></select></label>
-            <label class="text-[11px] font-bold text-slate-600">Konu/Tema<select id="muf-tema" class="${inputClass(true)} ml-1 min-w-[200px]"><option value="">—</option></select></label>
-            <label class="text-[11px] font-bold text-slate-600">Konu/İçerik Çerçevesi<select id="muf-konu" class="${inputClass(true)} ml-1 min-w-[220px]"><option value="">—</option></select></label>
+            <label class="text-[11px] font-bold text-slate-600">Konu/Tema<select id="muf-tema" class="${inputClass(true)} ml-1 min-w-[200px]"><option value="">Tümü</option></select></label>
+            <label class="text-[11px] font-bold text-slate-600">Konu/İçerik Çerçevesi<select id="muf-konu" class="${inputClass(true)} ml-1 min-w-[220px]"><option value="">Tümü</option></select></label>
             <label class="text-[11px] font-bold text-slate-600 flex-1 min-w-[120px]">Filtre<input id="muf-filt" class="${inputClass(true)} ml-1 w-full" placeholder=" öğrenme çıktısında ara…" value="${esc(mufredatFilter)}"/></label>
           </div>
-          <div id="muf-sonuc" class="max-h-48 overflow-auto text-[11px] border border-slate-200 rounded-lg bg-white"></div>
-          <p class="text-[10px] text-slate-500">Dersiniz otomatik seçilir. Seçilen öğrenme çıktısı aktif sınav bölümüne (${tur}) eklenir; puanı aşağıdan düzenleyebilirsiniz.</p>
+          <div id="muf-sonuc" class="max-h-64 overflow-auto text-[11px] border border-slate-200 rounded-lg bg-white">
+            <div class="p-2 text-slate-500">Öğrenme çıktıları yükleniyor...</div>
+          </div>
+          <p class="text-[10px] text-slate-500">Dersiniz otomatik seçilir; konu ve filtre alanları sadece listeyi daraltır. Seçilen öğrenme çıktısı aktif sınav bölümüne (${tur}) eklenir.</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" id="btn-soru-ekle" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2">Boş öğrenme çıktısı ekle</button>
@@ -1007,16 +1022,26 @@
       btn.addEventListener("click", () => soruSil(tur, parseInt(btn.getAttribute("data-sq-del"), 10)));
     });
 
-    const mf = el.querySelector("#btn-muf-yukle");
     const mfDers = el.querySelector("#muf-ders");
     const mfTema = el.querySelector("#muf-tema");
     const mfKonu = el.querySelector("#muf-konu");
     const mfFilt = el.querySelector("#muf-filt");
     const mfOut = el.querySelector("#muf-sonuc");
 
+    function mufredatDersleriDoldur() {
+      if (!curriculumCache || !mfDers) return;
+      const dersAdlari = Object.keys(curriculumCache.dersler || {}).sort();
+      const hedefDers = mufredatSeciliDers || curriculumDersAdi(state.meta.ders);
+      mufredatSeciliDers = dersAdlari.includes(hedefDers) ? hedefDers : (dersAdlari[0] || "");
+      mfDers.innerHTML =
+        `<option value="">— Ders seçin —</option>` +
+        dersAdlari.map((d) => `<option value="${escAttr(d)}"${mufredatSeciliDers === d ? " selected" : ""}>${esc(d)}</option>`).join("");
+    }
+
     function mufredatSecenekleriDoldur() {
       if (!curriculumCache) return;
-      const ders = (mfDers && mfDers.value) || "";
+      const ders = (mfDers && mfDers.value) || mufredatSeciliDers || curriculumDersAdi(state.meta.ders);
+      mufredatSeciliDers = ders;
       const temalar = curriculumTemaListesi(ders);
       const temaVar = temalar.includes(mufredatSeciliTema);
       if (!temaVar) {
@@ -1025,7 +1050,7 @@
       }
       if (mfTema) {
         mfTema.innerHTML =
-          `<option value="">— Konu/Tema seçin —</option>` +
+          `<option value="">Tüm konu/temalar</option>` +
           temalar
             .map((tema) => `<option value="${escAttr(tema)}"${mufredatSeciliTema === tema ? " selected" : ""}>${esc(tema)}</option>`)
             .join("");
@@ -1035,7 +1060,7 @@
       if (!konuVar) mufredatSeciliKonu = "";
       if (mfKonu) {
         mfKonu.innerHTML =
-          `<option value="">— Konu/İçerik seçin —</option>` +
+          `<option value="">Tüm konu/içerikler</option>` +
           konular
             .map((kon) => {
               const baslik = kon.baslik || "";
@@ -1048,8 +1073,9 @@
 
     function mufredatCiz() {
       if (!curriculumCache || !mfOut) return;
+      mufredatDersleriDoldur();
       mufredatSecenekleriDoldur();
-      const ders = (mfDers && mfDers.value) || "";
+      const ders = (mfDers && mfDers.value) || mufredatSeciliDers || "";
       const tema = mufredatSeciliTema;
       const konuBaslik = mufredatSeciliKonu;
       const flt = (mufredatFilter || "").toLowerCase().trim();
@@ -1062,23 +1088,15 @@
             if (!metin) return;
             const arama = [tema, kb, metin].join(" ").toLowerCase();
             if (flt && arama.indexOf(flt) === -1) return;
-            sat.push({ tema, konu: kb, metin });
+            sat.push({ tema: kon.konuTema || tema || kon.kaynakTema || "", konu: kb, icerik: kon.konuIcerik || kb, metin });
           });
       });
       if (!ders) {
         mfOut.innerHTML = `<div class="p-2 text-slate-500">Ders seçin.</div>`;
         return;
       }
-      if (!tema) {
-        mfOut.innerHTML = `<div class="p-2 text-slate-500">Konu/Tema seçin.</div>`;
-        return;
-      }
-      if (!konuBaslik) {
-        mfOut.innerHTML = `<div class="p-2 text-slate-500">Konu/İçerik Çerçevesi seçin.</div>`;
-        return;
-      }
       if (!sat.length) {
-        mfOut.innerHTML = `<div class="p-2 text-slate-500">Sonuç yok (filtre veya seçili içerik).</div>`;
+        mfOut.innerHTML = `<div class="p-2 text-slate-500">Seçili ders veya filtre için öğrenme çıktısı bulunamadı.</div>`;
         return;
       }
       mfOut.innerHTML = sat
@@ -1086,6 +1104,7 @@
           (r, i) =>
             `<div class="border-b border-slate-100 px-2 py-1.5 hover:bg-amber-50/80">
               <button type="button" class="text-left w-full" data-muf-pick="${i}">
+                <span class="block text-[10px] font-bold text-amber-800">${esc(curriculumTemaEtiketi(r.tema) || "Genel")} · ${esc(r.icerik || r.konu || "Öğrenme çıktısı")}</span>
                 <span class="text-slate-800">${esc(r.metin)}</span>
               </button>
             </div>`
@@ -1100,27 +1119,9 @@
       });
     }
 
-    if (mf) {
-      mf.addEventListener("click", async () => {
-        try {
-          await fetchCurriculum();
-          const dersAdlari = Object.keys(curriculumCache.dersler || {}).sort();
-          if (mfDers) {
-            const selD = mfDers.value;
-            const hedefDers = curriculumDersAdi(state.meta.ders);
-            mfDers.innerHTML =
-              `<option value="">— Ders seçin —</option>` +
-              dersAdlari.map((d) => `<option value="${escAttr(d)}"${(selD || hedefDers) === d ? " selected" : ""}>${esc(d)}</option>`).join("");
-          }
-          mufredatSecenekleriDoldur();
-          mufredatCiz();
-        } catch (e) {
-          alert(e.message || String(e));
-        }
-      });
-    }
     if (mfDers) {
       mfDers.addEventListener("change", () => {
+        mufredatSeciliDers = mfDers.value;
         mufredatSeciliTema = "";
         mufredatSeciliKonu = "";
         mufredatCiz();
@@ -1145,13 +1146,17 @@
         mufredatCiz();
       });
     }
-    if (curriculumCache && mfDers) {
-      const dersAdlari = Object.keys(curriculumCache.dersler || {}).sort();
-      const hedefDers = curriculumDersAdi(state.meta.ders);
-      mfDers.innerHTML =
-        `<option value="">— Ders seçin —</option>` +
-        dersAdlari.map((d) => `<option value="${escAttr(d)}"${hedefDers === d ? " selected" : ""}>${esc(d)}</option>`).join("");
-      mufredatSecenekleriDoldur();
+
+    if (!curriculumCache) {
+      if (mfOut) mfOut.innerHTML = `<div class="p-2 text-slate-500">Öğrenme çıktıları yükleniyor...</div>`;
+      fetchCurriculum()
+        .then(() => {
+          if (activeTab === "soru") renderActivePanel();
+        })
+        .catch((e) => {
+          if (mfOut) mfOut.innerHTML = `<div class="p-2 text-red-700 bg-red-50">Öğrenme çıktıları yüklenemedi: ${esc(e.message || String(e))}</div>`;
+        });
+    } else if (mfDers) {
       mufredatCiz();
     }
   }
@@ -1325,6 +1330,11 @@
   showPanel();
   renderActivePanel();
   updateKayitStatus();
+  fetchCurriculum()
+    .then(() => {
+      if (activeTab === "soru") renderActivePanel();
+    })
+    .catch((e) => console.warn(e));
   document.getElementById("btn-sunucu-kaydet")?.addEventListener("click", () => sunucuyaKaydet(false));
   document.getElementById("btn-kayitlar")?.addEventListener("click", () => {
     activeTab = "yedek";
