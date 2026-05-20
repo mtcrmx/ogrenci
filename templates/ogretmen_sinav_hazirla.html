@@ -222,9 +222,16 @@
     display: block;
     width: 100%;
     max-width: 100%;
-    border: 1px solid rgba(148, 163, 184, .34);
-    border-radius: 8px;
+    border: 0;
+    border-radius: 0;
     background: #fff;
+  }
+  .exam-question-text {
+    min-height: 42px;
+    border: 1px solid rgba(148, 163, 184, .26);
+    border-radius: 8px;
+    padding: 12px;
+    white-space: pre-wrap;
   }
   .exam-teacher-note {
     margin-top: 22px;
@@ -260,7 +267,6 @@
     .exam-print { display: block !important; }
     .question-media-preview { break-inside: avoid; page-break-inside: avoid; }
     .question-image { max-height: 260px; }
-    .exam-optic-image { border: 0; border-radius: 0; }
     .answer-key-page { break-before: page; page-break-before: always; }
     .exam-teacher-note { break-inside: avoid; page-break-inside: avoid; }
   }
@@ -278,7 +284,7 @@
   const DERSLER = {{ dersler | default([]) | tojson }};
   const OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
   const OGRETMEN = {{ (ogretmen_adi or "") | tojson }};
-  const OPTIK_URL = {{ url_for("static", filename="exam/optik_acik_uclu.jpg") | tojson }};
+  const OPTIK_URL = {{ url_for("static", filename="exam/optik_acik_uclu.png") | tojson }};
 
   const TABS = [
     ["bilgi", "1", "Bilgiler"],
@@ -774,7 +780,6 @@
   }
   function opticSheetHtml() {
     return `<section class="exam-optic-sheet">
-      <div class="exam-optic-title">Açık uçlu sınav cevap kağıdı</div>
       <img class="exam-optic-image" src="${esc(opticImageUrl())}" alt="Açık uçlu sınav cevap kağıdı">
     </section>`;
   }
@@ -783,7 +788,7 @@
     const teacher = String(state.meta.ogretmen || OGRETMEN || "").trim();
     return `<section class="exam-teacher-note">
       <div><strong>Öğretmenin Adı Soyadı:</strong> ${esc(teacher || "........................................")}</div>
-      <div><strong>Not:</strong> Başarılar dilerim.</div>
+      <div>Başarılar dilerim.</div>
     </section>`;
   }
 
@@ -791,7 +796,7 @@
     return `<section class="answer-key-page">
       <h3 class="text-sm font-black">Cevap anahtarı</h3>
       <div class="mt-2 grid gap-1 text-xs sm:grid-cols-2">
-        ${state.sorular.map((s) => `<div class="answer-key-line"><b>${esc(s.no)}.</b> ${esc(answerText(s))}${s.cozum ? `<div class="mt-1 text-slate-500"><b>Çözüm:</b> ${esc(s.cozum)}</div>` : ""}</div>`).join("")}
+        ${state.sorular.map((s) => `<div class="answer-key-line"><b>${esc(s.no)}.</b> ${esc(answerText(s))}</div>`).join("")}
       </div>
     </section>`;
   }
@@ -1078,23 +1083,12 @@
       </div>`;
   }
   function previewHtml() {
-    const m = state.meta;
     return `
       ${opticSheetHtml()}
-      <div class="border-b border-slate-300 pb-3 text-center">
-        <div class="text-sm font-black uppercase">${esc(m.okulAdi)}</div>
-        <div class="mt-1 text-lg font-black">${esc(m.sinavAdi)} Sınav Taslağı</div>
-        <div class="mt-1 text-xs text-slate-600">${esc(m.egitimYili)} · ${esc(m.sinifAdi)} · ${esc(m.ders)} · ${esc(m.tarih)} · ${esc(m.sure)} dk</div>
-      </div>
-      <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div>Ad Soyad: ........................................</div>
-        <div>No: .............</div>
-      </div>
-      <p class="mt-3 text-sm text-slate-700">${esc(m.aciklama)}</p>
+      <p class="mt-3 text-sm text-slate-700">Sorular kazanım dağılımı dikkate alınarak hazırlanmıştır.</p>
       <ol class="mt-4 space-y-4">
         ${state.sorular.map((s) => `<li class="pl-1">
-          <div class="flex justify-between gap-3 text-sm font-black"><span>${esc(s.no)}. ${esc(s.tip)} · ${esc(s.zorluk)}</span><span>${esc(s.puan)} puan</span></div>
-          <div class="mt-1 min-h-[42px] rounded border border-slate-200 p-3 text-sm">${esc(s.metin || "Soru metni buraya yazılacak.")}</div>
+          <div class="exam-question-text text-sm"><b>${esc(s.no)}.</b> ${esc(String(s.metin || "").trim())}</div>
           ${questionExtraPreviewHtml(s)}
           ${questionMediaHtml(s)}
         </li>`).join("")}
@@ -1209,7 +1203,7 @@
     scheduleSave();
   }
   function downloadHtml() {
-    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option,.answer-key-line{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-sheet{margin:0 0 24px;break-inside:avoid;page-break-inside:avoid}.exam-optic-title{margin-bottom:10px;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.exam-optic-image{display:block;width:100%;max-width:100%;border:1px solid #bbb;border-radius:8px;background:#fff}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #bbb;padding-top:14px;font-size:13px}.exam-teacher-note strong{font-weight:900}.answer-key-page{margin-top:28px;border-top:1px solid #bbb;padding-top:16px;break-before:page;page-break-before:always}</style></head><body>${previewHtml()}</body></html>`;
+    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111}li{margin:14px 0}.preview-options{display:grid;gap:6px;margin-top:10px}.preview-option,.answer-key-line{border:1px solid #ddd;border-radius:8px;padding:8px 10px}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}.question-media-figure{border:1px solid #ddd;border-radius:8px;overflow:hidden}.question-image{width:100%;max-height:340px;object-fit:contain}.question-chart svg{width:100%;height:auto}.question-media-caption{border-top:1px solid #ddd;padding:7px 9px;font-size:11px;color:#555}.question-table-preview{margin-top:10px;width:100%;border-collapse:collapse}.question-table-preview td,.question-table-preview th{border:1px solid #bbb;padding:7px 8px;text-align:left}.exam-optic-sheet{margin:0 0 24px;break-inside:avoid;page-break-inside:avoid}.exam-optic-image{display:block;width:100%;max-width:100%;border:0;border-radius:0;background:#fff}.exam-question-text{min-height:42px;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #bbb;padding-top:14px;font-size:13px}.exam-teacher-note strong{font-weight:900}.answer-key-page{margin-top:28px;border-top:1px solid #bbb;padding-top:16px;break-before:page;page-break-before:always}</style></head><body>${previewHtml()}</body></html>`;
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
