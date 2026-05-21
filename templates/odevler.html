@@ -47,12 +47,12 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-bold text-white">Yeni ödev oluştur</h2>
-                    <p class="text-slate-500 text-sm mt-1">Sınıf ve dersi seçin, temayı işaretleyin; öğrenme kanıtlarından uygun olanları seçerek kaydedin.</p>
+                    <p class="text-slate-500 text-sm mt-1">Sınıf, ders ve üniteyi seçin; Excel’deki öğrenme kanıtlarından uygun olanları işaretleyerek kaydedin.</p>
                 </div>
             </div>
             <form id="odev_form" method="POST" class="space-y-8">
                 <div class="rounded-xl border border-slate-700/80 bg-slate-900/30 p-4 sm:p-5 space-y-4">
-                    <p class="text-xs font-bold text-blue-400 uppercase tracking-wider">1 · Sınıf, ders ve tema</p>
+                    <p class="text-xs font-bold text-blue-400 uppercase tracking-wider">1 · Sınıf, ders ve ünite</p>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 items-end">
                     <div class="md:col-span-1">
                         <label class="block text-sm font-bold text-slate-300 mb-1.5">Sınıf</label>
@@ -84,7 +84,7 @@
                         </select>
                     </div>
                     <div class="md:col-span-1">
-                        <label class="block text-sm font-bold text-slate-300 mb-1.5">Tema / ünite / öğrenme alanı</label>
+                        <label class="block text-sm font-bold text-slate-300 mb-1.5">Ünite</label>
                         <select id="tema_secim" name="tema_adi" required onchange="temaDegisti()" class="select-ui">
                             <option value="">Önce ders seçin...</option>
                         </select>
@@ -93,28 +93,28 @@
                 </div>
 
                 <div class="rounded-xl border border-slate-700/80 bg-slate-900/30 p-4 sm:p-5 space-y-4">
-                    <p class="text-xs font-bold text-blue-400 uppercase tracking-wider">2 · Öğrenme kanıtları ve seçim</p>
+                    <p class="text-xs font-bold text-blue-400 uppercase tracking-wider">2 · Öğrenme kanıtları</p>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="space-y-3">
-                        <label class="block text-sm font-bold text-slate-300 mb-1">Öğrenme kanıtları</label>
-                        <p class="text-xs text-slate-500 -mt-1">Müfredattaki ölçme–değerlendirme türü veya kanıt başlığını seçin.</p>
-                        <select id="konu_secim" name="konu_adi" onchange="ciktiGuncelle()" class="select-ui">
-                            <option value="">Önce tema seçin...</option>
-                        </select>
+                        <label class="block text-sm font-bold text-slate-300 mb-1">Seçili ünite</label>
+                        <div id="kanit_kaynak_ozeti" class="min-h-[2.75rem] rounded-xl border border-slate-600 bg-slate-950/50 px-3 py-2 text-sm text-slate-400 leading-relaxed break-words">
+                            Önce ünite seçin...
+                        </div>
+                        <input type="hidden" id="konu_secim" name="konu_adi" value="">
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1">Ek açıklama <span class="font-normal">(isteğe bağlı)</span></label>
                             <input type="text" name="konu_adi_ek" maxlength="200" placeholder="Örn. sayfa no, etkinlik adı..." class="w-full min-h-[2.75rem] bg-slate-900/90 border border-slate-600 text-slate-200 rounded-xl px-3 py-2 text-sm placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 outline-none transition">
                         </div>
                     </div>
                     <div class="space-y-2">
-                        <label id="cikti_alan_etiket" class="block text-sm font-bold text-slate-300">İşaretlenecek maddeler</label>
-                        <div id="cikti_listesi" class="max-h-52 overflow-y-auto rounded-xl border border-slate-600 bg-slate-950/50 p-4 text-sm text-slate-300 space-y-2 min-h-[8rem]">
-                            <span class="text-slate-500 text-sm">Öğrenme kanıtı seçildiğinde burada işaretleyebileceğiniz liste açılır.</span>
+                        <label id="kanit_alan_etiket" class="block text-sm font-bold text-slate-300">İşaretlenecek öğrenme kanıtları</label>
+                        <div id="kanit_listesi" class="max-h-52 overflow-y-auto rounded-xl border border-slate-600 bg-slate-950/50 p-4 text-sm text-slate-300 space-y-2 min-h-[8rem]">
+                            <span class="text-slate-500 text-sm">Ünite seçildiğinde buraya öğrenme kanıtları gelir.</span>
                         </div>
                     </div>
                 </div>
                 </div>
-                <input type="hidden" name="ogrenme_ciktilari_json" id="ogrenme_ciktilari_json" value="[]">
+                <input type="hidden" name="ogrenme_kanitlari_json" id="ogrenme_kanitlari_json" value="[]">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
                     <p class="text-xs text-slate-500 order-2 sm:order-1">Kaydettiğinizde özet PDF yeni sekmede açılır; detay sayfasından tekrar indirebilirsiniz.</p>
                     <button type="submit" class="order-1 sm:order-2 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-base shadow-lg shadow-blue-900/30 transition focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900">
@@ -128,7 +128,7 @@
         <!-- Özet analiz -->
         <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
             <h2 class="text-xl font-bold text-white mb-1"><i class="fa-solid fa-chart-column mr-2 text-amber-400"></i>Müfredat özeti</h2>
-            <p class="text-slate-500 text-sm mb-4">Ders, tema ve öğrenme kanıtları; sınıf düzeyi; son haftalara göre ortalama tamamlanma.</p>
+            <p class="text-slate-500 text-sm mb-4">Ders, ünite ve öğrenme kanıtları; sınıf düzeyi; son haftalara göre ortalama tamamlanma.</p>
             <div id="mufredat_ozet" class="space-y-4 text-sm"></div>
         </div>
 
@@ -178,39 +178,15 @@
             <div class="text-center py-12 px-4 text-slate-500 bg-slate-800/30 rounded-2xl border border-slate-700 border-dashed max-w-lg mx-auto">
                 <i class="fa-solid fa-inbox text-4xl mb-3 text-slate-600 block" aria-hidden="true"></i>
                 <p class="font-bold text-slate-400 mb-1">Henüz kayıtlı ödev yok</p>
-                <p class="text-sm">Yukarıdaki formdan sınıf ve temayı seçip <strong class="text-slate-300">Öğrenme kanıtları</strong> alanından türü belirleyerek ödev oluşturabilirsiniz.</p>
+                <p class="text-sm">Yukarıdaki formdan sınıf, ders ve üniteyi seçip <strong class="text-slate-300">öğrenme kanıtlarını</strong> işaretleyerek ödev oluşturabilirsiniz.</p>
             </div>
             {% endif %}
         </div>
     </div>
 
     <script>
-        const mufredatFallback = {
-            "Müzik": ["1. Tema: Müzik Dili", "2. Tema: Müzik Kültürü"],
-            "Türkçe": ["1. Tema: Sözlü İletişim", "2. Tema: Okuma", "3. Tema: Yazma"],
-            "Matematik": ["1. Tema: Sayılar ve İşlemler", "2. Tema: Cebirsel İfadeler", "3. Tema: Geometri ve Ölçme", "4. Tema: Veri İşleme"],
-            "Fen Bilimleri": ["1. Tema: Dünya ve Evren", "2. Tema: Canlılar ve Yaşam", "3. Tema: Fiziksel Olaylar", "4. Tema: Madde ve Doğası"],
-            "Sosyal Bilgiler": ["1. Tema: Birey ve Toplum", "2. Tema: Kültür ve Miras", "3. Tema: İnsanlar, Yerler ve Çevreler", "4. Tema: Üretim, Dağıtım ve Tüketim"],
-            "İngilizce": ["Theme 1: Hello!", "Theme 2: My Town", "Theme 3: Games and Hobbies", "Theme 4: My Daily Routine", "Theme 5: Health", "Theme 6: Movies", "Theme 7: Party Time", "Theme 8: Fitness", "Theme 9: The Animal Shelter", "Theme 10: Festivals"],
-            "Din Kültürü": ["1. Tema: İnanç", "2. Tema: İbadet", "3. Tema: Ahlak", "4. Tema: Din ve Kültür"],
-            "Görsel Sanatlar": ["1. Tema: Görsel İletişim ve Biçimlendirme", "2. Tema: Kültürel Miras", "3. Tema: Sanat Eleştirisi ve Estetik"],
-            "Bilişim Teknolojileri": ["1. Tema: Bilişim Teknolojileri", "2. Tema: Etik ve Güvenlik", "3. Tema: İletişim, Araştırma ve İş Birliği", "4. Tema: Ürün Oluşturma", "5. Tema: Bilgi İşlemsel Düşünme"],
-            "T.C. İnkılap Tarihi ve Atatürkçülük": ["TYMM senkronu sonrası üniteler"],
-            "İnsan Hakları ve Vatandaşlık": ["TYMM senkronu sonrası üniteler"],
-            "Trafik Güvenliği": ["TYMM senkronu sonrası üniteler"]
-        };
-
         let curriculumByDers = null;
-        let currentCiktilar = [];
-
-        /** TYMM ölçme-değerlendirme için örnek araçlar (programla uyumlu). */
-        const STANDART_OLCME_DEG_ARACLARI = [
-            "Açık uçlu sorulardan oluşan çalışma kağıdı",
-            "İzleme testi",
-            "Performans görevi",
-            "Bütüncül veya analitik dereceli puanlama anahtarı",
-            "Öz değerlendirme ve akran değerlendirme formları"
-        ];
+        let currentKanitlar = [];
 
         function trNorm(s) {
             return String(s || "").toLocaleLowerCase("tr-TR").replace(/\s+/g, " ").trim();
@@ -221,9 +197,9 @@
             return m ? parseInt(m[1], 10) : null;
         }
 
-        function temaMetniGorunen(tema) {
+        function temaMetniGorunen(tema, seviyeSecili) {
             const s = String(tema || "").replace(/^\s*\d+\.\s*sınıf\s*·\s*/i, "").trim();
-            return s || tema;
+            return seviyeSecili ? (s || tema) : tema;
         }
 
         function secilenSinifSeviyesi() {
@@ -246,35 +222,9 @@
             if (document.getElementById("ders_secim").value) dersDegisti();
         }
 
-        function olcmeDegerlendirmeKonusuMu(baslik) {
-            if (!baslik) return false;
-            const b = trNorm(baslik);
-            if (b.includes("öğrenme kanıtları")) return true;
-            return b.includes("ölçme") && b.includes("değerlendirme");
-        }
-
-        function konuSecenekEtiket(baslik) {
-            if (olcmeDegerlendirmeKonusuMu(baslik)) return "Öğrenme kanıtları (ölçme–değerlendirme)";
-            return baslik;
-        }
-
-        function listeBirlestirOlcme(oncekiListe, standart) {
-            const out = [];
-            const seen = new Set();
-            function push(x) {
-                const k = trNorm(x);
-                if (!k || seen.has(k)) return;
-                seen.add(k);
-                out.push(x);
-            }
-            standart.forEach(push);
-            (oncekiListe || []).forEach(push);
-            return out;
-        }
-
         async function yukleMufredat() {
             try {
-                const r = await fetch("/api/curriculum/temel-egitim", { credentials: "same-origin" });
+                const r = await fetch("/api/odev/ogrenme-kanitlari", { credentials: "same-origin" });
                 if (!r.ok) throw new Error("api");
                 const data = await r.json();
                 curriculumByDers = data.dersler || null;
@@ -287,16 +237,33 @@
             return document.getElementById("ders_secim").value;
         }
 
+        function kanitlariTopla(entry) {
+            const out = [];
+            const seen = new Set();
+            function push(text) {
+                const value = String(text || "").trim();
+                const key = trNorm(value);
+                if (!key || seen.has(key)) return;
+                seen.add(key);
+                out.push(value);
+            }
+            (entry && entry.kanitlar || []).forEach(push);
+            return out;
+        }
+
+        function resetKanitAlani(mesaj) {
+            currentKanitlar = [];
+            document.getElementById("konu_secim").value = "";
+            document.getElementById("kanit_kaynak_ozeti").textContent = mesaj || "Önce ünite seçin...";
+            document.getElementById("kanit_alan_etiket").textContent = "İşaretlenecek öğrenme kanıtları";
+            document.getElementById("kanit_listesi").innerHTML = '<span class="text-slate-500 text-sm">' + (mesaj || "Ünite seçildiğinde buraya öğrenme kanıtları gelir.") + '</span>';
+        }
+
         function dersDegisti() {
             const dersKey = dersAdiFormdan();
             const temaSelect = document.getElementById("tema_secim");
-            const konuSelect = document.getElementById("konu_secim");
             temaSelect.innerHTML = "";
-            konuSelect.innerHTML = '<option value="">Öğrenme kanıtı seçin...</option>';
-            document.getElementById("cikti_listesi").innerHTML = '<span class="text-slate-500 text-sm">Öğrenme kanıtı seçildiğinde burada işaretleyebileceğiniz liste açılır.</span>';
-            currentCiktilar = [];
-            const etikReset = document.getElementById("cikti_alan_etiket");
-            if (etikReset) etikReset.textContent = "İşaretlenecek maddeler";
+            resetKanitAlani();
 
             if (!dersKey) {
                 temaSelect.innerHTML = '<option value="">Önce ders seçiniz...</option>';
@@ -304,96 +271,64 @@
             }
 
             const yapi = curriculumByDers && curriculumByDers[dersKey];
-            const sev = secilenSinifSeviyesi();
-            if (yapi && Array.isArray(yapi)) {
-                yapi.forEach(entry => {
-                    const tSev = temaSeviyesiParse(entry.tema);
-                    if (sev != null && tSev != null && tSev !== sev) return;
-                    const opt = document.createElement("option");
-                    opt.value = entry.tema;
-                    opt.textContent = temaMetniGorunen(entry.tema);
-                    temaSelect.appendChild(opt);
-                });
-            } else if (mufredatFallback[dersKey]) {
-                mufredatFallback[dersKey].forEach(tema => {
-                    const opt = document.createElement("option");
-                    opt.value = tema;
-                    opt.textContent = tema;
-                    temaSelect.appendChild(opt);
-                });
-            } else {
-                temaSelect.innerHTML = '<option value="">Bu ders için tanım yok</option>';
+            if (!yapi || !Array.isArray(yapi) || !yapi.length) {
+                temaSelect.innerHTML = '<option value="">Bu ders için öğrenme kanıtı yok</option>';
+                resetKanitAlani("Bu ders için Excel’de öğrenme kanıtı bulunamadı.");
+                return;
             }
+
+            const sev = secilenSinifSeviyesi();
+            const entries = yapi.filter(entry => {
+                const tSev = temaSeviyesiParse(entry.tema);
+                return sev == null || tSev == null || tSev === sev;
+            });
+            if (!entries.length) {
+                temaSelect.innerHTML = '<option value="">Bu sınıf için ünite yok</option>';
+                resetKanitAlani("Seçili sınıf düzeyi için öğrenme kanıtı bulunamadı.");
+                return;
+            }
+
+            temaSelect.innerHTML = '<option value="">Ünite seçin...</option>';
+            entries.forEach(entry => {
+                const opt = document.createElement("option");
+                opt.value = entry.tema;
+                opt.textContent = temaMetniGorunen(entry.tema, sev != null);
+                temaSelect.appendChild(opt);
+            });
             temaDegisti();
         }
 
         function temaDegisti() {
             const dersKey = dersAdiFormdan();
             const tema = document.getElementById("tema_secim").value;
-            const konuSelect = document.getElementById("konu_secim");
-            konuSelect.innerHTML = '<option value="">Öğrenme kanıtı seçin...</option>';
-            document.getElementById("cikti_listesi").innerHTML = '<span class="text-slate-500 text-sm">Öğrenme kanıtı seçildiğinde burada işaretleyebileceğiniz liste açılır.</span>';
-            currentCiktilar = [];
-            const etikReset2 = document.getElementById("cikti_alan_etiket");
-            if (etikReset2) etikReset2.textContent = "İşaretlenecek maddeler";
-
             const yapi = curriculumByDers && curriculumByDers[dersKey];
             if (!yapi || !tema) {
-                ciktiGuncelle();
+                resetKanitAlani("Önce ünite seçin...");
                 return;
             }
             const entry = yapi.find(x => x.tema === tema);
-            if (!entry || !entry.konular) {
-                ciktiGuncelle();
+            if (!entry) {
+                resetKanitAlani("Bu ünite için öğrenme kanıtı bulunamadı.");
                 return;
             }
-            entry.konular.forEach(k => {
-                const opt = document.createElement("option");
-                opt.value = k.baslik;
-                opt.textContent = konuSecenekEtiket(k.baslik);
-                konuSelect.appendChild(opt);
-            });
-            ciktiGuncelle();
-        }
-
-        function ciktiGuncelle() {
-            const dersKey = dersAdiFormdan();
-            const tema = document.getElementById("tema_secim").value;
-            const baslik = document.getElementById("konu_secim").value;
-            const div = document.getElementById("cikti_listesi");
-            const etik = document.getElementById("cikti_alan_etiket");
+            const liste = kanitlariTopla(entry);
+            const div = document.getElementById("kanit_listesi");
+            const etiket = document.getElementById("kanit_alan_etiket");
+            currentKanitlar = liste.slice();
+            document.getElementById("konu_secim").value = "Öğrenme kanıtları";
+            document.getElementById("kanit_kaynak_ozeti").textContent = temaMetniGorunen(tema, true);
+            etiket.textContent = "Öğrenme kanıtları (" + liste.length + ")";
             div.innerHTML = "";
-            currentCiktilar = [];
-
-            if (etik) etik.textContent = "İşaretlenecek maddeler";
-
-            const yapi = curriculumByDers && curriculumByDers[dersKey];
-            if (!yapi || !tema || !baslik) {
-                div.innerHTML = '<span class="text-slate-500 text-sm">Önce üstten öğrenme kanıtı türünü seçin.</span>';
-                return;
-            }
-            const entry = yapi.find(x => x.tema === tema);
-            const kn = entry && entry.konular ? entry.konular.find(k => k.baslik === baslik) : null;
-            let liste = (kn && kn.ciktilar) ? kn.ciktilar.slice() : [];
-            if (olcmeDegerlendirmeKonusuMu(baslik)) {
-                liste = listeBirlestirOlcme(liste, STANDART_OLCME_DEG_ARACLARI);
-            }
-            if (etik) {
-                etik.textContent = olcmeDegerlendirmeKonusuMu(baslik)
-                    ? "Ölçme ve değerlendirme — işaretleyin"
-                    : "Öğrenme çıktıları — işaretleyin";
-            }
             if (!liste.length) {
-                div.innerHTML = '<span class="text-slate-500 text-sm">Bu öğrenme kanıtı için liste tanımlı değil.</span>';
+                div.innerHTML = '<span class="text-slate-500 text-sm">Bu ünite için öğrenme kanıtı tanımlı değil.</span>';
                 return;
             }
-            currentCiktilar = liste.slice();
             liste.forEach((text, i) => {
                 const lab = document.createElement("label");
-                lab.className = "flex items-start gap-2 cursor-pointer py-1 rounded hover:bg-slate-800/80 px-1";
+                lab.className = "flex items-start gap-2 cursor-pointer py-1.5 rounded hover:bg-slate-800/80 px-1";
                 const cb = document.createElement("input");
                 cb.type = "checkbox";
-                cb.className = "oc_cb mt-1 shrink-0 rounded border-slate-600";
+                cb.className = "kanit_cb mt-1 shrink-0 rounded border-slate-600";
                 cb.dataset.i = String(i);
                 const span = document.createElement("span");
                 span.textContent = text;
@@ -462,11 +397,15 @@
 
         document.getElementById("odev_form").addEventListener("submit", function () {
             const secilen = [];
-            document.querySelectorAll(".oc_cb:checked").forEach(cb => {
+            document.querySelectorAll(".kanit_cb:checked").forEach(cb => {
                 const i = parseInt(cb.dataset.i, 10);
-                if (!isNaN(i) && currentCiktilar[i] !== undefined) secilen.push(currentCiktilar[i]);
+                if (!isNaN(i) && currentKanitlar[i] !== undefined) secilen.push(currentKanitlar[i]);
             });
-            document.getElementById("ogrenme_ciktilari_json").value = JSON.stringify(secilen);
+            const ozet = secilen.length
+                ? secilen.slice(0, 3).join(", ") + (secilen.length > 3 ? " +" + (secilen.length - 3) : "")
+                : "Öğrenme kanıtları";
+            document.getElementById("konu_secim").value = ozet;
+            document.getElementById("ogrenme_kanitlari_json").value = JSON.stringify(secilen);
         });
 
         document.addEventListener("DOMContentLoaded", function () {

@@ -98,7 +98,7 @@
                     {% endif %}
                     {% if odev.ogrenme_cikti_kodlari and odev.ogrenme_cikti_kodlari|length > 0 %}
                     <div class="mt-3 flex flex-wrap gap-2 items-center">
-                        <span class="text-xs font-bold text-slate-500 uppercase">Çıktı kodları</span>
+                        <span class="text-xs font-bold text-slate-500 uppercase">Kanıt kodları</span>
                         {% for kod in odev.ogrenme_cikti_kodlari %}
                         <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-amber-300 border border-slate-600">{{ kod }}</span>
                         {% endfor %}
@@ -106,7 +106,7 @@
                     {% endif %}
                     {% if odev.ogrenme_ciktilari and odev.ogrenme_ciktilari|length > 0 %}
                     <div class="mt-3">
-                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Seçilen öğrenme çıktıları</div>
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Seçilen öğrenme kanıtları</div>
                         <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
                             {% for c in odev.ogrenme_ciktilari %}
                             <li>{{ c }}</li>

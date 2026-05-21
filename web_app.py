@@ -2381,7 +2381,11 @@ def odevler():
             ek = request.form.get("konu_adi_ek", "").strip()
             if ek and ek != konu_adi:
                 konu_adi = konu_adi + " — " + ek
-        og_json = (request.form.get("ogrenme_ciktilari_json") or "").strip() or "[]"
+        og_json = (
+            request.form.get("ogrenme_kanitlari_json")
+            or request.form.get("ogrenme_ciktilari_json")
+            or ""
+        ).strip() or "[]"
         try:
             json.loads(og_json)
         except Exception:
@@ -2623,6 +2627,18 @@ def api_curriculum_temel_egitim():
         return jsonify(doc)
     except OSError:
         return jsonify({"hata": "Mufredat dosyasi bulunamadi", "dersler": {}}), 404
+
+
+@app.route("/api/odev/ogrenme-kanitlari")
+@giris_zorunlu
+def api_odev_ogrenme_kanitlari():
+    """Odev ve tema takibi icin Excel kaynakli unite > ogrenme kaniti havuzu."""
+    path = os.path.join(app.root_path, "data", "odev_ogrenme_kanitlari.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    except OSError:
+        return jsonify({"hata": "Odev ogrenme kanitlari dosyasi bulunamadi", "dersler": {}}), 404
 
 
 @app.route("/api/curriculum/drive-kazanimlari")
