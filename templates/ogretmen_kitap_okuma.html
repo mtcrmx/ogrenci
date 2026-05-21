@@ -10,7 +10,7 @@
         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Veliler okuma kaydı girer, öğretmen onaylar; onaylanan kayıtlar öğrenci XP’sine ve sınıf puanına işlenir.</p>
       </div>
       <a class="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-800"
-         href="{{ url_for('ogretmen_kitap_okuma_excel', sinif_id=secili_sinif or '', durum=durum) }}">Excel indir</a>
+         href="{{ url_for('ogretmen_kitap_okuma_excel', sinif_id=secili_sinif or '') }}">Excel indir</a>
     </div>
   </header>
 
@@ -29,6 +29,115 @@
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><div class="text-[10px] font-black uppercase text-slate-500">Onaylı kitap</div><div class="mt-1 text-3xl font-black text-emerald-700">{{ rapor.onayli }}</div></div>
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><div class="text-[10px] font-black uppercase text-slate-500">Sayfa / saat</div><div class="mt-1 text-2xl font-black text-slate-950">{{ rapor.sayfa }} / {{ rapor.saat }}</div></div>
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><div class="text-[10px] font-black uppercase text-slate-500">XP / sınıf puanı</div><div class="mt-1 text-2xl font-black text-sky-700">{{ rapor.xp }} / {{ rapor.lig_puani }}</div></div>
+  </section>
+
+  <section class="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 class="text-lg font-black text-slate-950">Rapor önizleme</h2>
+        <p class="text-sm text-slate-500">Sınıf geneli dağılım, okuma türü, sınıf karşılaştırması ve öğrenci bazlı detaylı analiz.</p>
+      </div>
+      <div class="text-xs font-black text-slate-500">{{ onizleme.ogrenciler|length }} öğrenci · {{ onizleme.toplam }} kayıt</div>
+    </div>
+
+    <div class="mt-4 grid gap-3 lg:grid-cols-[280px_280px_1fr]">
+      <div class="rounded-lg border border-slate-200 p-4">
+        <div class="text-xs font-black uppercase tracking-widest text-slate-500">Durum dağılımı</div>
+        <div class="mt-4 flex items-center gap-4">
+          <div class="h-28 w-28 shrink-0 rounded-full border border-slate-200 shadow-inner" style="background: {{ onizleme.durum_pie }}"></div>
+          <div class="grid gap-2 text-xs font-bold text-slate-600">
+            <div class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-amber-500"></span>Bekleyen: {{ onizleme.durum.onay_bekliyor }}</div>
+            <div class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-emerald-500"></span>Onaylı: {{ onizleme.durum.onaylandi }}</div>
+            <div class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-rose-600"></span>Reddedilen: {{ onizleme.durum.reddedildi }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-slate-200 p-4">
+        <div class="text-xs font-black uppercase tracking-widest text-slate-500">Sesli / sessiz</div>
+        <div class="mt-4 flex items-center gap-4">
+          <div class="h-28 w-28 shrink-0 rounded-full border border-slate-200 shadow-inner" style="background: {{ onizleme.tur_pie }}"></div>
+          <div class="grid gap-2 text-xs font-bold text-slate-600">
+            <div class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-sky-500"></span>Sesli: {{ onizleme.turler.sesli }}</div>
+            <div class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-violet-500"></span>Sessiz: {{ onizleme.turler.sessiz }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-slate-200 p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div class="text-xs font-black uppercase tracking-widest text-slate-500">Sınıf karşılaştırması</div>
+          <div class="text-[11px] font-bold text-slate-400">Onaylı sayfa bazlı</div>
+        </div>
+        <div class="grid gap-3">
+          {% for s in onizleme.siniflar %}
+          <div>
+            <div class="mb-1 flex justify-between gap-3 text-xs">
+              <span class="font-black text-slate-800">{{ s.sinif_adi }}</span>
+              <span class="font-bold text-slate-500">{{ s.sayfa }} sayfa · {{ s.kitap }} kitap · {{ s.ogrenci }} öğrenci</span>
+            </div>
+            <div class="h-3 overflow-hidden rounded-full bg-slate-100">
+              <div class="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-500" style="width: {{ s.sayfa_oran }}%"></div>
+            </div>
+          </div>
+          {% else %}
+          <div class="rounded-lg border border-dashed border-slate-300 p-4 text-sm font-semibold text-slate-500">Sınıf verisi yok.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 rounded-lg border border-slate-200">
+      <div class="flex flex-col gap-1 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 class="text-sm font-black text-slate-950">Öğrenci bazlı detaylı analiz</h3>
+          <p class="text-xs text-slate-500">Onaylı kayıtlar performansa işlenir; bekleyen ve reddedilenler ayrıca görünür.</p>
+        </div>
+      </div>
+      <div class="max-h-[520px] overflow-auto">
+        <table class="w-full min-w-[980px] text-sm">
+          <thead class="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th class="px-3 py-3 text-left">Sınıf</th>
+              <th class="px-3 py-3 text-left">No</th>
+              <th class="px-3 py-3 text-left">Öğrenci</th>
+              <th class="px-3 py-3 text-center">Kitap</th>
+              <th class="px-3 py-3 text-center">Sayfa</th>
+              <th class="px-3 py-3 text-center">Saat</th>
+              <th class="px-3 py-3 text-center">Sesli/Sessiz</th>
+              <th class="px-3 py-3 text-center">Bekleyen</th>
+              <th class="px-3 py-3 text-center">XP</th>
+              <th class="px-3 py-3 text-left">Durum</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for o in onizleme.ogrenciler %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-3 py-3 font-bold text-slate-600">{{ o.sinif_adi }}</td>
+              <td class="px-3 py-3 font-bold text-slate-600">{{ o.ogr_no }}</td>
+              <td class="px-3 py-3">
+                <div class="font-black text-slate-950">{{ o.ad_soyad }}</div>
+                <div class="mt-1 h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div class="h-full rounded-full bg-sky-600" style="width: {{ o.sayfa_oran }}%"></div>
+                </div>
+              </td>
+              <td class="px-3 py-3 text-center font-black text-slate-900">{{ o.kitap }}</td>
+              <td class="px-3 py-3 text-center font-black text-slate-900">{{ o.sayfa }}</td>
+              <td class="px-3 py-3 text-center font-bold text-slate-600">{{ o.saat }}</td>
+              <td class="px-3 py-3 text-center font-bold text-slate-600">{{ o.sesli }} / {{ o.sessiz }}</td>
+              <td class="px-3 py-3 text-center font-bold text-amber-700">{{ o.bekleyen }}</td>
+              <td class="px-3 py-3 text-center font-black text-emerald-700">{{ o.xp }}</td>
+              <td class="px-3 py-3">
+                <span class="rounded-full px-2.5 py-1 text-xs font-black {{ o.performans_cls }}">{{ o.performans }}</span>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="10" class="px-4 py-8 text-center text-sm font-semibold text-slate-500">Öğrenci verisi yok.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section class="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

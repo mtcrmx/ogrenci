@@ -3869,6 +3869,201 @@ def veli_kitap_okuma_kaydet():
     return redirect(url_for("veli_kitap_okuma"))
 
 
+def _kitap_okuma_pie_style(items: list[tuple[str, int]]) -> str:
+    total = sum(max(0, int(v or 0)) for _color, v in items)
+    if total <= 0:
+        return "conic-gradient(#e2e8f0 0deg 360deg)"
+    cursor = 0.0
+    segments = []
+    for color, value in items:
+        value = max(0, int(value or 0))
+        if value <= 0:
+            continue
+        end = cursor + (value / total) * 360.0
+        segments.append(f"{color} {cursor:.1f}deg {end:.1f}deg")
+        cursor = end
+    if not segments:
+        return "conic-gradient(#e2e8f0 0deg 360deg)"
+    if cursor < 360.0:
+        color = items[-1][0]
+        segments.append(f"{color} {cursor:.1f}deg 360deg")
+    return "conic-gradient(" + ", ".join(segments) + ")"
+
+
+def _kitap_okuma_onizleme_raporu(siniflar: list[dict], sinif_ids: list[int]) -> dict:
+    kayitlar = kitap_okuma_ogretmen_listesi(sinif_ids, "tum", 5000)
+    sinif_map = {int(s["id"]): s.get("sinif_adi", "") for s in siniflar if int(s["id"]) in sinif_ids}
+    durum = {"onay_bekliyor": 0, "onaylandi": 0, "reddedildi": 0}
+    turler = {"sesli": 0, "sessiz": 0}
+    sinif_ozet = {
+        sid: {
+            "sinif_id": sid,
+            "sinif_adi": sinif_map.get(sid, ""),
+            "ogrenci": 0,
+            "kayit": 0,
+            "onayli": 0,
+            "bekleyen": 0,
+            "reddedilen": 0,
+            "kitap": 0,
+            "sayfa": 0,
+            "saat": 0.0,
+            "xp": 0,
+            "lig_puani": 0,
+        }
+        for sid in sinif_ids
+    }
+    ogrenci_ozet: dict[int, dict] = {}
+    for sid in sinif_ids:
+        for ogr in sinif_ogrencileri(sid):
+            oid = int(ogr["id"])
+            ogrenci_ozet[oid] = {
+                "id": oid,
+                "sinif_id": sid,
+                "sinif_adi": sinif_map.get(sid, ""),
+                "ogr_no": ogr.get("ogr_no", ""),
+                "ad_soyad": ogr.get("ad_soyad", ""),
+                "kayit": 0,
+                "onayli": 0,
+                "bekleyen": 0,
+                "reddedilen": 0,
+                "kitap": 0,
+                "sayfa": 0,
+                "saat": 0.0,
+                "xp": 0,
+                "lig_puani": 0,
+                "sesli": 0,
+                "sessiz": 0,
+                "son_tarih": "",
+            }
+            if sid in sinif_ozet:
+                sinif_ozet[sid]["ogrenci"] += 1
+
+    for k in kayitlar:
+        try:
+            sid = int(k.get("sinif_id") or 0)
+            oid = int(k.get("ogrenci_id") or 0)
+        except (TypeError, ValueError):
+            continue
+        if sid not in sinif_ozet:
+            sinif_ozet[sid] = {
+                "sinif_id": sid,
+                "sinif_adi": k.get("sinif_adi", ""),
+                "ogrenci": 0,
+                "kayit": 0,
+                "onayli": 0,
+                "bekleyen": 0,
+                "reddedilen": 0,
+                "kitap": 0,
+                "sayfa": 0,
+                "saat": 0.0,
+                "xp": 0,
+                "lig_puani": 0,
+            }
+        if oid and oid not in ogrenci_ozet:
+            ogrenci_ozet[oid] = {
+                "id": oid,
+                "sinif_id": sid,
+                "sinif_adi": k.get("sinif_adi", ""),
+                "ogr_no": k.get("ogr_no", ""),
+                "ad_soyad": k.get("ad_soyad", ""),
+                "kayit": 0,
+                "onayli": 0,
+                "bekleyen": 0,
+                "reddedilen": 0,
+                "kitap": 0,
+                "sayfa": 0,
+                "saat": 0.0,
+                "xp": 0,
+                "lig_puani": 0,
+                "sesli": 0,
+                "sessiz": 0,
+                "son_tarih": "",
+            }
+            sinif_ozet[sid]["ogrenci"] += 1
+
+        st = k.get("durum") if k.get("durum") in durum else "onay_bekliyor"
+        tur = k.get("okuma_turu") if k.get("okuma_turu") in turler else "sessiz"
+        durum[st] += 1
+        turler[tur] += 1
+        so = sinif_ozet[sid]
+        oo = ogrenci_ozet.get(oid)
+        so["kayit"] += 1
+        if st == "onaylandi":
+            so["onayli"] += 1
+        elif st == "reddedildi":
+            so["reddedilen"] += 1
+        else:
+            so["bekleyen"] += 1
+        if oo:
+            oo["kayit"] += 1
+            oo[tur] += 1
+            oo["son_tarih"] = max(oo["son_tarih"], k.get("veli_tarih", "") or "")
+            if st == "onaylandi":
+                oo["onayli"] += 1
+            elif st == "reddedildi":
+                oo["reddedilen"] += 1
+            else:
+                oo["bekleyen"] += 1
+        if st == "onaylandi":
+            sayfa = int(k.get("sayfa_sayisi") or 0)
+            saat = float(k.get("saat") or 0)
+            xp = int(k.get("xp") or 0)
+            lig_puani = int(k.get("lig_puani") or 0)
+            so["kitap"] += 1
+            so["sayfa"] += sayfa
+            so["saat"] += saat
+            so["xp"] += xp
+            so["lig_puani"] += lig_puani
+            if oo:
+                oo["kitap"] += 1
+                oo["sayfa"] += sayfa
+                oo["saat"] += saat
+                oo["xp"] += xp
+                oo["lig_puani"] += lig_puani
+
+    sinif_listesi = sorted(sinif_ozet.values(), key=lambda x: (x["sinif_adi"], x["sinif_id"]))
+    ogrenci_listesi = sorted(
+        ogrenci_ozet.values(),
+        key=lambda x: (x["sinif_adi"], -int(x["sayfa"] or 0), -int(x["kitap"] or 0), str(x["ad_soyad"])),
+    )
+    max_sinif_sayfa = max([int(s["sayfa"] or 0) for s in sinif_listesi] + [1])
+    max_ogrenci_sayfa = max([int(o["sayfa"] or 0) for o in ogrenci_listesi] + [1])
+    for s in sinif_listesi:
+        s["sayfa_oran"] = max(3, min(100, int((int(s["sayfa"] or 0) / max_sinif_sayfa) * 100))) if s["sayfa"] else 3
+        s["saat"] = round(float(s["saat"] or 0), 1)
+    for o in ogrenci_listesi:
+        o["sayfa_oran"] = max(3, min(100, int((int(o["sayfa"] or 0) / max_ogrenci_sayfa) * 100))) if o["sayfa"] else 3
+        o["saat"] = round(float(o["saat"] or 0), 1)
+        o["sayfa_saat"] = round(float(o["sayfa"] or 0) / max(1.0, float(o["saat"] or 0)), 1) if o["sayfa"] else 0
+        if o["kitap"] >= 3 or o["sayfa"] >= 300:
+            o["performans"] = "Güçlü"
+            o["performans_cls"] = "bg-emerald-100 text-emerald-800"
+        elif o["kitap"] >= 1 or o["bekleyen"] > 0:
+            o["performans"] = "Aktif"
+            o["performans_cls"] = "bg-sky-100 text-sky-800"
+        else:
+            o["performans"] = "Kayıt yok"
+            o["performans_cls"] = "bg-slate-100 text-slate-600"
+
+    toplam = sum(durum.values())
+    return {
+        "toplam": toplam,
+        "durum": durum,
+        "turler": turler,
+        "durum_pie": _kitap_okuma_pie_style([
+            ("#f59e0b", durum["onay_bekliyor"]),
+            ("#10b981", durum["onaylandi"]),
+            ("#e11d48", durum["reddedildi"]),
+        ]),
+        "tur_pie": _kitap_okuma_pie_style([
+            ("#0ea5e9", turler["sesli"]),
+            ("#8b5cf6", turler["sessiz"]),
+        ]),
+        "siniflar": sinif_listesi,
+        "ogrenciler": ogrenci_listesi,
+    }
+
+
 @app.route("/ogretmen/kitap-okuma")
 @giris_zorunlu
 def ogretmen_kitap_okuma():
@@ -3885,6 +4080,7 @@ def ogretmen_kitap_okuma():
         durum = "onay_bekliyor"
     kayitlar = kitap_okuma_ogretmen_listesi(liste_ids, durum, 1000)
     rapor = kitap_okuma_rapor(liste_ids)
+    onizleme = _kitap_okuma_onizleme_raporu(siniflar, liste_ids)
     return render_template(
         "ogretmen_kitap_okuma.html",
         siniflar=siniflar,
@@ -3892,6 +4088,7 @@ def ogretmen_kitap_okuma():
         durum=durum,
         kayitlar=kayitlar,
         rapor=rapor,
+        onizleme=onizleme,
     )
 
 
@@ -3936,14 +4133,79 @@ def ogretmen_kitap_okuma_excel():
 
     siniflar = ogretmen_siniflari(session["ogretmen_id"])
     sinif_ids = [int(s["id"]) for s in siniflar]
+    sinif_adi_by_id = {int(s["id"]): s.get("sinif_adi", "") for s in siniflar}
     secili_sinif = request.args.get("sinif_id", type=int)
     if secili_sinif and secili_sinif in sinif_ids:
         sinif_ids = [secili_sinif]
-    durum = request.args.get("durum", "tum")
-    if durum not in {"onay_bekliyor", "onaylandi", "reddedildi", "tum"}:
-        durum = "tum"
-    kayitlar = kitap_okuma_ogretmen_listesi(sinif_ids, durum, 5000)
+    kayitlar = kitap_okuma_ogretmen_listesi(sinif_ids, "tum", 5000)
     rapor = kitap_okuma_rapor(sinif_ids)
+    kayitlar_by_ogrenci = {}
+    for k in kayitlar:
+        try:
+            oid = int(k.get("ogrenci_id") or 0)
+        except (TypeError, ValueError):
+            oid = 0
+        if oid:
+            kayitlar_by_ogrenci.setdefault(oid, []).append(k)
+    ogrenci_satirlari = []
+    gorulen_ogrenci_ids = set()
+    for sinif_id in sinif_ids:
+        for ogr in sinif_ogrencileri(sinif_id):
+            oid = int(ogr["id"])
+            gorulen_ogrenci_ids.add(oid)
+            ogrenci_satirlari.append({
+                "id": oid,
+                "sinif_id": sinif_id,
+                "sinif_adi": sinif_adi_by_id.get(sinif_id, ""),
+                "ogr_no": ogr.get("ogr_no", ""),
+                "ad_soyad": ogr.get("ad_soyad", ""),
+                "kayitlar": kayitlar_by_ogrenci.get(oid, []),
+            })
+    for k in kayitlar:
+        try:
+            oid = int(k.get("ogrenci_id") or 0)
+        except (TypeError, ValueError):
+            oid = 0
+        if oid and oid not in gorulen_ogrenci_ids:
+            ogrenci_satirlari.append({
+                "id": oid,
+                "sinif_id": int(k.get("sinif_id") or 0),
+                "sinif_adi": k.get("sinif_adi", ""),
+                "ogr_no": k.get("ogr_no", ""),
+                "ad_soyad": k.get("ad_soyad", ""),
+                "kayitlar": kayitlar_by_ogrenci.get(oid, [k]),
+            })
+            gorulen_ogrenci_ids.add(oid)
+
+    excel_satirlari = []
+    for ogr in ogrenci_satirlari:
+        ogr_kayitlari = ogr["kayitlar"] or [None]
+        for kayit in ogr_kayitlari:
+            if kayit:
+                satir = dict(kayit)
+                satir["sinif_adi"] = satir.get("sinif_adi") or ogr["sinif_adi"]
+                satir["ogr_no"] = satir.get("ogr_no") or ogr["ogr_no"]
+                satir["ad_soyad"] = satir.get("ad_soyad") or ogr["ad_soyad"]
+            else:
+                satir = {
+                    "sinif_adi": ogr["sinif_adi"],
+                    "ogr_no": ogr["ogr_no"],
+                    "ad_soyad": ogr["ad_soyad"],
+                    "kitap_adi": "",
+                    "yazar": "",
+                    "okuma_turu": "",
+                    "sayfa_sayisi": "",
+                    "saat": "",
+                    "gun": "",
+                    "durum": "kayit_yok",
+                    "xp": "",
+                    "lig_puani": "",
+                    "veli_tarih": "",
+                    "onay_tarihi": "",
+                    "veli_notu": "",
+                }
+            excel_satirlari.append(satir)
+    kayitlar = excel_satirlari
 
     wb = Workbook()
     ws = wb.active
