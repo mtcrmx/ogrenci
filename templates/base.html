@@ -537,6 +537,11 @@
               <span><span class="block font-black">Ödev işaretleme</span>
               <span class="block text-[11px] font-medium text-slate-500">Yapan öğrenciyi hızlı işaretle</span></span>
             </a>
+            <a href="{{ url_for('ogretmen_kitap_okuma') }}" class="nav-link">
+              <span class="nav-mark mark-sky">KO</span>
+              <span><span class="block font-black">Kitap okuma</span>
+              <span class="block text-[11px] font-medium text-slate-500">Veli girişleri, onay ve rapor</span></span>
+            </a>
           </div>
         </details>
 
@@ -565,7 +570,7 @@
 
         <details class="nav-details relative">
           <summary class="nav-pill cursor-pointer select-none">
-            Oyun ve Yayın
+            Puan ve Yayın
           </summary>
           <div class="nav-panel absolute right-0 mt-2 w-72 text-slate-800">
             <a href="{{ url_for('yayin', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('yayin') }}" class="nav-link">
@@ -573,30 +578,10 @@
               <span><span class="block font-black">Canlı yayın</span>
               <span class="block text-[11px] font-medium text-slate-500">Akıllı tahta ve okul panosu</span></span>
             </a>
-            <a href="{{ url_for('satranc') }}" class="nav-link">
-              <span class="nav-mark mark-sky">ST</span>
-              <span><span class="block font-black">Satranç arenası</span>
-              <span class="block text-[11px] font-medium text-slate-500">Tek oyuncu ve bire bir oyun</span></span>
-            </a>
-            <a href="{{ url_for('dama') }}" class="nav-link">
-              <span class="nav-mark mark-emerald">DM</span>
-              <span><span class="block font-black">Dama arenası</span>
-              <span class="block text-[11px] font-medium text-slate-500">Türk daması, tek oyuncu ve bire bir</span></span>
-            </a>
             <a href="{{ url_for('lig') }}" class="nav-link">
               <span class="nav-mark mark-amber">LG</span>
-              <span><span class="block font-black">Süper Lig</span>
-              <span class="block text-[11px] font-medium text-slate-500">Puan tablosu ve maçlar</span></span>
-            </a>
-            <a href="{{ url_for('ogretmen_ogrenci_maclari') }}" class="nav-link">
-              <span class="nav-mark mark-emerald">MO</span>
-              <span><span class="block font-black">Maç onayları</span>
-              <span class="block text-[11px] font-medium text-slate-500">Öğrenci maç talepleri</span></span>
-            </a>
-            <a href="{{ url_for('oduller') }}" class="nav-link">
-              <span class="nav-mark mark-rose">ÖD</span>
-              <span><span class="block font-black">Ödüller</span>
-              <span class="block text-[11px] font-medium text-slate-500">Rozet, görev ve alkış</span></span>
+              <span><span class="block font-black">Sınıf puanları</span>
+              <span class="block text-[11px] font-medium text-slate-500">Olumlu davranış, not ve onay puanları</span></span>
             </a>
           </div>
         </details>
@@ -665,6 +650,7 @@
         <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}" class="mobile-link"><span class="nav-mark mark-blue">DT</span><span>Davranış takibi</span></a>
         <a href="{{ url_for('odevler') }}" class="mobile-link"><span class="nav-mark mark-emerald">ÖT</span><span>Ödev ve tema takibi</span></a>
         <a href="{{ url_for('yoklama', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('yoklama') }}" class="mobile-link"><span class="nav-mark mark-amber">İŞ</span><span>Ödev işaretleme</span></a>
+        <a href="{{ url_for('ogretmen_kitap_okuma') }}" class="mobile-link"><span class="nav-mark mark-sky">KO</span><span>Kitap okuma</span></a>
       </div>
     </section>
 
@@ -678,14 +664,10 @@
     </section>
 
     <section>
-      <h2 class="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Oyun ve Yayın</h2>
+      <h2 class="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Puan ve Yayın</h2>
       <div class="grid grid-cols-2 gap-2">
         <a href="{{ url_for('yayin', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('yayin') }}" class="mobile-link"><span class="nav-mark mark-violet">YY</span><span>Yayın</span></a>
-        <a href="{{ url_for('satranc') }}" class="mobile-link"><span class="nav-mark mark-sky">ST</span><span>Satranç</span></a>
-        <a href="{{ url_for('dama') }}" class="mobile-link"><span class="nav-mark mark-emerald">DM</span><span>Dama</span></a>
-        <a href="{{ url_for('lig') }}" class="mobile-link"><span class="nav-mark mark-amber">LG</span><span>Lig</span></a>
-        <a href="{{ url_for('ogretmen_ogrenci_maclari') }}" class="mobile-link"><span class="nav-mark mark-emerald">MO</span><span>Maç onay</span></a>
-        <a href="{{ url_for('oduller') }}" class="mobile-link"><span class="nav-mark mark-rose">ÖD</span><span>Ödüller</span></a>
+        <a href="{{ url_for('lig') }}" class="mobile-link"><span class="nav-mark mark-amber">LG</span><span>Sınıf puanı</span></a>
       </div>
     </section>
 

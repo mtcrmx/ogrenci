@@ -214,31 +214,19 @@
         </div>
 
         <div class="action-group p-3" style="animation-delay:.14s">
-          <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Oyun, Rapor ve Analiz</h3>
+          <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Puan, Rapor ve Analiz</h3>
           <div class="mt-3 grid grid-cols-2 gap-1.5">
             <a href="{{ url_for('yayin', sinif_id=aktif.id) }}" class="action-row compact">
               <span class="nav-mark mark-violet">YY</span>
               <span class="text-sm font-black text-slate-900">Yayın</span>
             </a>
-            <a href="{{ url_for('satranc') }}" class="action-row compact">
-              <span class="nav-mark mark-sky">ST</span>
-              <span class="text-sm font-black text-slate-900">Satranç</span>
-            </a>
-            <a href="{{ url_for('dama') }}" class="action-row compact">
-              <span class="nav-mark mark-emerald">DM</span>
-              <span class="text-sm font-black text-slate-900">Dama</span>
-            </a>
             <a href="{{ url_for('lig') }}" class="action-row compact">
               <span class="nav-mark mark-amber">LG</span>
-              <span class="text-sm font-black text-slate-900">Lig</span>
+              <span class="text-sm font-black text-slate-900">Puan</span>
             </a>
-            <a href="{{ url_for('ogretmen_ogrenci_maclari') }}" class="action-row compact">
-              <span class="nav-mark mark-emerald">MO</span>
-              <span class="text-sm font-black text-slate-900">Maç</span>
-            </a>
-            <a href="{{ url_for('oduller') }}" class="action-row compact">
-              <span class="nav-mark mark-rose">ÖD</span>
-              <span class="text-sm font-black text-slate-900">Ödül</span>
+            <a href="{{ url_for('ogretmen_kitap_okuma') }}" class="action-row compact">
+              <span class="nav-mark mark-sky">KO</span>
+              <span class="text-sm font-black text-slate-900">Kitap</span>
             </a>
             <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}" class="action-row compact">
               <span class="nav-mark mark-rose">AN</span>
@@ -266,7 +254,7 @@
           <p class="text-[11px] text-emerald-800/80">Karttan “+ Olumlu” ile kaydedilir; her tik +5 XP ve sınıf ligine katkı. Her <strong>3</strong> olumlu tikte bir olumsuz tik silinir.</p>
         </div>
         <div class="flex gap-2">
-          <a href="{{ url_for('lig') }}" class="text-xs font-bold text-emerald-800 underline">Süper Lig →</a>
+          <a href="{{ url_for('lig') }}" class="text-xs font-bold text-emerald-800 underline">Sınıf puanı →</a>
           <a href="{{ url_for('rapor_haftalik', sinif_id=aktif.id) }}" class="text-xs font-bold text-emerald-700 underline">Haftalık özet →</a>
         </div>
       </div>
@@ -500,12 +488,6 @@
               title="Öğrenci özeti">
         <span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}
       </button>
-      {% if o.aktif_envanter %}
-      <span class="inline-flex items-center rounded-full bg-cyan-100 px-1.5 py-0.5 text-[11px] font-black text-cyan-800"
-            title="{{ o.aktif_envanter.ad }}">
-        {{ o.aktif_envanter.emoji }}
-      </span>
-      {% endif %}
       {% if o.rozetler %}
       <span class="inline-flex flex-wrap gap-0.5 items-center">
         {% for rz in o.rozetler %}
@@ -920,10 +902,6 @@ function kartHTML(o, sinifId) {
   const roz = (o.rozetler || []).map(r =>
     `<span class="text-base leading-none" title="${String(r.ad || '').replace(/"/g, '&quot;')}">${r.emoji || ''}</span>`
   ).join('');
-  const env = o.aktif_envanter
-    ? `<span class="inline-flex items-center rounded-full bg-cyan-100 px-1.5 py-0.5 text-[11px] font-black text-cyan-800" title="${String(o.aktif_envanter.ad || '').replace(/"/g, '&quot;')}">${o.aktif_envanter.emoji || ''}</span>`
-    : '';
-
   return `
   <div class="ogrenci-kart flex flex-wrap sm:flex-nowrap items-center gap-2 rounded-xl border px-3 py-2.5
               slide-in ${durumCls}"
@@ -933,7 +911,6 @@ function kartHTML(o, sinifId) {
         <button type="button" class="text-left hover:underline" onclick="ogrenciOzetAc(${o.id})" title="Özet">
           <span class="mr-1">${o.emoji}</span>${adStr.replace(/</g, '&lt;')}
         </button>
-        ${env}
         ${roz ? `<span class="inline-flex flex-wrap gap-0.5 items-center">${roz}</span>` : ''}
       </div>
       <div class="text-xs text-slate-500">No: ${o.ogr_no}</div>

@@ -6,13 +6,13 @@
   <section class="mx-auto max-w-5xl">
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p class="text-xs font-black uppercase tracking-widest text-sky-300">Erenler Cumhuriyet Süper Ligi</p>
+        <p class="text-xs font-black uppercase tracking-widest text-sky-300">Erenler Cumhuriyet sınıf puan sistemi</p>
         <h1 class="mt-1 text-3xl font-black tracking-normal text-white">Puan Durumu</h1>
-        <p class="mt-2 text-sm text-slate-400">Sınıfların toplam XP ve normal puan sıralaması.</p>
+        <p class="mt-2 text-sm text-slate-400">Olumlu davranış, öğretmen onayı, kitap okuma ve ders notlarından gelen sınıf puanları.</p>
       </div>
       {% if toplu_sifirlamaya_izin %}
         <form action="{{ url_for('lig_sifirla_mac') }}" method="POST"
-              onsubmit="return confirm('Sezon puan tablosu sıfırlansın mı?')"
+              onsubmit="return confirm('Sınıf puan tablosu sıfırlansın mı?')"
               class="flex w-full gap-2 sm:w-auto">
           <input type="password" name="parola" placeholder="Parola"
                  class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-sky-500 sm:w-32">
@@ -28,8 +28,8 @@
       <div class="border-b border-slate-800 bg-slate-900/80 px-5 py-4">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <h2 class="text-lg font-black text-white">Sezon Tablosu</h2>
-            <p class="text-xs text-slate-500">Sıralama toplam değer, XP ve normal puana göre yapılır.</p>
+            <h2 class="text-lg font-black text-white">Sınıf Puan Tablosu</h2>
+            <p class="text-xs text-slate-500">Sıralama toplam değer, XP ve davranış/onay/not puanına göre yapılır.</p>
           </div>
           <span class="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-black text-sky-300">
             {{ tablo|length }} sınıf

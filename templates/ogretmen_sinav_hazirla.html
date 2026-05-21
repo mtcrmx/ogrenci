@@ -27,9 +27,14 @@
           <div class="mt-1 text-2xl font-black text-sky-700" id="metric-kazanim">0</div>
         </div>
       </div>
-        <button type="button" class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-800" data-server-save>
-          <span data-save-label>Kaydet</span>
-        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" class="inline-flex w-full items-center justify-center rounded-lg border border-sky-200 bg-white px-4 py-3 text-sm font-black text-sky-800 shadow-sm hover:bg-sky-50" data-new-record>
+            Yeni sınav
+          </button>
+          <button type="button" class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-800" data-server-save>
+            <span data-save-label>Kaydet</span>
+          </button>
+        </div>
     </div>
     </div>
   </header>
@@ -39,6 +44,9 @@
       <nav class="flex gap-1" id="exam-tabs"></nav>
       <button type="button" class="sticky right-1 inline-flex shrink-0 items-center justify-center rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-800" data-server-save>
         <span data-save-label>Kaydet</span>
+      </button>
+      <button type="button" class="sticky right-1 inline-flex shrink-0 items-center justify-center rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-black text-sky-800 shadow-sm hover:bg-sky-50" data-new-record>
+        Yeni
       </button>
     </div>
   </div>
@@ -253,6 +261,16 @@
     break-inside: avoid;
     page-break-inside: avoid;
   }
+  .student-answer-label {
+    display: inline-block;
+    margin: 8px 10px 0;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 900;
+  }
   .exam-print-title {
     margin: 18px 0 14px;
     text-align: center;
@@ -400,6 +418,12 @@
           #64748b 28px
         ) !important;
     }
+    .student-answer-label {
+      background: #fff !important;
+      color: #111 !important;
+      font-size: 12px !important;
+      font-weight: 900 !important;
+    }
     .exam-teacher-note { break-inside: avoid; page-break-inside: avoid; }
   }
 </style>
@@ -418,6 +442,7 @@
   const DERSLER = {{ dersler | default([]) | tojson }};
   const OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
   const OGRETMEN = {{ (ogretmen_adi or "") | tojson }};
+  const OGRETMENLER = {{ ogretmenler | default([]) | tojson }};
   const OPTIK_URL = {{ url_for("static", filename="exam/optik_acik_uclu.png") | tojson }};
 
   const TABS = [
@@ -484,7 +509,7 @@
         toplamPuan: "100",
         cevapAlaniCm: "4",
         sinavTuru: "Karma",
-        aciklama: "Sorular kazanım dağılımı dikkate alınarak hazırlanmıştır.",
+        aciklama: "",
       },
       kazanimlar: [],
       sorular: [],
@@ -515,6 +540,9 @@
     s.cozum = s.cozum || "";
     s.not = s.not || "";
     if (s.cevapAlaniCm === undefined || s.cevapAlaniCm === null) s.cevapAlaniCm = "";
+    const answerAreaFlag = String(s.cevapAlaniVar ?? "var").toLowerCase();
+    s.cevapAlaniVar = ["yok", "false", "0", "hayir", "hayır"].includes(answerAreaFlag) ? "yok" : "var";
+    if (s.cevapAlaniMetni === undefined || s.cevapAlaniMetni === null) s.cevapAlaniMetni = "";
     s.secimSayisi = Math.min(6, Math.max(2, parseInt(s.secimSayisi, 10) || 4));
     s.dogruSecenek = s.dogruSecenek || "A";
     s.dogruYanlis = s.dogruYanlis || "Doğru";
@@ -584,9 +612,14 @@
   function questionAnswerSpaceCm(s) {
     return clampCm(s?.cevapAlaniCm, globalAnswerSpaceCm());
   }
+  function answerAreaEnabled(s) {
+    return String(s?.cevapAlaniVar || "var").toLowerCase() !== "yok";
+  }
   function answerSpaceHtml(s) {
+    if (!answerAreaEnabled(s)) return "";
     const height = questionAnswerSpaceCm(s).toFixed(1).replace(/\.0$/, "");
-    return `<div class="student-answer-space" data-answer-space="${esc(s.id)}" style="min-height:${height}cm"></div>`;
+    const label = String(s?.cevapAlaniMetni || "").trim();
+    return `<div class="student-answer-space" data-answer-space="${esc(s.id)}" style="min-height:${height}cm">${label ? `<div class="student-answer-label">${esc(label)}</div>` : ""}</div>`;
   }
   function updatePreviewAnswerSpaces() {
     document.querySelectorAll("[data-answer-space]").forEach((el) => {
@@ -615,7 +648,9 @@
       cevap: "",
       cozum: "",
       not: "",
+      cevapAlaniVar: "var",
       cevapAlaniCm: "",
+      cevapAlaniMetni: "",
       secimSayisi: 4,
       dogruSecenek: "A",
       dogruYanlis: "Doğru",
@@ -971,13 +1006,14 @@
           <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             ${select("sinifId", "Sınıf", SINIFLAR.map((s) => ({ value: s.id, label: s.sinif_adi })))}
             ${select("ders", "Ders", DERSLER)}
+            ${select("ogretmen", "Öğretmen", OGRETMENLER.length ? OGRETMENLER : [OGRETMEN].filter(Boolean))}
             ${input("sinavAdi", "Sınav adı")}
             ${input("egitimYili", "Eğitim yılı")}
             ${input("tarih", "Tarih", "date")}
             ${input("sure", "Süre (dk)", "number")}
             ${input("soruSayisi", "Hedef soru", "number")}
             ${input("toplamPuan", "Toplam puan", "number")}
-            <label class="exam-label">Cevap alanı (cm)<input class="exam-input" type="number" min="1.5" max="12" step="0.5" value="${esc(state.meta.cevapAlaniCm)}" data-meta="cevapAlaniCm"></label>
+            <label class="exam-label">Genel cevap boşluğu (cm)<input class="exam-input" type="number" min="1.5" max="12" step="0.5" value="${esc(state.meta.cevapAlaniCm)}" data-meta="cevapAlaniCm"></label>
             ${select("sinavTuru", "Soru tipi", ["Karma", ...TIPLER])}
           </div>
           <label class="exam-label mt-3">Açıklama<textarea class="exam-input min-h-[94px]" data-meta="aciklama">${esc(state.meta.aciklama)}</textarea></label>
@@ -1103,6 +1139,8 @@
     const typeOptions = TIPLER.map((t) => `<option ${s.tip === t ? "selected" : ""}>${t}</option>`).join("");
     const zorlukOptions = ZORLUK.map((z) => `<option ${s.zorluk === z ? "selected" : ""}>${z}</option>`).join("");
     const bilisselOptions = BILISSEL_DUZEYLER.map((z) => `<option ${s.bilissel === z ? "selected" : ""}>${z}</option>`).join("");
+    const answerAreaOptions = [["var", "Var"], ["yok", "Yok"]].map(([value, label]) => `<option value="${value}" ${s.cevapAlaniVar === value ? "selected" : ""}>${label}</option>`).join("");
+    const answerAreaOn = answerAreaEnabled(s);
     return `<article class="rounded-lg border border-slate-200 bg-white p-3" data-soru="${esc(s.id)}">
       <div class="flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0">
@@ -1116,13 +1154,14 @@
           <button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-question="${esc(s.id)}">Sil</button>
         </div>
       </div>
-      <div class="mt-3 grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_130px_150px] md:items-end">
+      <div class="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[70px_minmax(180px,1fr)_150px_120px_90px_130px_130px_150px] xl:items-end">
         <label class="exam-label">No<input class="exam-input" type="number" data-soru-field="no" value="${esc(s.no || i + 1)}"></label>
         <label class="exam-label">Kazanım<select class="exam-input" data-soru-field="kazanimKey"><option value="">Genel</option>${kazOpts}</select></label>
         <label class="exam-label">Tip<select class="exam-input" data-soru-field="tip">${typeOptions}</select></label>
         <label class="exam-label">Zorluk<select class="exam-input" data-soru-field="zorluk">${zorlukOptions}</select></label>
         <label class="exam-label">Puan<input class="exam-input" type="number" data-soru-field="puan" value="${esc(s.puan)}"></label>
-        <label class="exam-label">Cevap alanı<input class="exam-input" type="number" min="1.5" max="12" step="0.5" data-soru-field="cevapAlaniCm" value="${esc(s.cevapAlaniCm)}" placeholder="${esc(globalAnswerSpaceCm())}"></label>
+        <label class="exam-label">Cevap alanı<select class="exam-input" data-soru-field="cevapAlaniVar">${answerAreaOptions}</select></label>
+        <label class="exam-label ${answerAreaOn ? "" : "opacity-50"}">Boşluk (cm)<input class="exam-input" type="number" min="1.5" max="12" step="0.5" data-soru-field="cevapAlaniCm" value="${esc(s.cevapAlaniCm)}" placeholder="${esc(globalAnswerSpaceCm())}" ${answerAreaOn ? "" : "disabled"}></label>
         <label class="exam-label">Bilişsel<select class="exam-input" data-soru-field="bilissel">${bilisselOptions}</select></label>
       </div>
       <div class="mt-2 grid gap-2 md:grid-cols-4">
@@ -1139,6 +1178,7 @@
           <label class="exam-label">Açıklamalı çözüm<textarea class="exam-input min-h-[72px]" data-soru-field="cozum">${esc(s.cozum)}</textarea></label>
         </div>
       </div>
+      ${answerAreaOn ? `<label class="exam-label mt-2">Cevap alanı yazısı<textarea class="exam-input min-h-[64px]" data-soru-field="cevapAlaniMetni" placeholder="Örn. Cevabınızı bu alana yazınız.">${esc(s.cevapAlaniMetni)}</textarea></label>` : ""}
       ${typeSpecificHtml(s)}
       <label class="exam-label mt-3">Öğretmen notu<input class="exam-input" data-soru-field="not" value="${esc(s.not)}" placeholder="Bu alan sınav kağıdında görünmez."></label>
       <div class="mt-3 grid gap-3 lg:grid-cols-2">
@@ -1174,53 +1214,6 @@
         </section>
       </div>
     </article>`;
-    return `<article class="rounded-lg border border-slate-200 bg-white p-3" data-soru="${esc(s.id)}">
-      <div class="grid gap-2 md:grid-cols-[70px_1fr_150px_120px_90px_130px_auto] md:items-end">
-        <label class="exam-label">No<input class="exam-input" type="number" data-soru-field="no" value="${esc(s.no || i + 1)}"></label>
-        <label class="exam-label">Kazanım<select class="exam-input" data-soru-field="kazanimKey"><option value="">Genel</option>${kazOpts}</select></label>
-        <label class="exam-label">Tip<select class="exam-input" data-soru-field="tip">${TIPLER.map((t) => `<option ${s.tip === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>
-        <label class="exam-label">Zorluk<select class="exam-input" data-soru-field="zorluk">${ZORLUK.map((z) => `<option ${s.zorluk === z ? "selected" : ""}>${z}</option>`).join("")}</select></label>
-        <label class="exam-label">Puan<input class="exam-input" type="number" data-soru-field="puan" value="${esc(s.puan)}"></label>
-        <label class="exam-label">Cevap alanı<input class="exam-input" type="number" min="1.5" max="12" step="0.5" data-soru-field="cevapAlaniCm" value="${esc(s.cevapAlaniCm)}" placeholder="${esc(globalAnswerSpaceCm())}"></label>
-        <button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-question="${esc(s.id)}">Sil</button>
-      </div>
-      <div class="mt-2 grid gap-2 md:grid-cols-2">
-        <label class="exam-label">Soru metni<textarea class="exam-input min-h-[72px]" data-soru-field="metin">${esc(s.metin)}</textarea></label>
-        <label class="exam-label">Cevap / anahtar<textarea class="exam-input min-h-[72px]" data-soru-field="cevap">${esc(s.cevap)}</textarea></label>
-      </div>
-      <div class="mt-3 grid gap-3 lg:grid-cols-2">
-        <section class="question-media-editor">
-          <div class="flex items-center justify-between gap-2">
-            <div>
-              <div class="text-xs font-black uppercase tracking-widest text-slate-500">Görsel</div>
-              <p class="mt-1 text-xs text-slate-500">Soruya fotoğraf, şekil, harita veya diyagram ekleyin.</p>
-            </div>
-            ${s.gorsel ? `<button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-image="${esc(s.id)}">Kaldır</button>` : ""}
-          </div>
-          <input class="exam-input" type="file" accept="image/*" data-upload-image="${esc(s.id)}">
-          ${s.gorsel ? questionMediaHtml({ gorsel: s.gorsel, grafik: null }) : `<div class="mt-3 rounded-lg border border-dashed border-slate-300 bg-white p-4 text-xs font-semibold text-slate-500">Görsel eklendiğinde burada önizleme görünecek.</div>`}
-        </section>
-        <section class="question-media-editor">
-          <div class="flex items-center justify-between gap-2">
-            <div>
-              <div class="text-xs font-black uppercase tracking-widest text-slate-500">Grafik</div>
-              <p class="mt-1 text-xs text-slate-500">Etiket ve değer girerek yazdırılabilir grafik oluşturun.</p>
-            </div>
-            ${s.grafik ? `<button type="button" class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" data-remove-chart="${esc(s.id)}">Kaldır</button>` : ""}
-          </div>
-          <div class="mt-2 grid gap-2 sm:grid-cols-[130px_1fr]">
-            <label class="exam-label">Tür<select class="exam-input" data-chart-kind>${GRAFIK_TIPLERI.map(([value, label]) => `<option value="${value}" ${s.grafik?.type === value ? "selected" : ""}>${esc(label)}</option>`).join("")}</select></label>
-            <label class="exam-label">Başlık<input class="exam-input" data-chart-title value="${esc(s.grafik?.title || "")}" placeholder="Örn. Aylık yağış"></label>
-          </div>
-          <div class="mt-2 grid gap-2 sm:grid-cols-2">
-            <label class="exam-label">Etiketler<input class="exam-input" data-chart-labels value="${esc((s.grafik?.labels || []).join(", "))}" placeholder="Ocak, Şubat, Mart"></label>
-            <label class="exam-label">Değerler<input class="exam-input" data-chart-values value="${esc((s.grafik?.values || []).join(", "))}" placeholder="12, 18, 9"></label>
-          </div>
-          <button type="button" class="mt-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white" data-apply-chart="${esc(s.id)}">Grafik uygula</button>
-          ${s.grafik ? questionMediaHtml({ gorsel: null, grafik: s.grafik }) : `<div class="mt-3 rounded-lg border border-dashed border-slate-300 bg-white p-4 text-xs font-semibold text-slate-500">Grafik verileri girildiğinde burada önizleme görünecek.</div>`}
-        </section>
-      </div>
-    </article>`;
   }
   function renderPreview() {
     const byKaz = {};
@@ -1240,8 +1233,8 @@
           </div>
           <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
             <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Sayfa ayarı</h3>
-            <label class="exam-label mt-2">Genel cevap alanı (cm)<input class="exam-input" type="number" min="1.5" max="12" step="0.5" value="${esc(state.meta.cevapAlaniCm)}" data-meta="cevapAlaniCm"></label>
-            <p class="mt-2 text-xs leading-5 text-slate-500">Soru kartındaki cevap alanı boş bırakılırsa bu ölçü kullanılır.</p>
+            <label class="exam-label mt-2">Genel cevap boşluğu (cm)<input class="exam-input" type="number" min="1.5" max="12" step="0.5" value="${esc(state.meta.cevapAlaniCm)}" data-meta="cevapAlaniCm"></label>
+            <p class="mt-2 text-xs leading-5 text-slate-500">Cevap alanı Var olan sorularda, soru kartındaki boşluk değeri boşsa bu ölçü kullanılır.</p>
           </div>
           <div class="mt-4 grid gap-2">
             <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-black text-white" data-print>Yazdır</button>
@@ -1255,7 +1248,6 @@
       ${opticSheetHtml()}
       <div class="exam-after-optic">
         ${examTitleHtml()}
-        <p class="mt-3 text-sm text-slate-700">Sorular kazanım dağılımı dikkate alınarak hazırlanmıştır.</p>
         <ol class="mt-4 space-y-4">
           ${state.sorular.map((s) => `<li class="pl-1">
             <div class="exam-question-text text-sm"><b>${esc(s.no)}.</b> ${esc(String(s.metin || "").trim())}</div>
@@ -1387,6 +1379,15 @@
     await kayitlariYukle();
     renderAll();
   }
+  function yeniSinavBaslat() {
+    if (currentKayitId && !confirm("Yeni sınav başlatılsın mı? Mevcut kayıt sunucuda kalır.")) return;
+    currentKayitId = null;
+    localStorage.removeItem(LS_KEY + "_server_id");
+    state = defaultState();
+    activeTab = "bilgi";
+    scheduleSave();
+    renderAll();
+  }
   function applyTemplate(type) {
     if (type === "test") Object.assign(state.meta, { soruSayisi: "20", toplamPuan: "100", sinavTuru: "Çoktan seçmeli", sure: "40" });
     if (type === "yazili") Object.assign(state.meta, { soruSayisi: "10", toplamPuan: "100", sinavTuru: "Açık uçlu", sure: "40" });
@@ -1399,7 +1400,7 @@
     scheduleSave();
   }
   function exportPrintCss() {
-    return `@page{size:A4 portrait;margin:0}*,*::before,*::after{box-sizing:border-box}html,body{width:100%;max-width:100%;margin:0;padding:0;overflow-x:hidden;font-family:Arial,sans-serif;color:#111;background:#fff;print-color-adjust:exact;-webkit-print-color-adjust:exact}ol{margin-right:0;padding-left:18px}li{margin:14px 0;max-width:100%;padding-left:0;overflow-wrap:anywhere}.preview-options{display:grid;gap:6px;margin-top:10px;max-width:100%;overflow-wrap:anywhere}.preview-option{border:1px solid #111;border-radius:8px;padding:8px 10px;overflow-wrap:anywhere}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;max-width:100%;break-inside:avoid;page-break-inside:avoid}.question-media-figure{max-width:100%;border:1px solid #111;border-radius:8px;overflow:hidden}.question-image{display:block;width:100%;max-width:100%;max-height:260px;object-fit:contain}.question-chart,.question-chart svg{display:block;width:100%;max-width:100%;height:auto}.question-media-caption{border-top:1px solid #111;padding:7px 9px;font-size:11px;color:#111;font-weight:800}.question-table-preview{margin-top:10px;width:100%;max-width:100%;table-layout:fixed;border-collapse:collapse;color:#111;font-size:12px}.question-table-preview td,.question-table-preview th{border:1.25px solid #111;padding:7px 8px;text-align:left;color:#111;background:#fff;overflow-wrap:anywhere;word-break:break-word}.question-table-preview th{background:#eef2f7;font-weight:900}.exam-optic-image{display:block;width:calc(100% - 12mm);max-width:calc(100% - 12mm);margin:0 6mm 24px;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;break-inside:avoid;page-break-inside:avoid}.exam-after-optic{box-sizing:border-box;width:100%;max-width:100%;padding-left:18mm;padding-right:8mm;overflow:hidden}.exam-print-title{margin:18px 0 14px;text-align:center;color:#111}.exam-print-title .school{font-size:13px;font-weight:900;text-transform:uppercase}.exam-print-title .exam-name{margin-top:4px;font-size:17px;font-weight:900}.exam-print-title .exam-meta{margin-top:4px;font-size:12px;color:#333}.exam-question-text{max-width:100%;min-height:42px;border:1px solid #475569;border-radius:8px;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}.student-answer-space{max-width:100%;margin-top:10px;min-height:4cm;border:1.25px solid #475569;border-radius:8px;background:repeating-linear-gradient(to bottom,#fff 0,#fff 27px,#64748b 28px);break-inside:avoid;page-break-inside:avoid}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #475569;padding-top:14px;font-size:13px;break-inside:avoid;page-break-inside:avoid}.exam-teacher-note strong{font-weight:900}`;
+    return `@page{size:A4 portrait;margin:0}*,*::before,*::after{box-sizing:border-box}html,body{width:100%;max-width:100%;margin:0;padding:0;overflow-x:hidden;font-family:Arial,sans-serif;color:#111;background:#fff;print-color-adjust:exact;-webkit-print-color-adjust:exact}ol{margin-right:0;padding-left:18px}li{margin:14px 0;max-width:100%;padding-left:0;overflow-wrap:anywhere}.preview-options{display:grid;gap:6px;margin-top:10px;max-width:100%;overflow-wrap:anywhere}.preview-option{border:1px solid #111;border-radius:8px;padding:8px 10px;overflow-wrap:anywhere}.question-media-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;max-width:100%;break-inside:avoid;page-break-inside:avoid}.question-media-figure{max-width:100%;border:1px solid #111;border-radius:8px;overflow:hidden}.question-image{display:block;width:100%;max-width:100%;max-height:260px;object-fit:contain}.question-chart,.question-chart svg{display:block;width:100%;max-width:100%;height:auto}.question-media-caption{border-top:1px solid #111;padding:7px 9px;font-size:11px;color:#111;font-weight:800}.question-table-preview{margin-top:10px;width:100%;max-width:100%;table-layout:fixed;border-collapse:collapse;color:#111;font-size:12px}.question-table-preview td,.question-table-preview th{border:1.25px solid #111;padding:7px 8px;text-align:left;color:#111;background:#fff;overflow-wrap:anywhere;word-break:break-word}.question-table-preview th{background:#eef2f7;font-weight:900}.exam-optic-image{display:block;width:calc(100% - 12mm);max-width:calc(100% - 12mm);margin:0 6mm 24px;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;break-inside:avoid;page-break-inside:avoid}.exam-after-optic{box-sizing:border-box;width:100%;max-width:100%;padding-left:18mm;padding-right:8mm;overflow:hidden}.exam-print-title{margin:18px 0 14px;text-align:center;color:#111}.exam-print-title .school{font-size:13px;font-weight:900;text-transform:uppercase}.exam-print-title .exam-name{margin-top:4px;font-size:17px;font-weight:900}.exam-print-title .exam-meta{margin-top:4px;font-size:12px;color:#333}.exam-question-text{max-width:100%;min-height:42px;border:1px solid #475569;border-radius:8px;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}.student-answer-space{max-width:100%;margin-top:10px;min-height:4cm;border:1.25px solid #475569;border-radius:8px;background:repeating-linear-gradient(to bottom,#fff 0,#fff 27px,#64748b 28px);break-inside:avoid;page-break-inside:avoid}.student-answer-label{display:inline-block;margin:8px 10px 0;padding:2px 6px;border-radius:6px;background:#fff;color:#111;font-size:12px;font-weight:900}.exam-teacher-note{margin-top:22px;display:grid;gap:8px;border-top:1px solid #475569;padding-top:14px;font-size:13px;break-inside:avoid;page-break-inside:avoid}.exam-teacher-note strong{font-weight:900}`;
   }
   function downloadHtml() {
     const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${esc(state.meta.sinavAdi)}</title><style>${exportPrintCss()}</style></head><body>${previewHtml()}</body></html>`;
@@ -1456,6 +1457,9 @@
           s.kazanim = k ? k.text : "";
           if (k && !s.konu) s.konu = k.konu || "";
         }
+        normalizeQuestion(s, (parseInt(s.no, 10) || 1) - 1);
+        if (field === "cevapAlaniCm") updatePreviewAnswerSpaces();
+        if (field === "cevapAlaniMetni" && activeTab === "onizleme") renderPreview();
         renderMetrics();
         scheduleSave();
       }
@@ -1499,7 +1503,9 @@
           if (k && !s.konu) s.konu = k.konu || "";
         }
         normalizeQuestion(s, (parseInt(s.no, 10) || 1) - 1);
-        if (["tip", "kazanimKey"].includes(field)) renderAll();
+        if (["tip", "kazanimKey", "cevapAlaniVar"].includes(field)) renderAll();
+        else if (field === "cevapAlaniCm") updatePreviewAnswerSpaces();
+        else if (field === "cevapAlaniMetni" && activeTab === "onizleme") renderPreview();
         else renderMetrics();
         scheduleSave();
       }
@@ -1612,6 +1618,7 @@
     }
     if (e.target.closest("[data-print]")) return window.print();
     if (e.target.closest("[data-download-html]")) return downloadHtml();
+    if (e.target.closest("[data-new-record]")) return yeniSinavBaslat();
     if (e.target.closest("[data-server-save]")) return sunucuyaKaydet();
     const loadId = e.target.closest("[data-load-record]")?.getAttribute("data-load-record");
     if (loadId) return kayitAc(loadId);

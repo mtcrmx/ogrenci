@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XP · Görevler · Oyunlar</title>
+  <title>Puan ve gelişim</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
 </head>
@@ -13,14 +13,9 @@
   <div class="max-w-lg mx-auto px-4 py-3 flex flex-wrap items-center gap-2 justify-between">
     <div class="text-xs font-bold text-slate-400">🏫 Öğrenci gelişim</div>
     <nav class="flex flex-wrap gap-2">
-      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="text-xs font-black bg-indigo-600 px-3 py-1.5 rounded-lg">Futbol XP</a>
-      <a href="{{ url_for('ogrenci_voleybol_gelisim_panel') }}" class="text-xs font-bold bg-sky-600 px-3 py-1.5 rounded-lg">Voleybol XP</a>
+      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="text-xs font-black bg-indigo-600 px-3 py-1.5 rounded-lg">Puan paneli</a>
       <a href="{{ url_for('ogrenci_gorunum') }}" class="text-xs font-bold bg-slate-700 px-3 py-1.5 rounded-lg">Tik geçmişi</a>
       <a href="{{ url_for('paylasim_tema_odevler_sayfa') }}" target="_blank" rel="noopener" class="text-xs font-black bg-amber-700 hover:bg-amber-600 px-3 py-1.5 rounded-lg">Ödevler</a>
-      <a href="{{ url_for('pazar') }}" class="text-xs font-bold bg-amber-600 px-3 py-1.5 rounded-lg">Pazar</a>
-      <a href="{{ url_for('envanter') }}" class="text-xs font-bold bg-cyan-700 px-3 py-1.5 rounded-lg">Envanterim</a>
-      <a href="{{ url_for('oyunlar') }}" class="text-xs font-bold bg-emerald-700 px-3 py-1.5 rounded-lg">Oyunlar</a>
-      <a href="{{ url_for('ogrenci_mac_panel') }}" class="text-xs font-bold bg-green-700 px-3 py-1.5 rounded-lg">Mac/Taktik</a>
       <a href="{{ url_for('ogrenci_cikis') }}" class="text-xs font-bold bg-slate-800 px-3 py-1.5 rounded-lg">Çıkış</a>
     </nav>
   </div>
@@ -51,13 +46,13 @@
         <p class="text-[10px] text-slate-500">{{ sinif_sayisi }} sınıf içinde</p>
       </div>
     </div>
-    <p class="text-[11px] text-slate-500 mt-3">Oyun ve günlük görevlerle kazandığın kişisel XP buraya eklenir; ayrıca her başarılı ödülde sınıfın Süper Lig sıralamasına da katkı verirsin.</p>
+    <p class="text-[11px] text-slate-500 mt-3">Puanlar olumlu davranış, öğretmen onayı, okuma onayı ve ders notlarından gelir; onaylanan kayıtlar sınıf puanına da yansır.</p>
     {% else %}
     <p class="text-sm text-slate-500 mt-2">Sınıf verisi yüklenemedi.</p>
     {% endif %}
   </div>
 
-  {% if ozellikler %}
+  {% if false and ozellikler %}
   <section class="rounded-2xl border border-blue-500/40 bg-blue-950/20 overflow-hidden">
     <div class="px-4 py-3 border-b border-blue-500/20 bg-blue-500/10 flex justify-between items-center">
       <div>
@@ -85,6 +80,7 @@
   </section>
   {% endif %}
 
+  {% if false %}
   <section class="rounded-2xl border border-amber-500/40 bg-amber-950/20 overflow-hidden">
     <div class="px-4 py-3 border-b border-amber-500/20 bg-amber-500/10">
       <h2 class="font-black text-amber-100 text-sm">Bugünün görevi</h2>
@@ -108,7 +104,9 @@
       {% endif %}
     </div>
   </section>
+  {% endif %}
 
+  {% if false %}
   <a href="{{ url_for('oyunlar') }}"
      class="flex items-center justify-between rounded-2xl bg-emerald-900/40 border border-emerald-500/40 px-4 py-4 hover:bg-emerald-900/60 transition">
     <div>
@@ -117,8 +115,9 @@
     </div>
     <span class="text-xl">→</span>
   </a>
+  {% endif %}
 
-  {% if ozet.oyunlar and ozet.oyunlar|length %}
+  {% if false and ozet.oyunlar and ozet.oyunlar|length %}
   <div class="rounded-2xl bg-slate-900 border border-slate-800 p-4">
     <p class="text-[10px] font-bold text-slate-500 uppercase">Son oyunlar</p>
     <ul class="mt-2 space-y-1 text-xs text-slate-300">

@@ -335,6 +335,8 @@ def initialize_db():
     _rapor_arsiv_init(con)
     _sinav_analiz_init(con)
     _sinav_hazirlama_init(con)
+    _kitap_okuma_init(con)
+    _akademik_puan_init(con)
     _ogrenci_ozellikler_ensure(con)
     con.close()
 
@@ -2776,6 +2778,7 @@ def odev_tamamla(odev_id: int, ogrenci_id: int, ogretmen_id: int) -> dict:
     con = _conn()
     _odev_init(con)
     _gelisim_init(con)
+    _akademik_puan_init(con)
     row = con.execute("""
         SELECT od.baslik, od.sinif_id, o.ad_soyad
         FROM odevler od
@@ -2785,18 +2788,30 @@ def odev_tamamla(odev_id: int, ogrenci_id: int, ogretmen_id: int) -> dict:
     if not row:
         con.close()
         return {"ok": False, "sebep": "Odev veya ogrenci bulunamadi"}
-    con.execute("""
+    cur = con.execute("""
         INSERT OR IGNORE INTO odev_tamamlayanlar (odev_id, ogrenci_id, ogretmen_id, tarih)
         VALUES (?,?,?,?)
     """, (odev_id, ogrenci_id, ogretmen_id, datetime.now().strftime("%Y-%m-%d %H:%M")))
-    yeni = con.total_changes > 0
+    yeni = int(cur.rowcount or 0) > 0
     xp = 0
+    lig_puani = 0
     if yeni:
-        xp = 8
-        _gelisim_puan_ekle(con, ogrenci_id, xp)
+        puan = _onay_puani_isle_con(
+            con,
+            "odev_onayi",
+            odev_id,
+            ogrenci_id,
+            int(row["sinif_id"]),
+            ogretmen_id,
+            f"Ödev tamamlandı: {row['baslik']}",
+            xp=8,
+            lig_puani=2,
+        )
+        xp = int(puan.get("xp") or 0)
+        lig_puani = int(puan.get("lig_puani") or 0)
     con.commit()
     con.close()
-    return {"ok": True, "yeni": yeni, "xp": xp}
+    return {"ok": True, "yeni": yeni, "xp": xp, "lig_puani": lig_puani}
 
 
 def odev_tamamlandi_kaldir(odev_id: int, ogrenci_id: int) -> dict:
@@ -3076,7 +3091,394 @@ def _gelisim_puan_ekle(con, ogrenci_id: int, xp: int) -> dict:
     return dict(con.execute("SELECT * FROM gelisim_puan WHERE ogrenci_id=?", (ogrenci_id,)).fetchone())
 
 
+def _akademik_puan_init(con: sqlite3.Connection) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS akademik_puan_kayitlari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kaynak_turu TEXT NOT NULL,
+            kaynak_id INTEGER NOT NULL,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            ogretmen_id INTEGER REFERENCES ogretmenler(id),
+            ders TEXT NOT NULL DEFAULT '',
+            aciklama TEXT NOT NULL DEFAULT '',
+            ham_puan REAL NOT NULL DEFAULT 0,
+            max_puan REAL NOT NULL DEFAULT 100,
+            xp INTEGER NOT NULL DEFAULT 0,
+            lig_puani INTEGER NOT NULL DEFAULT 0,
+            tarih TEXT NOT NULL,
+            UNIQUE(kaynak_turu, kaynak_id, ogrenci_id)
+        )
+    """)
+    con.commit()
+
+
+def akademik_puan_isle(
+    kaynak_turu: str,
+    kaynak_id: int,
+    ogrenci_id: int,
+    sinif_id: int,
+    ogretmen_id: int | None,
+    ders: str,
+    ham_puan: float,
+    max_puan: float,
+    aciklama: str = "",
+) -> dict:
+    """Sınav/not kaynaklı puanı tek kez işler. 100 tam, 50 yarım katkı üretir."""
+    kaynak_turu = (kaynak_turu or "not").strip()[:40]
+    kaynak_id = int(kaynak_id or 0)
+    ogrenci_id = int(ogrenci_id or 0)
+    sinif_id = int(sinif_id or 0)
+    if kaynak_id <= 0 or ogrenci_id <= 0 or sinif_id <= 0:
+        return {"ok": False, "sebep": "Eksik puan kaynağı."}
+    try:
+        ham = max(0.0, float(ham_puan or 0))
+        maksimum = max(1.0, float(max_puan or 100))
+    except (TypeError, ValueError):
+        ham, maksimum = 0.0, 100.0
+    oran = max(0.0, min(1.0, ham / maksimum))
+    xp = int(round(20 * oran))
+    lig_puani = int(round(4 * oran))
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con = _conn()
+    _gelisim_init(con)
+    _akademik_puan_init(con)
+    try:
+        var = con.execute(
+            """
+            SELECT id, xp, lig_puani FROM akademik_puan_kayitlari
+            WHERE kaynak_turu=? AND kaynak_id=? AND ogrenci_id=?
+            """,
+            (kaynak_turu, kaynak_id, ogrenci_id),
+        ).fetchone()
+        if var:
+            return {"ok": True, "zaten_islenmis": True, "xp": int(var["xp"]), "lig_puani": int(var["lig_puani"])}
+        con.execute(
+            """
+            INSERT INTO akademik_puan_kayitlari
+              (kaynak_turu, kaynak_id, ogrenci_id, sinif_id, ogretmen_id, ders, aciklama,
+               ham_puan, max_puan, xp, lig_puani, tarih)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                kaynak_turu,
+                kaynak_id,
+                ogrenci_id,
+                sinif_id,
+                ogretmen_id,
+                (ders or "")[:80],
+                (aciklama or "")[:300],
+                ham,
+                maksimum,
+                xp,
+                lig_puani,
+                now,
+            ),
+        )
+        if xp > 0:
+            _gelisim_puan_ekle(con, ogrenci_id, xp)
+        if lig_puani > 0:
+            _lig_puan_artir_miktar(con, sinif_id, lig_puani)
+        con.commit()
+        return {"ok": True, "zaten_islenmis": False, "xp": xp, "lig_puani": lig_puani}
+    finally:
+        con.close()
+
+
+def _onay_puani_isle_con(
+    con: sqlite3.Connection,
+    kaynak_turu: str,
+    kaynak_id: int,
+    ogrenci_id: int,
+    sinif_id: int,
+    ogretmen_id: int | None,
+    aciklama: str,
+    xp: int = 10,
+    lig_puani: int = 2,
+) -> dict:
+    """Öğretmen onaylı öğrenci kayıtlarını tek kez XP ve sınıf puanına çevirir."""
+    kaynak_turu = (kaynak_turu or "ogretmen_onayi").strip()[:40]
+    kaynak_id = int(kaynak_id or 0)
+    ogrenci_id = int(ogrenci_id or 0)
+    sinif_id = int(sinif_id or 0)
+    xp = max(0, int(xp or 0))
+    lig_puani = max(0, int(lig_puani or 0))
+    if kaynak_id <= 0 or ogrenci_id <= 0 or sinif_id <= 0:
+        return {"ok": False, "sebep": "Eksik onay kaynağı.", "xp": 0, "lig_puani": 0}
+    _gelisim_init(con)
+    _akademik_puan_init(con)
+    var = con.execute(
+        """
+        SELECT xp, lig_puani FROM akademik_puan_kayitlari
+        WHERE kaynak_turu=? AND kaynak_id=? AND ogrenci_id=?
+        """,
+        (kaynak_turu, kaynak_id, ogrenci_id),
+    ).fetchone()
+    if var:
+        return {"ok": True, "zaten_islenmis": True, "xp": int(var["xp"]), "lig_puani": int(var["lig_puani"])}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        """
+        INSERT INTO akademik_puan_kayitlari
+          (kaynak_turu, kaynak_id, ogrenci_id, sinif_id, ogretmen_id, ders, aciklama,
+           ham_puan, max_puan, xp, lig_puani, tarih)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            kaynak_turu,
+            kaynak_id,
+            ogrenci_id,
+            sinif_id,
+            ogretmen_id,
+            "Öğretmen onayı",
+            (aciklama or "")[:300],
+            100.0,
+            100.0,
+            xp,
+            lig_puani,
+            now,
+        ),
+    )
+    if xp > 0:
+        _gelisim_puan_ekle(con, ogrenci_id, xp)
+    if lig_puani > 0:
+        _lig_puan_artir_miktar(con, sinif_id, lig_puani)
+    return {"ok": True, "zaten_islenmis": False, "xp": xp, "lig_puani": lig_puani}
+
+
+def _kitap_okuma_init(con: sqlite3.Connection) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS kitap_okuma_kayitlari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            kitap_adi TEXT NOT NULL,
+            yazar TEXT NOT NULL DEFAULT '',
+            okuma_turu TEXT NOT NULL DEFAULT 'sessiz',
+            sayfa_sayisi INTEGER NOT NULL DEFAULT 0,
+            saat REAL NOT NULL DEFAULT 0,
+            gun INTEGER NOT NULL DEFAULT 0,
+            baslangic_tarihi TEXT NOT NULL DEFAULT '',
+            bitis_tarihi TEXT NOT NULL DEFAULT '',
+            veli_notu TEXT NOT NULL DEFAULT '',
+            durum TEXT NOT NULL DEFAULT 'onay_bekliyor',
+            veli_tarih TEXT NOT NULL,
+            ogretmen_id INTEGER REFERENCES ogretmenler(id),
+            ogretmen_notu TEXT NOT NULL DEFAULT '',
+            onay_tarihi TEXT NOT NULL DEFAULT '',
+            xp INTEGER NOT NULL DEFAULT 0,
+            lig_puani INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    con.execute(
+        "CREATE INDEX IF NOT EXISTS idx_kitap_okuma_sinif_durum ON kitap_okuma_kayitlari(sinif_id, durum, veli_tarih DESC)"
+    )
+    con.execute(
+        "CREATE INDEX IF NOT EXISTS idx_kitap_okuma_ogrenci ON kitap_okuma_kayitlari(ogrenci_id, veli_tarih DESC)"
+    )
+    con.commit()
+
+
+def _kitap_okuma_puan(sayfa_sayisi: int, saat: float, gun: int) -> tuple[int, int]:
+    sayfa = max(0, int(sayfa_sayisi or 0))
+    sure = max(0.0, float(saat or 0))
+    gun_sayisi = max(0, int(gun or 0))
+    xp = min(60, max(5, int(round(sayfa / 8 + sure * 2 + min(gun_sayisi, 20) * 0.5))))
+    lig_puani = min(6, max(1, int(round(xp / 12))))
+    return xp, lig_puani
+
+
+def kitap_okuma_veli_kaydet(
+    ogrenci_id: int,
+    kitap_adi: str,
+    yazar: str,
+    okuma_turu: str,
+    sayfa_sayisi: int,
+    saat: float,
+    gun: int,
+    baslangic_tarihi: str,
+    bitis_tarihi: str,
+    veli_notu: str,
+) -> dict:
+    kitap_adi = (kitap_adi or "").strip()
+    if not kitap_adi:
+        return {"ok": False, "sebep": "Kitap adı zorunlu."}
+    okuma_turu = (okuma_turu or "sessiz").strip().lower()
+    if okuma_turu not in {"sesli", "sessiz"}:
+        okuma_turu = "sessiz"
+    con = _conn()
+    _kitap_okuma_init(con)
+    ogr = con.execute("SELECT sinif_id FROM ogrenciler WHERE id=?", (int(ogrenci_id),)).fetchone()
+    if not ogr:
+        con.close()
+        return {"ok": False, "sebep": "Öğrenci bulunamadı."}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        """
+        INSERT INTO kitap_okuma_kayitlari
+          (ogrenci_id, sinif_id, kitap_adi, yazar, okuma_turu, sayfa_sayisi, saat, gun,
+           baslangic_tarihi, bitis_tarihi, veli_notu, durum, veli_tarih)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            int(ogrenci_id),
+            int(ogr["sinif_id"]),
+            kitap_adi[:180],
+            (yazar or "").strip()[:120],
+            okuma_turu,
+            max(0, int(sayfa_sayisi or 0)),
+            max(0.0, float(saat or 0)),
+            max(0, int(gun or 0)),
+            (baslangic_tarihi or "").strip()[:10],
+            (bitis_tarihi or "").strip()[:10],
+            (veli_notu or "").strip()[:500],
+            "onay_bekliyor",
+            now,
+        ),
+    )
+    kayit_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+    con.commit()
+    con.close()
+    return {"ok": True, "id": int(kayit_id)}
+
+
+def kitap_okuma_ogrenci_gecmis(ogrenci_id: int, limit: int = 40) -> list[dict]:
+    con = _conn()
+    _kitap_okuma_init(con)
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT k.*, s.sinif_adi, o.ad_soyad, o.ogr_no, og.ad_soyad AS ogretmen_adi
+        FROM kitap_okuma_kayitlari k
+        JOIN ogrenciler o ON o.id = k.ogrenci_id
+        JOIN siniflar s ON s.id = k.sinif_id
+        LEFT JOIN ogretmenler og ON og.id = k.ogretmen_id
+        WHERE k.ogrenci_id=?
+        ORDER BY k.veli_tarih DESC, k.id DESC
+        LIMIT ?
+        """,
+        (int(ogrenci_id), int(limit or 40)),
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def kitap_okuma_ogretmen_listesi(sinif_ids: list[int], durum: str | None = None, limit: int = 500) -> list[dict]:
+    ids = [int(x) for x in (sinif_ids or []) if x is not None]
+    if not ids:
+        return []
+    con = _conn()
+    _kitap_okuma_init(con)
+    q = ",".join("?" * len(ids))
+    params: list = ids[:]
+    where = f"k.sinif_id IN ({q})"
+    if durum and durum != "tum":
+        where += " AND k.durum=?"
+        params.append(durum)
+    params.append(int(limit or 500))
+    rows = [dict(r) for r in con.execute(
+        f"""
+        SELECT k.*, s.sinif_adi, o.ad_soyad, o.ogr_no, og.ad_soyad AS ogretmen_adi
+        FROM kitap_okuma_kayitlari k
+        JOIN ogrenciler o ON o.id = k.ogrenci_id
+        JOIN siniflar s ON s.id = k.sinif_id
+        LEFT JOIN ogretmenler og ON og.id = k.ogretmen_id
+        WHERE {where}
+        ORDER BY
+          CASE k.durum WHEN 'onay_bekliyor' THEN 0 WHEN 'onaylandi' THEN 1 ELSE 2 END,
+          k.veli_tarih DESC,
+          k.id DESC
+        LIMIT ?
+        """,
+        params,
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def kitap_okuma_onayla(kayit_id: int, ogretmen_id: int, onay: bool, ogretmen_notu: str = "") -> dict:
+    con = _conn()
+    _kitap_okuma_init(con)
+    _gelisim_init(con)
+    row = con.execute("SELECT * FROM kitap_okuma_kayitlari WHERE id=?", (int(kayit_id),)).fetchone()
+    if not row:
+        con.close()
+        return {"ok": False, "sebep": "Kayıt bulunamadı."}
+    if row["durum"] != "onay_bekliyor":
+        con.close()
+        return {"ok": False, "sebep": "Bu kayıt zaten değerlendirilmiş."}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    if not onay:
+        con.execute(
+            """
+            UPDATE kitap_okuma_kayitlari
+            SET durum='reddedildi', ogretmen_id=?, ogretmen_notu=?, onay_tarihi=?
+            WHERE id=?
+            """,
+            (int(ogretmen_id), (ogretmen_notu or "")[:500], now, int(kayit_id)),
+        )
+        con.commit()
+        con.close()
+        return {"ok": True, "durum": "reddedildi", "xp": 0, "lig_puani": 0}
+    xp, lig_puani = _kitap_okuma_puan(row["sayfa_sayisi"], row["saat"], row["gun"])
+    _gelisim_puan_ekle(con, int(row["ogrenci_id"]), xp)
+    _lig_puan_artir_miktar(con, int(row["sinif_id"]), lig_puani)
+    con.execute(
+        """
+        UPDATE kitap_okuma_kayitlari
+        SET durum='onaylandi', ogretmen_id=?, ogretmen_notu=?, onay_tarihi=?, xp=?, lig_puani=?
+        WHERE id=?
+        """,
+        (int(ogretmen_id), (ogretmen_notu or "")[:500], now, xp, lig_puani, int(kayit_id)),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True, "durum": "onaylandi", "xp": xp, "lig_puani": lig_puani}
+
+
+def kitap_okuma_rapor(sinif_ids: list[int]) -> dict:
+    rows = kitap_okuma_ogretmen_listesi(sinif_ids, "tum", 5000)
+    onayli = [r for r in rows if r.get("durum") == "onaylandi"]
+    bekleyen = [r for r in rows if r.get("durum") == "onay_bekliyor"]
+    siniflar: dict[str, dict] = {}
+    ogrenciler: dict[int, dict] = {}
+    turler = {"sesli": 0, "sessiz": 0}
+    for r in onayli:
+        sinif = siniflar.setdefault(r["sinif_adi"], {"sinif_adi": r["sinif_adi"], "kitap": 0, "sayfa": 0, "saat": 0.0, "xp": 0})
+        sinif["kitap"] += 1
+        sinif["sayfa"] += int(r.get("sayfa_sayisi") or 0)
+        sinif["saat"] += float(r.get("saat") or 0)
+        sinif["xp"] += int(r.get("xp") or 0)
+        ogr = ogrenciler.setdefault(int(r["ogrenci_id"]), {"ad_soyad": r["ad_soyad"], "sinif_adi": r["sinif_adi"], "kitap": 0, "sayfa": 0, "saat": 0.0, "xp": 0})
+        ogr["kitap"] += 1
+        ogr["sayfa"] += int(r.get("sayfa_sayisi") or 0)
+        ogr["saat"] += float(r.get("saat") or 0)
+        ogr["xp"] += int(r.get("xp") or 0)
+        tur = r.get("okuma_turu") if r.get("okuma_turu") in turler else "sessiz"
+        turler[tur] += 1
+    return {
+        "toplam": len(rows),
+        "bekleyen": len(bekleyen),
+        "onayli": len(onayli),
+        "reddedilen": len([r for r in rows if r.get("durum") == "reddedildi"]),
+        "sayfa": sum(int(r.get("sayfa_sayisi") or 0) for r in onayli),
+        "saat": round(sum(float(r.get("saat") or 0) for r in onayli), 1),
+        "xp": sum(int(r.get("xp") or 0) for r in onayli),
+        "lig_puani": sum(int(r.get("lig_puani") or 0) for r in onayli),
+        "turler": turler,
+        "siniflar": sorted(siniflar.values(), key=lambda x: (-x["sayfa"], x["sinif_adi"])),
+        "ogrenciler": sorted(ogrenciler.values(), key=lambda x: (-x["sayfa"], -x["kitap"], x["ad_soyad"]))[:20],
+    }
+
+
 def oyun_puani_kaydet(ogrenci_id: int, oyun: str, puan: int) -> dict:
+    return {
+        "ok": False,
+        "sebep": "Oyun puanları kapalı. Puanlar olumlu davranış, öğretmen onayı, okuma onayı ve ders notlarından gelir.",
+        "xp": 0,
+        "gunluk_kalan": 0,
+        "puan": {},
+        "sinifa_lig_katkisi": False,
+    }
     oyun = (oyun or "Oyun").strip()[:40]
     puan = max(0, int(puan or 0))
     bugun = datetime.now().strftime("%Y-%m-%d")
@@ -4189,6 +4591,17 @@ def gunluk_yansima_degerlendir(
         durum = "onaylandi"
     con = _conn()
     _yardimci_tablolar_init(con)
+    _gelisim_init(con)
+    _akademik_puan_init(con)
+    row = con.execute(
+        """
+        SELECT gy.ogrenci_id, o.sinif_id
+        FROM gunluk_yansima gy
+        JOIN ogrenciler o ON o.id = gy.ogrenci_id
+        WHERE gy.id=?
+        """,
+        (yansima_id,),
+    ).fetchone()
     con.execute(
         """
         UPDATE gunluk_yansima SET durum=?, ogretmen_notu=?, degerlendiren_id=?
@@ -4196,6 +4609,18 @@ def gunluk_yansima_degerlendir(
         """,
         (durum, (ogretmen_notu or "")[:500], ogretmen_id, yansima_id),
     )
+    if durum == "onaylandi" and row:
+        _onay_puani_isle_con(
+            con,
+            "yansima_onayi",
+            yansima_id,
+            int(row["ogrenci_id"]),
+            int(row["sinif_id"]),
+            ogretmen_id,
+            "Günlük yansıma öğretmen onayı",
+            xp=6,
+            lig_puani=1,
+        )
     con.commit()
     con.close()
     return {"ok": True}
@@ -4560,7 +4985,7 @@ def sinav_analiz_listesi(ogretmen_id: int, limit: int = 50) -> list[dict]:
         FROM sinav_analiz_kayitlari
         ORDER BY guncelleme DESC, id DESC
         LIMIT ?
-    """, (max(1, min(int(limit or 50), 200)),)).fetchall()]
+    """, (max(1, min(int(limit or 50), 1000)),)).fetchall()]
     con.close()
     return [_sinav_analiz_row(r) for r in rows]
 
@@ -4699,7 +5124,7 @@ def sinav_hazirlama_listesi(ogretmen_id: int, limit: int = 50) -> list[dict]:
         FROM sinav_hazirlama_kayitlari
         ORDER BY guncelleme DESC, id DESC
         LIMIT ?
-    """, (max(1, min(int(limit or 50), 200)),)).fetchall()]
+    """, (max(1, min(int(limit or 50), 1000)),)).fetchall()]
     con.close()
     return [_sinav_hazirlama_row(r) for r in rows]
 
@@ -5246,6 +5671,8 @@ def odev_mufredat_ozeti(ogretmen_id: int) -> dict:
 def odev_durum_guncelle(odev_id: int, ogrenci_id: int, durum: str):
     con = _conn()
     _odev_init(con)
+    _gelisim_init(con)
+    _akademik_puan_init(con)
     cur = con.execute(
         "UPDATE odev_sonuclari SET durum = ? WHERE odev_id = ? AND ogrenci_id = ?",
         (durum, odev_id, ogrenci_id),
@@ -5256,14 +5683,26 @@ def odev_durum_guncelle(odev_id: int, ogrenci_id: int, durum: str):
             (odev_id, ogrenci_id, durum),
         )
     if durum == "tamamladi":
-        row = con.execute("SELECT ogretmen_id FROM odevler WHERE id = ?", (odev_id,)).fetchone()
-        con.execute(
+        row = con.execute("SELECT ogretmen_id, sinif_id, baslik FROM odevler WHERE id = ?", (odev_id,)).fetchone()
+        cur_tamam = con.execute(
             """
             INSERT OR IGNORE INTO odev_tamamlayanlar (odev_id, ogrenci_id, ogretmen_id, tarih)
             VALUES (?, ?, ?, ?)
             """,
             (odev_id, ogrenci_id, row["ogretmen_id"] if row else 0, datetime.now().strftime("%Y-%m-%d %H:%M")),
         )
+        if row and int(cur_tamam.rowcount or 0) > 0:
+            _onay_puani_isle_con(
+                con,
+                "odev_onayi",
+                odev_id,
+                ogrenci_id,
+                int(row["sinif_id"]),
+                int(row["ogretmen_id"] or 0),
+                f"Ödev tamamlandı: {row['baslik']}",
+                xp=8,
+                lig_puani=2,
+            )
     else:
         con.execute("DELETE FROM odev_tamamlayanlar WHERE odev_id = ? AND ogrenci_id = ?", (odev_id, ogrenci_id))
     con.commit()

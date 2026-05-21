@@ -569,14 +569,13 @@
     <div class="school-mark"><span>EC</span><span>Erenler Cumhuriyet Ortaokulu</span></div>
     <nav class="nav-scroll" aria-label="Sayfa bağlantıları">
       {% if not veli_modu %}
-      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="nav-action primary">XP ve oyun</a>
+      <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="nav-action primary">Puan paneli</a>
       <a href="{{ url_for('paylasim_tema_odevler_sayfa') }}" target="_blank" rel="noopener" class="nav-action">Ödevler</a>
       <a href="{{ url_for('ogrenci_yansima') }}" class="nav-action">Yansıma</a>
-      <a href="{{ url_for('envanter') }}" class="nav-action">Envanter</a>
-      <a href="{{ url_for('ogrenci_mac_panel') }}" class="nav-action">Maç/Taktik</a>
       <a href="{{ url_for('ogrenci_cikis') }}" class="nav-action danger">Çıkış</a>
       {% else %}
       <a href="{{ url_for('veli_ozet_sayfa') }}" class="nav-action primary">30 günlük özet</a>
+      <a href="{{ url_for('veli_kitap_okuma') }}" class="nav-action">Kitap okuma</a>
       <a href="{{ url_for('paylasim_tema_odevler_sayfa') }}" target="_blank" rel="noopener" class="nav-action">Ödevler</a>
       <a href="{{ url_for('veli_cikis') }}" class="nav-action danger">Çıkış</a>
       {% endif %}

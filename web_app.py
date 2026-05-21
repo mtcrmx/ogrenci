@@ -61,6 +61,9 @@ from database import (
     rapor_arsiv_tumunu_yedekle_ve_sil, rapor_arsiv_yedek_gruplari, rapor_arsiv_grubu_geri_yukle,
     sinav_analiz_kaydet, sinav_analiz_listesi, sinav_analiz_oku, sinav_analiz_sil,
     sinav_hazirlama_kaydet, sinav_hazirlama_listesi, sinav_hazirlama_oku, sinav_hazirlama_sil,
+    akademik_puan_isle,
+    kitap_okuma_veli_kaydet, kitap_okuma_ogrenci_gecmis, kitap_okuma_ogretmen_listesi,
+    kitap_okuma_onayla, kitap_okuma_rapor,
     tik_kayitlari_siniflarda,
     ogretmen_yetki_al, ogretmen_yetki_guncelle,
     randevu_talep_ekle, randevu_talep_by_id, randevu_listesi_siniflar, randevu_durum_guncelle,
@@ -187,6 +190,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "api_sinav_hazirlama_kayitlar", "api_sinav_hazirlama_kaydet",
     "api_sinav_hazirlama_kayit_oku", "api_sinav_hazirlama_kayit_sil",
     "api_curriculum_temel_egitim", "api_curriculum_drive_kazanimlari",
+    "ogretmen_kitap_okuma", "ogretmen_kitap_okuma_excel",
 })
 
 
@@ -544,26 +548,16 @@ def _ogrenci_ozeti(ogrenci_id: int) -> dict | None:
 
 def _bildirimleri_hazirla() -> list[dict]:
     bildirimler = []
-    for talep in bekleyen_ogrenci_talepleri():
-        bildirimler.append({
-            "tur": "Ittifak",
-            "renk": "cyan",
-            "baslik": f"{talep['sinif1_adi']} + {talep['sinif2_adi']}",
-            "detay": "Ogrencilerden gelen bekleyen ittifak talebi",
-            "hedef": url_for("oduller"),
-        })
     if session.get("ogretmen_id"):
-        pending = ogretmen_onay_bekleyen_ogrenci_maclari(
-            int(session["ogretmen_id"]),
-            _toplu_sifirlamaya_izinli_mi(int(session["ogretmen_id"])),
-        )
-        if pending:
+        sinif_ids = [int(s["id"]) for s in ogretmen_siniflari(int(session["ogretmen_id"]))]
+        pending_books = kitap_okuma_ogretmen_listesi(sinif_ids, "onay_bekliyor", 1000)
+        if pending_books:
             bildirimler.append({
-                "tur": "Ogrenci maci",
+                "tur": "Kitap",
                 "renk": "amber",
-                "baslik": f"{len(pending)} mac onay bekliyor",
-                "detay": "Ogrencilerin girdigi spor sonucu ogretmen onayi bekliyor",
-                "hedef": url_for("ogretmen_ogrenci_maclari"),
+                "baslik": f"{len(pending_books)} okuma onay bekliyor",
+                "detay": "Velilerin girdigi okuma kayitlari ogretmen onayi bekliyor",
+                "hedef": url_for("ogretmen_kitap_okuma"),
             })
     for o in _ogrencilere_durum_ekle(tum_okul_ogrencileri()):
         if o["tik_sayisi"] >= OLUMSUZ_TIK_LIMIT:
@@ -704,6 +698,7 @@ def ogrenci_gelisim_panel():
 @app.route("/ogrenci/voleybol-gelisim")
 @ogrenci_giris_zorunlu
 def ogrenci_voleybol_gelisim_panel():
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -731,6 +726,8 @@ def ogrenci_voleybol_gelisim_panel():
 @app.route("/oyunlar")
 @ogrenci_giris_zorunlu
 def oyunlar():
+    flash("Oyunlar kaldırıldı. Puanlar olumlu davranış, öğretmen onayı, okuma onayı ve ders notlarından kazanılır.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     sinif_adi = (o or {}).get("sinif_adi", "")
@@ -749,6 +746,10 @@ def oyunlar():
 
 @app.route("/satranc")
 def satranc():
+    flash("Oyunlar kaldırıldı.", "info")
+    if session.get("ogretmen_id"):
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("ogrenci_gelisim_panel" if session.get("ogrenci_giris") else "ogrenci_giris"))
     puan_kaydet = False
     if session.get("ogrenci_giris") and session.get("ogrenci_id"):
         oid = int(session["ogrenci_id"])
@@ -770,6 +771,10 @@ def satranc():
 
 @app.route("/dama")
 def dama():
+    flash("Oyunlar kaldırıldı.", "info")
+    if session.get("ogretmen_id"):
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("ogrenci_gelisim_panel" if session.get("ogrenci_giris") else "ogrenci_giris"))
     puan_kaydet = False
     if session.get("ogrenci_giris") and session.get("ogrenci_id"):
         oid = int(session["ogrenci_id"])
@@ -792,6 +797,8 @@ def dama():
 @app.route("/ogrenci/mac")
 @ogrenci_giris_zorunlu
 def ogrenci_mac_panel():
+    flash("Maç ve taktik oyunları kaldırıldı. Puanlar artık öğretmen onaylı gerçek etkinliklerden gelir.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -811,6 +818,8 @@ def ogrenci_mac_panel():
 @app.route("/ogrenci/mac/olustur", methods=["POST"])
 @ogrenci_giris_zorunlu
 def ogrenci_mac_olustur_route():
+    flash("Maç sistemi kaldırıldı.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     sonuc = ogrenci_mac_olustur(
         oid,
@@ -830,6 +839,7 @@ def ogrenci_mac_olustur_route():
 @app.route("/api/ogrenci/mac/simule", methods=["POST"])
 @ogrenci_giris_zorunlu
 def api_ogrenci_mac_simule():
+    return jsonify({"ok": False, "sebep": "Maç simülasyonu kaldırıldı."}), 410
     import random
     
     oid = int(session["ogrenci_id"])
@@ -969,6 +979,7 @@ def api_ogrenci_mac_simule():
 @app.route("/api/ogrenci/mac/2d_data", methods=["POST"])
 @ogrenci_giris_zorunlu
 def api_ogrenci_mac_2d_data():
+    return jsonify({"ok": False, "sebep": "Maç ekranı kaldırıldı."}), 410
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -1097,6 +1108,7 @@ def api_ogrenci_mac_2d_data():
 @app.route("/api/ogrenci/ozellik/artir", methods=["POST"])
 @ogrenci_giris_zorunlu
 def api_ogrenci_ozellik_artir():
+    return jsonify({"ok": False, "sebep": "Oyun özellikleri kaldırıldı. XP artık harcanmaz; yalnızca gelişim puanı olarak izlenir."}), 410
     oid = int(session["ogrenci_id"])
     ozet = gelisim_ozeti(oid)
     puan_dict = ozet.get("puan") or {}
@@ -1110,17 +1122,23 @@ def api_ogrenci_ozellik_artir():
 @app.route("/ogrenci/mac/2d")
 @ogrenci_giris_zorunlu
 def ogrenci_mac_saha_2d():
+    flash("Maç ekranı kaldırıldı.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     return render_template("mac_2d.html")
 
 @app.route("/ogrenci/voleybol/2d")
 @ogrenci_giris_zorunlu
 def ogrenci_voleybol_saha_2d():
+    flash("Voleybol maç ekranı kaldırıldı.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     return render_template("voleybol_2d.html")
 
 
 @app.route("/ogrenci/taktik")
 @ogrenci_giris_zorunlu
 def ogrenci_taktik():
+    flash("Taktik oyunu kaldırıldı.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -1142,6 +1160,7 @@ def ogrenci_taktik():
 @app.route("/api/ogrenci/taktik/kaydet", methods=["POST"])
 @ogrenci_giris_zorunlu
 def api_ogrenci_taktik_kaydet():
+    return jsonify({"ok": False, "sebep": "Taktik oyunu kaldırıldı."}), 410
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -1153,6 +1172,8 @@ def api_ogrenci_taktik_kaydet():
 @app.route("/ogrenci/voleybol-taktik")
 @ogrenci_giris_zorunlu
 def ogrenci_voleybol_taktik():
+    flash("Voleybol taktik oyunu kaldırıldı.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -1172,6 +1193,7 @@ def ogrenci_voleybol_taktik():
 @app.route("/api/ogrenci/voleybol-taktik/kaydet", methods=["POST"])
 @ogrenci_giris_zorunlu
 def api_ogrenci_voleybol_taktik_kaydet():
+    return jsonify({"ok": False, "sebep": "Voleybol taktik oyunu kaldırıldı."}), 410
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -1183,6 +1205,7 @@ def api_ogrenci_voleybol_taktik_kaydet():
 @app.route("/api/oyun/quiz-sorular")
 @ogrenci_giris_zorunlu
 def oyun_quiz_sorular_api():
+    return jsonify({"ok": False, "sebep": "Oyun quizleri kaldırıldı.", "sorular": []}), 410
     import random
 
     oid = int(session["ogrenci_id"])
@@ -1252,7 +1275,7 @@ def oyun_puan_api():
 @app.route("/api/ogrenci/gorev-tamamla", methods=["POST"])
 @ogrenci_giris_zorunlu
 def api_ogrenci_gorev_tamamla():
-    return jsonify(gelisim_gorev_tamamla(int(session["ogrenci_id"])))
+    return jsonify({"ok": False, "sebep": "Öğrenci kendi kendine puan alamaz. Puanlar öğretmen/onaylı kayıtlardan gelir."}), 410
 
 
 @app.route("/gelisim")
@@ -1270,11 +1293,7 @@ def ogrenci_patika():
 @app.route("/gelisim/gorev-tamamla", methods=["POST"])
 @ogrenci_giris_zorunlu
 def gelisim_gorev_tamamla_route():
-    sonuc = gelisim_gorev_tamamla(int(session["ogrenci_id"]))
-    if sonuc.get("ok"):
-        flash("Görev tamamlandı; XP ve sınıf lig katkın kaydedildi.", "success")
-    else:
-        flash(sonuc.get("sebep", "İşlem yapılamadı"), "error")
+    flash("Öğrenci kendi kendine puan alamaz. Puanlar öğretmen/onaylı kayıtlardan gelir.", "info")
     return redirect(url_for("ogrenci_gelisim_panel"))
 
 
@@ -1299,6 +1318,8 @@ def gelisim_tebrik_route():
 @app.route("/pazar")
 @ogrenci_giris_zorunlu
 def pazar():
+    flash("Pazar ve oyun ödülleri kaldırıldı. Puanlar onaylı eğitim kayıtlarından gelir.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -1316,6 +1337,8 @@ def pazar():
 @app.route("/pazar/satin-al", methods=["POST"])
 @ogrenci_giris_zorunlu
 def pazar_satin_al_route():
+    flash("Pazar ve oyun ödülleri kaldırıldı.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     kod = request.form.get("urun_kodu", "").strip()
     sonuc = pazar_satin_al(int(session["ogrenci_id"]), kod)
     if sonuc.get("ok"):
@@ -1328,6 +1351,8 @@ def pazar_satin_al_route():
 @app.route("/envanter")
 @ogrenci_giris_zorunlu
 def envanter():
+    flash("Envanter/oyun ödülleri kaldırıldı.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     o = _ogrenci_bul(oid)
     if not o:
@@ -1344,6 +1369,8 @@ def envanter():
 @app.route("/envanter/aktif", methods=["POST"])
 @ogrenci_giris_zorunlu
 def envanter_aktif_route():
+    flash("Envanter/oyun ödülleri kaldırıldı.", "info")
+    return redirect(url_for("ogrenci_gelisim_panel"))
     oid = int(session["ogrenci_id"])
     kod = request.form.get("urun_kodu", "").strip()
     sonuc = envanter_aktif_ayarla(oid, kod)
@@ -1375,6 +1402,7 @@ def ogretmen_sinav_analiz():
         "ogretmen_sinav_analiz.html",
         siniflar=siniflar,
         ogretmen_adi=session.get("ogretmen_adi", "") or "",
+        ogretmenler=[o["ad_soyad"] for o in tum_ogretmenler()],
         okul_adi="Erenler Cumhuriyet Ortaokulu",
         mudur_adi="ADEM AKGÜL",
         dersler=[
@@ -1405,6 +1433,7 @@ def ogretmen_sinav_hazirla():
         "ogretmen_sinav_hazirla.html",
         siniflar=siniflar,
         ogretmen_adi=session.get("ogretmen_adi", "") or "",
+        ogretmenler=[o["ad_soyad"] for o in tum_ogretmenler()],
         okul_adi="Erenler Cumhuriyet Ortaokulu",
         dersler=_sinav_dersleri(),
     )
@@ -1592,12 +1621,81 @@ def _sinav_hazirliktan_analiz_state(
     }
 
 
+def _sinav_state_not_puanlarini_isle(analiz_id: int, state: dict, ogretmen_id: int) -> dict:
+    """Analiz notlarını öğrenci XP'si ve sınıf puanına tek kez yansıtır."""
+    if not analiz_id or not isinstance(state, dict):
+        return {"islenen": 0, "xp": 0, "lig_puani": 0}
+    meta = state.get("meta") if isinstance(state.get("meta"), dict) else {}
+    sorular_raw = state.get("sorular") if isinstance(state.get("sorular"), dict) else {}
+    flat = []
+    for grup in ("yazili", "dinleme", "konusma"):
+        liste = sorular_raw.get(grup) if isinstance(sorular_raw.get(grup), list) else []
+        for idx, q in enumerate(liste):
+            if not isinstance(q, dict):
+                continue
+            col_id = q.get("id") or f"{grup}_{idx}"
+            try:
+                puan = max(0.0, float(q.get("puan") or 0))
+            except (TypeError, ValueError):
+                puan = 0.0
+            if puan > 0:
+                flat.append({"col": str(col_id), "puan": puan})
+    max_puan = sum(q["puan"] for q in flat)
+    if max_puan <= 0:
+        return {"islenen": 0, "xp": 0, "lig_puani": 0}
+    notlar = state.get("notlar") if isinstance(state.get("notlar"), dict) else {}
+    ogrenciler = state.get("ogrenciler") if isinstance(state.get("ogrenciler"), list) else []
+    ozet = {"islenen": 0, "xp": 0, "lig_puani": 0}
+    for ogr in ogrenciler:
+        if not isinstance(ogr, dict) or ogr.get("katilmadi"):
+            continue
+        try:
+            ogrenci_id = int(ogr.get("dbId") or 0)
+            sinif_id = int(meta.get("sinifId") or ogr.get("sinifId") or 0)
+        except (TypeError, ValueError):
+            continue
+        if ogrenci_id <= 0 or sinif_id <= 0:
+            continue
+        sk = f"id_{ogrenci_id}"
+        satir = notlar.get(sk) if isinstance(notlar.get(sk), dict) else {}
+        toplam = 0.0
+        girildi = False
+        for q in flat:
+            v = satir.get(q["col"])
+            if v in (None, ""):
+                continue
+            try:
+                deger = max(0.0, min(float(v), q["puan"]))
+            except (TypeError, ValueError):
+                continue
+            toplam += deger
+            girildi = True
+        if not girildi:
+            continue
+        sonuc = akademik_puan_isle(
+            "sinav_analiz",
+            int(analiz_id),
+            ogrenci_id,
+            sinif_id,
+            ogretmen_id,
+            meta.get("ders") or "",
+            toplam,
+            max_puan,
+            meta.get("sinavAdi") or "Sınav analizi",
+        )
+        if sonuc.get("ok") and not sonuc.get("zaten_islenmis"):
+            ozet["islenen"] += 1
+            ozet["xp"] += int(sonuc.get("xp") or 0)
+            ozet["lig_puani"] += int(sonuc.get("lig_puani") or 0)
+    return ozet
+
+
 @app.route("/api/sinav-analiz/kayitlar")
 @giris_zorunlu
 def api_sinav_analiz_kayitlar():
     return jsonify({
         "ok": True,
-        "kayitlar": sinav_analiz_listesi(session["ogretmen_id"], 60),
+        "kayitlar": sinav_analiz_listesi(session["ogretmen_id"], 1000),
     })
 
 
@@ -1638,6 +1736,13 @@ def api_sinav_analiz_kaydet():
     )
     if not sonuc.get("ok"):
         return jsonify(sonuc), 404
+    kayit = sonuc.get("kayit") or {}
+    if kayit.get("id"):
+        sonuc["puan_aktarim"] = _sinav_state_not_puanlarini_isle(
+            int(kayit["id"]),
+            state,
+            session["ogretmen_id"],
+        )
     return jsonify(sonuc)
 
 
@@ -1672,7 +1777,7 @@ def api_sinav_analiz_kayit_sil(kayit_id: int):
 def api_sinav_hazirlama_kayitlar():
     return jsonify({
         "ok": True,
-        "kayitlar": sinav_hazirlama_listesi(session["ogretmen_id"], 60),
+        "kayitlar": sinav_hazirlama_listesi(session["ogretmen_id"], 1000),
     })
 
 
@@ -3129,11 +3234,10 @@ def rapor_excel_detayli():
 @app.route("/lig")
 @giris_zorunlu
 def lig():
-    maclar = bugun_maclar()
     tablo = lig_puan_tablosu()
     return render_template(
         "lig.html",
-        maclar=maclar,
+        maclar=[],
         tablo=tablo,
         ogretmen_id=session["ogretmen_id"],
         var_ogretmenler=_var_hakem_idleri(),
@@ -3144,14 +3248,14 @@ def lig():
 @app.route("/lig/olustur", methods=["POST"])
 @giris_zorunlu
 def lig_olustur():
-    gunluk_mac_olustur()
+    flash("Lig maçları kaldırıldı. Sınıf puanları artık olumlu davranış, öğretmen onayı ve ders notlarından gelir.", "info")
     return redirect(url_for("lig"))
 
 
 @app.route("/api/lig/maclar")
 @giris_zorunlu
 def api_lig_maclar():
-    return jsonify(bugun_maclar())
+    return jsonify([])
 
 
 @app.route("/api/lig/tablo")
@@ -3169,6 +3273,7 @@ def lig_mac_detay(mac_id):
 @app.route("/lig/mac/<int:mac_id>/sonuc", methods=["POST"])
 @giris_zorunlu
 def lig_mac_sonuc(mac_id):
+    return jsonify({"ok": False, "sebep": "Lig maçları kaldırıldı."}), 410
     s1t = request.form.get("s1_tamamlayan", type=int)
     s2t = request.form.get("s2_tamamlayan", type=int)
     s1top = request.form.get("s1_toplam", type=int)
@@ -3188,6 +3293,7 @@ def lig_mac_sonuc(mac_id):
 @app.route("/lig/mac/<int:mac_id>/oyla", methods=["POST"])
 @giris_zorunlu
 def lig_mac_oyla(mac_id):
+    return jsonify({"ok": False, "sebep": "Lig maçları kaldırıldı."}), 410
     sid = request.form.get("sinif_id", type=int)
     if not sid:
         return jsonify({"durum": "hata", "sebep": "sinif_yok"}), 400
@@ -3202,7 +3308,7 @@ def lig_sifirla_mac():
         flash("Yanlış parola.", "error")
         return redirect(url_for("lig"))
     lig_mac_tablo_sifirla()
-    flash("Sezon maç ve tablo sıfırlandı.", "success")
+    flash("Sınıf puan tablosu sıfırlandı.", "success")
     return redirect(url_for("lig"))
 
 
@@ -3221,7 +3327,7 @@ def api_ogrenci_kadro(sinif_id):
 @app.route("/api/ogrenci/ittifaklar")
 @ogrenci_giris_zorunlu
 def api_ogrenci_ittifaklar():
-    return jsonify(aktif_ittifaklar())
+    return jsonify([])
 
 
 @app.route("/api/kadro/<int:sinif_id>/yenile", methods=["POST"])
@@ -3254,14 +3360,14 @@ def lig_mac_kart(mac_id):
 @app.route("/api/lig/mac/<int:mac_id>/kartlar")
 @giris_zorunlu
 def api_mac_kartlari(mac_id):
-    return jsonify(mac_kartlari(mac_id))
+    return jsonify([])
 
 
 @app.route("/api/lig/maclar_ve_tablo")
 @giris_zorunlu
 def api_lig_maclar_ve_tablo():
     return jsonify({
-        "maclar": bugun_maclar(),
+        "maclar": [],
         "tablo": lig_puan_tablosu(),
         "kadrolar": {},
     })
@@ -3274,6 +3380,8 @@ def api_lig_maclar_ve_tablo():
 @app.route("/oduller")
 @giris_zorunlu
 def oduller():
+    flash("Ödül/oyun merkezi kaldırıldı. Puanlar olumlu davranış, öğretmen onayı ve ders notlarından gelir.", "info")
+    return redirect(url_for("lig"))
     ogretmen_adi = session["ogretmen_adi"]
     return render_template("oduller.html",
         ogretmen_adi    = ogretmen_adi,
@@ -3296,6 +3404,7 @@ def oduller():
 @app.route("/api/oduller/veri")
 @giris_zorunlu
 def api_oduller_veri():
+    return jsonify({"ok": False, "sebep": "Ödül/oyun merkezi kaldırıldı."}), 410
     return jsonify({
         "sezon":    sezon_siralama(),
         "seviye":   tum_sinif_seviyeleri(),
@@ -3310,6 +3419,7 @@ def api_oduller_veri():
 @app.route("/api/gorev/tamamla", methods=["POST"])
 @giris_zorunlu
 def api_gorev_tamamla():
+    return jsonify({"ok": False, "sebep": "Görev oyunu kaldırıldı."}), 410
     gorev_id = int(request.form["gorev_id"])
     sinif_id = int(request.form["sinif_id"])
     return jsonify(gorev_tamamla(gorev_id, sinif_id))
@@ -3318,6 +3428,7 @@ def api_gorev_tamamla():
 @app.route("/api/mufettis/degerlendir", methods=["POST"])
 @giris_zorunlu
 def api_mufettis_degerlendir():
+    return jsonify({"ok": False, "sebep": "Gizli kahraman oyunu kaldırıldı."}), 410
     mufettis_id = int(request.form["mufettis_id"])
     sonuc       = request.form["sonuc"]
     if sonuc not in ("iyi", "kotu"):
@@ -3328,6 +3439,7 @@ def api_mufettis_degerlendir():
 @app.route("/api/alkis/ver", methods=["POST"])
 @giris_zorunlu
 def api_alkis_ver():
+    return jsonify({"ok": False, "sebep": "Alkış oyunu kaldırıldı. Olumlu davranış için + Olumlu tikini kullanın."}), 410
     ogrenci_id  = int(request.form["ogrenci_id"])
     sinif_id    = int(request.form["sinif_id"])
     mesaj       = request.form.get("mesaj", "Harika is!")
@@ -3338,6 +3450,7 @@ def api_alkis_ver():
 @app.route("/api/ittifak/olustur", methods=["POST"])
 @giris_zorunlu
 def api_ittifak_olustur():
+    return jsonify({"ok": False, "sebep": "İttifak oyunu kaldırıldı."}), 410
     sinif1_id = int(request.form["sinif1_id"])
     sinif2_id = int(request.form["sinif2_id"])
     return jsonify(ittifak_olustur(sinif1_id, sinif2_id))
@@ -3346,6 +3459,7 @@ def api_ittifak_olustur():
 @app.route("/api/ittifak/tamamla", methods=["POST"])
 @giris_zorunlu
 def api_ittifak_tamamla():
+    return jsonify({"ok": False, "sebep": "İttifak oyunu kaldırıldı."}), 410
     ittifak_id = int(request.form["ittifak_id"])
     return jsonify(ittifak_tamamla(ittifak_id))
 
@@ -3353,6 +3467,7 @@ def api_ittifak_tamamla():
 @app.route("/api/ittifak/onayla", methods=["POST"])
 @giris_zorunlu
 def api_ittifak_onayla():
+    return jsonify({"ok": False, "sebep": "İttifak oyunu kaldırıldı."}), 410
     ittifak_id = int(request.form["ittifak_id"])
     return jsonify(ittifak_onayla(ittifak_id))
 
@@ -3360,6 +3475,7 @@ def api_ittifak_onayla():
 @app.route("/api/ittifak/reddet", methods=["POST"])
 @giris_zorunlu
 def api_ittifak_reddet():
+    return jsonify({"ok": False, "sebep": "İttifak oyunu kaldırıldı."}), 410
     ittifak_id = int(request.form["ittifak_id"])
     return jsonify(ittifak_reddet(ittifak_id))
 
@@ -3367,6 +3483,7 @@ def api_ittifak_reddet():
 @app.route("/api/ogrenci/ittifak/talep", methods=["POST"])
 @ogrenci_giris_zorunlu
 def api_ogrenci_ittifak_talep():
+    return jsonify({"ok": False, "sebep": "İttifak oyunu kaldırıldı."}), 410
     try:
         sinif1_id = int(request.form["sinif1_id"])
         sinif2_id = int(request.form["sinif2_id"])
@@ -3381,6 +3498,7 @@ def api_ogrenci_ittifak_talep():
 @app.route("/api/mufettis/belirle", methods=["POST"])
 @giris_zorunlu
 def api_mufettis_belirle():
+    return jsonify({"ok": False, "sebep": "Gizli kahraman oyunu kaldırıldı."}), 410
     ogrenci_id = int(request.form["ogrenci_id"])
     return jsonify(mufettis_belirle(ogrenci_id))
 
@@ -3506,6 +3624,8 @@ def _quiz_analizi_olustur(sinif_seviyesi: int, ders: str, dogru: int, yanlis: in
 
 @app.route("/quiz/<int:sinif_id>")
 def quiz(sinif_id):
+    flash("Quiz oyunu kaldırıldı. Ders notları sınav analizi üzerinden puana yansır.", "info")
+    return redirect(url_for("dashboard") if session.get("ogretmen_id") else url_for("ogrenci_giris"))
     quiz_sorulari_yukle()
     from database import _conn as _db_conn
     con = _db_conn()
@@ -3525,6 +3645,7 @@ def quiz(sinif_id):
 
 @app.route("/api/quiz/sorular")
 def api_quiz_sorular():
+    return jsonify({"ok": False, "sebep": "Quiz oyunu kaldırıldı.", "sorular": []}), 410
     sinif_seviyesi = request.args.get("sinif_seviyesi", type=int)
     ders = request.args.get("ders", "")
     if not sinif_seviyesi or not ders:
@@ -3537,6 +3658,7 @@ def api_quiz_sorular():
 
 @app.route("/api/quiz/cevapla", methods=["POST"])
 def api_quiz_cevapla():
+    return jsonify({"ok": False, "sebep": "Quiz oyunu kaldırıldı."}), 410
     veri = request.json or {}
     sinif_id = veri.get("sinif_id")
     sinif_seviyesi = veri.get("sinif_seviyesi")
@@ -3618,6 +3740,8 @@ def api_taktik_kaydet(sinif_id):
 @app.route("/ogrenci-maclari")
 @giris_zorunlu
 def ogretmen_ogrenci_maclari():
+    flash("Maç onayları kaldırıldı. Öğretmen onay puanları kitap okuma ve akademik kayıtlar üzerinden işlenir.", "info")
+    return redirect(url_for("ogretmen_kitap_okuma"))
     ogretmen_id = int(session["ogretmen_id"])
     admin_mi = _toplu_sifirlamaya_izinli_mi(ogretmen_id)
     bekleyenler = ogretmen_onay_bekleyen_ogrenci_maclari(ogretmen_id, admin_mi, "onay_bekliyor")
@@ -3632,6 +3756,8 @@ def ogretmen_ogrenci_maclari():
 @app.route("/ogrenci-maclari/<int:mac_id>/onayla", methods=["POST"])
 @giris_zorunlu
 def ogretmen_ogrenci_mac_onayla(mac_id):
+    flash("Maç onay sistemi kaldırıldı.", "info")
+    return redirect(url_for("ogretmen_kitap_okuma"))
     ogretmen_id = int(session["ogretmen_id"])
     mac = ogrenci_mac_detay(mac_id)
     if not _ogretmen_ogrenci_macina_erisebilir(ogretmen_id, mac):
@@ -3647,6 +3773,8 @@ def ogretmen_ogrenci_mac_onayla(mac_id):
 @app.route("/ogrenci-maclari/<int:mac_id>/reddet", methods=["POST"])
 @giris_zorunlu
 def ogretmen_ogrenci_mac_reddet(mac_id):
+    flash("Maç onay sistemi kaldırıldı.", "info")
+    return redirect(url_for("ogretmen_kitap_okuma"))
     ogretmen_id = int(session["ogretmen_id"])
     mac = ogrenci_mac_detay(mac_id)
     if not _ogretmen_ogrenci_macina_erisebilir(ogretmen_id, mac):
@@ -3698,6 +3826,180 @@ def veli_randevu_kaydet():
     randevu_talep_ekle(int(oid), int(o["sinif_id"]), mesaj)
     flash("Görüşme talebiniz kaydedildi. Öğretmeniniz en kısa sürede değerlendirecek.", "success")
     return redirect(url_for("veli_ozet_sayfa"))
+
+
+@app.route("/veli/kitap-okuma")
+def veli_kitap_okuma():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    ogrenci = _ogrenci_bul(int(oid))
+    if not ogrenci:
+        session.pop("veli_ogrenci_id", None)
+        return redirect(url_for("veli_giris"))
+    return render_template(
+        "veli_kitap_okuma.html",
+        ogrenci=ogrenci,
+        avatar=_avatar(ogrenci),
+        kayitlar=kitap_okuma_ogrenci_gecmis(int(oid), 80),
+    )
+
+
+@app.route("/veli/kitap-okuma/kaydet", methods=["POST"])
+def veli_kitap_okuma_kaydet():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    sonuc = kitap_okuma_veli_kaydet(
+        int(oid),
+        request.form.get("kitap_adi", ""),
+        request.form.get("yazar", ""),
+        request.form.get("okuma_turu", "sessiz"),
+        request.form.get("sayfa_sayisi", type=int) or 0,
+        request.form.get("saat", type=float) or 0,
+        request.form.get("gun", type=int) or 0,
+        request.form.get("baslangic_tarihi", ""),
+        request.form.get("bitis_tarihi", ""),
+        request.form.get("veli_notu", ""),
+    )
+    flash(
+        "Okuma kaydı öğretmen onayına gönderildi." if sonuc.get("ok") else sonuc.get("sebep", "Kayıt alınamadı."),
+        "success" if sonuc.get("ok") else "warning",
+    )
+    return redirect(url_for("veli_kitap_okuma"))
+
+
+@app.route("/ogretmen/kitap-okuma")
+@giris_zorunlu
+def ogretmen_kitap_okuma():
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    sinif_ids = [int(s["id"]) for s in siniflar]
+    secili_sinif = request.args.get("sinif_id", type=int)
+    if secili_sinif and secili_sinif in sinif_ids:
+        liste_ids = [secili_sinif]
+    else:
+        secili_sinif = None
+        liste_ids = sinif_ids
+    durum = request.args.get("durum", "onay_bekliyor")
+    if durum not in {"onay_bekliyor", "onaylandi", "reddedildi", "tum"}:
+        durum = "onay_bekliyor"
+    kayitlar = kitap_okuma_ogretmen_listesi(liste_ids, durum, 1000)
+    rapor = kitap_okuma_rapor(liste_ids)
+    return render_template(
+        "ogretmen_kitap_okuma.html",
+        siniflar=siniflar,
+        secili_sinif=secili_sinif,
+        durum=durum,
+        kayitlar=kayitlar,
+        rapor=rapor,
+    )
+
+
+def _kitap_okuma_ogretmen_erisir_mi(kayit_id: int) -> bool:
+    sinif_ids = [int(s["id"]) for s in ogretmen_siniflari(session["ogretmen_id"])]
+    return any(int(k["id"]) == int(kayit_id) for k in kitap_okuma_ogretmen_listesi(sinif_ids, "tum", 5000))
+
+
+@app.route("/ogretmen/kitap-okuma/<int:kayit_id>/onayla", methods=["POST"])
+@giris_zorunlu
+def ogretmen_kitap_okuma_onayla(kayit_id: int):
+    if not _kitap_okuma_ogretmen_erisir_mi(kayit_id):
+        abort(403)
+    sonuc = kitap_okuma_onayla(kayit_id, session["ogretmen_id"], True, request.form.get("ogretmen_notu", ""))
+    flash(
+        f"Okuma onaylandı. +{sonuc.get('xp', 0)} XP, sınıfa +{sonuc.get('lig_puani', 0)} puan işlendi." if sonuc.get("ok") else sonuc.get("sebep", "İşlem yapılamadı."),
+        "success" if sonuc.get("ok") else "warning",
+    )
+    return redirect(request.referrer or url_for("ogretmen_kitap_okuma"))
+
+
+@app.route("/ogretmen/kitap-okuma/<int:kayit_id>/reddet", methods=["POST"])
+@giris_zorunlu
+def ogretmen_kitap_okuma_reddet(kayit_id: int):
+    if not _kitap_okuma_ogretmen_erisir_mi(kayit_id):
+        abort(403)
+    sonuc = kitap_okuma_onayla(kayit_id, session["ogretmen_id"], False, request.form.get("ogretmen_notu", ""))
+    flash(
+        "Okuma kaydı reddedildi." if sonuc.get("ok") else sonuc.get("sebep", "İşlem yapılamadı."),
+        "success" if sonuc.get("ok") else "warning",
+    )
+    return redirect(request.referrer or url_for("ogretmen_kitap_okuma"))
+
+
+@app.route("/ogretmen/kitap-okuma/excel")
+@giris_zorunlu
+def ogretmen_kitap_okuma_excel():
+    if not OPENPYXL_OK:
+        return "openpyxl kurulu degil", 500
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    sinif_ids = [int(s["id"]) for s in siniflar]
+    secili_sinif = request.args.get("sinif_id", type=int)
+    if secili_sinif and secili_sinif in sinif_ids:
+        sinif_ids = [secili_sinif]
+    durum = request.args.get("durum", "tum")
+    if durum not in {"onay_bekliyor", "onaylandi", "reddedildi", "tum"}:
+        durum = "tum"
+    kayitlar = kitap_okuma_ogretmen_listesi(sinif_ids, durum, 5000)
+    rapor = kitap_okuma_rapor(sinif_ids)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Kitap Okuma"
+    headers = ["Sınıf", "No", "Öğrenci", "Kitap", "Yazar", "Tür", "Sayfa", "Saat", "Gün", "Durum", "XP", "Sınıf Puanı", "Veli Tarihi", "Onay Tarihi", "Not"]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="1E3A8A")
+        cell.alignment = Alignment(horizontal="center")
+    for k in kayitlar:
+        ws.append([
+            k.get("sinif_adi", ""),
+            k.get("ogr_no", ""),
+            k.get("ad_soyad", ""),
+            k.get("kitap_adi", ""),
+            k.get("yazar", ""),
+            k.get("okuma_turu", ""),
+            k.get("sayfa_sayisi", 0),
+            k.get("saat", 0),
+            k.get("gun", 0),
+            k.get("durum", ""),
+            k.get("xp", 0),
+            k.get("lig_puani", 0),
+            k.get("veli_tarih", ""),
+            k.get("onay_tarihi", ""),
+            k.get("veli_notu", ""),
+        ])
+    ws2 = wb.create_sheet("Özet")
+    ws2.append(["Gösterge", "Değer"])
+    for row in [
+        ("Toplam kayıt", rapor["toplam"]),
+        ("Bekleyen", rapor["bekleyen"]),
+        ("Onaylı", rapor["onayli"]),
+        ("Reddedilen", rapor["reddedilen"]),
+        ("Toplam sayfa", rapor["sayfa"]),
+        ("Toplam saat", rapor["saat"]),
+        ("Toplam XP", rapor["xp"]),
+        ("Sınıf puanı", rapor["lig_puani"]),
+        ("Sesli okuma", rapor["turler"].get("sesli", 0)),
+        ("Sessiz okuma", rapor["turler"].get("sessiz", 0)),
+    ]:
+        ws2.append(row)
+    for sheet in wb.worksheets:
+        for col in sheet.columns:
+            sheet.column_dimensions[col[0].column_letter].width = min(42, max(12, max(len(str(c.value or "")) for c in col) + 2))
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp_path = tmp.name
+    wb.save(tmp_path)
+    tarih = datetime.now().strftime("%Y%m%d_%H%M")
+    return send_file(
+        tmp_path,
+        as_attachment=True,
+        download_name=f"KitapOkumaRaporu_{tarih}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @app.route("/ogretmen/randevular")
@@ -3773,7 +4075,20 @@ def api_pozitif_rozet(ogrenci_id: int):
     if not og:
         return jsonify({"ok": False}), 404
     yeni = rozet_ver_ogrenci(ogrenci_id, og["sinif_id"], "pozitif_yildiz")
-    return jsonify({"ok": True, "yeni": bool(yeni)})
+    puan = None
+    if yeni:
+        puan = akademik_puan_isle(
+            "pozitif_rozet",
+            ogrenci_id,
+            ogrenci_id,
+            int(og["sinif_id"]),
+            session["ogretmen_id"],
+            "Öğretmen onayı",
+            50,
+            100,
+            "Pozitif yıldız öğretmen onayı",
+        )
+    return jsonify({"ok": True, "yeni": bool(yeni), "puan": puan})
 
 
 @app.route("/rapor/haftalik")

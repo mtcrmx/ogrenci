@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Kitap Okuma{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-7xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
+  <header class="rounded-xl border border-sky-200 bg-white p-4 shadow-sm">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-[11px] font-black uppercase tracking-widest text-sky-700">Veli onaylı okuma takibi</p>
+        <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Kitap okuma raporları</h1>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Veliler okuma kaydı girer, öğretmen onaylar; onaylanan kayıtlar öğrenci XP’sine ve sınıf puanına işlenir.</p>
+      </div>
+      <a class="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-800"
+         href="{{ url_for('ogretmen_kitap_okuma_excel', sinif_id=secili_sinif or '', durum=durum) }}">Excel indir</a>
+    </div>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mt-3 grid gap-2">
+      {% for cat, msg in messages %}
+      <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">{{ msg }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <section class="mt-3 grid gap-3 md:grid-cols-4">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><div class="text-[10px] font-black uppercase text-slate-500">Bekleyen</div><div class="mt-1 text-3xl font-black text-amber-600">{{ rapor.bekleyen }}</div></div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><div class="text-[10px] font-black uppercase text-slate-500">Onaylı kitap</div><div class="mt-1 text-3xl font-black text-emerald-700">{{ rapor.onayli }}</div></div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><div class="text-[10px] font-black uppercase text-slate-500">Sayfa / saat</div><div class="mt-1 text-2xl font-black text-slate-950">{{ rapor.sayfa }} / {{ rapor.saat }}</div></div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><div class="text-[10px] font-black uppercase text-slate-500">XP / sınıf puanı</div><div class="mt-1 text-2xl font-black text-sky-700">{{ rapor.xp }} / {{ rapor.lig_puani }}</div></div>
+  </section>
+
+  <section class="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <form class="grid gap-3 md:grid-cols-[1fr_220px_160px]" method="get">
+      <label class="text-xs font-black text-slate-600">Sınıf
+        <select name="sinif_id" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <option value="">Tüm sınıflar</option>
+          {% for s in siniflar %}
+          <option value="{{ s.id }}" {% if secili_sinif == s.id %}selected{% endif %}>{{ s.sinif_adi }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="text-xs font-black text-slate-600">Durum
+        <select name="durum" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <option value="onay_bekliyor" {% if durum == 'onay_bekliyor' %}selected{% endif %}>Onay bekleyen</option>
+          <option value="onaylandi" {% if durum == 'onaylandi' %}selected{% endif %}>Onaylanan</option>
+          <option value="reddedildi" {% if durum == 'reddedildi' %}selected{% endif %}>Reddedilen</option>
+          <option value="tum" {% if durum == 'tum' %}selected{% endif %}>Tümü</option>
+        </select>
+      </label>
+      <button class="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-black text-white">Filtrele</button>
+    </form>
+  </section>
+
+  <div class="mt-3 grid gap-3 lg:grid-cols-[1fr_340px]">
+    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 class="text-lg font-black text-slate-950">Kayıtlar</h2>
+      <div class="mt-3 grid gap-3">
+        {% for k in kayitlar %}
+        <article class="rounded-lg border border-slate-200 p-3">
+          <div class="flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
+            <div class="min-w-0">
+              <div class="text-[10px] font-black uppercase tracking-widest text-sky-700">{{ k.sinif_adi }} · No {{ k.ogr_no }}</div>
+              <h3 class="truncate text-base font-black text-slate-950">{{ k.ad_soyad }}</h3>
+              <p class="mt-1 text-sm font-bold text-slate-700">{{ k.kitap_adi }}</p>
+              <p class="text-xs text-slate-500">{{ k.yazar or 'Yazar girilmedi' }} · {{ k.okuma_turu|capitalize }} · {{ k.sayfa_sayisi }} sayfa · {{ k.saat }} saat · {{ k.gun }} gün · {{ k.veli_tarih }}</p>
+              {% if k.veli_notu %}<p class="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">{{ k.veli_notu }}</p>{% endif %}
+              {% if k.durum == 'onaylandi' %}<p class="mt-2 text-xs font-black text-emerald-700">+{{ k.xp }} XP · sınıfa +{{ k.lig_puani }} puan · {{ k.onay_tarihi }}</p>{% endif %}
+              {% if k.ogretmen_notu %}<p class="mt-2 text-xs font-semibold text-slate-500">Öğretmen notu: {{ k.ogretmen_notu }}</p>{% endif %}
+            </div>
+            <span class="w-fit rounded-full px-3 py-1 text-[11px] font-black
+              {% if k.durum == 'onaylandi' %}bg-emerald-100 text-emerald-800{% elif k.durum == 'reddedildi' %}bg-rose-100 text-rose-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+              {% if k.durum == 'onaylandi' %}Onaylandı{% elif k.durum == 'reddedildi' %}Reddedildi{% else %}Onay bekliyor{% endif %}
+            </span>
+          </div>
+          {% if k.durum == 'onay_bekliyor' %}
+          <div class="mt-3 grid gap-2 md:grid-cols-2">
+            <form method="post" action="{{ url_for('ogretmen_kitap_okuma_onayla', kayit_id=k.id) }}" class="grid gap-2">
+              <input name="ogretmen_notu" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Onay notu">
+              <button class="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white">Onayla</button>
+            </form>
+            <form method="post" action="{{ url_for('ogretmen_kitap_okuma_reddet', kayit_id=k.id) }}" class="grid gap-2">
+              <input name="ogretmen_notu" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Red nedeni">
+              <button class="rounded-lg bg-rose-600 px-3 py-2 text-xs font-black text-white">Reddet</button>
+            </form>
+          </div>
+          {% endif %}
+        </article>
+        {% else %}
+        <div class="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm font-semibold text-slate-500">Bu filtrede kayıt yok.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <aside class="grid gap-3">
+      <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 class="text-sm font-black uppercase tracking-widest text-slate-500">Öğrenci liderleri</h2>
+        <div class="mt-3 grid gap-2">
+          {% for o in rapor.ogrenciler[:10] %}
+          <div class="rounded-lg bg-slate-50 p-3">
+            <div class="text-sm font-black text-slate-900">{{ o.ad_soyad }}</div>
+            <div class="text-xs text-slate-500">{{ o.sinif_adi }} · {{ o.kitap }} kitap · {{ o.sayfa }} sayfa · +{{ o.xp }} XP</div>
+          </div>
+          {% else %}
+          <p class="text-sm text-slate-500">Onaylı okuma kaydı yok.</p>
+          {% endfor %}
+        </div>
+      </section>
+      <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 class="text-sm font-black uppercase tracking-widest text-slate-500">Sınıf özeti</h2>
+        <div class="mt-3 grid gap-2">
+          {% for s in rapor.siniflar %}
+          <div class="flex justify-between gap-3 rounded-lg bg-slate-50 p-3 text-sm">
+            <span class="font-black">{{ s.sinif_adi }}</span>
+            <span class="font-bold text-slate-600">{{ s.sayfa }} sayfa</span>
+          </div>
+          {% else %}
+          <p class="text-sm text-slate-500">Henüz sınıf verisi oluşmadı.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+{% endblock %}

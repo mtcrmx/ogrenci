@@ -17,6 +17,7 @@
   </header>
 
   <div class="mb-3 flex flex-wrap gap-2">
+    <button type="button" id="btn-yeni-analiz" class="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-white text-amber-900 text-xs font-bold px-4 py-2 hover:bg-amber-50">Yeni analiz</button>
     <button type="button" id="btn-sunucu-kaydet" class="inline-flex items-center justify-center rounded-xl bg-emerald-700 text-white text-xs font-bold px-4 py-2 hover:bg-emerald-800">Kaydet</button>
     <button type="button" id="btn-kayitlar" class="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-white text-amber-900 text-xs font-bold px-4 py-2 hover:bg-amber-50">Kayıtlar</button>
   </div>
@@ -46,6 +47,7 @@
   const DEFAULT_OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
   const DEFAULT_MUDUR = "ADEM AKGÜL";
   const OGRETMEN_ADI = {{ (ogretmen_adi or "") | tojson }};
+  const OGRETMENLER = {{ ogretmenler | default([]) | tojson }};
 
   const TUR_RAPOR_BASLIK = {
     yazili: "YAZILI SINAV ÖĞRENME ÇIKTISI ANALİZİ",
@@ -228,6 +230,19 @@
       else alert(e.message || String(e));
       return null;
     }
+  }
+
+  function yeniAnalizBaslat() {
+    if (currentKayitId && !confirm("Yeni analiz başlatılsın mı? Mevcut kayıt sunucuda kalır.")) return;
+    currentKayitId = null;
+    localStorage.removeItem(LS_KEY + "_server_id");
+    state = defaultState();
+    activeTab = "bilgi";
+    scheduleSave();
+    renderTabs();
+    showPanel();
+    renderActivePanel();
+    updateKayitStatus();
   }
 
   function kayitKarti(k) {
@@ -980,7 +995,11 @@
               ${DERSLER.map((d) => `<option value="${escAttr(d)}" ${m.ders === d ? "selected" : ""}>${esc(d)}</option>`).join("")}
             </select>
           </label>
-          <label class="block text-xs font-bold text-slate-600">Öğretmen<input class="${inputClass(true)} mt-1 bg-slate-50" value="${esc(m.ogretmen)}" data-meta="ogretmen" readonly/></label>
+          <label class="block text-xs font-bold text-slate-600">Öğretmen
+            <select class="${inputClass(true)} mt-1" data-meta="ogretmen">
+              ${(OGRETMENLER.length ? OGRETMENLER : [OGRETMEN_ADI].filter(Boolean)).map((ad) => `<option value="${escAttr(ad)}" ${m.ogretmen === ad ? "selected" : ""}>${esc(ad)}</option>`).join("")}
+            </select>
+          </label>
           <label class="block text-xs font-bold text-slate-600">Müdür<input class="${inputClass(true)} mt-1 bg-slate-50" value="${esc(m.mudur)}" data-meta="mudur" readonly/></label>
           <label class="block text-xs font-bold text-slate-600">Sınav adı<input class="${inputClass(true)} mt-1" value="${esc(m.sinavAdi)}" data-meta="sinavAdi"/></label>
           <label class="block text-xs font-bold text-slate-600">Eğitim yılı<input class="${inputClass(true)} mt-1" value="${esc(m.egitimYili)}" data-meta="egitimYili"/></label>
@@ -1578,6 +1597,7 @@
     })
     .catch((e) => console.warn(e));
   document.getElementById("btn-sunucu-kaydet")?.addEventListener("click", () => sunucuyaKaydet(false));
+  document.getElementById("btn-yeni-analiz")?.addEventListener("click", () => yeniAnalizBaslat());
   document.getElementById("btn-kayitlar")?.addEventListener("click", () => {
     activeTab = "yedek";
     renderTabs();
