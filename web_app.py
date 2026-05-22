@@ -202,7 +202,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "api_sinav_hazirlama_kayit_oku", "api_sinav_hazirlama_kayit_sil",
     "api_curriculum_temel_egitim", "api_curriculum_drive_kazanimlari",
     "ogretmen_kitap_okuma", "ogretmen_kitap_okuma_excel",
-    "ogretmen_evrak_takip", "evrak_gorev_guncelle",
+    "ogretmen_evrak_takip", "ogretmen_evrak_takip_excel", "evrak_gorev_guncelle",
 })
 
 
@@ -1534,6 +1534,112 @@ def evrak_gorev_guncelle():
     if not sonuc.get("ok"):
         flash(sonuc.get("sebep") or "Evrak görevi güncellenemedi.", "error")
     return redirect(url_for("ogretmen_evrak_takip", ogretmen_id=hedef_ogretmen_id))
+
+
+@app.route("/ogretmen/evrak-takip/excel")
+@giris_zorunlu
+def ogretmen_evrak_takip_excel():
+    oid = int(session["ogretmen_id"])
+    if not _evrak_takip_yonetici_mi(oid):
+        abort(403)
+    if not OPENPYXL_OK:
+        return "openpyxl kurulu degil", 500
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    gorevler = evrak_ogretmen_durumlari(oid)
+    matris_map = {}
+    for row in evrak_takip_matrisi():
+        mid = int(row["ogretmen_id"])
+        item = matris_map.setdefault(mid, {
+            "ogretmen_adi": row.get("ogretmen_adi") or "",
+            "durumlar": {},
+        })
+        item["durumlar"][int(row["gorev_id"])] = row.get("durum") or "vermedi"
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Evrak Takip"
+    headers = ["Öğretmen", "Verdi", "Vermedi", "Tamamlanma %"] + [g["baslik"] for g in gorevler]
+    ws.append(headers)
+
+    header_fill = PatternFill("solid", fgColor="0F2144")
+    header_font = Font(bold=True, color="FFFFFF")
+    thin = Side(style="thin", color="CBD5E1")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    green_fill = PatternFill("solid", fgColor="D1FAE5")
+    red_fill = PatternFill("solid", fgColor="FFE4E6")
+    neutral_fill = PatternFill("solid", fgColor="F8FAFC")
+
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = border
+
+    toplam = len(gorevler)
+    for item in matris_map.values():
+        durumlar = item["durumlar"]
+        verilen = sum(1 for g in gorevler if durumlar.get(int(g["id"]), "vermedi") == "verdi")
+        vermedi = max(0, toplam - verilen)
+        yuzde = round(verilen * 100 / toplam, 1) if toplam else 0
+        ws.append([
+            item["ogretmen_adi"],
+            verilen,
+            vermedi,
+            yuzde,
+            *["Verdi" if durumlar.get(int(g["id"]), "vermedi") == "verdi" else "Vermedi" for g in gorevler],
+        ])
+
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        for idx, cell in enumerate(row, 1):
+            cell.border = border
+            cell.alignment = Alignment(horizontal="center" if idx > 1 else "left", vertical="center", wrap_text=True)
+            if idx >= 5:
+                cell.fill = green_fill if cell.value == "Verdi" else red_fill
+            elif idx in (2, 3, 4):
+                cell.fill = neutral_fill
+
+    ws.freeze_panes = "B2"
+    ws.auto_filter.ref = ws.dimensions
+    ws.column_dimensions["A"].width = 28
+    for col in range(2, 5):
+        ws.column_dimensions[get_column_letter(col)].width = 13
+    for col in range(5, ws.max_column + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 24
+    for row_idx in range(1, ws.max_row + 1):
+        ws.row_dimensions[row_idx].height = 36 if row_idx == 1 else 28
+    for cell in ws["D"][1:]:
+        cell.number_format = '0.0"%"'
+
+    ws2 = wb.create_sheet("Özet")
+    ws2.append(["Gösterge", "Değer"])
+    ws2.append(["Oluşturma tarihi", datetime.now().strftime("%Y-%m-%d %H:%M")])
+    ws2.append(["Öğretmen sayısı", len(matris_map)])
+    ws2.append(["Görev sayısı", toplam])
+    for cell in ws2[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = border
+    for row in ws2.iter_rows(min_row=2, max_row=ws2.max_row):
+        for cell in row:
+            cell.border = border
+            cell.alignment = Alignment(vertical="center")
+    ws2.column_dimensions["A"].width = 24
+    ws2.column_dimensions["B"].width = 24
+
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp_path = tmp.name
+    wb.save(tmp_path)
+    tarih = datetime.now().strftime("%Y%m%d_%H%M")
+    return send_file(
+        tmp_path,
+        as_attachment=True,
+        download_name=f"EvrakTakip_{tarih}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @app.route("/api/sinav-analiz/sinif/<int:sinif_id>")
