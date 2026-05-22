@@ -212,6 +212,31 @@
             return (n >= 5 && n <= 8) ? n : null;
         }
 
+        function sekizinciSinifTemaSecimi() {
+            return secilenSinifSeviyesi() === 8;
+        }
+
+        function sadeTemaAdi(no) {
+            return no + ". Tema";
+        }
+
+        function temaNoParse(tema) {
+            const m = String(tema || "").match(/(\d{1,2})\s*\.?\s*tema/i);
+            if (!m) return null;
+            const n = parseInt(m[1], 10);
+            return (n >= 1 && n <= 10) ? n : null;
+        }
+
+        function sekizinciTemaEntries(yapi, tema) {
+            const no = temaNoParse(tema);
+            if (!no || !Array.isArray(yapi)) return [];
+            return yapi.filter(entry => {
+                const tSev = temaSeviyesiParse(entry.tema);
+                const tNo = temaNoParse(entry.tema);
+                return tNo === no && (tSev === 8 || tSev == null);
+            });
+        }
+
         function sinifDegisti() {
             const sel = document.getElementById("sinif_secim");
             const hid = document.getElementById("sinif_seviyesi_hidden");
@@ -271,6 +296,18 @@
             }
 
             const yapi = curriculumByDers && curriculumByDers[dersKey];
+            if (sekizinciSinifTemaSecimi()) {
+                temaSelect.innerHTML = '<option value="">Tema seçin...</option>';
+                for (let i = 1; i <= 10; i++) {
+                    const ad = sadeTemaAdi(i);
+                    const opt = document.createElement("option");
+                    opt.value = ad;
+                    opt.textContent = ad;
+                    temaSelect.appendChild(opt);
+                }
+                temaDegisti();
+                return;
+            }
             if (!yapi || !Array.isArray(yapi) || !yapi.length) {
                 temaSelect.innerHTML = '<option value="">Bu ders için öğrenme kanıtı yok</option>';
                 resetKanitAlani("Bu ders için Excel’de öğrenme kanıtı bulunamadı.");
@@ -302,6 +339,48 @@
             const dersKey = dersAdiFormdan();
             const tema = document.getElementById("tema_secim").value;
             const yapi = curriculumByDers && curriculumByDers[dersKey];
+            if (sekizinciSinifTemaSecimi()) {
+                if (!tema) {
+                    resetKanitAlani("Önce tema seçin...");
+                    return;
+                }
+                const entries = sekizinciTemaEntries(yapi, tema);
+                const liste = [];
+                const seen = new Set();
+                entries.forEach(entry => {
+                    kanitlariTopla(entry).forEach(text => {
+                        const key = trNorm(text);
+                        if (!key || seen.has(key)) return;
+                        seen.add(key);
+                        liste.push(text);
+                    });
+                });
+                const div = document.getElementById("kanit_listesi");
+                const etiket = document.getElementById("kanit_alan_etiket");
+                currentKanitlar = liste.slice();
+                document.getElementById("konu_secim").value = "Öğrenme kanıtları";
+                document.getElementById("kanit_kaynak_ozeti").textContent = tema;
+                etiket.textContent = "Öğrenme kanıtları (" + liste.length + ")";
+                div.innerHTML = "";
+                if (!liste.length) {
+                    div.innerHTML = '<span class="text-slate-500 text-sm">Bu tema için öğrenme kanıtı tanımlı değil.</span>';
+                    return;
+                }
+                liste.forEach((text, i) => {
+                    const lab = document.createElement("label");
+                    lab.className = "flex items-start gap-2 cursor-pointer py-1.5 rounded hover:bg-slate-800/80 px-1";
+                    const cb = document.createElement("input");
+                    cb.type = "checkbox";
+                    cb.className = "kanit_cb mt-1 shrink-0 rounded border-slate-600";
+                    cb.dataset.i = String(i);
+                    const span = document.createElement("span");
+                    span.textContent = text;
+                    lab.appendChild(cb);
+                    lab.appendChild(span);
+                    div.appendChild(lab);
+                });
+                return;
+            }
             if (!yapi || !tema) {
                 resetKanitAlani("Önce ünite seçin...");
                 return;
