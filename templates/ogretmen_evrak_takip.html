@@ -51,7 +51,7 @@
 
     <div class="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <section class="space-y-2">
-        {% set duzenlenebilir = hedef_ogretmen_id == ogretmen_id %}
+        {% set duzenlenebilir = yonetici_mi %}
         {% for g in gorevler %}
         <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

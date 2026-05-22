@@ -1517,14 +1517,14 @@ def ogretmen_evrak_takip():
 @giris_zorunlu
 def evrak_gorev_guncelle():
     oid = int(session["ogretmen_id"])
+    if not _evrak_takip_yonetici_mi(oid):
+        abort(403)
     try:
         hedef_ogretmen_id = int(request.form.get("ogretmen_id") or oid)
         gorev_id = int(request.form.get("gorev_id") or 0)
     except (TypeError, ValueError):
         flash("Evrak görevi güncellenemedi.", "error")
         return redirect(url_for("ogretmen_evrak_takip"))
-    if hedef_ogretmen_id != oid:
-        abort(403)
     sonuc = evrak_gorev_durum_guncelle(
         hedef_ogretmen_id,
         gorev_id,
