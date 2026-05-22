@@ -62,6 +62,8 @@ from database import (
     sinav_analiz_kaydet, sinav_analiz_listesi, sinav_analiz_oku, sinav_analiz_sil,
     sinav_hazirlama_kaydet, sinav_hazirlama_listesi, sinav_hazirlama_oku, sinav_hazirlama_sil,
     akademik_puan_isle,
+    evrak_ogretmen_durumlari, evrak_gorev_durum_guncelle,
+    evrak_takip_ozetleri, evrak_takip_matrisi,
     kitap_okuma_veli_kaydet, kitap_okuma_ogrenci_gecmis, kitap_okuma_ogretmen_listesi,
     kitap_okuma_onayla, kitap_okuma_rapor,
     tik_kayitlari_siniflarda,
@@ -125,11 +127,20 @@ def _ogretmen_ogrencisine_erisebilir(ogretmen_id: int, ogrenci_id: int) -> bool:
 
 # Okul geneli sıfırlama (tüm tikler, lig sezonu, tam veri silme) — yalnızca bu öğretmen.
 _TOPLU_SIFIRLAMA_AD_SOYAD = "ADEM AKGÜL"
+_EVRAK_TAKIP_YONETICI_ADLARI = ("ADEM AKGÜL", "YUSUF ERTÜRK")
 
 
 def _toplu_sifirlamaya_izinli_mi(ogretmen_id: int) -> bool:
     beklenen = ogretmen_id_bul(_TOPLU_SIFIRLAMA_AD_SOYAD)
     return beklenen is not None and beklenen == ogretmen_id
+
+
+def _evrak_takip_yonetici_mi(ogretmen_id: int) -> bool:
+    yonetici_idleri = {ogretmen_id_bul(ad) for ad in _EVRAK_TAKIP_YONETICI_ADLARI}
+    if ogretmen_id in {int(i) for i in yonetici_idleri if i is not None}:
+        return True
+    aktif_ad = str(session.get("ogretmen_adi") or "").strip().casefold()
+    return aktif_ad in {ad.casefold() for ad in _EVRAK_TAKIP_YONETICI_ADLARI}
 
 
 def _ogretmen_ogrenci_macina_erisebilir(ogretmen_id: int, mac: dict | None) -> bool:
@@ -191,6 +202,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "api_sinav_hazirlama_kayit_oku", "api_sinav_hazirlama_kayit_sil",
     "api_curriculum_temel_egitim", "api_curriculum_drive_kazanimlari",
     "ogretmen_kitap_okuma", "ogretmen_kitap_okuma_excel",
+    "ogretmen_evrak_takip", "evrak_gorev_guncelle",
 })
 
 
@@ -1441,6 +1453,87 @@ def ogretmen_sinav_hazirla():
         okul_adi="Erenler Cumhuriyet Ortaokulu",
         dersler=_sinav_dersleri(),
     )
+
+
+@app.route("/ogretmen/evrak-takip")
+@giris_zorunlu
+def ogretmen_evrak_takip():
+    oid = int(session["ogretmen_id"])
+    yonetici_mi = _evrak_takip_yonetici_mi(oid)
+    ogretmenler = tum_ogretmenler() if yonetici_mi else [
+        {"id": oid, "ad_soyad": session.get("ogretmen_adi", "") or "Öğretmen"}
+    ]
+    ogretmen_idleri = {int(o["id"]) for o in ogretmenler if o.get("id") is not None}
+    try:
+        hedef_ogretmen_id = int(request.args.get("ogretmen_id") or oid)
+    except (TypeError, ValueError):
+        hedef_ogretmen_id = oid
+    if not yonetici_mi or hedef_ogretmen_id not in ogretmen_idleri:
+        hedef_ogretmen_id = oid
+
+    hedef_ogretmen = next(
+        (o for o in ogretmenler if int(o["id"]) == int(hedef_ogretmen_id)),
+        {"id": hedef_ogretmen_id, "ad_soyad": session.get("ogretmen_adi", "") or "Öğretmen"},
+    )
+    gorevler = evrak_ogretmen_durumlari(hedef_ogretmen_id)
+    toplam = len(gorevler)
+    verilen = sum(1 for g in gorevler if g.get("durum") == "verdi")
+    matris_satirlari = []
+    if yonetici_mi:
+        matris_map = {}
+        for row in evrak_takip_matrisi():
+            mid = int(row["ogretmen_id"])
+            item = matris_map.setdefault(mid, {
+                "ogretmen_id": mid,
+                "ogretmen_adi": row.get("ogretmen_adi") or "",
+                "durumlar": {},
+                "toplam": 0,
+                "verdi": 0,
+            })
+            durum = row.get("durum") or "vermedi"
+            item["durumlar"][int(row["gorev_id"])] = durum
+            item["toplam"] += 1
+            if durum == "verdi":
+                item["verdi"] += 1
+        matris_satirlari = list(matris_map.values())
+    return render_template(
+        "ogretmen_evrak_takip.html",
+        ogretmen_id=oid,
+        ogretmen_adi=session.get("ogretmen_adi", "") or "",
+        yonetici_mi=yonetici_mi,
+        ogretmenler=ogretmenler,
+        hedef_ogretmen=hedef_ogretmen,
+        hedef_ogretmen_id=hedef_ogretmen_id,
+        gorevler=gorevler,
+        toplam=toplam,
+        verilen=verilen,
+        yuzde=round((verilen * 100 / toplam), 1) if toplam else 0,
+        ozetler=evrak_takip_ozetleri() if yonetici_mi else [],
+        matris=matris_satirlari,
+    )
+
+
+@app.route("/ogretmen/evrak-takip/guncelle", methods=["POST"])
+@giris_zorunlu
+def evrak_gorev_guncelle():
+    oid = int(session["ogretmen_id"])
+    try:
+        hedef_ogretmen_id = int(request.form.get("ogretmen_id") or oid)
+        gorev_id = int(request.form.get("gorev_id") or 0)
+    except (TypeError, ValueError):
+        flash("Evrak görevi güncellenemedi.", "error")
+        return redirect(url_for("ogretmen_evrak_takip"))
+    if hedef_ogretmen_id != oid:
+        abort(403)
+    sonuc = evrak_gorev_durum_guncelle(
+        hedef_ogretmen_id,
+        gorev_id,
+        request.form.get("durum") or "vermedi",
+        oid,
+    )
+    if not sonuc.get("ok"):
+        flash(sonuc.get("sebep") or "Evrak görevi güncellenemedi.", "error")
+    return redirect(url_for("ogretmen_evrak_takip", ogretmen_id=hedef_ogretmen_id))
 
 
 @app.route("/api/sinav-analiz/sinif/<int:sinif_id>")

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Evrak Takip{% endblock %}
+
+{% block body %}
+<main class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-5 lg:py-6">
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-xl shadow-slate-200/60">
+    <div class="bg-gradient-to-r from-slate-950 via-okul-900 to-sky-800 px-5 py-5 text-white">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="text-[11px] font-black uppercase tracking-[.24em] text-sky-200">Evrak Listesi</p>
+          <h1 class="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Öğretmen görev formu</h1>
+          <p class="mt-2 max-w-2xl text-sm font-medium text-sky-100">
+            {{ hedef_ogretmen.ad_soyad }} için verdi/vermedi durumu
+          </p>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="rounded-xl bg-white/12 px-4 py-3">
+            <div class="text-[10px] font-black uppercase text-sky-100">Toplam</div>
+            <div class="text-2xl font-black">{{ toplam }}</div>
+          </div>
+          <div class="rounded-xl bg-emerald-400/20 px-4 py-3">
+            <div class="text-[10px] font-black uppercase text-emerald-100">Verdi</div>
+            <div class="text-2xl font-black">{{ verilen }}</div>
+          </div>
+          <div class="rounded-xl bg-rose-400/20 px-4 py-3">
+            <div class="text-[10px] font-black uppercase text-rose-100">Vermedi</div>
+            <div class="text-2xl font-black">{{ toplam - verilen }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-5 h-3 overflow-hidden rounded-full bg-white/15">
+        <div class="h-full rounded-full bg-gradient-to-r from-emerald-300 to-sky-300" style="width: {{ yuzde }}%"></div>
+      </div>
+    </div>
+
+    {% if yonetici_mi %}
+    <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+      <form method="get" class="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <label class="block flex-1 text-xs font-black uppercase tracking-widest text-slate-500">
+          Öğretmen görünümü
+          <select name="ogretmen_id" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+            {% for o in ogretmenler %}
+              <option value="{{ o.id }}" {% if o.id == hedef_ogretmen_id %}selected{% endif %}>{{ o.ad_soyad }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800">Aç</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <section class="space-y-2">
+        {% set duzenlenebilir = hedef_ogretmen_id == ogretmen_id %}
+        {% for g in gorevler %}
+        <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+              <div class="text-[11px] font-black uppercase tracking-widest text-slate-400">Görev {{ loop.index }}</div>
+              <h2 class="mt-0.5 text-base font-black text-slate-900">{{ g.baslik }}</h2>
+              {% if g.guncelleme %}
+              <p class="mt-1 text-xs font-semibold text-slate-400">Son güncelleme: {{ g.guncelleme }}</p>
+              {% endif %}
+            </div>
+            {% if duzenlenebilir %}
+            <form method="post" action="{{ url_for('evrak_gorev_guncelle') }}" class="grid grid-cols-2 gap-2 sm:w-56">
+              <input type="hidden" name="ogretmen_id" value="{{ hedef_ogretmen_id }}">
+              <input type="hidden" name="gorev_id" value="{{ g.id }}">
+              <button name="durum" value="verdi"
+                      class="rounded-xl border px-3 py-2 text-sm font-black transition
+                             {{ 'border-emerald-600 bg-emerald-600 text-white shadow-sm' if g.durum == 'verdi' else 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' }}">
+                Verdi
+              </button>
+              <button name="durum" value="vermedi"
+                      class="rounded-xl border px-3 py-2 text-sm font-black transition
+                             {{ 'border-rose-600 bg-rose-600 text-white shadow-sm' if g.durum != 'verdi' else 'border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100' }}">
+                Vermedi
+              </button>
+            </form>
+            {% else %}
+            <span class="inline-flex rounded-xl px-4 py-2 text-sm font-black {{ 'bg-emerald-100 text-emerald-800' if g.durum == 'verdi' else 'bg-rose-100 text-rose-800' }}">
+              {{ 'Verdi' if g.durum == 'verdi' else 'Vermedi' }}
+            </span>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </section>
+
+      <aside class="space-y-3">
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h2 class="text-sm font-black text-slate-900">Kişisel durum</h2>
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <div class="rounded-xl bg-white p-3 text-center shadow-sm">
+              <div class="text-[10px] font-black uppercase text-slate-400">Tamamlanma</div>
+              <div class="mt-1 text-2xl font-black text-slate-900">{{ yuzde }}%</div>
+            </div>
+            <div class="rounded-xl bg-white p-3 text-center shadow-sm">
+              <div class="text-[10px] font-black uppercase text-slate-400">Kalan</div>
+              <div class="mt-1 text-2xl font-black text-rose-700">{{ toplam - verilen }}</div>
+            </div>
+          </div>
+        </div>
+
+        {% if yonetici_mi %}
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 class="text-sm font-black text-slate-900">Tüm öğretmen özeti</h2>
+          <div class="mt-3 max-h-[420px] space-y-2 overflow-y-auto pr-1">
+            {% for o in ozetler %}
+            {% set pct = (o.verdi * 100 / o.toplam) if o.toplam else 0 %}
+            <a href="{{ url_for('ogretmen_evrak_takip', ogretmen_id=o.ogretmen_id) }}"
+               class="block rounded-xl border border-slate-200 bg-slate-50 p-3 hover:border-sky-300 hover:bg-sky-50">
+              <div class="flex items-center justify-between gap-2">
+                <span class="truncate text-sm font-black text-slate-900">{{ o.ogretmen_adi }}</span>
+                <span class="shrink-0 text-xs font-black text-slate-500">{{ o.verdi }}/{{ o.toplam }}</span>
+              </div>
+              <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                <div class="h-full rounded-full bg-emerald-500" style="width: {{ pct }}%"></div>
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </aside>
+    </div>
+  </section>
+
+  {% if yonetici_mi %}
+  <section class="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl shadow-slate-200/60">
+    <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Yönetici görünümü</p>
+        <h2 class="text-xl font-black text-slate-950">Tüm öğretmenler evrak matrisi</h2>
+      </div>
+    </div>
+    <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+      <table class="min-w-[1180px] w-full border-collapse text-xs">
+        <thead class="bg-slate-900 text-white">
+          <tr>
+            <th class="sticky left-0 z-10 border border-slate-700 bg-slate-900 px-3 py-3 text-left">Öğretmen</th>
+            <th class="border border-slate-700 px-3 py-3 text-center">Durum</th>
+            {% for g in gorevler %}
+            <th class="border border-slate-700 px-3 py-3 text-center">{{ g.baslik }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in matris %}
+          <tr class="odd:bg-white even:bg-slate-50">
+            <td class="sticky left-0 z-10 border border-slate-200 bg-inherit px-3 py-2 font-black text-slate-900">{{ row.ogretmen_adi }}</td>
+            <td class="border border-slate-200 px-3 py-2 text-center font-black text-slate-700">{{ row.verdi }}/{{ row.toplam }}</td>
+            {% for g in gorevler %}
+            {% set durum = row.durumlar.get(g.id, 'vermedi') %}
+            <td class="border border-slate-200 px-2 py-2 text-center">
+              <span class="inline-flex rounded-lg px-2.5 py-1 text-[11px] font-black {{ 'bg-emerald-100 text-emerald-800' if durum == 'verdi' else 'bg-rose-100 text-rose-800' }}">
+                {{ 'Verdi' if durum == 'verdi' else 'Vermedi' }}
+              </span>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}

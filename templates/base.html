@@ -542,6 +542,11 @@
               <span><span class="block font-black">Kitap okuma</span>
               <span class="block text-[11px] font-medium text-slate-500">Veli girişleri, onay ve rapor</span></span>
             </a>
+            <a href="{{ url_for('ogretmen_evrak_takip') }}" class="nav-link">
+              <span class="nav-mark mark-slate">EV</span>
+              <span><span class="block font-black">Evrak takip</span>
+              <span class="block text-[11px] font-medium text-slate-500">Verdi/vermedi görev formu</span></span>
+            </a>
           </div>
         </details>
 
@@ -651,6 +656,7 @@
         <a href="{{ url_for('odevler') }}" class="mobile-link"><span class="nav-mark mark-emerald">ÖT</span><span>Ödev ve tema takibi</span></a>
         <a href="{{ url_for('yoklama', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('yoklama') }}" class="mobile-link"><span class="nav-mark mark-amber">İŞ</span><span>Ödev işaretleme</span></a>
         <a href="{{ url_for('ogretmen_kitap_okuma') }}" class="mobile-link"><span class="nav-mark mark-sky">KO</span><span>Kitap okuma</span></a>
+        <a href="{{ url_for('ogretmen_evrak_takip') }}" class="mobile-link"><span class="nav-mark mark-slate">EV</span><span>Evrak takip</span></a>
       </div>
     </section>
 

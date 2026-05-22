@@ -337,6 +337,7 @@ def initialize_db():
     _sinav_hazirlama_init(con)
     _kitap_okuma_init(con)
     _akademik_puan_init(con)
+    _evrak_takip_init(con)
     _ogrenci_ozellikler_ensure(con)
     con.close()
 
@@ -481,6 +482,163 @@ def _sinav_hazirlama_init(con: sqlite3.Connection) -> None:
         ON sinav_hazirlama_kayitlari (ogretmen_id, guncelleme DESC)
     """)
     con.commit()
+
+
+EVRAK_GOREVLERI_DEFAULT = (
+    "Zümre Toplantısı",
+    "Şube Öğretmenler Kurulu",
+    "Veli Toplantısı",
+    "Yıllık Plan",
+    "Günlük Plan",
+    "Sınavlar",
+    "Sınav Analizleri",
+    "Sosyal Etkinlikler",
+    "Belirli Gün ve Haftalar",
+    "Sosyal Kulüp",
+    "Destek Eğitim",
+    "Evde Eğitim",
+    "Destekleme ve Yetiştirme Kursu",
+)
+
+
+def _evrak_takip_init(con: sqlite3.Connection) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS evrak_gorevleri (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            baslik TEXT NOT NULL UNIQUE,
+            sira INTEGER NOT NULL DEFAULT 0,
+            aktif INTEGER NOT NULL DEFAULT 1
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS evrak_gorev_durumlari (
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            gorev_id INTEGER NOT NULL REFERENCES evrak_gorevleri(id),
+            durum TEXT NOT NULL DEFAULT 'vermedi',
+            guncelleme TEXT NOT NULL,
+            guncelleyen_id INTEGER REFERENCES ogretmenler(id),
+            PRIMARY KEY (ogretmen_id, gorev_id)
+        )
+    """)
+    con.execute("""
+        CREATE INDEX IF NOT EXISTS idx_evrak_gorev_durumlari_ogretmen
+        ON evrak_gorev_durumlari (ogretmen_id)
+    """)
+    for idx, baslik in enumerate(EVRAK_GOREVLERI_DEFAULT, 1):
+        con.execute("""
+            INSERT INTO evrak_gorevleri (baslik, sira, aktif)
+            VALUES (?, ?, 1)
+            ON CONFLICT(baslik) DO UPDATE SET sira = excluded.sira, aktif = 1
+        """, (baslik, idx))
+    con.commit()
+
+
+def evrak_gorevleri() -> list[dict]:
+    con = _conn()
+    _evrak_takip_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT id, baslik, sira
+        FROM evrak_gorevleri
+        WHERE aktif = 1
+        ORDER BY sira, id
+    """).fetchall()]
+    con.close()
+    return rows
+
+
+def evrak_ogretmen_durumlari(ogretmen_id: int) -> list[dict]:
+    con = _conn()
+    _evrak_takip_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT g.id, g.baslik, g.sira,
+               COALESCE(d.durum, 'vermedi') AS durum,
+               COALESCE(d.guncelleme, '') AS guncelleme
+        FROM evrak_gorevleri g
+        LEFT JOIN evrak_gorev_durumlari d
+          ON d.gorev_id = g.id AND d.ogretmen_id = ?
+        WHERE g.aktif = 1
+        ORDER BY g.sira, g.id
+    """, (int(ogretmen_id),)).fetchall()]
+    con.close()
+    return rows
+
+
+def evrak_gorev_durum_guncelle(
+    ogretmen_id: int,
+    gorev_id: int,
+    durum: str,
+    guncelleyen_id: int | None = None,
+) -> dict:
+    durum = "verdi" if durum == "verdi" else "vermedi"
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    con = _conn()
+    _evrak_takip_init(con)
+    gorev = con.execute(
+        "SELECT id FROM evrak_gorevleri WHERE id = ? AND aktif = 1",
+        (int(gorev_id),),
+    ).fetchone()
+    ogretmen = con.execute(
+        "SELECT id FROM ogretmenler WHERE id = ?",
+        (int(ogretmen_id),),
+    ).fetchone()
+    if not gorev or not ogretmen:
+        con.close()
+        return {"ok": False, "sebep": "Görev veya öğretmen bulunamadı."}
+    con.execute("""
+        INSERT INTO evrak_gorev_durumlari
+            (ogretmen_id, gorev_id, durum, guncelleme, guncelleyen_id)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(ogretmen_id, gorev_id) DO UPDATE SET
+            durum = excluded.durum,
+            guncelleme = excluded.guncelleme,
+            guncelleyen_id = excluded.guncelleyen_id
+    """, (int(ogretmen_id), int(gorev_id), durum, now, int(guncelleyen_id or ogretmen_id)))
+    con.commit()
+    con.close()
+    return {"ok": True, "durum": durum, "guncelleme": now}
+
+
+def evrak_takip_ozetleri() -> list[dict]:
+    con = _conn()
+    _evrak_takip_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT o.id AS ogretmen_id,
+               o.ad_soyad AS ogretmen_adi,
+               COUNT(g.id) AS toplam,
+               SUM(CASE WHEN COALESCE(d.durum, 'vermedi') = 'verdi' THEN 1 ELSE 0 END) AS verdi,
+               MAX(COALESCE(d.guncelleme, '')) AS son_guncelleme
+        FROM ogretmenler o
+        CROSS JOIN evrak_gorevleri g
+        LEFT JOIN evrak_gorev_durumlari d
+          ON d.ogretmen_id = o.id AND d.gorev_id = g.id
+        WHERE g.aktif = 1
+        GROUP BY o.id, o.ad_soyad
+        ORDER BY o.ad_soyad
+    """).fetchall()]
+    con.close()
+    return rows
+
+
+def evrak_takip_matrisi() -> list[dict]:
+    con = _conn()
+    _evrak_takip_init(con)
+    rows = [dict(r) for r in con.execute("""
+        SELECT o.id AS ogretmen_id,
+               o.ad_soyad AS ogretmen_adi,
+               g.id AS gorev_id,
+               g.baslik AS gorev_baslik,
+               g.sira AS gorev_sira,
+               COALESCE(d.durum, 'vermedi') AS durum,
+               COALESCE(d.guncelleme, '') AS guncelleme
+        FROM ogretmenler o
+        CROSS JOIN evrak_gorevleri g
+        LEFT JOIN evrak_gorev_durumlari d
+          ON d.ogretmen_id = o.id AND d.gorev_id = g.id
+        WHERE g.aktif = 1
+        ORDER BY o.ad_soyad, g.sira, g.id
+    """).fetchall()]
+    con.close()
+    return rows
 
 
 def _bilgilendirme_init(con: sqlite3.Connection):
