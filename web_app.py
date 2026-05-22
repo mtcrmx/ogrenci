@@ -1493,6 +1493,36 @@ def _payload_kayit_id(veri: dict) -> int | None:
     return kayit_id if kayit_id > 0 else None
 
 
+def _sinav_meta_sinif_ids(meta: dict) -> list[int]:
+    raw = meta.get("sinifIds") or meta.get("sinifIdleri") or meta.get("sinifIdListesi") or []
+    adaylar = raw if isinstance(raw, list) else str(raw or "").replace(";", ",").split(",")
+    ids: list[int] = []
+    for item in adaylar:
+        try:
+            sid = int(item)
+        except (TypeError, ValueError):
+            continue
+        if sid > 0 and sid not in ids:
+            ids.append(sid)
+    if not ids:
+        try:
+            sid = int(meta.get("sinifId") or 0)
+        except (TypeError, ValueError):
+            sid = 0
+        if sid > 0:
+            ids.append(sid)
+    return ids
+
+
+def _sinav_sinif_adi_ozeti(ogretmen_id: int, sinif_ids: list[int], meta: dict | None = None) -> str:
+    sinif_map = {int(s["id"]): s.get("sinif_adi", "") for s in ogretmen_siniflari(ogretmen_id)}
+    adlar = [sinif_map.get(int(sid), "") for sid in sinif_ids]
+    adlar = [ad for ad in adlar if ad]
+    if adlar:
+        return ", ".join(adlar)
+    return str((meta or {}).get("sinifAdi") or "").strip()
+
+
 def _sinav_analiz_default_notu() -> str:
     return (
         "Hata yapılan soruların ait olduğu öğrenme çıktılarının tekrarı için 2 ders saati süre ayrılmıştır. "
@@ -1564,32 +1594,49 @@ def _hazirlik_sorusunu_analiz_sorusuna(soru: dict, idx: int) -> dict:
 
 def _sinav_hazirliktan_analiz_state(
     hazirlik_state: dict,
+    ogretmen_id: int,
     ogretmen_adi: str,
-    sinif_id: int | None,
+    sinif_ids: list[int] | None,
     hazirlama_kayit_id: int | None,
     analiz_kayit_id: int | None = None,
     onceki_analiz_state: dict | None = None,
 ) -> dict:
     hazirlik_meta = hazirlik_state.get("meta") if isinstance(hazirlik_state.get("meta"), dict) else {}
     onceki_meta = onceki_analiz_state.get("meta") if isinstance(onceki_analiz_state, dict) and isinstance(onceki_analiz_state.get("meta"), dict) else {}
-    onceki_sinif_id = onceki_meta.get("sinifId")
+    temiz_sinif_ids: list[int] = []
+    for sid in sinif_ids or []:
+        try:
+            sid_int = int(sid)
+        except (TypeError, ValueError):
+            continue
+        if sid_int > 0 and sid_int not in temiz_sinif_ids:
+            temiz_sinif_ids.append(sid_int)
+    if not temiz_sinif_ids:
+        temiz_sinif_ids = _sinav_meta_sinif_ids(hazirlik_meta)
+    sinif_id = temiz_sinif_ids[0] if temiz_sinif_ids else None
+    onceki_sinif_ids = _sinav_meta_sinif_ids(onceki_meta)
+    ayni_siniflar = set(onceki_sinif_ids) == set(temiz_sinif_ids)
+    sinif_map = {int(s["id"]): s.get("sinif_adi", "") for s in ogretmen_siniflari(ogretmen_id)}
+    sinif_adi_ozeti = _sinav_sinif_adi_ozeti(ogretmen_id, temiz_sinif_ids, hazirlik_meta)
 
     ogrenciler = []
-    if isinstance(onceki_analiz_state, dict) and str(onceki_sinif_id or "") == str(sinif_id or ""):
+    if isinstance(onceki_analiz_state, dict) and ayni_siniflar:
         eski_ogrenciler = onceki_analiz_state.get("ogrenciler")
         if isinstance(eski_ogrenciler, list) and eski_ogrenciler:
             ogrenciler = eski_ogrenciler
-    if not ogrenciler and sinif_id:
-        ogrenciler = [
-            {
-                "dbId": int(row["id"]),
-                "sira": i + 1,
-                "ogrNo": row.get("ogr_no"),
-                "adSoyad": row.get("ad_soyad") or "",
-                "katilmadi": False,
-            }
-            for i, row in enumerate(sinif_ogrencileri(sinif_id))
-        ]
+    if not ogrenciler and temiz_sinif_ids:
+        for sid in temiz_sinif_ids:
+            sinif_adi = sinif_map.get(int(sid), "")
+            for row in sinif_ogrencileri(sid):
+                ogrenciler.append({
+                    "dbId": int(row["id"]),
+                    "sinifId": int(sid),
+                    "sinifAdi": sinif_adi,
+                    "sira": len(ogrenciler) + 1,
+                    "ogrNo": row.get("ogr_no"),
+                    "adSoyad": row.get("ad_soyad") or "",
+                    "katilmadi": False,
+                })
 
     sorular = hazirlik_state.get("sorular") if isinstance(hazirlik_state.get("sorular"), list) else []
     analiz_sorular = [_hazirlik_sorusunu_analiz_sorusuna(s, i) for i, s in enumerate(sorular) if isinstance(s, dict)]
@@ -1605,7 +1652,8 @@ def _sinav_hazirliktan_analiz_state(
         "egitimYili": hazirlik_meta.get("egitimYili") or "",
         "analizTuru": onceki_meta.get("analizTuru") or "genel",
         "sinifId": sinif_id,
-        "sinifAdi": hazirlik_meta.get("sinifAdi") or "",
+        "sinifIds": temiz_sinif_ids,
+        "sinifAdi": sinif_adi_ozeti,
         "sinifMevcudu": str(len(ogrenciler) or onceki_meta.get("sinifMevcudu") or ""),
         "sinavaKatilan": str(len([o for o in ogrenciler if not o.get("katilmadi")]) or onceki_meta.get("sinavaKatilan") or ""),
         "basariEsik": str(basari_esik),
@@ -1660,7 +1708,7 @@ def _sinav_state_not_puanlarini_isle(analiz_id: int, state: dict, ogretmen_id: i
             continue
         try:
             ogrenci_id = int(ogr.get("dbId") or 0)
-            sinif_id = int(meta.get("sinifId") or ogr.get("sinifId") or 0)
+            sinif_id = int(ogr.get("sinifId") or meta.get("sinifId") or 0)
         except (TypeError, ValueError):
             continue
         if ogrenci_id <= 0 or sinif_id <= 0:
@@ -1722,11 +1770,8 @@ def api_sinav_analiz_kaydet():
     if not isinstance(state, dict):
         return jsonify({"ok": False, "sebep": "Analiz verisi eksik."}), 400
     meta = state.get("meta") if isinstance(state.get("meta"), dict) else {}
-    sinif_id = meta.get("sinifId")
-    try:
-        sinif_id_int = int(sinif_id) if sinif_id not in (None, "", 0, "0") else None
-    except (TypeError, ValueError):
-        sinif_id_int = None
+    sinif_ids = _sinav_meta_sinif_ids(meta)
+    sinif_id_int = sinif_ids[0] if sinif_ids else None
     kayit_id = _payload_kayit_id(veri)
     yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
     mevcut_kayit = sinav_analiz_oku(
@@ -1736,6 +1781,10 @@ def api_sinav_analiz_kaydet():
     ) if kayit_id else None
     if kayit_id and not mevcut_kayit:
         return jsonify({"ok": False, "sebep": "Kayıt bulunamadı veya yetkiniz yok."}), 404
+    if sinif_ids and not mevcut_kayit and not yonetici_mi:
+        yetkisiz = [sid for sid in sinif_ids if not _ogretmen_sinifinda_mi(session["ogretmen_id"], sid)]
+        if yetkisiz:
+            return jsonify({"ok": False, "sebep": "Seçili şubelerden birine erişim yetkiniz yok."}), 403
     if sinif_id_int and not mevcut_kayit and not (yonetici_mi or _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int)):
         return jsonify({"ok": False, "sebep": "Bu sınıfa erişim yetkiniz yok."}), 403
 
@@ -1750,7 +1799,7 @@ def api_sinav_analiz_kaydet():
         state_json=state_json,
         baslik=_sinav_analiz_baslik(meta),
         sinif_id=sinif_id_int,
-        sinif_adi=meta.get("sinifAdi") or "",
+        sinif_adi=_sinav_sinif_adi_ozeti(session["ogretmen_id"], sinif_ids, meta),
         ders=meta.get("ders") or "",
         sinav_adi=meta.get("sinavAdi") or "",
         egitim_yili=meta.get("egitimYili") or "",
@@ -1820,11 +1869,8 @@ def api_sinav_hazirlama_kaydet():
     if not isinstance(state, dict):
         return jsonify({"ok": False, "sebep": "Sınav hazırlığı verisi eksik."}), 400
     meta = state.get("meta") if isinstance(state.get("meta"), dict) else {}
-    sinif_id = meta.get("sinifId")
-    try:
-        sinif_id_int = int(sinif_id) if sinif_id not in (None, "", 0, "0") else None
-    except (TypeError, ValueError):
-        sinif_id_int = None
+    sinif_ids = _sinav_meta_sinif_ids(meta)
+    sinif_id_int = sinif_ids[0] if sinif_ids else None
     kayit_id = _payload_kayit_id(veri)
     yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
     mevcut_kayit = sinav_hazirlama_oku(
@@ -1834,6 +1880,10 @@ def api_sinav_hazirlama_kaydet():
     ) if kayit_id else None
     if kayit_id and not mevcut_kayit:
         return jsonify({"ok": False, "sebep": "Kayıt bulunamadı veya yetkiniz yok."}), 404
+    if sinif_ids and not mevcut_kayit and not yonetici_mi:
+        yetkisiz = [sid for sid in sinif_ids if not _ogretmen_sinifinda_mi(session["ogretmen_id"], sid)]
+        if yetkisiz:
+            return jsonify({"ok": False, "sebep": "Seçili şubelerden birine erişim yetkiniz yok."}), 403
     if sinif_id_int and not mevcut_kayit and not (yonetici_mi or _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int)):
         return jsonify({"ok": False, "sebep": "Bu sınıfa erişim yetkiniz yok."}), 403
 
@@ -1848,7 +1898,7 @@ def api_sinav_hazirlama_kaydet():
         state_json=state_json,
         baslik=_sinav_hazirlama_baslik(meta),
         sinif_id=sinif_id_int,
-        sinif_adi=meta.get("sinifAdi") or "",
+        sinif_adi=_sinav_sinif_adi_ozeti(session["ogretmen_id"], sinif_ids, meta),
         ders=meta.get("ders") or "",
         sinav_adi=meta.get("sinavAdi") or "",
         egitim_yili=meta.get("egitimYili") or "",
@@ -1887,8 +1937,9 @@ def api_sinav_hazirlama_kaydet():
 
     analiz_state = _sinav_hazirliktan_analiz_state(
         state,
+        session["ogretmen_id"],
         session.get("ogretmen_adi", "") or "",
-        sinif_id_int,
+        sinif_ids,
         hazirlama_kayit_id,
         analiz_kayit_id,
         onceki_analiz_state,
@@ -1904,7 +1955,7 @@ def api_sinav_hazirlama_kaydet():
             state_json=analiz_state_json,
             baslik=_sinav_analiz_baslik(analiz_state.get("meta", {})),
             sinif_id=sinif_id_int,
-            sinif_adi=meta.get("sinifAdi") or "",
+            sinif_adi=_sinav_sinif_adi_ozeti(session["ogretmen_id"], sinif_ids, analiz_state.get("meta", {})),
             ders=meta.get("ders") or "",
             sinav_adi=meta.get("sinavAdi") or "",
             egitim_yili=meta.get("egitimYili") or "",

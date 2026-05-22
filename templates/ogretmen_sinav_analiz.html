@@ -92,6 +92,7 @@
         egitimYili: "2025-2026",
         analizTuru: "genel",
         sinifId: SINIFLAR[0] ? SINIFLAR[0].id : null,
+        sinifIds: SINIFLAR[0] ? [SINIFLAR[0].id] : [],
         sinifAdi: SINIFLAR[0] ? SINIFLAR[0].sinif_adi : "",
         sinifMevcudu: "",
         sinavaKatilan: "",
@@ -147,6 +148,9 @@
     });
     if (!state.notlar || typeof state.notlar !== "object") state.notlar = {};
     mergeMetaDefaults();
+    state.meta.sinifIds = sinifIdleriNormalize(state.meta.sinifIds && state.meta.sinifIds.length ? state.meta.sinifIds : [state.meta.sinifId]);
+    if (!state.meta.sinifId && state.meta.sinifIds.length) state.meta.sinifId = state.meta.sinifIds[0];
+    state.meta.sinifAdi = seciliSinifAdi(state.meta.sinifIds) || state.meta.sinifAdi;
     state.ogrenciler.forEach((ogr) => {
       if (ogr.katilmadi == null) ogr.katilmadi = false;
     });
@@ -501,6 +505,36 @@
       .replace(/"/g, "&quot;");
   }
 
+  function sinifIdleriNormalize(ids) {
+    const seen = new Set();
+    const out = [];
+    (Array.isArray(ids) ? ids : [ids]).forEach((id) => {
+      const key = String(id ?? "").trim();
+      if (!key || seen.has(key)) return;
+      if (!SINIFLAR.some((s) => String(s.id) === key)) return;
+      seen.add(key);
+      out.push(key);
+    });
+    return out;
+  }
+
+  function seciliSinifIdleri() {
+    const ids = sinifIdleriNormalize(state.meta.sinifIds || []);
+    if (ids.length) return ids;
+    return sinifIdleriNormalize([state.meta.sinifId]);
+  }
+
+  function seciliSinifAdi(ids) {
+    return sinifIdleriNormalize(ids)
+      .map((id) => (SINIFLAR.find((s) => String(s.id) === String(id)) || {}).sinif_adi || "")
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  function cokluSinifMi() {
+    return seciliSinifIdleri().length > 1;
+  }
+
   function buildFormalRaporHtml() {
     const H = hesapDetay();
     const m = state.meta;
@@ -665,7 +699,8 @@
 
   function syncSinifFromSelect() {
     const id = state.meta.sinifId;
-    const row = SINIFLAR.find((s) => s.id === id);
+    const row = SINIFLAR.find((s) => String(s.id) === String(id));
+    state.meta.sinifIds = sinifIdleriNormalize([id]);
     state.meta.sinifAdi = row ? row.sinif_adi : "";
     scheduleSave();
   }
@@ -708,24 +743,37 @@
   }
 
   async function sinifListesiYukle() {
-    const id = state.meta.sinifId;
-    if (!id) {
-      alert("Önce sınıf seçin.");
+    const ids = seciliSinifIdleri();
+    if (!ids.length) {
+      alert("Önce sınıf/şube seçin.");
       return;
     }
     try {
-      const r = await fetch(API_SINIF(id), { credentials: "same-origin" });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.sebep || "Liste alınamadı");
-      state.ogrenciler = (j.ogrenciler || []).map((row, i) => ({
-        dbId: row.id,
-        sira: i + 1,
-        ogrNo: row.ogr_no,
-        adSoyad: row.ad_soyad,
-        katilmadi: false,
-      }));
-      state.meta.sinifAdi = j.sinif_adi || state.meta.sinifAdi;
-      state.meta.sinifMevcudu = String(j.mevcut || state.ogrenciler.length || "");
+      const ogrenciler = [];
+      const adlar = [];
+      for (const id of ids) {
+        const r = await fetch(API_SINIF(id), { credentials: "same-origin" });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.sebep || "Liste alınamadı");
+        const sinifAdi = j.sinif_adi || (SINIFLAR.find((s) => String(s.id) === String(id)) || {}).sinif_adi || "";
+        if (sinifAdi) adlar.push(sinifAdi);
+        (j.ogrenciler || []).forEach((row) => {
+          ogrenciler.push({
+            dbId: row.id,
+            sinifId: parseInt(id, 10) || null,
+            sinifAdi,
+            sira: ogrenciler.length + 1,
+            ogrNo: row.ogr_no,
+            adSoyad: row.ad_soyad,
+            katilmadi: false,
+          });
+        });
+      }
+      state.ogrenciler = ogrenciler;
+      state.meta.sinifIds = ids;
+      state.meta.sinifId = parseInt(ids[0], 10) || null;
+      state.meta.sinifAdi = adlar.join(", ") || state.meta.sinifAdi;
+      state.meta.sinifMevcudu = String(state.ogrenciler.length || "");
       state.meta.sinavaKatilan = String(state.ogrenciler.length || "");
       state.notlar = {};
       scheduleSave();
@@ -981,6 +1029,7 @@
     const m = state.meta;
     const seciliMevcut = state.ogrenciler.length || parseInt(m.sinifMevcudu, 10) || 0;
     const aktifKatilan = state.ogrenciler.filter((o) => !o.katilmadi).length || parseInt(m.sinavaKatilan, 10) || 0;
+    const sinifOzeti = seciliSinifAdi(seciliSinifIdleri()) || m.sinifAdi || "";
     el.innerHTML = `
       <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -988,7 +1037,7 @@
             <h2 class="text-sm font-black text-slate-800">Hazır okul / sınav bilgileri</h2>
             <p class="text-xs text-slate-500 mt-1">Okul, öğretmen ve öğrenci listesi sistemden gelir; rapor için sınıf, ders ve sınavı seçmeniz yeterlidir.</p>
           </div>
-          <button type="button" id="btn-hazirla" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2 hover:bg-okul-900">Seçili sınıfı hazırla</button>
+          <button type="button" id="btn-hazirla" class="rounded-xl bg-okul-800 text-white text-xs font-bold px-3 py-2 hover:bg-okul-900">Seçili şubeleri hazırla</button>
         </div>
         <div class="grid sm:grid-cols-2 gap-3">
           <label class="block text-xs font-bold text-slate-600">Okul adı<input class="${inputClass(true)} mt-1 bg-slate-50" value="${esc(m.okulAdi)}" data-meta="okulAdi" readonly/></label>
@@ -1012,9 +1061,10 @@
               <option value="">${SINIFLAR.length ? "— Sınıf seçin —" : "— Kayıtlı sınıf yok —"}</option>
               ${SINIFLAR.map(
                 (s) =>
-                  `<option value="${s.id}" ${m.sinifId === s.id ? "selected" : ""}>${esc(s.sinif_adi)}</option>`
+                  `<option value="${s.id}" ${String(m.sinifId || "") === String(s.id) ? "selected" : ""}>${esc(s.sinif_adi)}</option>`
               ).join("")}
             </select>
+            ${sinifOzeti ? `<div class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-900">Seçili şubeler: ${esc(sinifOzeti)}</div>` : ""}
           </label>
           <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
             <div class="text-[10px] font-bold text-slate-500">Sınıf mevcudu</div>
@@ -1078,10 +1128,12 @@
 
   function renderSinif() {
     const el = document.getElementById("panel-sinif");
+    const showSinifCol = cokluSinifMi() || state.ogrenciler.some((o) => o.sinifAdi);
     const rows = state.ogrenciler
       .map((o, i) => {
         return `<tr class="border-t border-slate-100">
           <td class="p-2"><input type="checkbox" data-o-idx="${i}" data-o-k="katilmadi" ${o.katilmadi ? "checked" : ""} title="Katılmadı"/></td>
+          ${showSinifCol ? `<td class="p-2 text-xs font-bold text-slate-600">${esc(o.sinifAdi || "")}</td>` : ""}
           <td class="p-2"><input class="${inputClass(true)}" value="${esc(o.ogrNo)}" data-o-idx="${i}" data-o-k="ogrNo"/></td>
           <td class="p-2"><input class="${inputClass(true)}" value="${esc(o.adSoyad)}" data-o-idx="${i}" data-o-k="adSoyad"/></td>
         </tr>`;
@@ -1100,9 +1152,9 @@
         <div class="overflow-x-auto border border-slate-200 rounded-xl">
           <table class="min-w-full text-xs">
             <thead><tr class="bg-slate-100 text-left font-bold text-slate-700">
-              <th class="p-2 w-10">G</th><th class="p-2 w-24">No</th><th class="p-2">Ad Soyad</th>
+              <th class="p-2 w-10">G</th>${showSinifCol ? `<th class="p-2 w-32">Şube</th>` : ""}<th class="p-2 w-24">No</th><th class="p-2">Ad Soyad</th>
             </tr></thead>
-            <tbody>${rows || `<tr><td colspan="3" class="p-4 text-center text-slate-500">Liste boş — ECO’dan yükleyin veya satır ekleyin.</td></tr>`}</tbody>
+            <tbody>${rows || `<tr><td colspan="${showSinifCol ? 4 : 3}" class="p-4 text-center text-slate-500">Liste boş — ECO’dan yükleyin veya satır ekleyin.</td></tr>`}</tbody>
           </table>
         </div>
       </div>`;
@@ -1348,6 +1400,7 @@
     const el = document.getElementById("panel-not");
     const fq = flatQuestions();
     const seciliSinif = String(state.meta.sinifId || "");
+    const showSinifCol = cokluSinifMi() || state.ogrenciler.some((o) => o.sinifAdi);
     const excelOrder = `[Öğrenci No] ${fq.map((_, i) => `[S${i + 1}]`).join(" ") || "[Puan 1] [Puan 2]"}`;
     const head = fq.map((c, idx) => {
       const tam = soruAnalizMetni(c.q);
@@ -1368,6 +1421,7 @@
       }).join("");
       return `<tr class="${o.katilmadi ? "bg-slate-50 text-slate-500" : "bg-white"}">
         <td class="border border-slate-100 px-3 py-2 text-center text-sm">${i + 1}</td>
+        ${showSinifCol ? `<td class="border border-slate-100 px-3 py-2 text-xs font-bold text-slate-600">${esc(o.sinifAdi || "")}</td>` : ""}
         <td class="border border-slate-100 px-3 py-2">
           <input class="h-10 w-28 rounded-lg border border-slate-300 bg-white px-2 text-center text-sm font-bold text-slate-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" value="${escAttr(o.ogrNo)}" data-not-o="${i}" data-not-k="ogrNo">
         </td>
@@ -1411,8 +1465,9 @@
         <div class="mt-5 overflow-x-auto rounded-xl border border-slate-200">
           <table class="min-w-[900px] w-full border-collapse text-sm">
             <thead>
-              <tr>
+                <tr>
                 <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">No</th>
+                ${showSinifCol ? `<th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">Şube</th>` : ""}
                 <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">Numara</th>
                 <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">Adı Soyadı</th>
                 ${head}
@@ -1420,7 +1475,7 @@
                 <th class="border border-slate-700 bg-slate-800 px-3 py-3 text-white">Sil</th>
               </tr>
             </thead>
-            <tbody>${body || `<tr><td colspan="${5 + fq.length}" class="p-5 text-center text-sm font-bold text-slate-500">Sınıf listesi boş. Sınıf seçip listeyi sistemden yükleyin.</td></tr>`}</tbody>
+            <tbody>${body || `<tr><td colspan="${5 + fq.length + (showSinifCol ? 1 : 0)}" class="p-5 text-center text-sm font-bold text-slate-500">Sınıf listesi boş. Sınıf seçip listeyi sistemden yükleyin.</td></tr>`}</tbody>
           </table>
         </div>
         <div class="mt-3 flex flex-wrap gap-2">
