@@ -4905,6 +4905,7 @@ def sinav_analiz_kaydet(
     sinav_adi: str,
     egitim_yili: str,
     kayit_id: int | None = None,
+    tum_kayit_yetkisi: bool = False,
 ) -> dict:
     con = _conn()
     _sinav_analiz_init(con)
@@ -4919,22 +4920,31 @@ def sinav_analiz_kaydet(
     except (TypeError, ValueError):
         kid = None
 
+    var = None
     if kid:
         var = con.execute(
-            "SELECT id FROM sinav_analiz_kayitlari WHERE id = ? AND ogretmen_id = ?",
-            (kid, ogretmen_id),
+            "SELECT id, ogretmen_id, ogretmen_adi FROM sinav_analiz_kayitlari WHERE id = ?",
+            (kid,),
         ).fetchone()
         if not var:
             kid = None
+        elif not tum_kayit_yetkisi and int(var["ogretmen_id"]) != int(ogretmen_id):
+            con.close()
+            return {"ok": False, "sebep": "Bu kaydı düzenleme yetkiniz yok."}
     if kid:
+        owner_adi = (
+            ogretmen_adi
+            if not var or int(var["ogretmen_id"]) == int(ogretmen_id)
+            else (var["ogretmen_adi"] or "")
+        )
         con.execute("""
             UPDATE sinav_analiz_kayitlari
             SET guncelleme = ?, ogretmen_adi = ?, baslik = ?, sinif_id = ?,
                 sinif_adi = ?, ders = ?, sinav_adi = ?, egitim_yili = ?, state_json = ?
-            WHERE id = ? AND ogretmen_id = ?
+            WHERE id = ?
         """, (
             now,
-            _sinav_analiz_text(ogretmen_adi, 160),
+            _sinav_analiz_text(owner_adi, 160),
             baslik,
             sinif_id_val,
             _sinav_analiz_text(sinif_adi, 80),
@@ -4943,7 +4953,6 @@ def sinav_analiz_kaydet(
             _sinav_analiz_text(egitim_yili, 40),
             state_json,
             kid,
-            ogretmen_id,
         ))
     else:
         cur = con.execute("""
@@ -4968,48 +4977,79 @@ def sinav_analiz_kaydet(
         kid = int(cur.lastrowid)
 
     con.commit()
-    row = con.execute("""
-        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
-        FROM sinav_analiz_kayitlari
-        WHERE id = ? AND ogretmen_id = ?
-    """, (kid, ogretmen_id)).fetchone()
+    if tum_kayit_yetkisi:
+        row = con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+            FROM sinav_analiz_kayitlari
+            WHERE id = ?
+        """, (kid,)).fetchone()
+    else:
+        row = con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+            FROM sinav_analiz_kayitlari
+            WHERE id = ? AND ogretmen_id = ?
+        """, (kid, ogretmen_id)).fetchone()
     con.close()
     return {"ok": True, "kayit": _sinav_analiz_row(row)} if row else {"ok": False, "sebep": "Kayıt okunamadı."}
 
 
-def sinav_analiz_listesi(ogretmen_id: int, limit: int = 50) -> list[dict]:
+def sinav_analiz_listesi(ogretmen_id: int, limit: int = 50, tum_kayit_yetkisi: bool = False) -> list[dict]:
     con = _conn()
     _sinav_analiz_init(con)
-    rows = [dict(r) for r in con.execute("""
-        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
-        FROM sinav_analiz_kayitlari
-        ORDER BY guncelleme DESC, id DESC
-        LIMIT ?
-    """, (max(1, min(int(limit or 50), 1000)),)).fetchall()]
+    limit_val = max(1, min(int(limit or 50), 1000))
+    if tum_kayit_yetkisi:
+        rows = [dict(r) for r in con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+            FROM sinav_analiz_kayitlari
+            ORDER BY guncelleme DESC, id DESC
+            LIMIT ?
+        """, (limit_val,)).fetchall()]
+    else:
+        rows = [dict(r) for r in con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+            FROM sinav_analiz_kayitlari
+            WHERE ogretmen_id = ?
+            ORDER BY guncelleme DESC, id DESC
+            LIMIT ?
+        """, (ogretmen_id, limit_val)).fetchall()]
     con.close()
     return [_sinav_analiz_row(r) for r in rows]
 
 
-def sinav_analiz_oku(kayit_id: int, ogretmen_id: int) -> dict | None:
+def sinav_analiz_oku(kayit_id: int, ogretmen_id: int, tum_kayit_yetkisi: bool = False) -> dict | None:
     con = _conn()
     _sinav_analiz_init(con)
-    row = con.execute("""
-        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi,
-               egitim_yili, state_json
-        FROM sinav_analiz_kayitlari
-        WHERE id = ?
-    """, (kayit_id,)).fetchone()
+    if tum_kayit_yetkisi:
+        row = con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi,
+                   egitim_yili, state_json
+            FROM sinav_analiz_kayitlari
+            WHERE id = ?
+        """, (kayit_id,)).fetchone()
+    else:
+        row = con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi,
+                   egitim_yili, state_json
+            FROM sinav_analiz_kayitlari
+            WHERE id = ? AND ogretmen_id = ?
+        """, (kayit_id, ogretmen_id)).fetchone()
     con.close()
     return dict(row) if row else None
 
 
-def sinav_analiz_sil(kayit_id: int, ogretmen_id: int) -> dict:
+def sinav_analiz_sil(kayit_id: int, ogretmen_id: int, tum_kayit_yetkisi: bool = False) -> dict:
     con = _conn()
     _sinav_analiz_init(con)
-    cur = con.execute(
-        "DELETE FROM sinav_analiz_kayitlari WHERE id = ? AND ogretmen_id = ?",
-        (kayit_id, ogretmen_id),
-    )
+    if tum_kayit_yetkisi:
+        cur = con.execute(
+            "DELETE FROM sinav_analiz_kayitlari WHERE id = ?",
+            (kayit_id,),
+        )
+    else:
+        cur = con.execute(
+            "DELETE FROM sinav_analiz_kayitlari WHERE id = ? AND ogretmen_id = ?",
+            (kayit_id, ogretmen_id),
+        )
     con.commit()
     silinen = int(cur.rowcount or 0)
     con.close()
@@ -5044,6 +5084,7 @@ def sinav_hazirlama_kaydet(
     sinav_adi: str,
     egitim_yili: str,
     kayit_id: int | None = None,
+    tum_kayit_yetkisi: bool = False,
 ) -> dict:
     con = _conn()
     _sinav_hazirlama_init(con)
@@ -5058,22 +5099,31 @@ def sinav_hazirlama_kaydet(
     except (TypeError, ValueError):
         kid = None
 
+    var = None
     if kid:
         var = con.execute(
-            "SELECT id FROM sinav_hazirlama_kayitlari WHERE id = ? AND ogretmen_id = ?",
-            (kid, ogretmen_id),
+            "SELECT id, ogretmen_id, ogretmen_adi FROM sinav_hazirlama_kayitlari WHERE id = ?",
+            (kid,),
         ).fetchone()
         if not var:
             kid = None
+        elif not tum_kayit_yetkisi and int(var["ogretmen_id"]) != int(ogretmen_id):
+            con.close()
+            return {"ok": False, "sebep": "Bu kaydı düzenleme yetkiniz yok."}
     if kid:
+        owner_adi = (
+            ogretmen_adi
+            if not var or int(var["ogretmen_id"]) == int(ogretmen_id)
+            else (var["ogretmen_adi"] or "")
+        )
         con.execute("""
             UPDATE sinav_hazirlama_kayitlari
             SET guncelleme = ?, ogretmen_adi = ?, baslik = ?, sinif_id = ?,
                 sinif_adi = ?, ders = ?, sinav_adi = ?, egitim_yili = ?, state_json = ?
-            WHERE id = ? AND ogretmen_id = ?
+            WHERE id = ?
         """, (
             now,
-            _sinav_analiz_text(ogretmen_adi, 160),
+            _sinav_analiz_text(owner_adi, 160),
             baslik,
             sinif_id_val,
             _sinav_analiz_text(sinif_adi, 80),
@@ -5082,7 +5132,6 @@ def sinav_hazirlama_kaydet(
             _sinav_analiz_text(egitim_yili, 40),
             state_json,
             kid,
-            ogretmen_id,
         ))
     else:
         cur = con.execute("""
@@ -5107,48 +5156,79 @@ def sinav_hazirlama_kaydet(
         kid = int(cur.lastrowid)
 
     con.commit()
-    row = con.execute("""
-        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
-        FROM sinav_hazirlama_kayitlari
-        WHERE id = ? AND ogretmen_id = ?
-    """, (kid, ogretmen_id)).fetchone()
+    if tum_kayit_yetkisi:
+        row = con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+            FROM sinav_hazirlama_kayitlari
+            WHERE id = ?
+        """, (kid,)).fetchone()
+    else:
+        row = con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+            FROM sinav_hazirlama_kayitlari
+            WHERE id = ? AND ogretmen_id = ?
+        """, (kid, ogretmen_id)).fetchone()
     con.close()
     return {"ok": True, "kayit": _sinav_hazirlama_row(row)} if row else {"ok": False, "sebep": "Kayıt okunamadı."}
 
 
-def sinav_hazirlama_listesi(ogretmen_id: int, limit: int = 50) -> list[dict]:
+def sinav_hazirlama_listesi(ogretmen_id: int, limit: int = 50, tum_kayit_yetkisi: bool = False) -> list[dict]:
     con = _conn()
     _sinav_hazirlama_init(con)
-    rows = [dict(r) for r in con.execute("""
-        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
-        FROM sinav_hazirlama_kayitlari
-        ORDER BY guncelleme DESC, id DESC
-        LIMIT ?
-    """, (max(1, min(int(limit or 50), 1000)),)).fetchall()]
+    limit_val = max(1, min(int(limit or 50), 1000))
+    if tum_kayit_yetkisi:
+        rows = [dict(r) for r in con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+            FROM sinav_hazirlama_kayitlari
+            ORDER BY guncelleme DESC, id DESC
+            LIMIT ?
+        """, (limit_val,)).fetchall()]
+    else:
+        rows = [dict(r) for r in con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi, egitim_yili
+            FROM sinav_hazirlama_kayitlari
+            WHERE ogretmen_id = ?
+            ORDER BY guncelleme DESC, id DESC
+            LIMIT ?
+        """, (ogretmen_id, limit_val)).fetchall()]
     con.close()
     return [_sinav_hazirlama_row(r) for r in rows]
 
 
-def sinav_hazirlama_oku(kayit_id: int, ogretmen_id: int) -> dict | None:
+def sinav_hazirlama_oku(kayit_id: int, ogretmen_id: int, tum_kayit_yetkisi: bool = False) -> dict | None:
     con = _conn()
     _sinav_hazirlama_init(con)
-    row = con.execute("""
-        SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi,
-               egitim_yili, state_json
-        FROM sinav_hazirlama_kayitlari
-        WHERE id = ?
-    """, (kayit_id,)).fetchone()
+    if tum_kayit_yetkisi:
+        row = con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi,
+                   egitim_yili, state_json
+            FROM sinav_hazirlama_kayitlari
+            WHERE id = ?
+        """, (kayit_id,)).fetchone()
+    else:
+        row = con.execute("""
+            SELECT id, olusturma, guncelleme, ogretmen_id, ogretmen_adi, baslik, sinif_id, sinif_adi, ders, sinav_adi,
+                   egitim_yili, state_json
+            FROM sinav_hazirlama_kayitlari
+            WHERE id = ? AND ogretmen_id = ?
+        """, (kayit_id, ogretmen_id)).fetchone()
     con.close()
     return dict(row) if row else None
 
 
-def sinav_hazirlama_sil(kayit_id: int, ogretmen_id: int) -> dict:
+def sinav_hazirlama_sil(kayit_id: int, ogretmen_id: int, tum_kayit_yetkisi: bool = False) -> dict:
     con = _conn()
     _sinav_hazirlama_init(con)
-    cur = con.execute(
-        "DELETE FROM sinav_hazirlama_kayitlari WHERE id = ? AND ogretmen_id = ?",
-        (kayit_id, ogretmen_id),
-    )
+    if tum_kayit_yetkisi:
+        cur = con.execute(
+            "DELETE FROM sinav_hazirlama_kayitlari WHERE id = ?",
+            (kayit_id,),
+        )
+    else:
+        cur = con.execute(
+            "DELETE FROM sinav_hazirlama_kayitlari WHERE id = ? AND ogretmen_id = ?",
+            (kayit_id, ogretmen_id),
+        )
     con.commit()
     silinen = int(cur.rowcount or 0)
     con.close()

@@ -35,7 +35,8 @@
 
 <script>
 (function () {
-  const LS_KEY = "eco_sinav_analiz_v2";
+  const OGRETMEN_ID = {{ ogretmen_id | default(0) | tojson }};
+  const LS_KEY = "eco_sinav_analiz_v2_" + (OGRETMEN_ID || "anonim");
   const API_SINIF = (id) => "/api/sinav-analiz/sinif/" + id;
   const API_MUFREDAT = "/api/curriculum/drive-kazanimlari";
   const API_KAYITLAR = "/api/sinav-analiz/kayitlar";
@@ -47,6 +48,7 @@
   const DEFAULT_OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
   const DEFAULT_MUDUR = "ADEM AKGÜL";
   const OGRETMEN_ADI = {{ (ogretmen_adi or "") | tojson }};
+  const SINAV_KAYIT_YONETICI = {{ sinav_kayit_yonetici | default(false) | tojson }};
   const OGRETMENLER = {{ ogretmenler | default([]) | tojson }};
 
   const TUR_RAPOR_BASLIK = {
@@ -248,7 +250,7 @@
   function kayitKarti(k) {
     const current = currentKayitId && Number(k.id) === Number(currentKayitId);
     const alt = [k.sinif_adi, k.ders, k.sinav_adi, k.egitim_yili].filter(Boolean).join(" · ");
-    const own = !k.ogretmen_adi || k.ogretmen_adi === OGRETMEN_ADI;
+    const own = SINAV_KAYIT_YONETICI || !k.ogretmen_adi || k.ogretmen_adi === OGRETMEN_ADI;
     const owner = k.ogretmen_adi ? `Kaydeden: ${k.ogretmen_adi}` : "";
     return `
       <div class="rounded-xl border ${current ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"} p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

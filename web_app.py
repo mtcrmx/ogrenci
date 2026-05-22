@@ -1401,7 +1401,9 @@ def ogretmen_sinav_analiz():
     return render_template(
         "ogretmen_sinav_analiz.html",
         siniflar=siniflar,
+        ogretmen_id=oid,
         ogretmen_adi=session.get("ogretmen_adi", "") or "",
+        sinav_kayit_yonetici=_toplu_sifirlamaya_izinli_mi(oid),
         ogretmenler=[o["ad_soyad"] for o in tum_ogretmenler()],
         okul_adi="Erenler Cumhuriyet Ortaokulu",
         mudur_adi="ADEM AKGÜL",
@@ -1432,7 +1434,9 @@ def ogretmen_sinav_hazirla():
     return render_template(
         "ogretmen_sinav_hazirla.html",
         siniflar=siniflar,
+        ogretmen_id=oid,
         ogretmen_adi=session.get("ogretmen_adi", "") or "",
+        sinav_kayit_yonetici=_toplu_sifirlamaya_izinli_mi(oid),
         ogretmenler=[o["ad_soyad"] for o in tum_ogretmenler()],
         okul_adi="Erenler Cumhuriyet Ortaokulu",
         dersler=_sinav_dersleri(),
@@ -1442,7 +1446,8 @@ def ogretmen_sinav_hazirla():
 @app.route("/api/sinav-analiz/sinif/<int:sinif_id>")
 @giris_zorunlu
 def api_sinav_analiz_sinif(sinif_id: int):
-    if not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
+    if not yonetici_mi and not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
         return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
     rows = sinif_ogrencileri(sinif_id)
     def _ogr_row(r):
@@ -1497,11 +1502,15 @@ def _sinav_analiz_default_notu() -> str:
     )
 
 
-def _sinav_hazirlama_analiz_kaydi_bul(ogretmen_id: int, hazirlama_kayit_id: int | None) -> tuple[int | None, dict | None]:
+def _sinav_hazirlama_analiz_kaydi_bul(
+    ogretmen_id: int,
+    hazirlama_kayit_id: int | None,
+    tum_kayit_yetkisi: bool = False,
+) -> tuple[int | None, dict | None]:
     if not hazirlama_kayit_id:
         return None, None
-    for kayit in sinav_analiz_listesi(ogretmen_id, 200):
-        row = sinav_analiz_oku(kayit["id"], ogretmen_id)
+    for kayit in sinav_analiz_listesi(ogretmen_id, 200, tum_kayit_yetkisi=tum_kayit_yetkisi):
+        row = sinav_analiz_oku(kayit["id"], ogretmen_id, tum_kayit_yetkisi=tum_kayit_yetkisi)
         if not row:
             continue
         try:
@@ -1693,9 +1702,15 @@ def _sinav_state_not_puanlarini_isle(analiz_id: int, state: dict, ogretmen_id: i
 @app.route("/api/sinav-analiz/kayitlar")
 @giris_zorunlu
 def api_sinav_analiz_kayitlar():
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
     return jsonify({
         "ok": True,
-        "kayitlar": sinav_analiz_listesi(session["ogretmen_id"], 1000),
+        "kayitlar": sinav_analiz_listesi(
+            session["ogretmen_id"],
+            1000,
+            tum_kayit_yetkisi=yonetici_mi,
+        ),
+        "yonetici": yonetici_mi,
     })
 
 
@@ -1713,8 +1728,15 @@ def api_sinav_analiz_kaydet():
     except (TypeError, ValueError):
         sinif_id_int = None
     kayit_id = _payload_kayit_id(veri)
-    paylasimli_kayit = bool(kayit_id and sinav_analiz_oku(kayit_id, session["ogretmen_id"]))
-    if sinif_id_int and not paylasimli_kayit and not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int):
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
+    mevcut_kayit = sinav_analiz_oku(
+        kayit_id,
+        session["ogretmen_id"],
+        tum_kayit_yetkisi=yonetici_mi,
+    ) if kayit_id else None
+    if kayit_id and not mevcut_kayit:
+        return jsonify({"ok": False, "sebep": "Kayıt bulunamadı veya yetkiniz yok."}), 404
+    if sinif_id_int and not mevcut_kayit and not (yonetici_mi or _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int)):
         return jsonify({"ok": False, "sebep": "Bu sınıfa erişim yetkiniz yok."}), 403
 
     try:
@@ -1733,6 +1755,7 @@ def api_sinav_analiz_kaydet():
         sinav_adi=meta.get("sinavAdi") or "",
         egitim_yili=meta.get("egitimYili") or "",
         kayit_id=kayit_id,
+        tum_kayit_yetkisi=yonetici_mi,
     )
     if not sonuc.get("ok"):
         return jsonify(sonuc), 404
@@ -1741,7 +1764,7 @@ def api_sinav_analiz_kaydet():
         sonuc["puan_aktarim"] = _sinav_state_not_puanlarini_isle(
             int(kayit["id"]),
             state,
-            session["ogretmen_id"],
+            int(kayit.get("ogretmen_id") or session["ogretmen_id"]),
         )
     return jsonify(sonuc)
 
@@ -1749,7 +1772,8 @@ def api_sinav_analiz_kaydet():
 @app.route("/api/sinav-analiz/kayit/<int:kayit_id>")
 @giris_zorunlu
 def api_sinav_analiz_kayit_oku(kayit_id: int):
-    row = sinav_analiz_oku(kayit_id, session["ogretmen_id"])
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
+    row = sinav_analiz_oku(kayit_id, session["ogretmen_id"], tum_kayit_yetkisi=yonetici_mi)
     if not row:
         return jsonify({"ok": False, "sebep": "Kayıt bulunamadı."}), 404
     try:
@@ -1758,7 +1782,7 @@ def api_sinav_analiz_kayit_oku(kayit_id: int):
         return jsonify({"ok": False, "sebep": "Kayıt verisi okunamadı."}), 500
     kayit = {k: row[k] for k in (
         "id", "olusturma", "guncelleme", "baslik", "sinif_id", "sinif_adi",
-        "ders", "sinav_adi", "egitim_yili",
+        "ders", "sinav_adi", "egitim_yili", "ogretmen_id", "ogretmen_adi",
     )}
     return jsonify({"ok": True, "kayit": kayit, "state": state})
 
@@ -1766,7 +1790,8 @@ def api_sinav_analiz_kayit_oku(kayit_id: int):
 @app.route("/api/sinav-analiz/kayit/<int:kayit_id>/sil", methods=["DELETE", "POST"])
 @giris_zorunlu
 def api_sinav_analiz_kayit_sil(kayit_id: int):
-    sonuc = sinav_analiz_sil(kayit_id, session["ogretmen_id"])
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
+    sonuc = sinav_analiz_sil(kayit_id, session["ogretmen_id"], tum_kayit_yetkisi=yonetici_mi)
     if sonuc.get("silinen", 0) < 1:
         return jsonify({"ok": False, "sebep": "Kayıt bulunamadı.", "silinen": 0}), 404
     return jsonify(sonuc)
@@ -1775,9 +1800,15 @@ def api_sinav_analiz_kayit_sil(kayit_id: int):
 @app.route("/api/sinav-hazirlama/kayitlar")
 @giris_zorunlu
 def api_sinav_hazirlama_kayitlar():
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
     return jsonify({
         "ok": True,
-        "kayitlar": sinav_hazirlama_listesi(session["ogretmen_id"], 1000),
+        "kayitlar": sinav_hazirlama_listesi(
+            session["ogretmen_id"],
+            1000,
+            tum_kayit_yetkisi=yonetici_mi,
+        ),
+        "yonetici": yonetici_mi,
     })
 
 
@@ -1795,8 +1826,15 @@ def api_sinav_hazirlama_kaydet():
     except (TypeError, ValueError):
         sinif_id_int = None
     kayit_id = _payload_kayit_id(veri)
-    paylasimli_kayit = bool(kayit_id and sinav_hazirlama_oku(kayit_id, session["ogretmen_id"]))
-    if sinif_id_int and not paylasimli_kayit and not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int):
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
+    mevcut_kayit = sinav_hazirlama_oku(
+        kayit_id,
+        session["ogretmen_id"],
+        tum_kayit_yetkisi=yonetici_mi,
+    ) if kayit_id else None
+    if kayit_id and not mevcut_kayit:
+        return jsonify({"ok": False, "sebep": "Kayıt bulunamadı veya yetkiniz yok."}), 404
+    if sinif_id_int and not mevcut_kayit and not (yonetici_mi or _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id_int)):
         return jsonify({"ok": False, "sebep": "Bu sınıfa erişim yetkiniz yok."}), 403
 
     try:
@@ -1815,6 +1853,7 @@ def api_sinav_hazirlama_kaydet():
         sinav_adi=meta.get("sinavAdi") or "",
         egitim_yili=meta.get("egitimYili") or "",
         kayit_id=kayit_id,
+        tum_kayit_yetkisi=yonetici_mi,
     )
     if not sonuc.get("ok"):
         return jsonify(sonuc), 404
@@ -1827,7 +1866,11 @@ def api_sinav_hazirlama_kaydet():
     except (TypeError, ValueError):
         analiz_kayit_id = None
     if analiz_kayit_id:
-        row = sinav_analiz_oku(analiz_kayit_id, session["ogretmen_id"])
+        row = sinav_analiz_oku(
+            analiz_kayit_id,
+            session["ogretmen_id"],
+            tum_kayit_yetkisi=yonetici_mi,
+        )
         if row:
             try:
                 onceki_analiz_state = json.loads(row.get("state_json") or "{}")
@@ -1839,6 +1882,7 @@ def api_sinav_hazirlama_kaydet():
         analiz_kayit_id, onceki_analiz_state = _sinav_hazirlama_analiz_kaydi_bul(
             session["ogretmen_id"],
             hazirlama_kayit_id,
+            tum_kayit_yetkisi=yonetici_mi,
         )
 
     analiz_state = _sinav_hazirliktan_analiz_state(
@@ -1865,6 +1909,7 @@ def api_sinav_hazirlama_kaydet():
             sinav_adi=meta.get("sinavAdi") or "",
             egitim_yili=meta.get("egitimYili") or "",
             kayit_id=analiz_kayit_id,
+            tum_kayit_yetkisi=yonetici_mi,
         )
         if analiz_sonuc.get("ok"):
             analiz_kayit = analiz_sonuc.get("kayit") or {}
@@ -1880,7 +1925,8 @@ def api_sinav_hazirlama_kaydet():
 @app.route("/api/sinav-hazirlama/kayit/<int:kayit_id>")
 @giris_zorunlu
 def api_sinav_hazirlama_kayit_oku(kayit_id: int):
-    row = sinav_hazirlama_oku(kayit_id, session["ogretmen_id"])
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
+    row = sinav_hazirlama_oku(kayit_id, session["ogretmen_id"], tum_kayit_yetkisi=yonetici_mi)
     if not row:
         return jsonify({"ok": False, "sebep": "Kayıt bulunamadı."}), 404
     try:
@@ -1889,7 +1935,7 @@ def api_sinav_hazirlama_kayit_oku(kayit_id: int):
         return jsonify({"ok": False, "sebep": "Kayıt verisi okunamadı."}), 500
     kayit = {k: row[k] for k in (
         "id", "olusturma", "guncelleme", "baslik", "sinif_id", "sinif_adi",
-        "ders", "sinav_adi", "egitim_yili",
+        "ders", "sinav_adi", "egitim_yili", "ogretmen_id", "ogretmen_adi",
     )}
     return jsonify({"ok": True, "kayit": kayit, "state": state})
 
@@ -1897,7 +1943,8 @@ def api_sinav_hazirlama_kayit_oku(kayit_id: int):
 @app.route("/api/sinav-hazirlama/kayit/<int:kayit_id>/sil", methods=["DELETE", "POST"])
 @giris_zorunlu
 def api_sinav_hazirlama_kayit_sil(kayit_id: int):
-    sonuc = sinav_hazirlama_sil(kayit_id, session["ogretmen_id"])
+    yonetici_mi = _toplu_sifirlamaya_izinli_mi(session["ogretmen_id"])
+    sonuc = sinav_hazirlama_sil(kayit_id, session["ogretmen_id"], tum_kayit_yetkisi=yonetici_mi)
     if sonuc.get("silinen", 0) < 1:
         return jsonify({"ok": False, "sebep": "Kayıt bulunamadı.", "silinen": 0}), 404
     return jsonify(sonuc)
