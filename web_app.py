@@ -117,6 +117,8 @@ def _tarih_araligi_duzelt(bas: str, bit: str) -> tuple[str, str]:
 
 
 def _ogretmen_sinifinda_mi(ogretmen_id: int, sinif_id: int) -> bool:
+    if sinif_id in {s["id"] for s in aktif_sube_siniflari()}:
+        return True
     return sinif_id in {s["id"] for s in ogretmen_siniflari(ogretmen_id)}
 
 
@@ -2386,7 +2388,7 @@ def bilgilendirme_yonetimi():
 def dashboard():
     ogretmen_id  = session["ogretmen_id"]
     ogretmen_adi = session.get("ogretmen_adi", "")
-    siniflar     = ogretmen_siniflari(ogretmen_id)
+    siniflar     = aktif_sube_siniflari() or ogretmen_siniflari(ogretmen_id)
 
     if not siniflar:
         return render_template("dashboard.html", siniflar=[], aktif=None,
@@ -2462,26 +2464,40 @@ def veri_girisi():
 @giris_zorunlu
 def ders_programi():
     oid = int(session["ogretmen_id"])
-    benim_siniflar = ogretmen_siniflari(oid)
     subeler = aktif_sube_siniflari()
     gorunum = (request.args.get("gorunum") or "ben").strip()
-    if gorunum not in {"ben", "sinif"}:
+    if gorunum not in {"ben", "sinif", "tum"}:
         gorunum = "ben"
     sinif_id = request.args.get("sinif", type=int)
-    if gorunum == "sinif":
-        if not sinif_id:
-            if benim_siniflar:
-                sinif_id = int(benim_siniflar[0]["id"])
-            elif subeler:
-                sinif_id = int(subeler[0]["id"])
+    sinif_programlari = []
+    if gorunum == "tum":
+        for s in subeler:
+            kayitlar = ders_programi_sinif(int(s["id"]))
+            sinif_programlari.append({
+                "sinif_id": int(s["id"]),
+                "sinif_adi": s["sinif_adi"],
+                "grid": ders_programi_grid(kayitlar),
+                "kayit_sayisi": len(kayitlar),
+            })
+        kayitlar = []
+        baslik = "Tüm sınıflar"
+        grid = []
+        kayit_sayisi = sum(p["kayit_sayisi"] for p in sinif_programlari)
+    elif gorunum == "sinif":
+        if not sinif_id and subeler:
+            sinif_id = int(subeler[0]["id"])
         kayitlar = ders_programi_sinif(sinif_id) if sinif_id else []
         baslik = next((s["sinif_adi"] for s in subeler if int(s["id"]) == int(sinif_id or 0)), "")
         if not baslik and kayitlar:
             baslik = kayitlar[0].get("sinif_adi") or ""
+        grid = ders_programi_grid(kayitlar)
+        kayit_sayisi = len(kayitlar)
     else:
         kayitlar = ders_programi_ogretmen(oid)
         baslik = session.get("ogretmen_adi") or "Programım"
         sinif_id = None
+        grid = ders_programi_grid(kayitlar)
+        kayit_sayisi = len(kayitlar)
     return render_template(
         "ders_programi.html",
         gorunum=gorunum,
@@ -2489,8 +2505,9 @@ def ders_programi():
         sinif_id=sinif_id,
         baslik=baslik,
         gunler=DERS_GUNLERI,
-        grid=ders_programi_grid(kayitlar),
-        kayit_sayisi=len(kayitlar),
+        grid=grid,
+        kayit_sayisi=kayit_sayisi,
+        sinif_programlari=sinif_programlari,
     )
 
 

@@ -382,6 +382,10 @@ def _programdan_siniflar() -> dict[str, list[str]]:
 
 _OGRETMEN_SINIF: dict[str, list[str]] = _programdan_siniflar()
 _KADRO_DISI_OGRETMENLER = ["YUSUF ERTÜRK"]
+_AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B")
+_TUM_SUBE_OGRETMENLERI = tuple(
+    dict.fromkeys(list(_OGRETMEN_SINIF.keys()) + _KADRO_DISI_OGRETMENLER)
+)
 
 # ── PDF'lerden alınan öğrenci listeleri (ad_soyad, öğrenci_no) ─────────────
 _OGRENCILER: dict[str, list[tuple[str, int]]] = {
@@ -1197,10 +1201,8 @@ def _bos_sifre_uret(con: sqlite3.Connection) -> str:
 
 
 def _ogretmen_kadrosunu_senkronize(con: sqlite3.Connection) -> None:
-    """Yeni öğretmenleri ekler; sınıf eşleşmesini güncel ders programına göre yazar."""
-    kadro = list(_OGRETMEN_SINIF.keys()) + [
-        ad for ad in _KADRO_DISI_OGRETMENLER if ad not in _OGRETMEN_SINIF
-    ]
+    """Yeni öğretmenleri ekler; her öğretmene 5/A–8/B şubelerini açar."""
+    kadro = list(_TUM_SUBE_OGRETMENLERI)
     for ad in kadro:
         row = con.execute(
             "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
@@ -1214,39 +1216,19 @@ def _ogretmen_kadrosunu_senkronize(con: sqlite3.Connection) -> None:
         )
         print(f"INFO: Yeni ogretmen eklendi: {ad} ({sifre})")
 
-    aktif_idler: set[int] = set()
-    for ad, siniflar in _OGRETMEN_SINIF.items():
-        og = con.execute(
-            "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
-        ).fetchone()
-        if not og:
-            continue
-        oid = int(og["id"])
-        aktif_idler.add(oid)
-        con.execute("DELETE FROM ogretmen_sinif WHERE ogretmen_id = ?", (oid,))
-        for sinif_adi in siniflar:
-            sinif = con.execute(
-                "SELECT id FROM siniflar WHERE sinif_adi = ?", (sinif_adi,)
-            ).fetchone()
-            if not sinif:
-                continue
+    sube_idler: list[int] = []
+    for sinif_adi in _AKTIF_SUBELER:
+        sid = _sinif_id_adi(con, sinif_adi)
+        if sid:
+            sube_idler.append(sid)
+
+    for row in con.execute("SELECT id FROM ogretmenler").fetchall():
+        oid = int(row["id"])
+        for sid in sube_idler:
             con.execute(
                 "INSERT OR IGNORE INTO ogretmen_sinif (ogretmen_id, sinif_id) VALUES (?, ?)",
-                (oid, int(sinif["id"])),
+                (oid, sid),
             )
-
-    for ad in _KADRO_DISI_OGRETMENLER:
-        og = con.execute(
-            "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
-        ).fetchone()
-        if og:
-            aktif_idler.add(int(og["id"]))
-
-    for row in con.execute("SELECT id, ad_soyad FROM ogretmenler").fetchall():
-        oid = int(row["id"])
-        if oid in aktif_idler:
-            continue
-        con.execute("DELETE FROM ogretmen_sinif WHERE ogretmen_id = ?", (oid,))
     con.commit()
 
 
@@ -1374,11 +1356,11 @@ def ders_programi_okul() -> list[dict]:
 
 def aktif_sube_siniflari() -> list[dict]:
     con = _conn()
-    rows = [dict(r) for r in con.execute("""
-        SELECT id, sinif_adi FROM siniflar
-        WHERE sinif_adi IN ('5/A', '5/B', '6/A', '6/B', '7/A', '7/B', '8/A', '8/B')
-        ORDER BY sinif_adi
-    """).fetchall()]
+    yerler = ",".join("?" * len(_AKTIF_SUBELER))
+    rows = [dict(r) for r in con.execute(
+        f"SELECT id, sinif_adi FROM siniflar WHERE sinif_adi IN ({yerler}) ORDER BY sinif_adi",
+        _AKTIF_SUBELER,
+    ).fetchall()]
     con.close()
     return rows
 
