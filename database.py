@@ -232,6 +232,151 @@ _OGRENCILER: dict[str, list[tuple[str, int]]] = {
 }
 
 
+# Yeni 5. sınıflar (2026-2027) — okul listelerinden
+_YENI_BESINCILER: dict[str, list[tuple[str, int]]] = {
+    "5/A": [
+        ("HÜSEYİN ÇAĞLAR", 171),
+        ("BERAT FİLİZ", 275),
+        ("MİSRA YAMAN", 282),
+        ("NİSA NUR AÇIKGÖZ", 286),
+        ("ÖMER HALİS DOĞAN", 288),
+        ("ÖMER KAAN AKCAN", 290),
+        ("YUSUF ERDOĞAN", 294),
+        ("ZEHRA KULA", 295),
+        ("ZEHRA UĞUR", 296),
+        ("YANKI DENİZ BATU GÜLBAŞ", 302),
+        ("BUĞLEM ATEŞ", 303),
+        ("DEFNE ERDOĞAN", 305),
+        ("EBRAR GÜLBAHAR TUNCAY", 306),
+        ("EYMEN DERE", 311),
+        ("EYMEN TAHA KARAGÖZ", 313),
+        ("HASAN KAYRA YILDIRIM", 315),
+        ("MELİS LİNA YAPICAK", 318),
+        ("OĞUZ KAĞAN GÖKÇE", 321),
+        ("SEMA NUR DUMAN", 322),
+        ("YUSUF EMİR MENSUR", 325),
+        ("BAHADIR AYAZ ŞAHİN", 332),
+        ("ZEYNEP SARE AKKUŞ", 335),
+        ("DENİZ AYNACI", 337),
+        ("ELİF DURSUN", 339),
+        ("ESMA HATUN BEKTAŞ", 340),
+        ("EYYÜP EYMEN KİLPELİT", 341),
+        ("HACER AYBÜKE KÜSER", 343),
+        ("MUSTAFA EREN ŞİMŞEK", 351),
+        ("ŞENGÜL KARA", 358),
+        ("ZEYNEP MUCU", 363),
+        ("AHMET EYMEN BIYIK", 365),
+    ],
+    "5/B": [
+        ("BELİNAY TATAR", 172),
+        ("METEHAN YILDIRIM", 280),
+        ("MÜRSEL EYMEN AKÇAY", 284),
+        ("ZÜMRA SALIK", 300),
+        ("MEHMET SALİH YILDIRIM", 304),
+        ("EYLÜL ERVA PARLAK", 310),
+        ("EYMEN EFE AKSIR", 312),
+        ("HACER TUĞBA SERT", 314),
+        ("HİRA MİRAY ALAŞ", 316),
+        ("HİRA SULTAN YURDAKUL", 317),
+        ("MUHAMMED MUSAB ARIK", 319),
+        ("NUR GÖKÇE", 320),
+        ("SUDENAZ ALA", 323),
+        ("TUFAN ÇÖPATLAMAZ", 324),
+        ("ZEHRA BAYRAM", 326),
+        ("ASYA KAÇMAZ", 330),
+        ("ALİ MERT ÖZTÜRK", 331),
+        ("BATUHAN GEDİK", 333),
+        ("YAREN İPEK", 334),
+        ("CEYLİN MİRA ŞENTÜRK", 336),
+        ("ECRİN BERRA YARDIMCI", 338),
+        ("GÜL GÖKÇE", 342),
+        ("KUZEY ALİ ALAŞ", 346),
+        ("MENDERES FURKAN BURSALI", 347),
+        ("MUSTAFA MEMİŞ", 352),
+        ("RAHİME RAVZA SAĞIR", 355),
+        ("SEVDA ARMUTCU", 356),
+        ("SEVİM YARDIMCI", 357),
+        ("VEYSEL EFE DİLBAZ", 359),
+        ("YASİN EFE ALA", 360),
+        ("YASİR DOĞAN", 361),
+        ("YİĞİT SAMET İPEK", 362),
+        ("ZEYNEP UÇAR", 364),
+        ("HÜSEYİN EFE SAĞIR", 366),
+    ],
+}
+
+_EGITIM_YILI_YUKSELTME_ANAHTAR = "egitim_yili_yukseltme_2026_2027"
+
+
+def _sinif_id_adi(con: sqlite3.Connection, sinif_adi: str) -> int | None:
+    row = con.execute("SELECT id FROM siniflar WHERE sinif_adi = ?", (sinif_adi,)).fetchone()
+    return int(row["id"]) if row else None
+
+
+def _egitim_yili_yukselt_2026_2027(con: sqlite3.Connection) -> None:
+    """8. sınıfları mezun eder, diğerlerini bir üst şubeye alır, yeni 5. sınıfları ekler."""
+    _yardimci_tablolar_init(con)
+    var = con.execute(
+        "SELECT deger FROM admin_meta WHERE anahtar = ?",
+        (_EGITIM_YILI_YUKSELTME_ANAHTAR,),
+    ).fetchone()
+    if var:
+        return
+
+    adlar = ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"]
+    ids: dict[str, int] = {}
+    for adi in adlar:
+        sid = _sinif_id_adi(con, adi)
+        if not sid:
+            print("UYARI: Sinif bulunamadi, yukseltme atlandi:", adi)
+            return
+        ids[adi] = sid
+
+    con.execute("INSERT OR IGNORE INTO siniflar (sinif_adi) VALUES (?)", ("Mezun 2026",))
+    mezun_id = _sinif_id_adi(con, "Mezun 2026")
+    if not mezun_id:
+        print("UYARI: Mezun sinifi olusturulamadi, yukseltme atlandi.")
+        return
+
+    con.execute(
+        "UPDATE ogrenciler SET sinif_id = ? WHERE sinif_id IN (?, ?)",
+        (mezun_id, ids["8/A"], ids["8/B"]),
+    )
+    for kaynak, hedef in (
+        ("7/A", "8/A"),
+        ("7/B", "8/B"),
+        ("6/A", "7/A"),
+        ("6/B", "7/B"),
+        ("5/A", "6/A"),
+        ("5/B", "6/B"),
+    ):
+        con.execute(
+            "UPDATE ogrenciler SET sinif_id = ? WHERE sinif_id = ?",
+            (ids[hedef], ids[kaynak]),
+        )
+
+    mevcut = {int(r[0]) for r in con.execute("SELECT ogr_no FROM ogrenciler")}
+    eklenen = 0
+    for sinif_adi, liste in _YENI_BESINCILER.items():
+        sid = ids[sinif_adi]
+        for ad_soyad, ogr_no in liste:
+            if int(ogr_no) in mevcut:
+                continue
+            con.execute(
+                "INSERT INTO ogrenciler (ad_soyad, sinif_id, ogr_no) VALUES (?, ?, ?)",
+                (ad_soyad, sid, int(ogr_no)),
+            )
+            mevcut.add(int(ogr_no))
+            eklenen += 1
+
+    con.execute(
+        "INSERT INTO admin_meta (anahtar, deger) VALUES (?, ?)",
+        (_EGITIM_YILI_YUKSELTME_ANAHTAR, "ok"),
+    )
+    con.commit()
+    print(f"INFO: 2026-2027 sinif yukseltmesi uygulandi (yeni 5. sinif: {eklenen} ogrenci).")
+
+
 # ══════════════════════════════════════════════════════════════════════════
 # Bağlantı
 # ══════════════════════════════════════════════════════════════════════════
@@ -339,6 +484,7 @@ def initialize_db():
     _akademik_puan_init(con)
     _evrak_takip_init(con)
     _ogrenci_ozellikler_ensure(con)
+    _egitim_yili_yukselt_2026_2027(con)
     con.close()
 
 
