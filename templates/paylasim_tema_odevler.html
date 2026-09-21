@@ -17,8 +17,7 @@
         <a href="{{ url_for('veli_ozet_sayfa') }}" class="text-xs font-bold bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg">30 günlük özet</a>
         <a href="{{ url_for('veli_cikis') }}" class="text-xs font-bold bg-slate-800 px-3 py-1.5 rounded-lg">Çıkış</a>
         {% else %}
-        <a href="{{ url_for('ogrenci_gorunum') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Ana öğrenci ekranı</a>
-        <a href="{{ url_for('ogrenci_gelisim_panel') }}" class="text-xs font-bold bg-indigo-700 hover:bg-indigo-600 px-3 py-1.5 rounded-lg">XP panel</a>
+        <a href="{{ url_for('ogrenci_gorunum') }}" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Tik geçmişi</a>
         <a href="{{ url_for('ogrenci_cikis') }}" class="text-xs font-bold bg-slate-800 px-3 py-1.5 rounded-lg">Çıkış</a>
         {% endif %}
       </div>

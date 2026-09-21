@@ -19,21 +19,17 @@
             </a>
             <h1 class="mt-8 text-3xl font-black leading-tight text-white sm:text-5xl">Öğrenci kişisel alanı</h1>
             <p class="mt-4 max-w-lg text-sm font-bold leading-6 text-white/78">
-              Girişten sonra kendi tik kayıtlarını, ödevlerini ve öğretmen onaylı puan ilerlemeni görürsün.
+              Girişten sonra kendi tik kayıtlarını ve ödevlerini görürsün.
             </p>
           </div>
-          <div class="grid gap-3 sm:grid-cols-3">
+          <div class="grid gap-3 sm:grid-cols-2">
             <div class="rounded-[8px] border border-white/20 bg-white/14 p-3 text-white backdrop-blur">
               <div class="text-xs font-black text-white/70">Takip</div>
               <div class="mt-1 text-lg font-black">Tik geçmişi</div>
             </div>
             <div class="rounded-[8px] border border-white/20 bg-white/14 p-3 text-white backdrop-blur">
-              <div class="text-xs font-black text-white/70">Gelişim</div>
-              <div class="mt-1 text-lg font-black">XP paneli</div>
-            </div>
-            <div class="rounded-[8px] border border-white/20 bg-white/14 p-3 text-white backdrop-blur">
-              <div class="text-xs font-black text-white/70">Puan</div>
-              <div class="mt-1 text-lg font-black">Öğretmen onayı</div>
+              <div class="text-xs font-black text-white/70">Ödev</div>
+              <div class="mt-1 text-lg font-black">Tema listesi</div>
             </div>
           </div>
         </div>
@@ -72,8 +68,8 @@
         </div>
 
         <div class="mt-5 grid gap-2 border-t border-slate-200 pt-4 text-center text-xs font-bold sm:grid-cols-2">
-          <a href="{{ url_for('ogrenci_ben') }}" class="rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sky-700 hover:bg-sky-50">
-            Kişisel ekrana git
+          <a href="{{ url_for('ogrenci_gorunum') }}" class="rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sky-700 hover:bg-sky-50">
+            Tik geçmişine git
           </a>
           <a href="{{ url_for('login') }}" class="rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-slate-600 hover:bg-slate-50">
             Öğretmen girişine dön

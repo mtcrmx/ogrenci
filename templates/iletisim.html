@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}İletişim{% endblock %}
+
+{% block body %}
+<main class="px-4 py-6">
+  <section class="mx-auto max-w-4xl space-y-5">
+    <div>
+      <p class="text-xs font-black uppercase tracking-widest text-sky-700">İletişim</p>
+      <h1 class="mt-1 text-2xl font-black text-slate-950">Duyuru ve veli</h1>
+      <p class="mt-1 text-sm text-slate-600">Öğrenci-veli duyurusu ve görüşme talepleri.</p>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2">
+      <a href="{{ url_for('bilgilendirme_yonetimi') }}"
+         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-sky-300 hover:shadow">
+        <div class="text-xs font-black uppercase tracking-widest text-sky-700">Duyuru</div>
+        <h2 class="mt-1 text-lg font-black text-slate-950">Duyuru yayınla</h2>
+        <p class="mt-1 text-sm text-slate-500">Öğrenci ve veliye kısa bilgilendirme gönder.</p>
+      </a>
+      <a href="{{ url_for('ogretmen_randevular') }}"
+         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-rose-300 hover:shadow">
+        <div class="text-xs font-black uppercase tracking-widest text-rose-700">Randevu</div>
+        <h2 class="mt-1 text-lg font-black text-slate-950">Veli randevuları</h2>
+        <p class="mt-1 text-sm text-slate-500">Görüşme taleplerini gör ve yanıtla.</p>
+      </a>
+    </div>
+  </section>
+</main>
+{% endblock %}

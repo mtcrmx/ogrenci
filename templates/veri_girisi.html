@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Veri girişi{% endblock %}
+
+{% block body %}
+<main class="px-4 py-6">
+  <section class="mx-auto max-w-4xl space-y-5">
+    <div>
+      <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Veri girişi</p>
+      <h1 class="mt-1 text-2xl font-black text-slate-950">Öğrenci verisi gir</h1>
+      <p class="mt-1 text-sm text-slate-600">Ödev, kitap okuma ve sınav kayıtları.</p>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2">
+      <a href="{{ url_for('odevler') }}"
+         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-emerald-300 hover:shadow">
+        <div class="text-xs font-black uppercase tracking-widest text-emerald-700">Ödev</div>
+        <h2 class="mt-1 text-lg font-black text-slate-950">Ödev ve tema</h2>
+        <p class="mt-1 text-sm text-slate-500">Tema oluştur, müfredat seç, sınıf ödevi ver.</p>
+      </a>
+      <a href="{{ url_for('yoklama', sinif=request.args.get('sinif')) if request.args.get('sinif') else url_for('yoklama') }}"
+         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-amber-300 hover:shadow">
+        <div class="text-xs font-black uppercase tracking-widest text-amber-700">İşaretleme</div>
+        <h2 class="mt-1 text-lg font-black text-slate-950">Ödev işaretleme</h2>
+        <p class="mt-1 text-sm text-slate-500">Yapan öğrenciyi listeden işaretle.</p>
+      </a>
+      <a href="{{ url_for('ogretmen_kitap_okuma') }}"
+         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-sky-300 hover:shadow">
+        <div class="text-xs font-black uppercase tracking-widest text-sky-700">Kitap</div>
+        <h2 class="mt-1 text-lg font-black text-slate-950">Kitap okuma</h2>
+        <p class="mt-1 text-sm text-slate-500">Veli kayıtlarını onayla veya reddet.</p>
+      </a>
+      <a href="{{ url_for('ogretmen_sinav_analiz') }}"
+         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-amber-300 hover:shadow">
+        <div class="text-xs font-black uppercase tracking-widest text-amber-800">Sınav</div>
+        <h2 class="mt-1 text-lg font-black text-slate-950">Sınav analizi</h2>
+        <p class="mt-1 text-sm text-slate-500">Kazanım ve sınıf analizi. Hazırlama bu sayfadan açılır.</p>
+      </a>
+    </div>
+  </section>
+</main>
+{% endblock %}
