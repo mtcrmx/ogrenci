@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Ders programı{% endblock %}
+
+{% block body %}
+<main class="px-4 py-6">
+  <section class="mx-auto max-w-6xl space-y-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-xs font-black uppercase tracking-widest text-indigo-700">Ders programı</p>
+        <h1 class="mt-1 text-2xl font-black text-slate-950">{{ baslik or 'Haftalık program' }}</h1>
+        <p class="mt-1 text-sm text-slate-600">{{ kayit_sayisi }} ders · 2026-2027</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('ders_programi', gorunum='ben') }}"
+           class="rounded-lg px-3 py-2 text-xs font-black border {{ 'bg-indigo-700 text-white border-indigo-700' if gorunum == 'ben' else 'bg-white text-slate-700 border-slate-200' }}">
+          Programım
+        </a>
+        <a href="{{ url_for('ders_programi', gorunum='sinif', sinif=sinif_id) }}"
+           class="rounded-lg px-3 py-2 text-xs font-black border {{ 'bg-indigo-700 text-white border-indigo-700' if gorunum == 'sinif' else 'bg-white text-slate-700 border-slate-200' }}">
+          Sınıf
+        </a>
+      </div>
+    </div>
+
+    {% if gorunum == 'sinif' %}
+    <form method="get" class="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="gorunum" value="sinif">
+      <label class="text-xs font-black text-slate-500">Şube</label>
+      <select name="sinif" onchange="this.form.submit()"
+              class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800">
+        {% for s in siniflar %}
+        <option value="{{ s.id }}" {% if sinif_id and s.id == sinif_id %}selected{% endif %}>{{ s.sinif_adi }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+
+    <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <table class="min-w-[720px] w-full text-left text-sm">
+        <thead>
+          <tr class="bg-slate-50 text-xs font-black uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-3 w-24">Saat</th>
+            {% for gun in gunler %}
+            <th class="px-2 py-3">{{ gun }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for satir in grid %}
+          <tr class="border-t border-slate-100 align-top">
+            <td class="px-3 py-2">
+              <div class="text-xs font-black text-slate-800">{{ satir.ders_no }}. ders</div>
+              <div class="text-[11px] font-bold text-slate-400">{{ satir.saat }}</div>
+            </td>
+            {% for hucre in satir.hucreler %}
+            <td class="px-2 py-2">
+              {% if hucre.dersler %}
+                {% for d in hucre.dersler %}
+                <div class="mb-1 rounded-lg border border-indigo-100 bg-indigo-50 px-2 py-1.5 last:mb-0">
+                  {% if gorunum == 'ben' %}
+                  <div class="text-xs font-black text-indigo-900">{{ d.sinif_adi }}</div>
+                  {% else %}
+                  <div class="text-xs font-black text-indigo-900">{{ d.ogretmen_adi }}</div>
+                  {% endif %}
+                  <div class="text-[11px] font-bold text-indigo-700">{{ d.ders_kisa }}</div>
+                  {% if hucre.gun == 4 %}
+                  <div class="text-[10px] font-bold text-slate-400">{{ hucre.saat }}</div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="h-10 rounded-lg bg-slate-50"></div>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs font-bold text-slate-400">Cuma öğleden sonra saatleri hafta içinden farklıdır.</p>
+  </section>
+</main>
+{% endblock %}

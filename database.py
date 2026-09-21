@@ -117,25 +117,271 @@ OLUMLU_KRITERLER = [
     ("🎯", "Günlük Hedef Tamamlama"),
 ]
 
-# ── PDF'lerden alınan öğretmen–sınıf eşleşmeleri ──────────────────────────
-_OGRETMEN_SINIF: dict[str, list[str]] = {
-    "ADEM AKGÜL":       ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"],
-    "AYTAÇ ATMACA":     ["6/A", "6/B", "8/A", "8/B"],
-    "CANTEKİN KURTOĞLU":["5/A", "5/B", "8/A", "8/B"],
-    "CEMİL KUYUMCU":    ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"],
-    "ELİF DEDEOĞLU":    ["5/A", "6/A", "6/B", "7/B", "8/A", "8/B"],
-    "EMİNE KILIÇ":      ["5/B", "7/A"],
-    "FATMA ÇAPKULAÇ":   ["5/B", "6/A", "6/B", "7/A"],
-    "FUNDA KİRAZ":      ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"],
-    "HAVVA ÖZDEMİR":    ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"],
-    "İFTARİYE ARSLAN":  ["5/A", "5/B", "7/A", "7/B"],
-    "MERVE TÜRKEL":     ["6/A", "6/B", "7/A"],
-    "METEHAN CÜCEN":    ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"],
-    "NESLİHAN ÇAKMAK":  ["5/A", "7/B", "8/A", "8/B"],
-    "ÖZGE KILIÇ":       ["7/A", "7/B", "8/A", "8/B"],
-    "SATI ERGİN":       ["5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"],
-    "YUSUF ERTÜRK":     ["5/A", "5/B", "6/A", "6/B"],
+# ── 2026-2027 öğretmen ders programı (gün 0=Pazartesi … 4=Cuma, ders 1–7)
+DERS_GUNLERI = ("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma")
+_DERS_SAAT_HAFTAICI = (
+    ("08:15", "08:55"),
+    ("09:15", "09:55"),
+    ("10:10", "10:50"),
+    ("11:05", "11:45"),
+    ("12:55", "13:35"),
+    ("13:50", "14:30"),
+    ("14:45", "15:25"),
+)
+_DERS_SAAT_CUMA = (
+    ("08:15", "08:55"),
+    ("09:15", "09:55"),
+    ("10:10", "10:50"),
+    ("11:05", "11:45"),
+    ("13:30", "14:00"),
+    ("14:00", "14:50"),
+    ("14:50", "15:40"),
+)
+DERS_KISA_AD = {
+    "Din Kültürü ve Ahlak Bilgisi": "DKAB",
+    "T.C. İnkılap Tarihi ve Atatürkçülük": "İnkılap",
+    "Görsel Sanatlar": "Görsel",
+    "Fen Bilimleri": "Fen",
+    "Beden Eğitimi ve Spor": "Beden",
+    "Bilişim Teknolojileri": "Bilişim",
+    "Teknoloji ve Tasarım": "Tekno",
+    "Medya Okuryazarlığı": "Medya",
+    "Yazarlık ve Yazma Becerileri": "YYB",
+    "Temel Dini Bilgiler": "TDB",
+    "Çevre Eğitimi": "Çevre",
+    "Sosyal Bilgiler": "Sosyal",
 }
+
+# (öğretmen, gün, ders_no, sınıf, ders)
+_DERS_PROGRAMI_SATIRLARI: list[tuple[str, int, int, str, str]] = [
+    ("ADEM AKGÜL", 0, 1, "8/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("ADEM AKGÜL", 0, 5, "8/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("ADEM AKGÜL", 0, 6, "8/B", "Türkçe"),
+    ("ADEM AKGÜL", 1, 5, "8/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("ADEM AKGÜL", 1, 6, "8/B", "Türkçe"),
+    ("ADEM AKGÜL", 2, 1, "7/A", "Medya Okuryazarlığı"),
+    ("ADEM AKGÜL", 2, 2, "5/A", "Yazarlık ve Yazma Becerileri"),
+    ("ADEM AKGÜL", 2, 4, "8/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("ADEM AKGÜL", 3, 5, "8/B", "Türkçe"),
+
+    ("CEMİL KUYUMCU", 0, 1, "6/B", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 0, 2, "6/A", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 0, 3, "6/A", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 0, 4, "7/A", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 0, 5, "5/A", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 0, 7, "7/A", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 2, 1, "7/B", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 2, 2, "8/A", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 2, 3, "6/A", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 2, 4, "7/B", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 2, 5, "5/B", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 2, 7, "6/B", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 4, 3, "7/A", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 4, 4, "7/B", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 4, 6, "8/B", "Görsel Sanatlar"),
+    ("CEMİL KUYUMCU", 4, 7, "6/B", "Görsel Sanatlar"),
+
+    ("ELİF DEDEOĞLU", 0, 1, "5/A", "İngilizce"),
+    ("ELİF DEDEOĞLU", 0, 3, "8/B", "İngilizce"),
+    ("ELİF DEDEOĞLU", 0, 6, "6/A", "İngilizce"),
+    ("ELİF DEDEOĞLU", 0, 7, "7/B", "Rehberlik"),
+    ("ELİF DEDEOĞLU", 1, 2, "8/B", "İngilizce"),
+    ("ELİF DEDEOĞLU", 1, 4, "7/B", "İngilizce"),
+    ("ELİF DEDEOĞLU", 1, 5, "6/B", "İngilizce"),
+    ("ELİF DEDEOĞLU", 3, 1, "6/B", "İngilizce"),
+    ("ELİF DEDEOĞLU", 3, 2, "6/A", "İngilizce"),
+    ("ELİF DEDEOĞLU", 3, 3, "7/A", "İngilizce"),
+    ("ELİF DEDEOĞLU", 4, 1, "7/B", "İngilizce"),
+    ("ELİF DEDEOĞLU", 4, 2, "5/A", "İngilizce"),
+    ("ELİF DEDEOĞLU", 4, 3, "7/A", "İngilizce"),
+
+    ("BEYZANUR AKKIŞ", 0, 1, "7/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 0, 3, "6/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 0, 4, "7/A", "Matematik"),
+    ("BEYZANUR AKKIŞ", 0, 5, "6/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 1, 2, "6/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 1, 3, "5/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 2, 1, "6/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 2, 2, "7/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 2, 3, "7/A", "Matematik"),
+    ("BEYZANUR AKKIŞ", 2, 5, "5/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 3, 1, "7/A", "Matematik"),
+    ("BEYZANUR AKKIŞ", 3, 2, "6/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 3, 4, "5/B", "Matematik"),
+    ("BEYZANUR AKKIŞ", 3, 5, "7/B", "Matematik"),
+
+    ("FUNDA KİRAZ", 0, 1, "8/A", "T.C. İnkılap Tarihi ve Atatürkçülük"),
+    ("FUNDA KİRAZ", 0, 2, "6/B", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 0, 3, "6/A", "Ahlak"),
+    ("FUNDA KİRAZ", 0, 4, "5/B", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 0, 5, "6/B", "Ahlak"),
+    ("FUNDA KİRAZ", 0, 6, "5/A", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 1, 2, "6/B", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 1, 3, "7/A", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 1, 4, "7/B", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 2, 1, "5/A", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 2, 2, "7/A", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 2, 3, "6/A", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 2, 5, "7/B", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 3, 1, "5/B", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 3, 2, "7/A", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 3, 3, "7/B", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 3, 4, "6/A", "Sosyal Bilgiler"),
+    ("FUNDA KİRAZ", 3, 5, "8/B", "T.C. İnkılap Tarihi ve Atatürkçülük"),
+
+    ("HAVVA ÖZDEMİR", 0, 2, "8/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 0, 3, "5/B", "Temel Dini Bilgiler"),
+    ("HAVVA ÖZDEMİR", 0, 4, "5/A", "Temel Dini Bilgiler"),
+    ("HAVVA ÖZDEMİR", 0, 6, "5/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 1, 2, "6/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 1, 3, "6/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 1, 4, "5/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 1, 5, "8/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 2, 1, "7/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 2, 2, "5/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 2, 4, "7/A", "Arapça"),
+    ("HAVVA ÖZDEMİR", 3, 2, "8/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 3, 3, "7/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 3, 4, "6/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 3, 6, "7/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 4, 1, "8/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 4, 2, "7/A", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 4, 3, "6/B", "Din Kültürü ve Ahlak Bilgisi"),
+    ("HAVVA ÖZDEMİR", 4, 4, "5/A", "Din Kültürü ve Ahlak Bilgisi"),
+
+    ("İFTARİYE ARSLAN", 1, 1, "8/A", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 1, 4, "8/B", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 1, 5, "8/A", "Çevre Eğitimi"),
+    ("İFTARİYE ARSLAN", 2, 1, "6/A", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 2, 3, "8/B", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 2, 4, "5/A", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 2, 5, "8/A", "Çevre Eğitimi"),
+    ("İFTARİYE ARSLAN", 3, 1, "8/A", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 3, 4, "5/A", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 3, 6, "6/B", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 4, 1, "6/A", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 4, 2, "8/A", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 4, 3, "6/B", "Fen Bilimleri"),
+    ("İFTARİYE ARSLAN", 4, 4, "8/B", "Fen Bilimleri"),
+
+    ("MERVE TÜRKEL", 0, 1, "7/A", "Türkçe"),
+    ("MERVE TÜRKEL", 0, 2, "7/A", "Rehberlik"),
+    ("MERVE TÜRKEL", 0, 4, "7/B", "Medya Okuryazarlığı"),
+    ("MERVE TÜRKEL", 0, 5, "5/B", "Türkçe"),
+    ("MERVE TÜRKEL", 1, 4, "5/B", "Yazarlık ve Yazma Becerileri"),
+    ("MERVE TÜRKEL", 1, 5, "7/A", "Türkçe"),
+    ("MERVE TÜRKEL", 1, 6, "7/B", "Türkçe"),
+    ("MERVE TÜRKEL", 3, 1, "7/B", "Türkçe"),
+    ("MERVE TÜRKEL", 3, 2, "5/B", "Türkçe"),
+    ("MERVE TÜRKEL", 3, 3, "7/B", "Medya Okuryazarlığı"),
+    ("MERVE TÜRKEL", 3, 4, "7/A", "Türkçe"),
+    ("MERVE TÜRKEL", 4, 6, "5/B", "Türkçe"),
+    ("MERVE TÜRKEL", 4, 7, "7/B", "Türkçe"),
+
+    ("METEHAN CÜCEN", 0, 6, "8/B", "Müzik"),
+    ("METEHAN CÜCEN", 0, 7, "5/A", "Müzik"),
+    ("METEHAN CÜCEN", 2, 7, "8/B", "Müzik"),
+    ("METEHAN CÜCEN", 3, 1, "8/B", "Müzik"),
+    ("METEHAN CÜCEN", 3, 2, "8/A", "Müzik"),
+    ("METEHAN CÜCEN", 4, 1, "8/A", "Müzik"),
+
+    ("NESLİHAN ÇAKMAK", 0, 4, "6/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 0, 5, "8/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 1, 1, "8/B", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 1, 2, "6/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 1, 3, "6/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 1, 4, "5/A", "Rehberlik"),
+    ("NESLİHAN ÇAKMAK", 1, 7, "8/B", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 2, 1, "8/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 2, 6, "6/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 2, 7, "6/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 3, 6, "8/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 3, 7, "5/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 4, 1, "8/B", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 4, 2, "6/A", "Matematik"),
+    ("NESLİHAN ÇAKMAK", 4, 3, "5/A", "Matematik"),
+
+    ("ÖZGE KILIÇ", 2, 1, "5/A", "Teknoloji ve Tasarım"),
+    ("ÖZGE KILIÇ", 2, 2, "5/A", "Rehberlik"),
+    ("ÖZGE KILIÇ", 2, 3, "7/B", "Teknoloji ve Tasarım"),
+    ("ÖZGE KILIÇ", 2, 4, "8/B", "Teknoloji ve Tasarım"),
+    ("ÖZGE KILIÇ", 2, 5, "7/A", "Teknoloji ve Tasarım"),
+    ("ÖZGE KILIÇ", 4, 1, "8/B", "Teknoloji ve Tasarım"),
+    ("ÖZGE KILIÇ", 4, 2, "7/A", "Teknoloji ve Tasarım"),
+    ("ÖZGE KILIÇ", 4, 3, "8/A", "Teknoloji ve Tasarım"),
+    ("ÖZGE KILIÇ", 4, 4, "7/B", "Teknoloji ve Tasarım"),
+
+    ("SATI ERGİN", 0, 3, "7/B", "Beden Eğitimi ve Spor"),
+    ("SATI ERGİN", 1, 1, "7/A", "Beden Eğitimi ve Spor"),
+    ("SATI ERGİN", 1, 2, "8/A", "Beden Eğitimi ve Spor"),
+    ("SATI ERGİN", 2, 2, "5/B", "Beden Eğitimi ve Spor"),
+    ("SATI ERGİN", 2, 3, "6/B", "Beden Eğitimi ve Spor"),
+    ("SATI ERGİN", 4, 1, "5/A", "Beden Eğitimi ve Spor"),
+    ("SATI ERGİN", 4, 2, "8/B", "Beden Eğitimi ve Spor"),
+    ("SATI ERGİN", 4, 3, "8/B", "Rehberlik"),
+    ("SATI ERGİN", 4, 4, "6/A", "Beden Eğitimi ve Spor"),
+
+    ("SEDAT KALENDER", 0, 1, "6/A", "Bilişim Teknolojileri"),
+    ("SEDAT KALENDER", 0, 2, "6/B", "Bilişim Teknolojileri"),
+    ("SEDAT KALENDER", 0, 3, "5/A", "Bilişim Teknolojileri"),
+    ("SEDAT KALENDER", 0, 4, "5/B", "Bilişim Teknolojileri"),
+    ("SEDAT KALENDER", 1, 1, "6/A", "Bilişim Teknolojileri"),
+    ("SEDAT KALENDER", 1, 2, "5/A", "Bilişim Teknolojileri"),
+    ("SEDAT KALENDER", 1, 3, "5/B", "Bilişim Teknolojileri"),
+    ("SEDAT KALENDER", 1, 4, "6/B", "Bilişim Teknolojileri"),
+
+    ("CANTEKİN KURTOĞLU", 1, 5, "5/A", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 1, 6, "6/A", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 2, 5, "6/B", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 2, 6, "5/A", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 2, 7, "5/A", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 3, 5, "6/B", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 3, 6, "6/A", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 4, 4, "6/B", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 4, 5, "6/B", "Türkçe"),
+    ("CANTEKİN KURTOĞLU", 4, 6, "6/A", "Rehberlik"),
+    ("CANTEKİN KURTOĞLU", 4, 7, "5/A", "Türkçe"),
+
+    ("AYTAÇ ATMACA", 0, 6, "7/A", "Fen Bilimleri"),
+    ("AYTAÇ ATMACA", 0, 7, "7/B", "Fen Bilimleri"),
+    ("AYTAÇ ATMACA", 1, 5, "5/B", "Fen Bilimleri"),
+    ("AYTAÇ ATMACA", 1, 6, "7/B", "Fen Bilimleri"),
+    ("AYTAÇ ATMACA", 1, 7, "7/A", "Fen Bilimleri"),
+    ("AYTAÇ ATMACA", 4, 4, "5/B", "Fen Bilimleri"),
+    ("AYTAÇ ATMACA", 4, 5, "5/B", "Rehberlik"),
+    ("AYTAÇ ATMACA", 4, 6, "7/B", "Fen Bilimleri"),
+    ("AYTAÇ ATMACA", 4, 7, "7/A", "Fen Bilimleri"),
+
+    ("EMİNE KILIÇ", 0, 1, "5/B", "İngilizce"),
+    ("EMİNE KILIÇ", 0, 3, "8/A", "İngilizce"),
+    ("EMİNE KILIÇ", 4, 6, "8/A", "İngilizce"),
+    ("EMİNE KILIÇ", 4, 7, "5/B", "İngilizce"),
+
+    ("FATİH KOCATÜRK", 2, 2, "8/A", "Türkçe"),
+    ("FATİH KOCATÜRK", 3, 6, "8/A", "Türkçe"),
+
+    ("NURŞEN CÜCEN", 1, 1, "6/A", "Müzik"),
+    ("NURŞEN CÜCEN", 1, 2, "7/B", "Müzik"),
+    ("NURŞEN CÜCEN", 1, 3, "5/A", "Müzik"),
+    ("NURŞEN CÜCEN", 1, 4, "6/A", "Müzik"),
+    ("NURŞEN CÜCEN", 1, 5, "5/B", "Müzik"),
+    ("NURŞEN CÜCEN", 1, 6, "6/B", "Müzik"),
+    ("NURŞEN CÜCEN", 1, 7, "7/A", "Müzik"),
+    ("NURŞEN CÜCEN", 3, 5, "5/A", "Müzik"),
+    ("NURŞEN CÜCEN", 3, 6, "5/B", "Müzik"),
+    ("NURŞEN CÜCEN", 3, 7, "6/B", "Müzik"),
+]
+
+
+def _programdan_siniflar() -> dict[str, list[str]]:
+    harita: dict[str, set[str]] = {}
+    for ad, _gun, _no, sinif, _ders in _DERS_PROGRAMI_SATIRLARI:
+        harita.setdefault(ad, set()).add(sinif)
+    return {ad: sorted(siniflar) for ad, siniflar in harita.items()}
+
+
+_OGRETMEN_SINIF: dict[str, list[str]] = _programdan_siniflar()
+_KADRO_DISI_OGRETMENLER = ["YUSUF ERTÜRK"]
 
 # ── PDF'lerden alınan öğrenci listeleri (ad_soyad, öğrenci_no) ─────────────
 _OGRENCILER: dict[str, list[tuple[str, int]]] = {
@@ -485,6 +731,8 @@ def initialize_db():
     _evrak_takip_init(con)
     _ogrenci_ozellikler_ensure(con)
     _egitim_yili_yukselt_2026_2027(con)
+    _ogretmen_kadrosunu_senkronize(con)
+    _ders_programini_senkronize(con)
     con.close()
 
 
@@ -940,27 +1188,224 @@ def _seed(con: sqlite3.Connection):
     con.commit()
 
 
-def _ogretmen_sinif_eslesmelerini_tamamla(con: sqlite3.Connection) -> None:
-    """Kodda güncellenen öğretmen-sınıf eşleşmelerini mevcut DB'ye ekler."""
-    for ogretmen_adi, siniflar in _OGRETMEN_SINIF.items():
+def _bos_sifre_uret(con: sqlite3.Connection) -> str:
+    mevcut = {str(r[0]) for r in con.execute("SELECT sifre FROM ogretmenler")}
+    n = 100
+    while f"EC{n}" in mevcut:
+        n += 1
+    return f"EC{n}"
+
+
+def _ogretmen_kadrosunu_senkronize(con: sqlite3.Connection) -> None:
+    """Yeni öğretmenleri ekler; sınıf eşleşmesini güncel ders programına göre yazar."""
+    kadro = list(_OGRETMEN_SINIF.keys()) + [
+        ad for ad in _KADRO_DISI_OGRETMENLER if ad not in _OGRETMEN_SINIF
+    ]
+    for ad in kadro:
+        row = con.execute(
+            "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
+        ).fetchone()
+        if row:
+            continue
+        sifre = _bos_sifre_uret(con)
+        con.execute(
+            "INSERT INTO ogretmenler (ad_soyad, sifre) VALUES (?, ?)",
+            (ad, sifre),
+        )
+        print(f"INFO: Yeni ogretmen eklendi: {ad} ({sifre})")
+
+    aktif_idler: set[int] = set()
+    for ad, siniflar in _OGRETMEN_SINIF.items():
         og = con.execute(
-            "SELECT id FROM ogretmenler WHERE ad_soyad = ?",
-            (ogretmen_adi,),
+            "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
         ).fetchone()
         if not og:
             continue
+        oid = int(og["id"])
+        aktif_idler.add(oid)
+        con.execute("DELETE FROM ogretmen_sinif WHERE ogretmen_id = ?", (oid,))
         for sinif_adi in siniflar:
             sinif = con.execute(
-                "SELECT id FROM siniflar WHERE sinif_adi = ?",
-                (sinif_adi,),
+                "SELECT id FROM siniflar WHERE sinif_adi = ?", (sinif_adi,)
             ).fetchone()
             if not sinif:
                 continue
             con.execute(
                 "INSERT OR IGNORE INTO ogretmen_sinif (ogretmen_id, sinif_id) VALUES (?, ?)",
-                (og["id"], sinif["id"]),
+                (oid, int(sinif["id"])),
             )
+
+    for ad in _KADRO_DISI_OGRETMENLER:
+        og = con.execute(
+            "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
+        ).fetchone()
+        if og:
+            aktif_idler.add(int(og["id"]))
+
+    for row in con.execute("SELECT id, ad_soyad FROM ogretmenler").fetchall():
+        oid = int(row["id"])
+        if oid in aktif_idler:
+            continue
+        con.execute("DELETE FROM ogretmen_sinif WHERE ogretmen_id = ?", (oid,))
     con.commit()
+
+
+def _ogretmen_sinif_eslesmelerini_tamamla(con: sqlite3.Connection) -> None:
+    _ogretmen_kadrosunu_senkronize(con)
+
+
+def _ders_programi_tablosu(con: sqlite3.Connection) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS ders_programi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            gun INTEGER NOT NULL,
+            ders_no INTEGER NOT NULL,
+            ders_adi TEXT NOT NULL,
+            UNIQUE(ogretmen_id, gun, ders_no)
+        )
+    """)
+    con.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ders_programi_sinif ON ders_programi (sinif_id, gun, ders_no)"
+    )
+
+
+def _ders_programini_senkronize(con: sqlite3.Connection) -> None:
+    _ders_programi_tablosu(con)
+    con.execute("DELETE FROM ders_programi")
+    eklenen = 0
+    for ad, gun, ders_no, sinif_adi, ders_adi in _DERS_PROGRAMI_SATIRLARI:
+        og = con.execute(
+            "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
+        ).fetchone()
+        sinif = con.execute(
+            "SELECT id FROM siniflar WHERE sinif_adi = ?", (sinif_adi,)
+        ).fetchone()
+        if not og or not sinif:
+            print(f"UYARI: Ders programi atlandi: {ad} {sinif_adi} gun={gun} ders={ders_no}")
+            continue
+        con.execute(
+            """
+            INSERT INTO ders_programi (ogretmen_id, sinif_id, gun, ders_no, ders_adi)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (int(og["id"]), int(sinif["id"]), int(gun), int(ders_no), ders_adi),
+        )
+        eklenen += 1
+    con.commit()
+    print(f"INFO: Ders programi senkronize edildi ({eklenen} ders).")
+
+
+def ders_saati(gun: int, ders_no: int) -> tuple[str, str]:
+    saatler = _DERS_SAAT_CUMA if int(gun) == 4 else _DERS_SAAT_HAFTAICI
+    if 1 <= int(ders_no) <= len(saatler):
+        return saatler[int(ders_no) - 1]
+    return ("", "")
+
+
+def ders_adi_kisa(ders_adi: str) -> str:
+    return DERS_KISA_AD.get(ders_adi, ders_adi)
+
+
+def _ders_programi_satirlarini_isle(rows) -> list[dict]:
+    kayitlar = []
+    for r in rows:
+        d = dict(r)
+        bas, bit = ders_saati(int(d["gun"]), int(d["ders_no"]))
+        d["gun_adi"] = DERS_GUNLERI[int(d["gun"])] if 0 <= int(d["gun"]) < len(DERS_GUNLERI) else ""
+        d["baslangic"] = bas
+        d["bitis"] = bit
+        d["saat"] = f"{bas}–{bit}" if bas and bit else ""
+        d["ders_kisa"] = ders_adi_kisa(d.get("ders_adi") or "")
+        kayitlar.append(d)
+    return kayitlar
+
+
+def ders_programi_ogretmen(ogretmen_id: int) -> list[dict]:
+    con = _conn()
+    _ders_programi_tablosu(con)
+    rows = con.execute("""
+        SELECT d.gun, d.ders_no, d.ders_adi,
+               s.id AS sinif_id, s.sinif_adi,
+               o.id AS ogretmen_id, o.ad_soyad AS ogretmen_adi
+        FROM ders_programi d
+        JOIN siniflar s ON s.id = d.sinif_id
+        JOIN ogretmenler o ON o.id = d.ogretmen_id
+        WHERE d.ogretmen_id = ?
+        ORDER BY d.gun, d.ders_no
+    """, (int(ogretmen_id),)).fetchall()
+    con.close()
+    return _ders_programi_satirlarini_isle(rows)
+
+
+def ders_programi_sinif(sinif_id: int) -> list[dict]:
+    con = _conn()
+    _ders_programi_tablosu(con)
+    rows = con.execute("""
+        SELECT d.gun, d.ders_no, d.ders_adi,
+               s.id AS sinif_id, s.sinif_adi,
+               o.id AS ogretmen_id, o.ad_soyad AS ogretmen_adi
+        FROM ders_programi d
+        JOIN siniflar s ON s.id = d.sinif_id
+        JOIN ogretmenler o ON o.id = d.ogretmen_id
+        WHERE d.sinif_id = ?
+        ORDER BY d.gun, d.ders_no
+    """, (int(sinif_id),)).fetchall()
+    con.close()
+    return _ders_programi_satirlarini_isle(rows)
+
+
+def ders_programi_okul() -> list[dict]:
+    con = _conn()
+    _ders_programi_tablosu(con)
+    rows = con.execute("""
+        SELECT d.gun, d.ders_no, d.ders_adi,
+               s.id AS sinif_id, s.sinif_adi,
+               o.id AS ogretmen_id, o.ad_soyad AS ogretmen_adi
+        FROM ders_programi d
+        JOIN siniflar s ON s.id = d.sinif_id
+        JOIN ogretmenler o ON o.id = d.ogretmen_id
+        ORDER BY o.ad_soyad, d.gun, d.ders_no
+    """).fetchall()
+    con.close()
+    return _ders_programi_satirlarini_isle(rows)
+
+
+def aktif_sube_siniflari() -> list[dict]:
+    con = _conn()
+    rows = [dict(r) for r in con.execute("""
+        SELECT id, sinif_adi FROM siniflar
+        WHERE sinif_adi IN ('5/A', '5/B', '6/A', '6/B', '7/A', '7/B', '8/A', '8/B')
+        ORDER BY sinif_adi
+    """).fetchall()]
+    con.close()
+    return rows
+
+
+def ders_programi_grid(kayitlar: list[dict]) -> list[dict]:
+    """Haftalık tablo: her ders saati için gün hücreleri."""
+    by = {}
+    for k in kayitlar:
+        by.setdefault((int(k["gun"]), int(k["ders_no"])), []).append(k)
+    satirlar = []
+    for ders_no in range(1, 8):
+        hucreler = []
+        for gun in range(5):
+            bas, bit = ders_saati(gun, ders_no)
+            hucreler.append({
+                "gun": gun,
+                "gun_adi": DERS_GUNLERI[gun],
+                "saat": f"{bas}–{bit}" if bas and bit else "",
+                "dersler": by.get((gun, ders_no), []),
+            })
+        bas0, bit0 = ders_saati(0, ders_no)
+        satirlar.append({
+            "ders_no": ders_no,
+            "saat": f"{bas0}–{bit0}",
+            "hucreler": hucreler,
+        })
+    return satirlar
 
 
 # ══════════════════════════════════════════════════════════════════════════

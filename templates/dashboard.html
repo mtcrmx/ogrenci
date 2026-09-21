@@ -95,6 +95,10 @@
              oninput="filtrele()"
              class="search-field border border-slate-300 rounded-lg px-3 py-1.5 text-sm
                     w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <a href="{{ url_for('ders_programi', gorunum='sinif', sinif=aktif.id) }}"
+         class="hidden sm:inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-800">
+        Ders programı
+      </a>
 
       <div class="flex gap-1.5 sm:hidden w-full flex-wrap">
         <a href="{{ url_for('rapor_excel', sinif_id=aktif.id) }}"
@@ -108,6 +112,10 @@
         <a href="{{ url_for('ogretmen_sinav_analiz') }}"
            class="flex-1 min-w-[40%] text-center bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg border-2 border-amber-500">
           📈 Sınav
+        </a>
+        <a href="{{ url_for('ders_programi', gorunum='sinif', sinif=aktif.id) }}"
+           class="flex-1 min-w-[40%] text-center bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+          Ders programı
         </a>
       </div>
     </div>

@@ -75,6 +75,8 @@ from database import (
     haftalik_sinif_ozeti, tik_sayisi_sinif_aralik, olumlu_sayisi_sinif_aralik,
     veli_ozet_metrikleri, anonim_sinif_dagilimi,
     denetim_listesi, denetim_kaydet, admin_meta_get, admin_meta_set,
+    DERS_GUNLERI, ders_programi_ogretmen, ders_programi_sinif,
+    ders_programi_grid, aktif_sube_siniflari,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes, pdf_odev_raporu_bytes
@@ -203,6 +205,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "api_curriculum_temel_egitim", "api_curriculum_drive_kazanimlari",
     "ogretmen_kitap_okuma", "ogretmen_kitap_okuma_excel",
     "ogretmen_evrak_takip", "ogretmen_evrak_takip_excel", "evrak_gorev_guncelle",
+    "ders_programi",
 })
 
 
@@ -2262,6 +2265,7 @@ def veli_panel():
         return redirect(url_for("veli_giris"))
     gecmis = ogrenci_tik_gecmisi(int(ogrenci_id))
     odevler = ogrenci_odevleri(int(ogrenci_id), 40)
+    program = ders_programi_sinif(int(o["sinif_id"])) if o.get("sinif_id") else []
     return render_template(
         "tik_gecmisi.html",
         ogrenci=o,
@@ -2270,6 +2274,8 @@ def veli_panel():
         veli_modu=True,
         odevler=odevler,
         pdf_ok=PDF_OK,
+        gunler=DERS_GUNLERI,
+        program_grid=ders_programi_grid(program),
     )
 
 
@@ -2450,6 +2456,42 @@ def dashboard():
 @giris_zorunlu
 def veri_girisi():
     return render_template("veri_girisi.html")
+
+
+@app.route("/ders-programi")
+@giris_zorunlu
+def ders_programi():
+    oid = int(session["ogretmen_id"])
+    benim_siniflar = ogretmen_siniflari(oid)
+    subeler = aktif_sube_siniflari()
+    gorunum = (request.args.get("gorunum") or "ben").strip()
+    if gorunum not in {"ben", "sinif"}:
+        gorunum = "ben"
+    sinif_id = request.args.get("sinif", type=int)
+    if gorunum == "sinif":
+        if not sinif_id:
+            if benim_siniflar:
+                sinif_id = int(benim_siniflar[0]["id"])
+            elif subeler:
+                sinif_id = int(subeler[0]["id"])
+        kayitlar = ders_programi_sinif(sinif_id) if sinif_id else []
+        baslik = next((s["sinif_adi"] for s in subeler if int(s["id"]) == int(sinif_id or 0)), "")
+        if not baslik and kayitlar:
+            baslik = kayitlar[0].get("sinif_adi") or ""
+    else:
+        kayitlar = ders_programi_ogretmen(oid)
+        baslik = session.get("ogretmen_adi") or "Programım"
+        sinif_id = None
+    return render_template(
+        "ders_programi.html",
+        gorunum=gorunum,
+        siniflar=subeler,
+        sinif_id=sinif_id,
+        baslik=baslik,
+        gunler=DERS_GUNLERI,
+        grid=ders_programi_grid(kayitlar),
+        kayit_sayisi=len(kayitlar),
+    )
 
 
 @app.route("/iletisim")
@@ -3243,6 +3285,7 @@ def ogrenci_gorunum():
         return redirect(url_for("ogrenci_giris"))
     gecmis = ogrenci_tik_gecmisi(int(ogrenci_id))
     odevler = ogrenci_odevleri(int(ogrenci_id), 40)
+    program = ders_programi_sinif(int(o["sinif_id"])) if o.get("sinif_id") else []
     return render_template(
         "tik_gecmisi.html",
         ogrenci=o,
@@ -3251,6 +3294,8 @@ def ogrenci_gorunum():
         veli_modu=False,
         odevler=odevler,
         pdf_ok=PDF_OK,
+        gunler=DERS_GUNLERI,
+        program_grid=ders_programi_grid(program),
     )
 
 

@@ -513,6 +513,36 @@
       animation: soft-pulse 1.6s ease-in-out infinite;
       flex: 0 0 auto;
     }
+    .schedule-wrap { overflow-x: auto; }
+    .schedule-table {
+      width: 100%;
+      min-width: 640px;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .schedule-table th,
+    .schedule-table td {
+      border-top: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    .schedule-table th {
+      background: rgba(248, 250, 252, .9);
+      font-size: 11px;
+      font-weight: 1000;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+    .schedule-table td > span { display: block; color: #94a3b8; font-weight: 700; }
+    .schedule-cell {
+      border: 1px solid rgba(99, 102, 241, .18);
+      background: rgba(238, 242, 255, .7);
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+    .schedule-cell strong { display: block; color: #312e81; font-weight: 1000; }
+    .schedule-cell span { display: block; margin-top: 2px; color: #4338ca; font-size: 11px; font-weight: 800; }
     @media (max-width: 900px) {
       .topbar-inner { align-items: flex-start; flex-direction: column; }
       .nav-scroll { width: 100%; }
@@ -676,6 +706,49 @@
       </div>
     </section>
   </div>
+
+  {% if program_grid %}
+  <section class="panel mt-4" style="--delay:.14s">
+    <div class="panel-head">
+      <div>
+        <h2 class="panel-title">Ders programı</h2>
+        <p class="panel-note">{{ ogrenci.sinif_adi }} haftalık dersler.</p>
+      </div>
+    </div>
+    <div class="schedule-wrap">
+      <table class="schedule-table">
+        <thead>
+          <tr>
+            <th>Saat</th>
+            {% for gun in gunler %}
+            <th>{{ gun }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for satir in program_grid %}
+          <tr>
+            <td>
+              <b>{{ satir.ders_no }}.</b>
+              <span>{{ satir.saat }}</span>
+            </td>
+            {% for hucre in satir.hucreler %}
+            <td>
+              {% for d in hucre.dersler %}
+              <div class="schedule-cell">
+                <strong>{{ d.ders_kisa }}</strong>
+                <span>{{ d.ogretmen_adi }}</span>
+              </div>
+              {% endfor %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
 
   <section class="panel mt-4" style="--delay:.16s">
     <div class="panel-head">
