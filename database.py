@@ -368,9 +368,9 @@ _DERS_PROGRAMI_SATIRLARI: list[tuple[str, int, int, str, str]] = [
     ("FATİH KOCATÜRK", 3, 6, "8/A", "Türkçe"),
     ("FATİH KOCATÜRK", 4, 7, "8/A", "Türkçe"),
 
-    ("NURŞEN CÜCEN", 1, 1, "6/A", "Müzik"),
+    ("NURŞEN CÜCEN", 1, 1, "5/A", "Müzik"),
     ("NURŞEN CÜCEN", 1, 2, "7/B", "Müzik"),
-    ("NURŞEN CÜCEN", 1, 3, "5/A", "Müzik"),
+    ("NURŞEN CÜCEN", 1, 3, "6/A", "Müzik"),
     ("NURŞEN CÜCEN", 1, 4, "6/A", "Müzik"),
     ("NURŞEN CÜCEN", 1, 5, "5/B", "Müzik"),
     ("NURŞEN CÜCEN", 1, 6, "6/B", "Müzik"),
