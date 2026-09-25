@@ -4082,6 +4082,9 @@ def _gelisim_init(con) -> None:
             tarih TEXT NOT NULL
         )
     """)
+    not_kolon = {r[1] for r in con.execute("PRAGMA table_info(ogretmen_notlari)").fetchall()}
+    if "tur" not in not_kolon:
+        con.execute("ALTER TABLE ogretmen_notlari ADD COLUMN tur TEXT NOT NULL DEFAULT ''")
     con.execute("""
         CREATE TABLE IF NOT EXISTS hikaye_ilerleme (
             sinif_id INTEGER PRIMARY KEY REFERENCES siniflar(id),
@@ -5104,17 +5107,33 @@ def pazar_satin_al(ogrenci_id: int, urun_kodu: str) -> dict:
     return {"ok": True, "urun": urun}
 
 
-def ogretmen_notu_ekle(ogrenci_id: int, ogretmen_id: int, not_metni: str, veliye_acik: bool = True) -> dict:
+def ogretmen_notu_ekle(
+    ogrenci_id: int,
+    ogretmen_id: int,
+    not_metni: str,
+    veliye_acik: bool = True,
+    tur: str = "",
+) -> dict:
     not_metni = (not_metni or "").strip()
     if not not_metni:
         return {"ok": False, "sebep": "Not bos olamaz"}
+    if tur not in ("", "uyari", "olumlu"):
+        return {"ok": False, "sebep": "Gecersiz tur"}
     con = _conn()
     _gelisim_init(con)
     con.execute("""
-        INSERT INTO ogretmen_notlari (ogrenci_id, ogretmen_id, not_metni, veliye_acik, tarih)
-        VALUES (?,?,?,?,?)
-    """, (ogrenci_id, ogretmen_id, not_metni, 1 if veliye_acik else 0, datetime.now().strftime("%Y-%m-%d %H:%M")))
-    con.commit(); con.close()
+        INSERT INTO ogretmen_notlari (ogrenci_id, ogretmen_id, not_metni, veliye_acik, tarih, tur)
+        VALUES (?,?,?,?,?,?)
+    """, (
+        ogrenci_id,
+        ogretmen_id,
+        not_metni,
+        1 if veliye_acik else 0,
+        datetime.now().strftime("%Y-%m-%d %H:%M"),
+        tur,
+    ))
+    con.commit()
+    con.close()
     return {"ok": True}
 
 
@@ -5888,7 +5907,7 @@ def ogretmen_notlari_veli_ozeti(ogrenci_id: int, limit: int = 25) -> list[dict]:
     con = _conn()
     _gelisim_init(con)
     rows = [dict(r) for r in con.execute("""
-        SELECT ono.not_metni, ono.tarih, og.ad_soyad AS ogretmen
+        SELECT ono.id, ono.not_metni, ono.tarih, ono.tur, og.ad_soyad AS ogretmen
         FROM ogretmen_notlari ono
         JOIN ogretmenler og ON og.id = ono.ogretmen_id
         WHERE ono.ogrenci_id = ? AND ono.veliye_acik = 1
@@ -5897,6 +5916,22 @@ def ogretmen_notlari_veli_ozeti(ogrenci_id: int, limit: int = 25) -> list[dict]:
     """, (ogrenci_id, limit)).fetchall()]
     con.close()
     return rows
+
+
+def veli_davranis_pencereleri(ogrenci_id: int) -> list[dict]:
+    """Velinin ilk ekranında gösterilecek son uyarı ve olumlu not."""
+    notlar = ogretmen_notlari_veli_ozeti(ogrenci_id, 30)
+    secilen = []
+    gorulen = set()
+    for n in notlar:
+        tur = (n.get("tur") or "").strip()
+        if tur not in ("uyari", "olumlu") or tur in gorulen:
+            continue
+        gorulen.add(tur)
+        secilen.append(n)
+        if len(gorulen) == 2:
+            break
+    return secilen
 
 
 def veli_ozet_metrikleri(ogrenci_id: int, gun: int = 30) -> dict:

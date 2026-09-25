@@ -587,6 +587,56 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
 </head>
 <body class="ui-theme {% if veli_modu %}parent-mode{% else %}student-mode{% endif %}">
+{% if veli_modu and veli_pencereler %}
+<div id="veli-popup-katman"></div>
+<script type="application/json" id="veli-popup-veri">{{ veli_pencereler|tojson }}</script>
+<style>
+  #veli-popup-katman .vp-arkaplan { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, .55); }
+  #veli-popup-katman .vp-kutu { width: min(440px, 100%); border-radius: 18px; padding: 22px; color: #fff; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  #veli-popup-katman .vp-uyari { background: #be123c; }
+  #veli-popup-katman .vp-olumlu { background: #047857; }
+  #veli-popup-katman .vp-duyuru { background: #1d4ed8; }
+  #veli-popup-katman .vp-ust { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+  #veli-popup-katman .vp-alt { margin-top: 8px; font-size: 12px; opacity: .85; }
+  #veli-popup-katman p { margin: 12px 0 0; line-height: 1.5; }
+  #veli-popup-katman button { margin-top: 16px; border: 0; border-radius: 12px; background: #fff; color: #0f172a; font-weight: 800; padding: 10px 16px; cursor: pointer; }
+</style>
+<script>
+(function () {
+  const ham = document.getElementById('veli-popup-veri');
+  const katman = document.getElementById('veli-popup-katman');
+  if (!ham || !katman) return;
+  let liste = [];
+  try { liste = JSON.parse(ham.textContent || '[]'); } catch (e) { liste = []; }
+  const anahtar = 'veli-popup-goruldu';
+  let gorulen = [];
+  try { gorulen = JSON.parse(sessionStorage.getItem(anahtar) || '[]'); } catch (e) { gorulen = []; }
+  const bekleyen = liste.filter(p => gorulen.indexOf(p.anahtar) < 0);
+  function kapat(p) {
+    gorulen.push(p.anahtar);
+    sessionStorage.setItem(anahtar, JSON.stringify(gorulen));
+    katman.innerHTML = '';
+    goster();
+  }
+  function goster() {
+    const p = bekleyen.shift();
+    if (!p) return;
+    const renk = p.tur === 'uyari' ? 'vp-uyari' : (p.tur === 'olumlu' ? 'vp-olumlu' : 'vp-duyuru');
+    const kutu = document.createElement('div');
+    kutu.className = 'vp-arkaplan';
+    kutu.innerHTML = '<div class="vp-kutu ' + renk + '"><div class="vp-ust"></div><h2></h2><p class="vp-metin"></p><div class="vp-alt"></div><button type="button">Tamam</button></div>';
+    const etiket = p.tur === 'uyari' ? 'Uyarı' : (p.tur === 'olumlu' ? 'Olumlu davranış' : 'Duyuru');
+    kutu.querySelector('.vp-ust').textContent = etiket;
+    kutu.querySelector('h2').textContent = p.baslik || '';
+    kutu.querySelector('.vp-metin').textContent = p.metin || '';
+    kutu.querySelector('.vp-alt').textContent = p.alt || '';
+    kutu.querySelector('button').addEventListener('click', () => kapat(p));
+    katman.appendChild(kutu);
+  }
+  goster();
+})();
+</script>
+{% endif %}
 {% set odev_liste = odevler|default([], true) %}
 {% set toplam_odev = odev_liste|length %}
 {% set tamamlanan_odev = odev_liste|selectattr('tamamlandi')|list|length %}

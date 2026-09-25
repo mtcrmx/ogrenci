@@ -49,6 +49,7 @@ from database import (
     tebrik_gonder, haftalik_veli_ozeti,
     akilli_ogrenci_karnesi, ogretmen_bildirim_merkezi, gelisim_ligi,
     hikaye_modu, pazar_urunleri_ogrenci, pazar_satin_al, ogretmen_notu_ekle,
+    ogretmen_notlari_veli_ozeti,
     ogrenci_rozetleri_yayin_map, rozet_emojileri_ve_metin,
     envanter_listele, envanter_aktif_ayarla, ogrenci_aktif_envanter_map,
     oyun_puani_kaydet, GOREV_SABLONLARI,
@@ -57,6 +58,7 @@ from database import (
     ogretmen_onay_bekleyen_ogrenci_maclari, ogrenci_mac_onayla,
     bilgilendirme_ekle, bilgilendirme_listesi, bilgilendirme_yayinlayan_icin_sil,
     son_bilgilendirme,
+    veli_davranis_pencereleri,
     rapor_arsiv_kaydet, rapor_arsiv_listesi, rapor_arsiv_pdf_oku,
     rapor_arsiv_tumunu_yedekle_ve_sil, rapor_arsiv_yedek_gruplari, rapor_arsiv_grubu_geri_yukle,
     sinav_analiz_kaydet, sinav_analiz_listesi, sinav_analiz_oku, sinav_analiz_sil,
@@ -2269,6 +2271,24 @@ def veli_panel():
     gecmis = ogrenci_tik_gecmisi(int(ogrenci_id))
     odevler = ogrenci_odevleri(int(ogrenci_id), 40)
     program = ders_programi_sinif(int(o["sinif_id"])) if o.get("sinif_id") else []
+    pencereler = []
+    for n in veli_davranis_pencereleri(int(ogrenci_id)):
+        pencereler.append({
+            "anahtar": f"not-{n['id']}",
+            "tur": n["tur"],
+            "baslik": "Uyarı" if n["tur"] == "uyari" else "Olumlu davranış",
+            "metin": n["not_metni"],
+            "alt": f"{n.get('ogretmen') or ''} · {(n.get('tarih') or '')[:16]}",
+        })
+    duyuru = son_bilgilendirme("veli")
+    if duyuru:
+        pencereler.append({
+            "anahtar": f"duyuru-{duyuru['id']}",
+            "tur": "duyuru",
+            "baslik": duyuru.get("baslik") or "Duyuru",
+            "metin": duyuru.get("metin") or "",
+            "alt": f"{duyuru.get('yayinlayan') or ''} · {(duyuru.get('tarih') or '')[:16]}",
+        })
     return render_template(
         "tik_gecmisi.html",
         ogrenci=o,
@@ -2279,6 +2299,7 @@ def veli_panel():
         pdf_ok=PDF_OK,
         gunler=DERS_GUNLERI,
         program_grid=ders_programi_grid(program),
+        veli_pencereler=pencereler,
     )
 
 
@@ -3373,17 +3394,48 @@ def api_ogretmen_ogrenci_ozet(ogrenci_id: int):
         return jsonify({"ok": False}), 404
     gel = oz.get("gelisim") or {}
     xp = int((gel.get("puan") or {}).get("xp") or 0)
+    ogr = oz["ogrenci"]
+    bugun = date.today()
+    hafta = (bugun - timedelta(days=bugun.weekday())).isoformat()
+    kayit = haftalik_takip_sinif(int(ogr["sinif_id"]), hafta).get(int(ogrenci_id), {})
+    etiket = {
+        "okudu": "Okudu", "okumadi": "Okumadı",
+        "getirdi": "Getirdi", "getirmedi": "Getirmedi",
+        "tam": "Tam", "eksik": "Eksik", "yok": "Yok",
+    }
     return jsonify({
         "ok": True,
-        "ogrenci": oz["ogrenci"],
-        "xp": xp,
-        "avatar_gelisim": gel.get("avatar") or {},
-        "rozetler": oz["rozetler"],
-        "istatistik": oz["istatistik"],
-        "sezon": oz.get("sezon"),
-        "disiplin_sira": oz.get("disiplin_sira"),
-        "gelisim": gel,
+        "ogrenci": {
+            "id": ogr["id"],
+            "ad_soyad": ogr.get("ad_soyad") or "",
+            "ogr_no": ogr.get("ogr_no"),
+            "sinif_adi": ogr.get("sinif_adi") or "",
+        },
+        "hafta": {
+            "basi": hafta,
+            "kitap_okuma": etiket.get(kayit.get("kitap_okuma") or "", "İşaretlenmedi"),
+            "kitap_getirme": etiket.get(kayit.get("kitap_getirme") or "", "İşaretlenmedi"),
+            "odev_durum": etiket.get(kayit.get("odev_durum") or "", "İşaretlenmedi"),
+        },
+        "notlar": ogretmen_notlari_veli_ozeti(int(ogrenci_id), 6),
     })
+
+
+@app.route("/api/ogretmen/ogrenci/<int:ogrenci_id>/veli-not", methods=["POST"])
+@giris_zorunlu
+def api_veli_not_yaz(ogrenci_id: int):
+    if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
+        return jsonify({"ok": False, "sebep": "Yetkisiz"}), 403
+    payload = request.get_json(silent=True) or request.form
+    sonuc = ogretmen_notu_ekle(
+        ogrenci_id,
+        session["ogretmen_id"],
+        str(payload.get("metin") or ""),
+        True,
+        str(payload.get("tur") or ""),
+    )
+    kod = 200 if sonuc.get("ok") else 400
+    return jsonify(sonuc), kod
 
 
 @app.route("/api/lig")

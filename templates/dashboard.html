@@ -207,12 +207,47 @@
   </main>
 </div>
 
+<div id="ogrenci-bilgi" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+  <div class="max-h-[calc(100svh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
+    <div class="flex items-start justify-between gap-3 bg-slate-900 px-5 py-4 text-white">
+      <div>
+        <p class="text-xs text-slate-300">Öğrenci</p>
+        <h3 id="bilgi-ad" class="text-lg font-black">—</h3>
+        <p id="bilgi-alt" class="text-xs text-slate-300"></p>
+      </div>
+      <button type="button" id="bilgi-kapat" class="text-2xl leading-none text-white/70">×</button>
+    </div>
+    <div class="space-y-4 p-4 text-sm text-slate-700">
+      <div class="grid grid-cols-3 gap-2">
+        <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Kitap</div><div id="bilgi-okuma" class="mt-1 font-black text-slate-950">—</div></div>
+        <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Getirme</div><div id="bilgi-getirme" class="mt-1 font-black text-slate-950">—</div></div>
+        <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Ödev</div><div id="bilgi-odev" class="mt-1 font-black text-slate-950">—</div></div>
+      </div>
+      <div>
+        <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">Veliye giden notlar</h4>
+        <div id="bilgi-notlar" class="mt-2 space-y-2"></div>
+      </div>
+      <form id="bilgi-form" class="space-y-2">
+        <label class="block text-xs font-black text-slate-600">Veliye davranış notu
+          <textarea id="bilgi-metin" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="Veli ekranında görünecek not"></textarea>
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" data-tur="uyari" class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-black text-white">Uyarı gönder</button>
+          <button type="button" data-tur="olumlu" class="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-black text-white">Olumlu davranış</button>
+        </div>
+        <p id="bilgi-sonuc" class="text-xs font-bold text-emerald-700"></p>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {# ── Makro: Öğrenci Kartı ─────────────────────────────────────────────── #}
 {% macro ogrenci_karti(o, sinif_id) %}
-<div class="ogrenci-kart flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5"
-     data-ad="{{ o.ad_soyad }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}">
+<div class="ogrenci-kart flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300"
+     data-ad="{{ o.ad_soyad }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}"
+     role="button" tabindex="0">
   <div class="flex-1 min-w-0">
     <div class="font-bold text-slate-800 text-sm break-words">
       <span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}
@@ -290,12 +325,84 @@ async function yenile() {
 
 function kartHTML(o) {
   const ad = String(o.ad_soyad || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  return '<div class="ogrenci-kart flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5" data-ad="' + ad + '" data-id="' + o.id + '">' +
+  return '<div class="ogrenci-kart flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300" data-ad="' + ad + '" data-id="' + o.id + '" role="button">' +
     '<div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm break-words"><span class="mr-1">' + (o.emoji || '') + '</span>' + ad + '</div>' +
     '<div class="text-xs text-slate-500">No: ' + (o.ogr_no || '') + '</div></div></div>';
 }
 
 // İlk yükleme + periyodik güncelleme
 setInterval(yenile, 10_000);
+
+const bilgi = document.getElementById('ogrenci-bilgi');
+let bilgiOgrenciId = 0;
+
+function notSatiri(n) {
+  const tur = n.tur === 'uyari' ? 'Uyarı' : (n.tur === 'olumlu' ? 'Olumlu' : 'Not');
+  const renk = n.tur === 'uyari' ? 'border-rose-200 bg-rose-50' : (n.tur === 'olumlu' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50');
+  return '<div class="rounded-xl border px-3 py-2 ' + renk + '"><div class="text-[10px] font-black uppercase">' + tur + '</div><div>' +
+    String(n.not_metni || '').replace(/</g, '&lt;') + '</div><div class="text-[11px] text-slate-400">' +
+    String(n.ogretmen || '') + ' · ' + String(n.tarih || '').slice(0, 16) + '</div></div>';
+}
+
+async function ogrenciBilgiAc(id) {
+  bilgiOgrenciId = Number(id);
+  bilgi.classList.remove('hidden');
+  bilgi.classList.add('flex');
+  document.getElementById('bilgi-ad').textContent = 'Yükleniyor...';
+  document.getElementById('bilgi-notlar').innerHTML = '';
+  document.getElementById('bilgi-sonuc').textContent = '';
+  const res = await fetch('/api/ogretmen/ogrenci/' + id);
+  const j = await res.json();
+  if (!j.ok) {
+    document.getElementById('bilgi-ad').textContent = 'Açılamadı';
+    return;
+  }
+  const o = j.ogrenci || {};
+  const h = j.hafta || {};
+  document.getElementById('bilgi-ad').textContent = o.ad_soyad || '';
+  document.getElementById('bilgi-alt').textContent = (o.sinif_adi || '') + ' · No ' + (o.ogr_no || '');
+  document.getElementById('bilgi-okuma').textContent = h.kitap_okuma || '—';
+  document.getElementById('bilgi-getirme').textContent = h.kitap_getirme || '—';
+  document.getElementById('bilgi-odev').textContent = h.odev_durum || '—';
+  const notlar = j.notlar || [];
+  document.getElementById('bilgi-notlar').innerHTML = notlar.length
+    ? notlar.map(notSatiri).join('')
+    : '<p class="text-xs text-slate-400">Henüz veli notu yok.</p>';
+}
+
+function bilgiKapat() {
+  bilgi.classList.add('hidden');
+  bilgi.classList.remove('flex');
+}
+document.getElementById('bilgi-kapat').addEventListener('click', bilgiKapat);
+bilgi.addEventListener('click', (e) => { if (e.target === bilgi) bilgiKapat(); });
+document.getElementById('ogrenci-listesi').addEventListener('click', (e) => {
+  const kart = e.target.closest('.ogrenci-kart');
+  if (kart) ogrenciBilgiAc(kart.dataset.id);
+});
+document.getElementById('bilgi-form').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-tur]');
+  if (!btn || !bilgiOgrenciId) return;
+  const metin = document.getElementById('bilgi-metin').value.trim();
+  if (!metin) {
+    document.getElementById('bilgi-sonuc').textContent = 'Not yazın.';
+    document.getElementById('bilgi-sonuc').className = 'text-xs font-bold text-rose-700';
+    return;
+  }
+  const res = await fetch('/api/ogretmen/ogrenci/' + bilgiOgrenciId + '/veli-not', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ metin: metin, tur: btn.dataset.tur })
+  });
+  const j = await res.json();
+  if (!j.ok) {
+    document.getElementById('bilgi-sonuc').textContent = 'Kaydedilemedi.';
+    return;
+  }
+  document.getElementById('bilgi-metin').value = '';
+  document.getElementById('bilgi-sonuc').className = 'text-xs font-bold text-emerald-700';
+  document.getElementById('bilgi-sonuc').textContent = 'Veli ekranına iletildi.';
+  ogrenciBilgiAc(bilgiOgrenciId);
+});
 </script>
 {% endblock %}
