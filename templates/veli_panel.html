@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Veli paneli</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", sans-serif; background: #f1f5f9; color: #0f172a; }
+    header { background: #0f2744; color: #fff; }
+    .bar { max-width: 980px; margin: 0 auto; padding: 16px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .brand { font-weight: 800; }
+    a.cikis { color: #fff; text-decoration: none; background: #b91c1c; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 800; }
+    main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+    .kart { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; }
+    h1 { margin: 4px 0 0; font-size: 26px; }
+    .soluk { color: #64748b; font-size: 13px; }
+    .uc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .kutu { background: #f8fafc; border-radius: 12px; padding: 12px; }
+    .kutu b { display: block; margin-top: 4px; font-size: 16px; }
+    .not { border-radius: 12px; padding: 12px; margin-top: 8px; }
+    .uyari { background: #fff1f2; border: 1px solid #fecdd3; }
+    .olumlu { background: #ecfdf5; border: 1px solid #a7f3d0; }
+    .diger { background: #f8fafc; border: 1px solid #e2e8f0; }
+    textarea, button { width: 100%; border-radius: 12px; font: inherit; }
+    textarea { border: 1px solid #cbd5e1; padding: 10px; }
+    button { margin-top: 8px; border: 0; background: #0f2744; color: #fff; font-weight: 800; padding: 10px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 8px 6px; text-align: left; vertical-align: top; }
+    .iki { display: grid; gap: 12px; }
+    @media (min-width: 800px) { .iki { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 640px) { .uc { grid-template-columns: 1fr; } }
+    #veli-popup-katman .vp-arkaplan { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, .55); }
+    #veli-popup-katman .vp-kutu { width: min(440px, 100%); border-radius: 18px; padding: 22px; color: #fff; }
+    #veli-popup-katman .vp-uyari { background: #be123c; }
+    #veli-popup-katman .vp-olumlu { background: #047857; }
+    #veli-popup-katman .vp-duyuru { background: #1d4ed8; }
+    #veli-popup-katman h2 { margin: 8px 0 0; }
+    #veli-popup-katman button { width: auto; background: #fff; color: #0f172a; }
+  </style>
+</head>
+<body>
+<div id="veli-popup-katman"></div>
+<script type="application/json" id="veli-popup-veri">{{ veli_pencereler|tojson }}</script>
+<header>
+  <div class="bar">
+    <div class="brand">Erenler Cumhuriyet Ortaokulu</div>
+    <a class="cikis" href="{{ url_for('veli_cikis') }}">Çıkış</a>
+  </div>
+</header>
+<main>
+  <section class="kart">
+    <div class="soluk">Veli paneli</div>
+    <h1>{{ ogrenci.ad_soyad }}</h1>
+    <div class="soluk">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}</div>
+  </section>
+
+  <section class="kart">
+    <div class="soluk">Bu hafta</div>
+    <div class="uc" style="margin-top:10px">
+      <div class="kutu"><span class="soluk">Kitap okuma</span><b>{{ hafta.kitap_okuma }}</b></div>
+      <div class="kutu"><span class="soluk">Kitabı getirme</span><b>{{ hafta.kitap_getirme }}</b></div>
+      <div class="kutu"><span class="soluk">Ödev</span><b>{{ hafta.odev_durum }}</b></div>
+    </div>
+  </section>
+
+  <div class="iki">
+    <section class="kart">
+      <strong>Öğretmen notları</strong>
+      {% for n in notlar %}
+      <article class="not {{ 'uyari' if n.tur == 'uyari' else ('olumlu' if n.tur == 'olumlu' else 'diger') }}">
+        <div class="soluk">{{ 'Uyarı' if n.tur == 'uyari' else ('Olumlu davranış' if n.tur == 'olumlu' else 'Not') }}</div>
+        <div>{{ n.not_metni }}</div>
+        <div class="soluk">{{ n.ogretmen }} · {{ (n.tarih or '')[:16] }}</div>
+      </article>
+      {% else %}
+      <p class="soluk">Henüz not yok.</p>
+      {% endfor %}
+    </section>
+    <section class="kart">
+      <strong>Görüşme talebi</strong>
+      <p class="soluk">Kısa bir not yazın, öğretmen ekranına düşer.</p>
+      <form method="post" action="{{ url_for('veli_randevu_kaydet') }}">
+        <textarea name="mesaj" rows="4" placeholder="Konuyu yazın" required></textarea>
+        <button type="submit">Talep gönder</button>
+      </form>
+    </section>
+  </div>
+
+  {% if program_grid %}
+  <section class="kart">
+    <strong>{{ ogrenci.sinif_adi }} ders programı</strong>
+    <div style="overflow:auto;margin-top:8px">
+      <table>
+        <thead>
+          <tr><th>Saat</th>{% for gun in gunler %}<th>{{ gun }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for satir in program_grid %}
+          <tr>
+            <td>{{ satir.ders_no }}. {{ satir.saat }}</td>
+            {% for h in satir.hucreler %}
+            <td>{% for d in h.dersler %}{{ d.ders_kisa }}<br><span class="soluk">{{ d.ogretmen_adi }}</span><br>{% else %}—{% endfor %}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</main>
+<script>
+(function () {
+  const ham = document.getElementById('veli-popup-veri');
+  const katman = document.getElementById('veli-popup-katman');
+  if (!ham || !katman) return;
+  let liste = [];
+  try { liste = JSON.parse(ham.textContent || '[]'); } catch (e) { liste = []; }
+  let gorulen = [];
+  try { gorulen = JSON.parse(sessionStorage.getItem('veli-popup-goruldu') || '[]'); } catch (e) { gorulen = []; }
+  const bekleyen = liste.filter(p => gorulen.indexOf(p.anahtar) < 0);
+  function kapat(p) {
+    gorulen.push(p.anahtar);
+    sessionStorage.setItem('veli-popup-goruldu', JSON.stringify(gorulen));
+    katman.innerHTML = '';
+    goster();
+  }
+  function goster() {
+    const p = bekleyen.shift();
+    if (!p) return;
+    const renk = p.tur === 'uyari' ? 'vp-uyari' : (p.tur === 'olumlu' ? 'vp-olumlu' : 'vp-duyuru');
+    const etiket = p.tur === 'uyari' ? 'Uyarı' : (p.tur === 'olumlu' ? 'Olumlu davranış' : 'Duyuru');
+    const kutu = document.createElement('div');
+    kutu.className = 'vp-arkaplan';
+    kutu.innerHTML = '<div class="vp-kutu ' + renk + '"><div class="vp-ust"></div><h2></h2><p></p><div class="vp-alt"></div><button type="button">Tamam</button></div>';
+    kutu.querySelector('.vp-ust').textContent = etiket;
+    kutu.querySelector('h2').textContent = p.baslik || '';
+    kutu.querySelector('p').textContent = p.metin || '';
+    kutu.querySelector('.vp-alt').textContent = p.alt || '';
+    kutu.querySelector('button').addEventListener('click', () => kapat(p));
+    katman.appendChild(kutu);
+  }
+  goster();
+})();
+</script>
+</body>
+</html>

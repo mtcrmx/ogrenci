@@ -390,6 +390,7 @@ def _programdan_siniflar() -> dict[str, list[str]]:
 
 _OGRETMEN_SINIF: dict[str, list[str]] = _programdan_siniflar()
 _KADRO_DISI_OGRETMENLER = ["YUSUF ERTÜRK"]
+_AYRILAN_OGRETMENLER = ("FATMA ÇAPKULAÇ",)
 _AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B")
 _TUM_SUBE_OGRETMENLERI = tuple(
     dict.fromkeys(list(_OGRETMEN_SINIF.keys()) + _KADRO_DISI_OGRETMENLER)
@@ -1522,7 +1523,10 @@ def _ogretmen_kadrosunu_senkronize(con: sqlite3.Connection) -> None:
         if sid:
             sube_idler.append(sid)
 
-    for row in con.execute("SELECT id FROM ogretmenler").fetchall():
+    for row in con.execute("SELECT id, ad_soyad FROM ogretmenler").fetchall():
+        if (row["ad_soyad"] or "") in _AYRILAN_OGRETMENLER:
+            con.execute("DELETE FROM ogretmen_sinif WHERE ogretmen_id = ?", (int(row["id"]),))
+            continue
         oid = int(row["id"])
         for sid in sube_idler:
             con.execute(
@@ -1703,7 +1707,7 @@ def tum_ogretmenler() -> list[dict]:
         FROM ogretmenler ORDER BY ad_soyad
     """).fetchall()]
     con.close()
-    return rows
+    return [r for r in rows if r["ad_soyad"] not in _AYRILAN_OGRETMENLER]
 
 
 def tum_sifre_listesi() -> list[dict]:
@@ -1713,11 +1717,13 @@ def tum_sifre_listesi() -> list[dict]:
         "SELECT ad_soyad, sifre FROM ogretmenler ORDER BY sifre"
     ).fetchall()]
     con.close()
-    return rows
+    return [r for r in rows if r["ad_soyad"] not in _AYRILAN_OGRETMENLER]
 
 
 def ogretmen_dogrula(ad_soyad: str, sifre: str) -> bool:
     """Ad ve şifre eşleşiyorsa True döndürür."""
+    if (ad_soyad or "").strip() in _AYRILAN_OGRETMENLER:
+        return False
     con = _conn()
     row = con.execute(
         "SELECT id FROM ogretmenler WHERE ad_soyad = ? AND sifre = ?",

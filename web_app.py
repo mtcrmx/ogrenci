@@ -657,6 +657,7 @@ def logout():
 
 @app.route("/ogrenci/giris", methods=["GET", "POST"])
 def ogrenci_giris():
+    return redirect(url_for("veli_giris"))
     hata = None
     next_url = request.values.get("next") or url_for("ogrenci_gorunum")
     if not next_url.startswith("/"):
@@ -2268,8 +2269,20 @@ def veli_panel():
     if not o:
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
-    gecmis = ogrenci_tik_gecmisi(int(ogrenci_id))
-    odevler = ogrenci_odevleri(int(ogrenci_id), 40)
+    bugun = date.today()
+    hafta_basi = (bugun - timedelta(days=bugun.weekday())).isoformat()
+    kayit = haftalik_takip_sinif(int(o["sinif_id"]), hafta_basi).get(int(ogrenci_id), {})
+    etiket = {
+        "okudu": "Okudu", "okumadi": "Okumadı",
+        "getirdi": "Getirdi", "getirmedi": "Getirmedi",
+        "tam": "Tam", "eksik": "Eksik", "yok": "Yok",
+    }
+    hafta = {
+        "kitap_okuma": etiket.get(kayit.get("kitap_okuma") or "", "Henüz işaretlenmedi"),
+        "kitap_getirme": etiket.get(kayit.get("kitap_getirme") or "", "Henüz işaretlenmedi"),
+        "odev_durum": etiket.get(kayit.get("odev_durum") or "", "Henüz işaretlenmedi"),
+    }
+    notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     program = ders_programi_sinif(int(o["sinif_id"])) if o.get("sinif_id") else []
     pencereler = []
     for n in veli_davranis_pencereleri(int(ogrenci_id)):
@@ -2290,13 +2303,11 @@ def veli_panel():
             "alt": f"{duyuru.get('yayinlayan') or ''} · {(duyuru.get('tarih') or '')[:16]}",
         })
     return render_template(
-        "tik_gecmisi.html",
+        "veli_panel.html",
         ogrenci=o,
-        gecmis=gecmis,
         avatar=_avatar(o),
-        veli_modu=True,
-        odevler=odevler,
-        pdf_ok=PDF_OK,
+        hafta=hafta,
+        notlar=notlar,
         gunler=DERS_GUNLERI,
         program_grid=ders_programi_grid(program),
         veli_pencereler=pencereler,
@@ -4424,6 +4435,7 @@ def ogretmen_ogrenci_mac_reddet(mac_id):
 
 @app.route("/veli/ozet")
 def veli_ozet_sayfa():
+    return redirect(url_for("veli_panel"))
     oid = session.get("veli_ogrenci_id")
     if not oid:
         return redirect(url_for("veli_giris"))
