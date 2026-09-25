@@ -7,7 +7,7 @@
     <div>
       <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Veri girişi</p>
       <h1 class="mt-1 text-2xl font-black text-slate-950">Öğrenci verisi gir</h1>
-      <p class="mt-1 text-sm text-slate-600">Haftalık kitap ve ödev işaretleri, tema ödevi ve sınav kayıtları.</p>
+      <p class="mt-1 text-sm text-slate-600">Haftalık kitap ve ödev işaretleri ile sınav kayıtları.</p>
     </div>
 
     <a href="{{ url_for('haftalik_takip', sinif=request.args.get('sinif')) if request.args.get('sinif') else url_for('haftalik_takip') }}"
@@ -18,18 +18,6 @@
     </a>
 
     <div class="grid gap-3 sm:grid-cols-2">
-      <a href="{{ url_for('odevler') }}"
-         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-emerald-300 hover:shadow">
-        <div class="text-xs font-black uppercase tracking-widest text-emerald-700">Ödev</div>
-        <h2 class="mt-1 text-lg font-black text-slate-950">Ödev ve tema</h2>
-        <p class="mt-1 text-sm text-slate-500">Tema oluştur, müfredat seç, sınıf ödevi ver.</p>
-      </a>
-      <a href="{{ url_for('yoklama', sinif=request.args.get('sinif')) if request.args.get('sinif') else url_for('yoklama') }}"
-         class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-amber-300 hover:shadow">
-        <div class="text-xs font-black uppercase tracking-widest text-amber-700">İşaretleme</div>
-        <h2 class="mt-1 text-lg font-black text-slate-950">Ödev işaretleme</h2>
-        <p class="mt-1 text-sm text-slate-500">Yapan öğrenciyi listeden işaretle.</p>
-      </a>
       <a href="{{ url_for('ogretmen_kitap_okuma') }}"
          class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-sky-300 hover:shadow">
         <div class="text-xs font-black uppercase tracking-widest text-sky-700">Kitap</div>

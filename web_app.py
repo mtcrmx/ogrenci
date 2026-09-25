@@ -2691,6 +2691,7 @@ def turnuva():
 @app.route("/yoklama")
 @giris_zorunlu
 def yoklama():
+    return redirect(url_for("haftalik_takip", sinif=request.args.get("sinif", type=int)))
     siniflar = ogretmen_siniflari(session["ogretmen_id"])
     aktif_id = request.args.get("sinif", type=int) or (siniflar[0]["id"] if siniflar else 0)
     aktif = next((s for s in siniflar if s["id"] == aktif_id), siniflar[0] if siniflar else None)
@@ -2888,6 +2889,7 @@ def odev_tamamla_route(odev_id, ogrenci_id):
 @app.route("/odevler", methods=["GET", "POST"])
 @giris_zorunlu
 def odevler():
+    return redirect(url_for("haftalik_takip", sinif=request.form.get("sinif_id", type=int) or request.args.get("sinif", type=int)))
     oid = session["ogretmen_id"]
     from database import odev_olustur, odevleri_getir
 

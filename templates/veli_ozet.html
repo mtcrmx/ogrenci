@@ -477,44 +477,11 @@
           </div>
         </div>
       </div>
-      <div class="hero-metrics">
-        <div class="hero-metric">
-          <span>Son {{ metrics.gun }} gün</span>
-          <strong>{{ metrics.tik_son_gun }}</strong>
-        </div>
-        <div class="hero-metric">
-          <span>Ödev durumu</span>
-          <strong style="font-size:22px">{{ tamamlanan_odev }}/{{ toplam_odev }}</strong>
-        </div>
-      </div>
     </div>
   </section>
 
   <div class="grid">
     <div class="space-y-4">
-      <section class="panel" style="--delay:.04s">
-        <div class="panel-head">
-          <div>
-            <h2 class="panel-title">30 günlük görünüm</h2>
-            <p class="panel-note">Son kayıt yoğunluğu ve ödev ilerlemesi tek ekranda.</p>
-          </div>
-        </div>
-        <div class="panel-body">
-          <div class="stat-grid">
-            <div class="stat">
-              <span>Tik kaydı</span>
-              <strong>{{ metrics.tik_son_gun }}</strong>
-              <div class="meter mt-3"><span style="--value:{{ risk_yuzde }}%"></span></div>
-            </div>
-            <div class="stat">
-              <span>Ödev tamamlama</span>
-              <strong>%{{ odev_orani|int }}</strong>
-              <div class="meter mt-3"><span style="--value:{{ odev_orani }}%"></span></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section class="panel" style="--delay:.08s">
         <div class="panel-head">
           <div>
@@ -528,28 +495,6 @@
         </form>
       </section>
 
-      <section class="panel" style="--delay:.12s">
-        <div class="panel-head">
-          <div>
-            <h2 class="panel-title">Ödev özeti</h2>
-            <p class="panel-note">En güncel sınıf ödevleri.</p>
-          </div>
-          <span class="state {{ 'state-done' if toplam_odev and tamamlanan_odev == toplam_odev else 'state-wait' }}">{{ tamamlanan_odev }}/{{ toplam_odev }}</span>
-        </div>
-        <div class="panel-body homework-list">
-          {% for od in odev_liste %}
-          <article class="homework-card">
-            <div class="homework-top">
-              <div class="homework-title">{{ od.baslik }}</div>
-              <span class="state {{ 'state-done' if od.tamamlandi else 'state-wait' }}">{{ 'Tamamlandı' if od.tamamlandi else 'Bekliyor' }}</span>
-            </div>
-            <div class="homework-meta">{{ od.ders }} · Son teslim: {{ od.son_tarih }} · {{ od.ogretmen }}</div>
-          </article>
-          {% else %}
-          <div class="empty">Henüz ödev girilmedi.</div>
-          {% endfor %}
-        </div>
-      </section>
     </div>
 
     <div class="space-y-4">
@@ -572,24 +517,6 @@
         </div>
       </section>
 
-      <section class="panel" style="--delay:.20s">
-        <div class="panel-head">
-          <div>
-            <h2 class="panel-title">Son tik kayıtları</h2>
-            <p class="panel-note">Yakın dönem davranış geçmişi.</p>
-          </div>
-        </div>
-        <div class="panel-body history-list">
-          {% for g in gecmis_kisa %}
-          <article class="history-card">
-            <div class="history-reason">{{ g.kriter }}</div>
-            <div class="history-meta">{{ (g.tarih or '')[:16] }} · {{ g.ogretmen }}</div>
-          </article>
-          {% else %}
-          <div class="empty">Kayıt yok.</div>
-          {% endfor %}
-        </div>
-      </section>
     </div>
   </div>
 </main>
