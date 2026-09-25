@@ -739,6 +739,7 @@ def initialize_db():
     _sinav_analiz_init(con)
     _sinav_hazirlama_init(con)
     _kitap_okuma_init(con)
+    _haftalik_takip_init(con)
     _akademik_puan_init(con)
     _evrak_takip_init(con)
     _ogrenci_ozellikler_ensure(con)
@@ -4016,6 +4017,132 @@ def _kitap_okuma_init(con: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_kitap_okuma_ogrenci ON kitap_okuma_kayitlari(ogrenci_id, veli_tarih DESC)"
     )
     con.commit()
+
+
+_HAFTALIK_TAKIP_ALAN = {
+    "kitap_okuma": {"okudu", "okumadi"},
+    "kitap_getirme": {"getirdi", "getirmedi"},
+    "odev_durum": {"tam", "eksik", "yok"},
+}
+
+
+def _haftalik_takip_init(con: sqlite3.Connection) -> None:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS haftalik_takip (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            hafta_basi TEXT NOT NULL,
+            kitap_okuma TEXT NOT NULL DEFAULT '',
+            kitap_getirme TEXT NOT NULL DEFAULT '',
+            odev_durum TEXT NOT NULL DEFAULT '',
+            ogretmen_id INTEGER REFERENCES ogretmenler(id),
+            guncelleme TEXT NOT NULL DEFAULT '',
+            UNIQUE(ogrenci_id, hafta_basi)
+        )
+    """)
+    con.execute(
+        "CREATE INDEX IF NOT EXISTS idx_haftalik_takip_sinif_hafta "
+        "ON haftalik_takip(sinif_id, hafta_basi)"
+    )
+    con.commit()
+
+
+def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = con.execute(
+        """
+        SELECT ogrenci_id, kitap_okuma, kitap_getirme, odev_durum
+        FROM haftalik_takip
+        WHERE sinif_id = ? AND hafta_basi = ?
+        """,
+        (sinif_id, hafta_basi),
+    ).fetchall()
+    con.close()
+    return {
+        int(r["ogrenci_id"]): {
+            "kitap_okuma": r["kitap_okuma"] or "",
+            "kitap_getirme": r["kitap_getirme"] or "",
+            "odev_durum": r["odev_durum"] or "",
+        }
+        for r in rows
+    }
+
+
+def haftalik_takip_isaretle(
+    sinif_id: int,
+    ogrenci_id: int,
+    hafta_basi: str,
+    alan: str,
+    deger: str,
+    ogretmen_id: int,
+) -> dict:
+    if alan not in _HAFTALIK_TAKIP_ALAN:
+        return {"ok": False, "sebep": "alan"}
+    if deger and deger not in _HAFTALIK_TAKIP_ALAN[alan]:
+        return {"ok": False, "sebep": "deger"}
+    con = _conn()
+    _haftalik_takip_init(con)
+    ogr = con.execute(
+        "SELECT sinif_id FROM ogrenciler WHERE id = ?", (ogrenci_id,)
+    ).fetchone()
+    if not ogr or int(ogr["sinif_id"]) != int(sinif_id):
+        con.close()
+        return {"ok": False, "sebep": "ogrenci"}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        f"""
+        INSERT INTO haftalik_takip
+            (ogrenci_id, sinif_id, hafta_basi, {alan}, ogretmen_id, guncelleme)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(ogrenci_id, hafta_basi) DO UPDATE SET
+            sinif_id = excluded.sinif_id,
+            {alan} = excluded.{alan},
+            ogretmen_id = excluded.ogretmen_id,
+            guncelleme = excluded.guncelleme
+        """,
+        (ogrenci_id, sinif_id, hafta_basi, deger, ogretmen_id, now),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True, "alan": alan, "deger": deger}
+
+
+def haftalik_takip_toplu(
+    sinif_id: int,
+    hafta_basi: str,
+    alan: str,
+    deger: str,
+    ogretmen_id: int,
+) -> dict:
+    if alan not in _HAFTALIK_TAKIP_ALAN:
+        return {"ok": False, "sebep": "alan"}
+    if deger and deger not in _HAFTALIK_TAKIP_ALAN[alan]:
+        return {"ok": False, "sebep": "deger"}
+    con = _conn()
+    _haftalik_takip_init(con)
+    ogrenciler = con.execute(
+        "SELECT id FROM ogrenciler WHERE sinif_id = ?", (sinif_id,)
+    ).fetchall()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    for row in ogrenciler:
+        con.execute(
+            f"""
+            INSERT INTO haftalik_takip
+                (ogrenci_id, sinif_id, hafta_basi, {alan}, ogretmen_id, guncelleme)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(ogrenci_id, hafta_basi) DO UPDATE SET
+                sinif_id = excluded.sinif_id,
+                {alan} = excluded.{alan},
+                ogretmen_id = excluded.ogretmen_id,
+                guncelleme = excluded.guncelleme
+            """,
+            (int(row["id"]), sinif_id, hafta_basi, deger, ogretmen_id, now),
+        )
+    con.commit()
+    con.close()
+    return {"ok": True, "adet": len(ogrenciler), "alan": alan, "deger": deger}
 
 
 def _kitap_okuma_puan(sayfa_sayisi: int, saat: float, gun: int) -> tuple[int, int]:

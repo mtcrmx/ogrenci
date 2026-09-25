@@ -5,7 +5,7 @@ web_app.py  —  Erenler Cumhuriyet Ortaokulu Ogrenci Takip
 
 import json
 import os, tempfile
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from io import BytesIO
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -66,6 +66,7 @@ from database import (
     evrak_takip_ozetleri, evrak_takip_matrisi,
     kitap_okuma_veli_kaydet, kitap_okuma_ogrenci_gecmis, kitap_okuma_ogretmen_listesi,
     kitap_okuma_onayla, kitap_okuma_rapor,
+    haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu,
     tik_kayitlari_siniflarda,
     ogretmen_yetki_al, ogretmen_yetki_guncelle,
     randevu_talep_ekle, randevu_talep_by_id, randevu_listesi_siniflar, randevu_durum_guncelle,
@@ -2702,6 +2703,150 @@ def yoklama():
     return render_template("yoklama.html", siniflar=siniflar, aktif=aktif,
                            ogrenciler=ogrenciler, odevler=odevler,
                            secili_odev=secili_odev)
+
+
+# 2026-2027 çalışma takvimi: ara tatil ve yarıyıl haftaları listeye girmez.
+_DONEM_ARALIKLARI = {
+    1: (
+        (date(2026, 9, 7), date(2026, 11, 13)),
+        (date(2026, 11, 23), date(2027, 1, 22)),
+    ),
+    2: (
+        (date(2027, 2, 8), date(2027, 3, 26)),
+        (date(2027, 4, 5), date(2027, 6, 18)),
+    ),
+}
+_AY_KISA = ("Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara")
+
+
+def _hafta_etiket(pazartesi: date, cuma: date) -> str:
+    if pazartesi.month == cuma.month:
+        return f"{pazartesi.day}–{cuma.day} {_AY_KISA[pazartesi.month - 1]}"
+    return (
+        f"{pazartesi.day} {_AY_KISA[pazartesi.month - 1]}"
+        f"–{cuma.day} {_AY_KISA[cuma.month - 1]}"
+    )
+
+
+def _donem_haftalari(donem: int) -> list[dict]:
+    haftalar = []
+    for bas, bit in _DONEM_ARALIKLARI.get(donem, ()):
+        gun = bas - timedelta(days=bas.weekday())
+        while gun <= bit:
+            cuma = gun + timedelta(days=4)
+            if cuma >= bas and gun <= bit:
+                haftalar.append({
+                    "basi": gun.isoformat(),
+                    "etiket": _hafta_etiket(gun, cuma),
+                    "no": len(haftalar) + 1,
+                })
+            gun += timedelta(days=7)
+    return haftalar
+
+
+def _bugunun_donemi(bugun: date | None = None) -> int:
+    bugun = bugun or date.today()
+    for donem, araliklar in _DONEM_ARALIKLARI.items():
+        for bas, bit in araliklar:
+            if bas <= bugun <= bit:
+                return donem
+    ilk = _DONEM_ARALIKLARI[1][0][0]
+    return 1 if bugun < ilk else 2
+
+
+def _secili_hafta(haftalar: list[dict], istenen: str | None) -> str:
+    anahtarlar = {h["basi"] for h in haftalar}
+    if istenen in anahtarlar:
+        return istenen
+    bugun = date.today()
+    pazartesi = (bugun - timedelta(days=bugun.weekday())).isoformat()
+    if pazartesi in anahtarlar:
+        return pazartesi
+    gecmis = [h["basi"] for h in haftalar if h["basi"] <= bugun.isoformat()]
+    if gecmis:
+        return gecmis[-1]
+    return haftalar[0]["basi"] if haftalar else ""
+
+
+@app.route("/haftalik-takip")
+@giris_zorunlu
+def haftalik_takip():
+    siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    if not siniflar:
+        siniflar = aktif_sube_siniflari()
+    aktif_id = request.args.get("sinif", type=int) or (siniflar[0]["id"] if siniflar else 0)
+    aktif = next((s for s in siniflar if s["id"] == aktif_id), siniflar[0] if siniflar else None)
+    donem = request.args.get("donem", type=int)
+    if donem not in (1, 2):
+        donem = _bugunun_donemi()
+    haftalar = _donem_haftalari(donem)
+    hafta = _secili_hafta(haftalar, (request.args.get("hafta") or "").strip())
+    ogrenciler = sinif_ogrencileri(aktif["id"]) if aktif else []
+    kayit = haftalik_takip_sinif(aktif["id"], hafta) if aktif and hafta else {}
+    for ogr in ogrenciler:
+        durum = kayit.get(int(ogr["id"]), {})
+        ogr["kitap_okuma"] = durum.get("kitap_okuma", "")
+        ogr["kitap_getirme"] = durum.get("kitap_getirme", "")
+        ogr["odev_durum"] = durum.get("odev_durum", "")
+    ozet = {
+        "okudu": sum(1 for o in ogrenciler if o["kitap_okuma"] == "okudu"),
+        "getirdi": sum(1 for o in ogrenciler if o["kitap_getirme"] == "getirdi"),
+        "tam": sum(1 for o in ogrenciler if o["odev_durum"] == "tam"),
+        "eksik": sum(1 for o in ogrenciler if o["odev_durum"] == "eksik"),
+        "yok": sum(1 for o in ogrenciler if o["odev_durum"] == "yok"),
+        "toplam": len(ogrenciler),
+    }
+    return render_template(
+        "haftalik_takip.html",
+        siniflar=siniflar,
+        aktif=aktif,
+        donem=donem,
+        haftalar=haftalar,
+        hafta=hafta,
+        ogrenciler=ogrenciler,
+        ozet=ozet,
+    )
+
+
+def _haftalik_takip_yetki(sinif_id: int) -> bool:
+    if not sinif_id:
+        return False
+    return _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id)
+
+
+@app.route("/haftalik-takip/isaret", methods=["POST"])
+@giris_zorunlu
+def haftalik_takip_isaret():
+    payload = request.get_json(silent=True) or request.form
+    sinif_id = int(payload.get("sinif_id") or 0)
+    ogrenci_id = int(payload.get("ogrenci_id") or 0)
+    hafta = str(payload.get("hafta") or "").strip()
+    alan = str(payload.get("alan") or "").strip()
+    deger = str(payload.get("deger") or "").strip()
+    if not _haftalik_takip_yetki(sinif_id) or not hafta:
+        return jsonify({"ok": False}), 403
+    sonuc = haftalik_takip_isaretle(
+        sinif_id, ogrenci_id, hafta, alan, deger, session["ogretmen_id"]
+    )
+    kod = 200 if sonuc.get("ok") else 400
+    return jsonify(sonuc), kod
+
+
+@app.route("/haftalik-takip/toplu", methods=["POST"])
+@giris_zorunlu
+def haftalik_takip_toplu_route():
+    payload = request.get_json(silent=True) or request.form
+    sinif_id = int(payload.get("sinif_id") or 0)
+    hafta = str(payload.get("hafta") or "").strip()
+    alan = str(payload.get("alan") or "").strip()
+    deger = str(payload.get("deger") or "").strip()
+    if not _haftalik_takip_yetki(sinif_id) or not hafta:
+        return jsonify({"ok": False}), 403
+    sonuc = haftalik_takip_toplu(
+        sinif_id, hafta, alan, deger, session["ogretmen_id"]
+    )
+    kod = 200 if sonuc.get("ok") else 400
+    return jsonify(sonuc), kod
 
 
 @app.route("/odev/ekle", methods=["POST"])

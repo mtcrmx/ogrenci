@@ -7,8 +7,15 @@
     <div>
       <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Veri girişi</p>
       <h1 class="mt-1 text-2xl font-black text-slate-950">Öğrenci verisi gir</h1>
-      <p class="mt-1 text-sm text-slate-600">Ödev, kitap okuma ve sınav kayıtları.</p>
+      <p class="mt-1 text-sm text-slate-600">Haftalık kitap ve ödev işaretleri, tema ödevi ve sınav kayıtları.</p>
     </div>
+
+    <a href="{{ url_for('haftalik_takip', sinif=request.args.get('sinif')) if request.args.get('sinif') else url_for('haftalik_takip') }}"
+       class="block rounded-2xl border border-emerald-300 bg-emerald-50 p-5 shadow-sm hover:border-emerald-400 hover:shadow">
+      <div class="text-xs font-black uppercase tracking-widest text-emerald-800">Hızlı giriş</div>
+      <h2 class="mt-1 text-lg font-black text-slate-950">Kitap okuma ve ödev</h2>
+      <p class="mt-1 text-sm text-slate-600">Dönem haftaları, sınıf listesi, okudu / getirdi ve ödev: tam, eksik, yok.</p>
+    </a>
 
     <div class="grid gap-3 sm:grid-cols-2">
       <a href="{{ url_for('odevler') }}"
