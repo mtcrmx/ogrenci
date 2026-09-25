@@ -563,6 +563,230 @@ _YENI_BESINCILER: dict[str, list[tuple[str, int]]] = {
     ],
 }
 
+_SINIF_LISTESI_20260925 = {
+    "5/A": [
+        ('HÜSEYİN ÇAĞLAR', 171),
+        ('BERAT FİLİZ', 275),
+        ('MISRA YAMAN', 282),
+        ('NİSA NUR AÇIKGÖZ', 286),
+        ('ÖMER HALİS DOĞAN', 288),
+        ('ÖMER KAAN AKCAN', 290),
+        ('YUSUF ERDOĞAN', 294),
+        ('ZEHRA KULA', 295),
+        ('ZEHRA UĞUR', 296),
+        ('BUĞLEM ATEŞ', 303),
+        ('DEFNE ERDOĞAN', 305),
+        ('EBRAR GÜLBAHAR TUNCAY', 306),
+        ('EYMEN DERE', 311),
+        ('HASAN KAYRA YILDIRIM', 315),
+        ('MELİS LİNA YAPICAK', 318),
+        ('OĞUZ KAĞAN GÖKÇE', 321),
+        ('SEMA NUR DUMAN', 322),
+        ('YUSUF EMİR MENSUR', 325),
+        ('BAHADIR AYAZ ŞAHİN', 332),
+        ('ZEYNEP SARE AKKUŞ', 335),
+        ('DENİZ AYNACI', 337),
+        ('ELİF DURSUN', 339),
+        ('ESMA HATUN BEKTAŞ', 340),
+        ('HACER AYBÜKE KÜSER', 343),
+        ('ŞENGÜL KARA', 358),
+        ('ZEYNEP MUCU', 363),
+        ('AHMET EYMEN BIYIK', 365),
+    ],
+    "5/B": [
+        ('BELİNAY TATAR', 172),
+        ('MÜRSEL EYMEN AKÇAY', 284),
+        ('KAMİL YUSUF CİNKAR', 293),
+        ('EYLÜL ERVA PARLAK', 310),
+        ('EYMEN EFE AKSIR', 312),
+        ('HACER TUĞBA SERT', 314),
+        ('HİRA SULTAN YURDAKUL', 317),
+        ('MUHAMMED MUSAB ARIK', 319),
+        ('NUR GÖKCE', 320),
+        ('SUDENAZ ALA', 323),
+        ('TUFAN ÇÖPATLAMAZ', 324),
+        ('ASYA KAÇMAZ', 330),
+        ('ALİ MERT ÖZTÜRK', 331),
+        ('BATUHAN GEDİK', 333),
+        ('YAREN İPEK', 334),
+        ('ECRİN BERRA YARDIMCI', 338),
+        ('GÜL GÖKCE', 342),
+        ('KUZEY ALİ ALAŞ', 346),
+        ('MENDERES FURKAN BURSALI', 347),
+        ('MUSTAFA MEMİŞ', 352),
+        ('RAHİME RAVZA SAĞIR', 355),
+        ('SEVDA ARMUTCU', 356),
+        ('YASİN EFE ALA', 360),
+        ('YASİR DOĞAN', 361),
+        ('YİĞİT SAMET İPEK', 362),
+        ('ZEYNEP UÇAR', 364),
+        ('HÜSEYİN EFE SAĞIR', 366),
+    ],
+    "6/A": [
+        ('YASEMİN ARDA', 4),
+        ('TOPRAK ÇELİKEL', 13),
+        ('CENNET ÇAKIR', 14),
+        ('ALPASLAN ALİM', 16),
+        ('ALİ DURAN UÇAR', 25),
+        ('ŞEYMA ÇETİN', 30),
+        ('ALPEREN KÖROĞLU', 33),
+        ('BATUHAN KÖROĞLU', 46),
+        ('BUSE SARIKAYA', 60),
+        ('ELİF KAŞMER', 68),
+        ('EYLÜL SENA ÜSTÜN', 80),
+        ('HASAN KAĞAN GÜLEK', 83),
+        ('ERDEM BÜTÜNER', 89),
+        ('MELİKE KAŞMER', 96),
+        ('MERT BERAT İMAL', 101),
+        ('MESUT TUNA ALİM', 103),
+        ('MUHAMMED EMİN ARSLAN', 105),
+        ('MUHAMMED YİĞİT HELVACI', 107),
+        ('MUSTAFA EMİR ARSLAN', 113),
+        ('SEMANUR GÜLER', 114),
+        ('RECEP EREN ÇELEBİ', 126),
+        ('VEYSAL UMUT ARICI', 136),
+        ('YAĞIZ KAYRA BARILDAR', 137),
+        ('ZEYNEP AZRA BOZKUŞ', 141),
+        ('ŞÜKRÜ EREN KIRKICI', 281),
+    ],
+    "6/B": [
+        ('YİĞİT EFE KULA', 2),
+        ('EMİR EREN ÇAKIR', 6),
+        ('BATTAL UMUT AÇIKGÖZ', 20),
+        ('RABİA MEVLÜDE TURA', 24),
+        ('ALPER TAHA ORAL', 26),
+        ('ALPEREN AKKAYA', 27),
+        ('EZEL TALHA ÇOBAN', 29),
+        ('MEHMET FATİH ORUÇ', 32),
+        ('ARİF EMİR DALDADURMAZ', 39),
+        ('BAHRİ BERAT KAYA', 44),
+        ('BURAK ATEŞ', 48),
+        ('YUSUF EYMEN KARLI', 52),
+        ('ELİF ADA GÜNNEÇ', 67),
+        ('ESLEM ÇÖRDÜK', 69),
+        ('ESMA NUR ATAK', 74),
+        ('EYMEN YÜCE', 77),
+        ('HANDAN MİNA GÜÇLÜ', 82),
+        ('HİRA NUR KARAKAŞ', 88),
+        ('MELİKE ÖZDİL', 97),
+        ('MİRAY ADA KARADAĞLI', 104),
+        ('NİZAMETTİN UYSAL', 116),
+        ('SEZGİN SAVAŞ', 132),
+        ('UMUT VURAL', 133),
+        ('VEYSAL EMRE ŞEN', 135),
+        ('POYRAZ EFE KOLAY', 298),
+    ],
+    "7/A": [
+        ('ZEHRA SARI', 7),
+        ('ŞEREF ÇÖRDÜK', 18),
+        ('ADEM EMİR ACAR', 21),
+        ('MUHAMMED SALİH İPEK', 34),
+        ('ASLINUR BALCI', 40),
+        ('AHMET SAVAŞ', 42),
+        ('ZEYNEP KESKİN', 43),
+        ('FARUK ARIK', 55),
+        ('MUSTAFA ÇINAR ÇELİKEL', 65),
+        ('EGE AÇIKGÖZ', 78),
+        ('NİSA İPEK ÇORUMLU', 84),
+        ('SEVGİ POLAT', 94),
+        ('YUSUF AKCAN', 122),
+        ('HASAN ARDA ALİM', 125),
+        ('ONUR ÇAKMAK', 128),
+        ('MEHMET ZOR', 155),
+        ('BERKAY KOCA', 220),
+        ('BEYZA NUR YAMAN', 227),
+        ('EMİR DUMAN', 254),
+        ('HACER BETÜL YILDIRIM', 268),
+        ('HAZAL NUR SAĞIR', 270),
+        ('HİRA BUĞLEM AYDIN', 271),
+        ('HÜSEYİN ÇANKAL', 272),
+        ('KADİR KIRATLI', 277),
+        ('NACİYE NİSA ARSLAN', 292),
+        ('POYRAZ ÖZEK', 299),
+    ],
+    "7/B": [
+        ('ENES AYKAÇ', 22),
+        ('AHMET BERKAY YURDUSAY', 37),
+        ('ÖZGÜR ÇIRAK', 76),
+        ('BERKAY KÖSE', 86),
+        ('RUMEYSA YÜCE', 99),
+        ('UTKU CAN DALKILIÇ', 111),
+        ('ELİF YILMAZ', 120),
+        ('YİĞİT TALHA KARACA', 144),
+        ('BERRA ERDEM', 222),
+        ('EMİR EFE ŞAHİN', 255),
+        ('EREN KULA', 258),
+        ('ESLEM KARAASLAN', 260),
+        ('FEYZA SARE ÇAKIR', 266),
+        ('HANİFE ÇÜRÜK', 269),
+        ('HÜSEYİN DALKIRAN', 273),
+        ('HÜSEYİN EFE TEPEGÖZ', 274),
+        ('İBRAHİM ODUNCU', 276),
+        ('KÜBRA SARI', 279),
+        ('MUHAMMED EMİR DALEĞMEZ', 285),
+        ('MUSA ÇAĞLAYAN', 287),
+        ('MUSTAFA YİĞİT UYSAL', 289),
+        ('PELİN NUR SARI', 297),
+        ('RUKİYE KARACA', 301),
+        ('HANİFE NAZ TOKMAK', 375),
+    ],
+    "8/A": [
+        ('AÇELYA EMEN', 41),
+        ('ATAMAN ŞEKER', 58),
+        ('BELGİN ECE DEDE', 73),
+        ('CİHAT KARAASLAN', 81),
+        ('DOĞUKAN AKYOL', 92),
+        ('EBRAR ŞAHİN', 100),
+        ('ELANUR KÖSE', 109),
+        ('ÇINAR AYDAŞ', 110),
+        ('ENES BUĞRA İŞLER', 115),
+        ('ESMA BETÜL ZOBU', 118),
+        ('ESMA RABİA ŞEN', 119),
+        ('EYMEN EFE ARIK', 121),
+        ('KADER URAL', 131),
+        ('HASAN MERT ÜNLÜ', 138),
+        ('ELANUR ARDOĞAN', 149),
+        ('MUHAMMET HASAN ZEYBEK', 158),
+        ('MELİKE ÜSTÜN', 163),
+        ('MELİSA SARIOĞLU', 164),
+        ('NEHİR NİSA ÇÖPATLAMAZ', 177),
+        ('RAMAZAN AKTAŞ', 194),
+        ('ELA SAĞLAM', 200),
+        ('VEYSEL CAN BEKTAŞ', 215),
+        ('YAREN KAPLAN', 217),
+        ('ZEYNEP İPEK', 223),
+        ('ZEYNEP KOLAY', 224),
+    ],
+    "8/B": [
+        ('MURAT YILDIRIM', 11),
+        ('DAMLA NAZ GENCEL', 12),
+        ('EMİNE SERRA KOLAY', 19),
+        ('ÇINAR SAĞIR', 38),
+        ('ALİ KEKEÇ', 57),
+        ('AYŞENUR SENA ÇENGELCİ', 72),
+        ('BERRA NUR DERE', 75),
+        ('EGEHAN ALA', 108),
+        ('FATMA NUR CANDAN', 123),
+        ('GÜLBAHAR İPEKCİ', 129),
+        ('HATİCE KÜBRA GÖKGÖBEL', 139),
+        ('SENA NEHİR SAĞIR', 142),
+        ('HÜMEYRA ŞİRİN DELİCAN', 143),
+        ('HÜSEYİN TALHA DERE', 145),
+        ('İBRAHİM ALİ DİNÇ', 148),
+        ('MUHAMMED YAĞIZ KIZMAZ', 167),
+        ('MUSAB YAMAN', 170),
+        ('NEHİR OKUMUŞ', 181),
+        ('SELDA ECE GÖKÇE', 208),
+        ('ŞEVKET ÇÖRDÜK', 209),
+        ('ŞEVVAL ÖZTÜRK', 211),
+        ('ŞÜHEDA BUĞLEM KARASLAN', 212),
+        ('YAĞMUR NİSA KOCA', 216),
+        ('ZEHRA ZEREN', 221),
+        ('ZÜMRA KARAKAYA', 225),
+    ],
+}
+
+
 _EGITIM_YILI_YUKSELTME_ANAHTAR = "egitim_yili_yukseltme_2026_2027"
 
 
@@ -638,6 +862,72 @@ def _egitim_yili_yukselt_2026_2027(con: sqlite3.Connection) -> None:
 # ══════════════════════════════════════════════════════════════════════════
 # Bağlantı
 # ══════════════════════════════════════════════════════════════════════════
+
+
+def _ad_karsilastir(a: str, b: str) -> bool:
+    tab = str.maketrans({
+        "İ": "I", "I": "I", "ı": "I", "i": "I",
+        "Ç": "C", "ç": "C", "Ğ": "G", "ğ": "G",
+        "Ö": "O", "ö": "O", "Ş": "S", "ş": "S",
+        "Ü": "U", "ü": "U",
+    })
+    def n(s: str) -> str:
+        return " ".join((s or "").upper().translate(tab).split())
+    return n(a) == n(b)
+
+
+def _sinif_listesini_uygula(con: sqlite3.Connection) -> None:
+    """25.09.2026 sınıf listesine göre aktif şubeleri günceller."""
+    aktif = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B")
+    ids: dict[str, int] = {}
+    for adi in aktif:
+        sid = _sinif_id_adi(con, adi)
+        if not sid:
+            print("UYARI: Sinif listesi uygulanamadi, sinif yok:", adi)
+            return
+        ids[adi] = sid
+    con.execute("INSERT OR IGNORE INTO siniflar (sinif_adi) VALUES (?)", ("Ayrılan 2026",))
+    ayrilan = _sinif_id_adi(con, "Ayrılan 2026")
+    if not ayrilan:
+        return
+    pdf: dict[int, tuple[str, str]] = {}
+    for sinif_adi, liste in _SINIF_LISTESI_20260925.items():
+        for ad_soyad, ogr_no in liste:
+            pdf[int(ogr_no)] = (ad_soyad, sinif_adi)
+    aktif_ids = tuple(ids.values())
+    yer = ",".join("?" * len(aktif_ids))
+    mevcut = [dict(r) for r in con.execute(
+        f"SELECT id, ad_soyad, sinif_id, ogr_no FROM ogrenciler WHERE sinif_id IN ({yer})",
+        aktif_ids,
+    ).fetchall()]
+    eslesen: set[int] = set()
+    for ogr_no, (ad_soyad, sinif_adi) in pdf.items():
+        hedef = ids[sinif_adi]
+        bulunan = next(
+            (r for r in mevcut if int(r["ogr_no"]) == ogr_no and _ad_karsilastir(r["ad_soyad"], ad_soyad)),
+            None,
+        )
+        if bulunan:
+            eslesen.add(int(bulunan["id"]))
+            if int(bulunan["sinif_id"]) != hedef:
+                con.execute(
+                    "UPDATE ogrenciler SET sinif_id = ? WHERE id = ?",
+                    (hedef, int(bulunan["id"])),
+                )
+            continue
+        con.execute(
+            "INSERT INTO ogrenciler (ad_soyad, sinif_id, ogr_no) VALUES (?, ?, ?)",
+            (ad_soyad, hedef, ogr_no),
+        )
+    for r in mevcut:
+        if int(r["id"]) in eslesen:
+            continue
+        con.execute(
+            "UPDATE ogrenciler SET sinif_id = ? WHERE id = ?",
+            (ayrilan, int(r["id"])),
+        )
+    con.commit()
+
 
 def _conn() -> sqlite3.Connection:
     c = sqlite3.connect(DB_PATH, timeout=30)
@@ -744,6 +1034,7 @@ def initialize_db():
     _evrak_takip_init(con)
     _ogrenci_ozellikler_ensure(con)
     _egitim_yili_yukselt_2026_2027(con)
+    _sinif_listesini_uygula(con)
     _ogretmen_kadrosunu_senkronize(con)
     _ders_programini_senkronize(con)
     con.close()
