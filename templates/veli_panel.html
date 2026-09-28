@@ -11,7 +11,10 @@
     header { background: #0f2744; color: #fff; }
     .bar { max-width: 980px; margin: 0 auto; padding: 16px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
     .brand { font-weight: 800; }
-    a.cikis { color: #fff; text-decoration: none; background: #b91c1c; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 800; }
+    .aksiyon { display: flex; gap: 8px; }
+    a.cikis, a.rapor { color: #fff; text-decoration: none; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 800; }
+    a.rapor { background: #1d4ed8; }
+    a.cikis { background: #b91c1c; }
     main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
     .kart { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; }
     h1 { margin: 4px 0 0; font-size: 26px; }
@@ -31,14 +34,18 @@
     .iki { display: grid; gap: 12px; }
     @media (min-width: 800px) { .iki { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 640px) { .uc { grid-template-columns: 1fr; } }
-    #veli-popup-katman .vp-arkaplan { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, .55); }
-    #veli-popup-katman .vp-kutu { width: min(440px, 100%); border-radius: 18px; padding: 22px; color: #fff; }
-    #veli-popup-katman .vp-uyari { background: #be123c; }
-    #veli-popup-katman .vp-olumlu { background: #047857; }
-    #veli-popup-katman .vp-duyuru { background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; }
-  #veli-popup-katman .vp-duyuru button { background: #0f2744; color: #fff; }
-    #veli-popup-katman h2 { margin: 8px 0 0; }
-    #veli-popup-katman button { width: auto; background: #fff; color: #0f172a; }
+    #veli-popup-katman .vp-arkaplan { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 23, 42, .55); }
+    #veli-popup-katman .vp-kutu { width: min(420px, 100%); border-radius: 20px; padding: 22px 22px 18px; box-shadow: 0 24px 60px rgba(0,0,0,.28); }
+    #veli-popup-katman .vp-uyari { background: #be123c; color: #fff; }
+    #veli-popup-katman .vp-olumlu { background: #047857; color: #fff; }
+    #veli-popup-katman .vp-duyuru { background: #fff; color: #0f172a; border: 1px solid #e2e8f0; }
+    #veli-popup-katman .vp-ust { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+    #veli-popup-katman h2 { margin: 8px 0 0; font-size: 22px; line-height: 1.25; color: inherit; }
+    #veli-popup-katman .vp-metin { margin: 12px 0 0; line-height: 1.55; font-size: 15px; white-space: pre-wrap; color: inherit; }
+    #veli-popup-katman .vp-alt { margin-top: 10px; font-size: 12px; opacity: .8; color: inherit; }
+    #veli-popup-katman .vp-kutu button { display: block; width: 100%; margin-top: 16px; border: 0; border-radius: 12px; padding: 12px; font-weight: 800; cursor: pointer; }
+    #veli-popup-katman .vp-uyari button, #veli-popup-katman .vp-olumlu button { background: #fff; color: #0f172a; }
+    #veli-popup-katman .vp-duyuru button { background: #0f2744; color: #fff; }
   </style>
 </head>
 <body>
@@ -47,8 +54,10 @@
 <header>
   <div class="bar">
     <div class="brand">Erenler Cumhuriyet Ortaokulu</div>
-    <a class="cikis" href="{{ url_for('veli_kitap_odev_rapor') }}" style="background:#0f2744;margin-right:8px">Raporum</a>
-    <a class="cikis" href="{{ url_for('veli_cikis') }}">Çıkış</a>
+    <div class="aksiyon">
+      <a class="rapor" href="{{ url_for('veli_kitap_odev_rapor') }}">Raporum</a>
+      <a class="cikis" href="{{ url_for('veli_cikis') }}">Çıkış</a>
+    </div>
   </div>
 </header>
 <main>

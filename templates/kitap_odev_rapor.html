@@ -40,11 +40,33 @@
     </div>
   </div>
   {% set o = analiz.ozet %}
-  <section class="ozet">
-    <div class="kutu">Hafta<b>{{ o.hafta }}</b></div>
-    <div class="kutu">Okudu / okumadı<b>{{ o.okudu }} / {{ o.okumadi }}</b></div>
-    <div class="kutu">Getirdi / getirmedi<b>{{ o.getirdi }} / {{ o.getirmedi }}</b></div>
-    <div class="kutu">Tam / eksik / yok<b>{{ o.tam }} / {{ o.eksik }} / {{ o.yok }}</b></div>
+  {% set okuma_top = (o.okudu or 0) + (o.okumadi or 0) %}
+  {% set getir_top = (o.getirdi or 0) + (o.getirmedi or 0) %}
+  {% set odev_top = (o.tam or 0) + (o.eksik or 0) + (o.yok or 0) %}
+  {% set okudu_y = ((o.okudu or 0) * 100 / okuma_top)|round(0) if okuma_top else 0 %}
+  {% set getirdi_y = ((o.getirdi or 0) * 100 / getir_top)|round(0) if getir_top else 0 %}
+  {% set tam_y = ((o.tam or 0) * 100 / odev_top)|round(0) if odev_top else 0 %}
+  <style>
+    .grafik { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+    .halka { width: 110px; height: 110px; }
+    .dol { stroke-dashoffset: 100; animation: halka-dol 1.1s ease forwards; }
+    @keyframes halka-dol { to { stroke-dashoffset: 0; } }
+    .cubuk { height: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-top: 6px; }
+    .cubuk > span { display: block; height: 100%; width: 0; background: #059669; animation: cubuk-dol .9s ease forwards; }
+    @keyframes cubuk-dol { to { width: var(--w); } }
+    @media (max-width: 700px) { .grafik { grid-template-columns: 1fr; } }
+    @media print { .dol, .cubuk > span { animation: none; stroke-dashoffset: 0; width: var(--w); } }
+  </style>
+  <section class="grafik">
+    <div class="kutu">Kitap okuma
+      <svg class="halka" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" stroke-width="3.5"></circle><circle class="dol" cx="18" cy="18" r="15.5" fill="none" stroke="#059669" stroke-width="3.5" stroke-dasharray="{{ okudu_y }} 100" transform="rotate(-90 18 18)"></circle></svg>
+      <b>%{{ okudu_y }}</b></div>
+    <div class="kutu">Getirme
+      <svg class="halka" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" stroke-width="3.5"></circle><circle class="dol" cx="18" cy="18" r="15.5" fill="none" stroke="#0284c7" stroke-width="3.5" stroke-dasharray="{{ getirdi_y }} 100" transform="rotate(-90 18 18)"></circle></svg>
+      <b>%{{ getirdi_y }}</b></div>
+    <div class="kutu">Ödev tam
+      <div class="cubuk"><span style="--w: {{ tam_y }}%"></span></div>
+      <b>%{{ tam_y }}</b></div>
   </section>
   <table>
     <thead>
