@@ -98,7 +98,10 @@
     <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
     <input type="hidden" name="islem" value="hedef">
     <label class="text-xs font-black text-slate-500">LGS / okul hedefi
-      <input name="hedef" value="{{ profil.hedef }}" placeholder="Örn. Fen lisesi, 450 puan" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+      <input name="hedef" value="{{ profil.hedef }}" placeholder="Örn. Fen lisesi" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+    </label>
+    <label class="mt-3 block text-xs font-black text-slate-500">Hedef net (90 üzerinden)
+      <input name="hedef_net" type="number" min="0" max="90" value="{{ profil.hedef_net or '' }}" placeholder="Örn. 40" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
     </label>
     <button class="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Hedefi kaydet</button>
   </form>
@@ -141,6 +144,23 @@
     doldur();
   })();
   </script>
+  {% endif %}
+  {% if not veli and kocluk and kocluk.oneriler %}
+  <section class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
+    <h2 class="font-black">Zayıf ders: {{ kocluk.zayif.ders }}</h2>
+    <p class="mt-1 text-slate-700">Bu konuları gelecek haftanın pazartesine 15 soruluk görev olarak yaz.</p>
+    <div class="mt-2 flex flex-wrap gap-2">
+      {% for k in kocluk.oneriler %}
+      <form method="post">
+        <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+        <input type="hidden" name="islem" value="oneri">
+        <input type="hidden" name="ders" value="{{ kocluk.zayif.ders }}">
+        <input type="hidden" name="konu" value="{{ k.konu }}">
+        <button class="min-h-11 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{{ k.konu }}</button>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
   {% endif %}
   {% if veli %}
   <p class="mt-3 text-sm text-slate-600">Yaptım dersen öğretmenine düşer. Onaylamadan tamam sayılmaz.</p>
@@ -236,6 +256,7 @@
     </table>
   </section>
   {% elif bolum == 'gunluk' and veli %}
+  <p class="mt-3 text-sm text-slate-600">Yazdığın soru, öğretmen gördüm demeden haftalık tempoya girmez.</p>
   <form method="post" class="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
     <input type="hidden" name="islem" value="gunluk">
     <input type="date" name="tarih" value="{{ bugun }}" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
@@ -248,12 +269,12 @@
   </form>
   <section class="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
     <table class="w-full text-sm">
-      <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th class="px-3 py-2">Tarih</th><th class="px-3 py-2">Ders</th><th class="px-3 py-2">Soru</th><th class="px-3 py-2">D/Y</th><th class="px-3 py-2">Sayfa</th></tr></thead>
+      <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th class="px-3 py-2">Tarih</th><th class="px-3 py-2">Ders</th><th class="px-3 py-2">Soru</th><th class="px-3 py-2">D/Y</th><th class="px-3 py-2">Sayfa</th><th class="px-3 py-2">Onay</th></tr></thead>
       <tbody>
         {% for g in gunluk %}
-        <tr class="border-t border-slate-100"><td class="px-3 py-2">{{ g.tarih }}</td><td class="px-3 py-2 font-bold">{{ g.ders }}</td><td class="px-3 py-2">{{ g.cozulen }}</td><td class="px-3 py-2">{{ g.dogru }}/{{ g.yanlis }}</td><td class="px-3 py-2">{{ g.sayfa }}</td></tr>
+        <tr class="border-t border-slate-100"><td class="px-3 py-2">{{ g.tarih }}</td><td class="px-3 py-2 font-bold">{{ g.ders }}</td><td class="px-3 py-2">{{ g.cozulen }}</td><td class="px-3 py-2">{{ g.dogru }}/{{ g.yanlis }}</td><td class="px-3 py-2">{{ g.sayfa }}</td><td class="px-3 py-2 font-bold">{{ 'Görüldü' if g.goruldu == 1 else ('Sayılmadı' if g.goruldu == 2 else 'Onay bekliyor') }}</td></tr>
         {% else %}
-        <tr><td class="px-3 py-6 text-slate-500" colspan="5">Henüz günlük kayıt yok.</td></tr>
+        <tr><td class="px-3 py-6 text-slate-500" colspan="6">Henüz günlük kayıt yok.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -297,7 +318,7 @@
   </style>
   <section class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
     <h2 class="font-black">{{ ogrenci.ad_soyad.split()[0] }}, hedefin duruyor</h2>
-    <p class="mt-1 text-sm text-slate-700">{{ kocluk.hedef or 'Öğretmen henüz hedef yazmadı.' }}</p>
+    <p class="mt-1 text-sm text-slate-700">{{ kocluk.hedef or 'Öğretmen henüz hedef yazmadı.' }}{% if kocluk.hedef_net %} · hedef {{ kocluk.hedef_net }} net{% if kocluk.son %}, kalan {{ kocluk.kalan }}{% endif %}{% endif %}</p>
     <p class="mt-2 text-sm text-slate-800">{{ kocluk.mesaj }}</p>
     {% if kocluk.rozetler %}
     <div class="mt-3 flex flex-wrap gap-2">

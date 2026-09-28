@@ -60,6 +60,20 @@
        Sağ: Ana İçerik
   ══════════════════════════════════════════════════════════════ -->
   <main class="main-canvas flex-1 min-w-0 lg:ml-0">
+    {% if eksik_siniflar is defined and (eksik_siniflar or onay_sayisi) %}
+    <section class="mx-3 mt-3 space-y-2 sm:mx-4">
+      {% if onay_sayisi %}
+      <a href="{{ url_for('onay_kutusu') }}" class="block rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
+        {{ onay_sayisi }} onay bekliyor{% if onay_geciken %} · {{ onay_geciken }} tanesi 3 günü geçti{% endif %}
+      </a>
+      {% endif %}
+      {% for s in eksik_siniflar %}
+      <a href="{{ url_for('haftalik_takip', sinif=s.id) }}" class="block rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-950">
+        {{ s.sinif_adi }} bu hafta {% if s.isaretli == 0 %}henüz işaretlenmedi{% else %}eksik: {{ s.isaretli }}/{{ s.toplam }}{% endif %}
+      </a>
+      {% endfor %}
+    </section>
+    {% endif %}
 
     {% if aktif %}
     <!-- Üst başlık + araçlar -->

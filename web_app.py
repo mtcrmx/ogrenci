@@ -70,10 +70,12 @@ from database import (
     kitap_okuma_onayla, kitap_okuma_rapor,
     haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu, haftalik_takip_metin,
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet, haftalik_odev_bildir,
+    haftalik_odev_onceki_kopyala, sinif_hafta_durumu, onay_bekleyenler,
+    ogrenci_adi_ara, donem_karne_satirlari,
     sinif_okuma_kitaplari,
     ogrenci_verilen_kitaplar,
     lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_bildir, lgs_gorev_onayla,
-    lgs_gunluk_ekle, lgs_gunluk_liste, lgs_deneme_ekle, lgs_denemeler,
+    lgs_gunluk_ekle, lgs_gunluk_liste, lgs_gunluk_onayla, lgs_deneme_ekle, lgs_denemeler,
     LGS_DERSLER, LGS_GUNLER, LGS_SORU_SAYISI,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
@@ -1444,15 +1446,41 @@ def envanter_aktif_route():
     return redirect(url_for("envanter"))
 
 
-@app.route("/karne")
-@ogrenci_giris_zorunlu
-def ogrenci_karne():
-    return redirect(url_for("ogrenci_gorunum"))
-
-
 @app.route("/veli/karne")
 def veli_karne():
-    return redirect(url_for("veli_panel"))
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    donem = request.args.get("donem", type=int) or _bugunun_donemi()
+    donem, _haftalar, satirlar = _karne_paketi(donem, ogrenci_id=int(oid))
+    return render_template("karne.html", siniflar=[], sinif_id=None, donem=donem, satirlar=satirlar, veli=True)
+
+
+@app.route("/veli/karne.xlsx")
+def veli_karne_excel():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    if not OPENPYXL_OK:
+        return "Excel için openpyxl gerekir.", 500
+    donem = request.args.get("donem", type=int) or _bugunun_donemi()
+    donem, _haftalar, satirlar = _karne_paketi(donem, ogrenci_id=int(oid))
+    bio = _karne_excel(satirlar, donem)
+    return send_file(bio, as_attachment=True, download_name=f"karne-{donem}.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route("/veli/karne.pdf")
+def veli_karne_pdf():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    from pdf_export import REPORTLAB_OK, pdf_donem_karnesi_bytes
+    if not REPORTLAB_OK:
+        return "PDF için reportlab gerekir.", 500
+    donem = request.args.get("donem", type=int) or _bugunun_donemi()
+    donem, _haftalar, satirlar = _karne_paketi(donem, ogrenci_id=int(oid))
+    veri = pdf_donem_karnesi_bytes(satirlar, donem)
+    return send_file(BytesIO(veri), as_attachment=True, download_name=f"karne-{donem}.pdf", mimetype="application/pdf")
 
 
 @app.route("/ogretmen/sinav-analiz")
@@ -2328,7 +2356,17 @@ def veli_panel():
         "odev_durum": etiket.get(kayit.get("odev_durum") or "", "Henüz işaretlenmedi"),
         "odev_kod": kayit.get("odev_durum") or "",
         "odev_bildirim": kayit.get("odev_bildirim") or "",
+        "odev_karar_not": kayit.get("odev_karar_not") or "",
+        "ogretmen_adi": kayit.get("ogretmen_adi") or "",
+        "kitap_adi": kayit.get("kitap_adi") or "",
+        "kitap_sayfa": int(kayit.get("kitap_sayfa") or 0),
     }
+    katalog = 0
+    for k in sinif_okuma_kitaplari(o.get("sinif_adi") or ""):
+        if k.get("ad") == hafta["kitap_adi"]:
+            katalog = int(k.get("sayfa") or 0)
+            break
+    hafta["katalog_sayfa"] = katalog
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
     gorevler = lgs_gorevler(int(ogrenci_id), hafta_basi)
@@ -2337,10 +2375,31 @@ def veli_panel():
     oran = round(tamam * 100 / len(gorevler)) if gorevler else 0
     denemeler = lgs_denemeler(int(ogrenci_id), 12)
     profil = lgs_profil(int(ogrenci_id))
+    gunluk = lgs_gunluk_liste(int(ogrenci_id))
     kocluk = _lgs_kocluk(
         denemeler, oran, len(gorevler), bugun_gorev,
-        lgs_gunluk_liste(int(ogrenci_id)), profil["hedef"],
+        gunluk, profil["hedef"], profil.get("hedef_net") or 0,
     )
+    bekleyen_lgs = [g for g in gorevler if g.get("bildirdi") and not g.get("tamamlandi")]
+    bekleyen_gunluk = sum(1 for g in gunluk if int(g.get("goruldu") or 0) == 0)
+    satirlar = [f"{o['ad_soyad']} · {o['sinif_adi']} · bu hafta"]
+    if hafta["kitap_adi"]:
+        sayfa = f"{hafta['kitap_sayfa']}/{katalog} sayfa" if katalog else f"{hafta['kitap_sayfa']} sayfa"
+        satirlar.append(f"Kitap: {hafta['kitap_adi']} ({sayfa}) · {hafta['kitap_okuma']}")
+    satirlar.append(f"Ödev: {odev.get('ders') or 'ders yok'} — {odev.get('aciklama') or 'açıklama yok'}")
+    if hafta["odev_kod"]:
+        karar = f"Öğretmen kararı: {hafta['odev_durum']}"
+        if hafta["odev_karar_not"]:
+            karar += f". {hafta['odev_karar_not']}"
+        if hafta["ogretmen_adi"]:
+            karar += f" ({hafta['ogretmen_adi']})"
+        satirlar.append(karar)
+    elif hafta["odev_bildirim"] == "yaptim":
+        satirlar.append("Öğrenci ödevi yaptım dedi, öğretmen onayı bekleniyor.")
+    if bekleyen_lgs:
+        satirlar.append("LGS onay bekleyen: " + ", ".join(f"{g['ders']} {g.get('konu') or ''}".strip() for g in bekleyen_lgs))
+    if bekleyen_gunluk:
+        satirlar.append(f"Günlük kayıt onay bekliyor: {bekleyen_gunluk}")
     return render_template(
         "veli_panel.html",
         ogrenci=o,
@@ -2351,6 +2410,7 @@ def veli_panel():
         notlar=notlar,
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
         kocluk=kocluk,
+        ozet_metin="\n".join(satirlar),
     )
 
 
@@ -2568,6 +2628,9 @@ def dashboard():
                 })
 
     olumlu_satirlari = sinif_olumlu_gecmis(aktif["id"])
+    hafta_bugun = (date.today() - timedelta(days=date.today().weekday())).isoformat()
+    eksik_siniflar = sinif_hafta_durumu(hafta_bugun)
+    kutu = onay_bekleyenler(hafta_bugun)
     ids_ogr = [o["id"] for o in ogrenciler]
     olumlu_h = ogrenci_olumlu_tik_sayilari(ids_ogr)
     roz_harita = ogrenci_rozetleri_yayin_map(ids_ogr, limit=6)
@@ -2587,7 +2650,10 @@ def dashboard():
                            bugunki_mufettis=bugunki_muf,
                            bekleyen_talepler=bek_talepler,
                            tum_sinif_ogrencileri_popup=popup_ogrenciler,
-                           toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id))
+                           toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id),
+                           eksik_siniflar=eksik_siniflar,
+                           onay_sayisi=len(kutu["odevler"]) + len(kutu["gorevler"]) + len(kutu["gunluk"]),
+                           onay_geciken=kutu["geciken"])
 
 
 @app.route("/veri")
@@ -2930,6 +2996,9 @@ def haftalik_takip():
         ogr["odev_ders"] = durum.get("odev_ders", "")
         ogr["odev_not"] = durum.get("odev_not", "")
         ogr["odev_bildirim"] = durum.get("odev_bildirim", "")
+        ogr["odev_karar_not"] = durum.get("odev_karar_not", "")
+        ogr["kitap_sayfa"] = durum.get("kitap_sayfa", 0)
+        ogr["ogretmen_adi"] = durum.get("ogretmen_adi", "")
     ozet = {
         "okudu": sum(1 for o in ogrenciler if o["kitap_okuma"] == "okudu"),
         "getirdi": sum(1 for o in ogrenciler if o["kitap_getirme"] == "getirdi"),
@@ -3039,6 +3108,129 @@ def haftalik_odev_bilgi_route():
     return redirect(url_for("haftalik_takip", sinif=sinif_id, hafta=hafta, donem=donem))
 
 
+@app.route("/haftalik-takip/kopyala", methods=["POST"])
+@giris_zorunlu
+def haftalik_odev_kopyala_route():
+    sinif_id = request.form.get("sinif_id", type=int) or 0
+    hafta = (request.form.get("hafta") or "").strip()
+    donem = request.form.get("donem", type=int) or 1
+    if not _haftalik_takip_yetki(sinif_id) or not hafta:
+        abort(403)
+    sonuc = haftalik_odev_onceki_kopyala(sinif_id, hafta, session["ogretmen_id"])
+    if not sonuc.get("ok"):
+        flash("Önceki haftada kopyalanacak bir sınıf ödevi yok.", "warning")
+    return redirect(url_for("haftalik_takip", sinif=sinif_id, hafta=hafta, donem=donem))
+
+
+@app.route("/onay-kutusu", methods=["GET", "POST"])
+@giris_zorunlu
+def onay_kutusu():
+    hafta = _lgs_hafta()
+    if request.method == "POST":
+        tip = request.form.get("tip")
+        if tip == "odev":
+            sinif_id = request.form.get("sinif_id", type=int) or 0
+            ogrenci_id = request.form.get("ogrenci_id", type=int) or 0
+            karar = request.form.get("karar") or ""
+            if _haftalik_takip_yetki(sinif_id) and ogrenci_id:
+                if karar in {"tam", "eksik", "yok"}:
+                    haftalik_takip_isaretle(sinif_id, ogrenci_id, hafta, "odev_durum", karar, session["ogretmen_id"])
+                elif karar == "reddet":
+                    haftalik_odev_bildir(ogrenci_id, hafta, False)
+        elif tip == "lgs":
+            lgs_gorev_onayla(
+                request.form.get("ogrenci_id", type=int) or 0,
+                request.form.get("gorev_id", type=int) or 0,
+                "onay" if request.form.get("karar") == "onay" else "reddet",
+            )
+        elif tip == "gunluk":
+            lgs_gunluk_onayla(request.form.get("kayit_id", type=int) or 0, request.form.get("karar") or "")
+        return redirect(url_for("onay_kutusu"))
+    kutu = onay_bekleyenler(hafta)
+    return render_template("onay_kutusu.html", hafta=hafta, **kutu)
+
+
+@app.route("/ogrenci-ara")
+@giris_zorunlu
+def ogrenci_ara():
+    if not _giris_raporu_acik_mi():
+        abort(403)
+    sorgu = (request.args.get("q") or "").strip()
+    return render_template(
+        "ogrenci_ara.html",
+        sorgu=sorgu,
+        sonuclar=ogrenci_adi_ara(sorgu, _lgs_hafta()) if sorgu else [],
+    )
+
+
+def _karne_paketi(donem: int, sinif_id: int | None = None, ogrenci_id: int | None = None):
+    if donem not in (1, 2):
+        donem = _bugunun_donemi()
+    haftalar = [h["basi"] for h in _donem_haftalari(donem)]
+    return donem, haftalar, donem_karne_satirlari(haftalar, sinif_id=sinif_id, ogrenci_id=ogrenci_id)
+
+
+def _karne_excel(satirlar, donem: int):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"{donem}. dönem"
+    ws.append(["Öğrenci", "No", "Sınıf", "Okudu", "Okumadı", "Ödev tam", "Eksik", "Yok", "LGS hedef net", "Hedef", "Denemeler"])
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="0F2744")
+    for s in satirlar:
+        ws.append([
+            s["ad_soyad"], s["ogr_no"], s["sinif_adi"], s["okudu"], s["okumadi"],
+            s["tam"], s["eksik"], s["yok"], s["hedef_net"] or "", s["hedef"], s["denemeler"],
+        ])
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    return bio
+
+
+@app.route("/karne")
+@giris_zorunlu
+def karne():
+    siniflar = aktif_sube_siniflari()
+    sinif_id = request.args.get("sinif", type=int) or (siniflar[0]["id"] if siniflar else 0)
+    donem = request.args.get("donem", type=int) or _bugunun_donemi()
+    donem, _haftalar, satirlar = _karne_paketi(donem, sinif_id=sinif_id)
+    return render_template("karne.html", siniflar=siniflar, sinif_id=sinif_id, donem=donem, satirlar=satirlar, veli=False)
+
+
+@app.route("/karne.xlsx")
+@giris_zorunlu
+def karne_excel():
+    if not OPENPYXL_OK:
+        return "Excel için openpyxl gerekir.", 500
+    sinif_id = request.args.get("sinif", type=int)
+    donem = request.args.get("donem", type=int) or _bugunun_donemi()
+    donem, _haftalar, satirlar = _karne_paketi(donem, sinif_id=sinif_id)
+    bio = _karne_excel(satirlar, donem)
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=f"donem-karnesi-{donem}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@app.route("/karne.pdf")
+@giris_zorunlu
+def karne_pdf():
+    from pdf_export import REPORTLAB_OK, pdf_donem_karnesi_bytes
+    if not REPORTLAB_OK:
+        return "PDF için reportlab gerekir.", 500
+    sinif_id = request.args.get("sinif", type=int)
+    donem = request.args.get("donem", type=int) or _bugunun_donemi()
+    donem, _haftalar, satirlar = _karne_paketi(donem, sinif_id=sinif_id)
+    veri = pdf_donem_karnesi_bytes(satirlar, donem)
+    return send_file(BytesIO(veri), as_attachment=True, download_name=f"donem-karnesi-{donem}.pdf", mimetype="application/pdf")
+
+
 @app.route("/giris-raporu")
 @giris_zorunlu
 def giris_raporu():
@@ -3067,6 +3259,7 @@ def giris_raporu():
         secili=secili,
         detay=detay,
         giren=sum(1 for s in satirlar if s["girdi"]),
+        geciken=onay_bekleyenler(hafta)["geciken"],
     )
 
 
@@ -3126,7 +3319,7 @@ def giris_raporu_excel():
     )
 
 
-def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef) -> dict:
+def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef_net: int = 0) -> dict:
     """Veli ve öğrencinin gördüğü sonuç, ders analizi ve bir sonraki adım."""
     hedef = (hedef or "").strip()
     son = denemeler[0] if denemeler else None
@@ -3252,12 +3445,22 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef) -> di
         if float(uc[0]["net"]) <= float(uc[1]["net"]) <= float(uc[2]["net"]):
             rozetler.append({"ad": "İstikrar", "aciklama": "Son üç denemenin neti düşmedi."})
     hafta_basi = _lgs_hafta()
-    soru = sum(int(g.get("cozulen") or 0) for g in gunluk if (g.get("tarih") or "") >= hafta_basi)
+    soru = sum(
+        int(g.get("cozulen") or 0)
+        for g in gunluk
+        if int(g.get("goruldu") or 0) == 1 and (g.get("tarih") or "") >= hafta_basi
+    )
     if soru >= 30:
         rozetler.append({"ad": "Soru temposu", "aciklama": f"Bu hafta {soru} soru çözüldü."})
     yuzde = max(0, min(100, round(float(son["net"]) * 100 / 90))) if son else 0
+    hedef_net = max(0, min(90, int(hedef_net or 0)))
+    kalan = round(max(0, hedef_net - float(son["net"])), 2) if son and hedef_net else hedef_net
+    if hedef_net and son:
+        kisa = f"{kisa} Hedef {hedef_net} net, kalan {kalan}."
     return {
         "hedef": hedef,
+        "hedef_net": hedef_net,
+        "kalan": kalan,
         "son": son,
         "onceki": onceki,
         "fark": fark,
@@ -3339,7 +3542,7 @@ def _lgs_ekran(veli: bool):
             )
             bolum = "gunluk"
         elif not veli and islem == "hedef":
-            lgs_profil_kaydet(oid, request.form.get("hedef", ""))
+            lgs_profil_kaydet(oid, request.form.get("hedef", ""), request.form.get("hedef_net", type=int) or 0)
         elif not veli and islem == "gorev":
             lgs_gorev_ekle(
                 oid, hafta,
@@ -3348,6 +3551,13 @@ def _lgs_ekran(veli: bool):
                 request.form.get("konu", ""),
                 request.form.get("hedef_soru", type=int) or 0,
             )
+            bolum = "program"
+        elif not veli and islem == "oneri":
+            konu = (request.form.get("konu") or "").strip()
+            ders_adi = (request.form.get("ders") or "").strip()
+            if any(k["konu"] == konu for k in LGS_KONULAR.get(ders_adi, [])):
+                sonraki = (date.fromisoformat(hafta) + timedelta(days=7)).isoformat()
+                lgs_gorev_ekle(oid, sonraki, 0, ders_adi, konu, 15)
             bolum = "program"
         elif not veli and islem == "deneme":
             dersler = []
@@ -3394,7 +3604,9 @@ def _lgs_ekran(veli: bool):
     grafik = list(reversed(denemeler[:8]))
     gunluk = lgs_gunluk_liste(oid) if veli else []
     profil = lgs_profil(oid)
-    kocluk = _lgs_kocluk(denemeler, oran, len(gorevler), bugun_gorev, gunluk, profil["hedef"]) if veli else None
+    kocluk = _lgs_kocluk(
+        denemeler, oran, len(gorevler), bugun_gorev, gunluk, profil["hedef"], profil.get("hedef_net") or 0,
+    )
     return render_template(
         "lgs.html",
         veli=veli,

@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f2744">
   <title>Veli paneli</title>
   <style>
     :root { color-scheme: light; }
@@ -41,6 +43,7 @@
   <div class="bar">
     <div class="brand">Erenler Cumhuriyet Ortaokulu</div>
     <div class="aksiyon">
+      <a class="rapor" href="{{ url_for('veli_karne') }}">Karne</a>
       <a class="rapor" href="{{ url_for('veli_lgs') }}">LGS</a>
       <a class="rapor" href="{{ url_for('veli_kitap_odev_rapor') }}">Raporum</a>
       <a class="cikis" href="{{ url_for('veli_cikis') }}">Çıkış</a>
@@ -56,7 +59,7 @@
 
   <section class="kart">
     <div class="soluk">Bu hafta</div>
-    <p style="margin:8px 0 0;font-weight:800">Kitabı: {{ odev_ogr.kitap_adi or 'Henüz kitap seçilmedi' }}</p>
+    <p style="margin:8px 0 0;font-weight:800">Kitabı: {{ odev_ogr.kitap_adi or hafta.kitap_adi or 'Henüz kitap seçilmedi' }}{% if hafta.kitap_adi %} · {{ hafta.kitap_sayfa }}{% if hafta.katalog_sayfa %}/{{ hafta.katalog_sayfa }}{% endif %} sayfa{% endif %}</p>
     <p class="soluk" style="margin-top:8px">Sınıf ödevi</p>
     <p style="margin:4px 0 0;font-weight:800">{{ odev.ders or 'Ders yazılmadı' }}</p>
     <p class="soluk" style="margin-top:4px">{{ odev.aciklama or 'Sınıfa genel ödev yazılmadı.' }}</p>
@@ -71,7 +74,9 @@
       <div class="kutu"><span class="soluk">Ödev durumu</span><b>{{ hafta.odev_durum }}</b></div>
     </div>
     {% if hafta.odev_kod %}
-    <p class="soluk" style="margin-top:10px">Öğretmen kararı kesin. Öğrencinin “yaptım” demesi bu kaydı değiştirmez.</p>
+    <p style="margin:10px 0 0;font-weight:800">Öğretmen kararı: {{ hafta.odev_durum }}{% if hafta.ogretmen_adi %} · {{ hafta.ogretmen_adi }}{% endif %}</p>
+    {% if hafta.odev_karar_not %}<p class="soluk" style="margin-top:4px">{{ hafta.odev_karar_not }}</p>{% endif %}
+    <p class="soluk" style="margin-top:6px">Bu karar kesin. Yaptım demek kaydı değiştirmez.</p>
     {% elif hafta.odev_bildirim == 'yaptim' %}
     <p style="margin:10px 0 0;font-weight:800">Yaptım dedin. Öğretmen onaylayınca kesinleşir.</p>
     <form method="post" action="{{ url_for('veli_odev_bildir') }}">
@@ -88,8 +93,15 @@
   </section>
 
   <section class="kart">
+    <div class="soluk">Bu haftanın metni</div>
+    <textarea id="hafta-metin" readonly rows="6">{{ ozet_metin }}</textarea>
+    <button type="button" id="hafta-kopyala">Kopyala</button>
+    <button type="button" id="ana-ekran" hidden>Ana ekrana ekle</button>
+  </section>
+
+  <section class="kart">
     <div class="soluk">LGS hedefi</div>
-    <p style="margin:8px 0 0;font-weight:800">{{ kocluk.hedef or 'Hedef henüz yazılmadı' }}</p>
+    <p style="margin:8px 0 0;font-weight:800">{{ kocluk.hedef or 'Hedef henüz yazılmadı' }}{% if kocluk.hedef_net %} · {{ kocluk.hedef_net }} net{% if kocluk.son %}, kalan {{ kocluk.kalan }}{% endif %}{% endif %}</p>
     {% if kocluk.son %}
     <p class="soluk" style="margin-top:6px">Son deneme {{ kocluk.son.net }} / {{ kocluk.tavan }} net</p>
     {% endif %}
@@ -162,5 +174,34 @@
     </section>
   </div>
 </main>
+<script>
+document.getElementById("hafta-kopyala").addEventListener("click", function () {
+  const kutu = document.getElementById("hafta-metin");
+  navigator.clipboard.writeText(kutu.value).then(function () {
+    document.getElementById("hafta-kopyala").textContent = "Kopyalandı";
+  }).catch(function () {
+    kutu.focus();
+    kutu.select();
+  });
+});
+(function () {
+  const dugme = document.getElementById("ana-ekran");
+  const kurulu = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (kurulu) return;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  let bekleyen = null;
+  window.addEventListener("beforeinstallprompt", function (olay) {
+    olay.preventDefault();
+    bekleyen = olay;
+    dugme.hidden = false;
+  });
+  if (ios) dugme.hidden = false;
+  dugme.addEventListener("click", async function () {
+    if (bekleyen) { bekleyen.prompt(); dugme.hidden = true; return; }
+    alert("Paylaş menüsünden Ana Ekrana Ekle seçin.");
+  });
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
+})();
+</script>
 </body>
 </html>

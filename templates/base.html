@@ -521,6 +521,14 @@
            class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'haftalik_takip' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
           Kitap / Ödev
         </a>
+        <a href="{{ url_for('onay_kutusu') }}"
+           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'onay_kutusu' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+          Onay
+        </a>
+        <a href="{{ url_for('karne', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('karne') }}"
+           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['karne', 'karne_excel', 'karne_pdf'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+          Karne
+        </a>
         <a href="{{ url_for('veri_girisi', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('veri_girisi') }}"
            class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['veri_girisi', 'odevler', 'odev_detay', 'yoklama', 'ogretmen_kitap_okuma', 'haftalik_takip'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
           Veri
@@ -538,9 +546,14 @@
            class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['giris_raporu', 'giris_raporu_excel'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
           Giriş raporu
         </a>
+        <a href="{{ url_for('ogrenci_ara') }}"
+           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'ogrenci_ara' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+          Ara
+        </a>
         {% endif %}
       </nav>
 
+      <button id="ana-ekran" type="button" hidden class="rounded-lg bg-amber-400 px-3 py-2 text-xs font-black text-slate-900">Ana ekrana ekle</button>
       <span class="hidden sm:block text-xs text-blue-200 truncate max-w-52">👤 {{ session.ogretmen_adi }}{% if session.ogretmen_adi == 'ADEM AKGÜL' %} · Müdür{% elif session.ogretmen_adi == 'METEHAN CÜCEN' %} · Müdür Yardımcısı{% endif %}</span>
       <a href="{{ url_for('logout') }}"
          class="hidden sm:inline-flex bg-slate-600 hover:bg-slate-500 text-white text-xs
@@ -575,11 +588,14 @@
       <div class="grid gap-2">
         <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}" class="mobile-link"><span class="nav-mark mark-blue">P</span><span>Panel — öğrenci listesi</span></a>
         <a href="{{ url_for('haftalik_takip', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('haftalik_takip') }}" class="mobile-link"><span class="nav-mark mark-emerald">K</span><span>Kitap ve ödev — haftalık işaret</span></a>
+        <a href="{{ url_for('onay_kutusu') }}" class="mobile-link"><span class="nav-mark mark-amber">O</span><span>Onay kutusu — yaptım diyenler</span></a>
+        <a href="{{ url_for('karne', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('karne') }}" class="mobile-link"><span class="nav-mark mark-slate">N</span><span>Dönem karnesi — kitap, ödev, LGS</span></a>
         <a href="{{ url_for('veri_girisi', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('veri_girisi') }}" class="mobile-link"><span class="nav-mark mark-emerald">V</span><span>Veri girişi — kitap ve ödev</span></a>
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — kitap ve ödev raporu</span></a>
         <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — program ve deneme girişi</span></a>
         {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
         <a href="{{ url_for('giris_raporu') }}" class="mobile-link"><span class="nav-mark mark-slate">G</span><span>Giriş raporu — kim veri girdi</span></a>
+        <a href="{{ url_for('ogrenci_ara') }}" class="mobile-link"><span class="nav-mark mark-blue">S</span><span>Öğrenci ara</span></a>
         {% endif %}
       </div>
     </section>
@@ -666,6 +682,29 @@ document.addEventListener('keydown', function (event) {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('{{ url_for("service_worker") }}').catch(() => {});
 }
+(function () {
+  const dugme = document.getElementById("ana-ekran");
+  if (!dugme) return;
+  const kurulu = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (kurulu) return;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  let bekleyen = null;
+  window.addEventListener("beforeinstallprompt", function (olay) {
+    olay.preventDefault();
+    bekleyen = olay;
+    dugme.hidden = false;
+  });
+  if (ios) dugme.hidden = false;
+  dugme.addEventListener("click", async function () {
+    if (bekleyen) {
+      bekleyen.prompt();
+      bekleyen = null;
+      dugme.hidden = true;
+      return;
+    }
+    alert("Telefonda paylaş menüsünden Ana Ekrana Ekle seçin.");
+  });
+})();
 </script>
 </body>
 </html>

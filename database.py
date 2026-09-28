@@ -1189,27 +1189,44 @@ def _lgs_init(con: sqlite3.Connection) -> None:
             WHERE tamamlandi = 1
             """
         )
+    gorev_kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_gorev)").fetchall()}
+    if "bildirim_tarih" not in gorev_kolon:
+        con.execute("ALTER TABLE lgs_gorev ADD COLUMN bildirim_tarih TEXT NOT NULL DEFAULT ''")
+    gunluk_kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_gunluk)").fetchall()}
+    if "goruldu" not in gunluk_kolon:
+        con.execute("ALTER TABLE lgs_gunluk ADD COLUMN goruldu INTEGER NOT NULL DEFAULT 0")
+    if "kayit_zamani" not in gunluk_kolon:
+        con.execute("ALTER TABLE lgs_gunluk ADD COLUMN kayit_zamani TEXT NOT NULL DEFAULT ''")
+    profil_kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_profil)").fetchall()}
+    if "hedef_net" not in profil_kolon:
+        con.execute("ALTER TABLE lgs_profil ADD COLUMN hedef_net INTEGER NOT NULL DEFAULT 0")
     con.commit()
 
 
 def lgs_profil(ogrenci_id: int) -> dict:
     con = _conn()
     _lgs_init(con)
-    row = con.execute("SELECT hedef FROM lgs_profil WHERE ogrenci_id = ?", (ogrenci_id,)).fetchone()
+    row = con.execute("SELECT hedef, hedef_net FROM lgs_profil WHERE ogrenci_id = ?", (ogrenci_id,)).fetchone()
     con.close()
-    return {"hedef": (row["hedef"] if row else "") or ""}
+    if not row:
+        return {"hedef": "", "hedef_net": 0}
+    return {"hedef": row["hedef"] or "", "hedef_net": int(row["hedef_net"] or 0)}
 
 
-def lgs_profil_kaydet(ogrenci_id: int, hedef: str) -> None:
+def lgs_profil_kaydet(ogrenci_id: int, hedef: str, hedef_net: int = 0) -> None:
     con = _conn()
     _lgs_init(con)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    net = max(0, min(90, int(hedef_net or 0)))
     con.execute(
         """
-        INSERT INTO lgs_profil (ogrenci_id, hedef, guncelleme) VALUES (?, ?, ?)
-        ON CONFLICT(ogrenci_id) DO UPDATE SET hedef = excluded.hedef, guncelleme = excluded.guncelleme
+        INSERT INTO lgs_profil (ogrenci_id, hedef, hedef_net, guncelleme) VALUES (?, ?, ?, ?)
+        ON CONFLICT(ogrenci_id) DO UPDATE SET
+            hedef = excluded.hedef,
+            hedef_net = excluded.hedef_net,
+            guncelleme = excluded.guncelleme
         """,
-        (ogrenci_id, (hedef or "").strip()[:160], now),
+        (ogrenci_id, (hedef or "").strip()[:160], net, now),
     )
     con.commit()
     con.close()
@@ -1220,7 +1237,7 @@ def lgs_gorevler(ogrenci_id: int, hafta_basi: str) -> list[dict]:
     _lgs_init(con)
     rows = [dict(r) for r in con.execute(
         """
-        SELECT id, gun, ders, konu, hedef_soru, tamamlandi, bildirdi
+        SELECT id, gun, ders, konu, hedef_soru, tamamlandi, bildirdi, bildirim_tarih
         FROM lgs_gorev WHERE ogrenci_id = ? AND hafta_basi = ?
         ORDER BY gun, id
         """,
@@ -1252,13 +1269,15 @@ def lgs_gorev_bildir(ogrenci_id: int, gorev_id: int) -> None:
     """Öğrenci yaptım der. Öğretmen onaylamadan tamam sayılmaz."""
     con = _conn()
     _lgs_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
     con.execute(
         """
         UPDATE lgs_gorev
-        SET bildirdi = CASE WHEN bildirdi = 1 THEN 0 ELSE 1 END
+        SET bildirdi = CASE WHEN bildirdi = 1 THEN 0 ELSE 1 END,
+            bildirim_tarih = CASE WHEN bildirdi = 1 THEN '' ELSE ? END
         WHERE id = ? AND ogrenci_id = ? AND tamamlandi = 0
         """,
-        (gorev_id, ogrenci_id),
+        (now, gorev_id, ogrenci_id),
     )
     con.commit()
     con.close()
@@ -1279,7 +1298,7 @@ def lgs_gorev_onayla(ogrenci_id: int, gorev_id: int, karar: str) -> None:
         )
     elif karar == "reddet":
         con.execute(
-            "UPDATE lgs_gorev SET tamamlandi = 0, bildirdi = 0 WHERE id = ? AND ogrenci_id = ?",
+            "UPDATE lgs_gorev SET tamamlandi = 0, bildirdi = 0, bildirim_tarih = '' WHERE id = ? AND ogrenci_id = ?",
             (gorev_id, ogrenci_id),
         )
     con.commit()
@@ -1291,15 +1310,17 @@ def lgs_gunluk_ekle(ogrenci_id: int, tarih: str, ders: str, cozulen: int, dogru:
         return {"ok": False}
     con = _conn()
     _lgs_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
     con.execute(
         """
-        INSERT INTO lgs_gunluk (ogrenci_id, tarih, ders, cozulen, dogru, yanlis, sayfa)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO lgs_gunluk (ogrenci_id, tarih, ders, cozulen, dogru, yanlis, sayfa, goruldu, kayit_zamani)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
         """,
         (
             ogrenci_id, tarih[:10], ders.strip(),
             max(0, int(cozulen or 0)), max(0, int(dogru or 0)),
             max(0, int(yanlis or 0)), max(0, int(sayfa or 0)),
+            now,
         ),
     )
     con.commit()
@@ -1312,7 +1333,7 @@ def lgs_gunluk_liste(ogrenci_id: int, limit: int = 30) -> list[dict]:
     _lgs_init(con)
     rows = [dict(r) for r in con.execute(
         """
-        SELECT tarih, ders, cozulen, dogru, yanlis, sayfa
+        SELECT id, tarih, ders, cozulen, dogru, yanlis, sayfa, goruldu, kayit_zamani
         FROM lgs_gunluk WHERE ogrenci_id = ?
         ORDER BY tarih DESC, id DESC LIMIT ?
         """,
@@ -1320,6 +1341,17 @@ def lgs_gunluk_liste(ogrenci_id: int, limit: int = 30) -> list[dict]:
     ).fetchall()]
     con.close()
     return rows
+
+
+def lgs_gunluk_onayla(kayit_id: int, karar: str) -> None:
+    con = _conn()
+    _lgs_init(con)
+    if karar == "gor":
+        con.execute("UPDATE lgs_gunluk SET goruldu = 1 WHERE id = ?", (kayit_id,))
+    elif karar == "reddet":
+        con.execute("UPDATE lgs_gunluk SET goruldu = 2 WHERE id = ?", (kayit_id,))
+    con.commit()
+    con.close()
 
 
 def _lgs_net(dogru: int, yanlis: int) -> float:
@@ -4691,9 +4723,11 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
         "ON haftalik_takip(sinif_id, hafta_basi)"
     )
     takip_kolon = {r[1] for r in con.execute("PRAGMA table_info(haftalik_takip)").fetchall()}
-    for ad in ("kitap_adi", "odev_ders", "odev_not", "odev_bildirim"):
+    for ad in ("kitap_adi", "odev_ders", "odev_not", "odev_bildirim", "odev_karar_not", "odev_bildirim_tarih"):
         if ad not in takip_kolon:
             con.execute(f"ALTER TABLE haftalik_takip ADD COLUMN {ad} TEXT NOT NULL DEFAULT ''")
+    if "kitap_sayfa" not in takip_kolon:
+        con.execute("ALTER TABLE haftalik_takip ADD COLUMN kitap_sayfa INTEGER NOT NULL DEFAULT 0")
     con.execute("""
         CREATE TABLE IF NOT EXISTS haftalik_odev_bilgi (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4728,9 +4762,12 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
     _haftalik_takip_init(con)
     rows = con.execute(
         """
-        SELECT ogrenci_id, kitap_okuma, kitap_getirme, odev_durum, kitap_adi, odev_ders, odev_not, odev_bildirim
-        FROM haftalik_takip
-        WHERE sinif_id = ? AND hafta_basi = ?
+        SELECT h.ogrenci_id, h.kitap_okuma, h.kitap_getirme, h.odev_durum, h.kitap_adi,
+               h.odev_ders, h.odev_not, h.odev_bildirim, h.odev_karar_not, h.kitap_sayfa,
+               h.odev_bildirim_tarih, COALESCE(g.ad_soyad, '') AS ogretmen_adi
+        FROM haftalik_takip h
+        LEFT JOIN ogretmenler g ON g.id = h.ogretmen_id
+        WHERE h.sinif_id = ? AND h.hafta_basi = ?
         """,
         (sinif_id, hafta_basi),
     ).fetchall()
@@ -4744,6 +4781,10 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
             "odev_ders": r["odev_ders"] or "",
             "odev_not": r["odev_not"] or "",
             "odev_bildirim": r["odev_bildirim"] or "",
+            "odev_karar_not": r["odev_karar_not"] or "",
+            "kitap_sayfa": int(r["kitap_sayfa"] or 0),
+            "odev_bildirim_tarih": r["odev_bildirim_tarih"] or "",
+            "ogretmen_adi": r["ogretmen_adi"] or "",
         }
         for r in rows
     }
@@ -4807,7 +4848,7 @@ def haftalik_odev_bilgi_kaydet(
     return {"ok": True}
 
 
-_HAFTALIK_METIN = {"kitap_adi": 160, "odev_ders": 80, "odev_not": 300}
+_HAFTALIK_METIN = {"kitap_adi": 160, "odev_ders": 80, "odev_not": 300, "odev_karar_not": 200, "kitap_sayfa": 4}
 
 
 def haftalik_takip_metin(
@@ -4816,6 +4857,8 @@ def haftalik_takip_metin(
     if alan not in _HAFTALIK_METIN:
         return {"ok": False, "sebep": "alan"}
     deger = (deger or "").strip()[: _HAFTALIK_METIN[alan]]
+    if alan == "kitap_sayfa":
+        deger = "".join(ch for ch in deger if ch.isdigit())[:4] or "0"
     con = _conn()
     _haftalik_takip_init(con)
     ogr = con.execute("SELECT sinif_id FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
@@ -4999,20 +5042,279 @@ def haftalik_odev_bildir(ogrenci_id: int, hafta_basi: str, yaptim: bool) -> dict
         return {"ok": False, "sebep": "onaylandi"}
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     deger = "yaptim" if yaptim else ""
+    tarih = now if yaptim else ""
     con.execute(
         """
         INSERT INTO haftalik_takip
-            (ogrenci_id, sinif_id, hafta_basi, odev_bildirim, guncelleme)
-        VALUES (?, ?, ?, ?, ?)
+            (ogrenci_id, sinif_id, hafta_basi, odev_bildirim, odev_bildirim_tarih, guncelleme)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(ogrenci_id, hafta_basi) DO UPDATE SET
             odev_bildirim = excluded.odev_bildirim,
+            odev_bildirim_tarih = excluded.odev_bildirim_tarih,
             guncelleme = excluded.guncelleme
         """,
-        (ogrenci_id, int(ogr["sinif_id"]), hafta_basi, deger, now),
+        (ogrenci_id, int(ogr["sinif_id"]), hafta_basi, deger, tarih, now),
     )
     con.commit()
     con.close()
     return {"ok": True, "deger": deger}
+
+
+_AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B")
+
+
+def _uc_gun_gecti(metin: str) -> bool:
+    if not (metin or "").strip():
+        return False
+    try:
+        an = datetime.strptime(metin.strip()[:16], "%Y-%m-%d %H:%M")
+    except ValueError:
+        return False
+    return an <= datetime.now() - timedelta(days=3)
+
+
+def sinif_hafta_durumu(hafta_basi: str) -> list[dict]:
+    """Bu hafta hiç işaretlenmemiş veya eksik kalan aktif sınıflar."""
+    con = _conn()
+    _haftalik_takip_init(con)
+    yer = ",".join("?" * len(_AKTIF_SUBELER))
+    rows = con.execute(
+        f"""
+        SELECT s.id, s.sinif_adi,
+               (SELECT COUNT(*) FROM ogrenciler o WHERE o.sinif_id = s.id) AS toplam,
+               (SELECT COUNT(*) FROM haftalik_takip h
+                 WHERE h.sinif_id = s.id AND h.hafta_basi = ?
+                   AND (h.kitap_okuma != '' OR h.kitap_getirme != '' OR h.odev_durum != '')) AS isaretli
+        FROM siniflar s
+        WHERE s.sinif_adi IN ({yer})
+        ORDER BY s.sinif_adi
+        """,
+        (hafta_basi, *_AKTIF_SUBELER),
+    ).fetchall()
+    con.close()
+    return [
+        {"id": int(r["id"]), "sinif_adi": r["sinif_adi"], "toplam": int(r["toplam"] or 0), "isaretli": int(r["isaretli"] or 0)}
+        for r in rows
+        if int(r["toplam"] or 0) and int(r["isaretli"] or 0) < int(r["toplam"] or 0)
+    ]
+
+
+def onay_bekleyenler(hafta_basi: str) -> dict:
+    con = _conn()
+    _haftalik_takip_init(con)
+    _lgs_init(con)
+    yer = ",".join("?" * len(_AKTIF_SUBELER))
+    odevler = [dict(r) for r in con.execute(
+        f"""
+        SELECT h.ogrenci_id, o.ad_soyad, o.ogr_no, s.sinif_adi, s.id AS sinif_id,
+               h.odev_bildirim_tarih, h.odev_ders, h.odev_not,
+               COALESCE(b.ders, '') AS sinif_ders, COALESCE(b.aciklama, '') AS sinif_aciklama
+        FROM haftalik_takip h
+        JOIN ogrenciler o ON o.id = h.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        LEFT JOIN haftalik_odev_bilgi b ON b.sinif_id = h.sinif_id AND b.hafta_basi = h.hafta_basi
+        WHERE h.hafta_basi = ? AND h.odev_bildirim = 'yaptim' AND COALESCE(h.odev_durum, '') = ''
+          AND s.sinif_adi IN ({yer})
+        ORDER BY s.sinif_adi, o.ad_soyad
+        """,
+        (hafta_basi, *_AKTIF_SUBELER),
+    ).fetchall()]
+    gorevler = [dict(r) for r in con.execute(
+        f"""
+        SELECT g.id, g.ogrenci_id, g.ders, g.konu, g.gun, g.hedef_soru, g.bildirim_tarih,
+               o.ad_soyad, o.ogr_no, s.sinif_adi
+        FROM lgs_gorev g
+        JOIN ogrenciler o ON o.id = g.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        WHERE g.hafta_basi = ? AND g.bildirdi = 1 AND g.tamamlandi = 0
+          AND s.sinif_adi IN ({yer})
+        ORDER BY s.sinif_adi, o.ad_soyad, g.gun
+        """,
+        (hafta_basi, *_AKTIF_SUBELER),
+    ).fetchall()]
+    gunluk = [dict(r) for r in con.execute(
+        f"""
+        SELECT k.id, k.ogrenci_id, k.tarih, k.ders, k.cozulen, k.dogru, k.yanlis, k.sayfa, k.kayit_zamani,
+               o.ad_soyad, o.ogr_no, s.sinif_adi
+        FROM lgs_gunluk k
+        JOIN ogrenciler o ON o.id = k.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        WHERE k.goruldu = 0 AND s.sinif_adi IN ({yer})
+        ORDER BY k.kayit_zamani, k.id
+        LIMIT 80
+        """,
+        _AKTIF_SUBELER,
+    ).fetchall()]
+    con.close()
+    for satir in odevler:
+        satir["gecikti"] = _uc_gun_gecti(satir.get("odev_bildirim_tarih") or "")
+    for satir in gorevler:
+        satir["gun_adi"] = LGS_GUNLER[int(satir["gun"])] if int(satir["gun"]) in range(7) else ""
+        satir["gecikti"] = _uc_gun_gecti(satir.get("bildirim_tarih") or "")
+    for satir in gunluk:
+        satir["gecikti"] = _uc_gun_gecti(satir.get("kayit_zamani") or "")
+    geciken = sum(1 for s in odevler + gorevler + gunluk if s["gecikti"])
+    return {"odevler": odevler, "gorevler": gorevler, "gunluk": gunluk, "geciken": geciken}
+
+
+def _tr_sade(metin: str) -> str:
+    tablo = str.maketrans("ıİiIşŞğĞüÜöÖçÇ", "iIiIsSgGuUoOcC")
+    return (metin or "").translate(tablo).lower()
+
+
+def ogrenci_adi_ara(sorgu: str, hafta_basi: str) -> list[dict]:
+    parca = _tr_sade(sorgu)
+    if len(parca) < 2:
+        return []
+    con = _conn()
+    _haftalik_takip_init(con)
+    _lgs_init(con)
+    yer = ",".join("?" * len(_AKTIF_SUBELER))
+    hepsi = [dict(r) for r in con.execute(
+        f"""
+        SELECT o.id, o.ad_soyad, o.ogr_no, s.sinif_adi, s.id AS sinif_id
+        FROM ogrenciler o JOIN siniflar s ON s.id = o.sinif_id
+        WHERE s.sinif_adi IN ({yer})
+        ORDER BY s.sinif_adi, o.ad_soyad
+        """,
+        _AKTIF_SUBELER,
+    ).fetchall()]
+    adaylar = [o for o in hepsi if parca in _tr_sade(o["ad_soyad"]) or parca == str(o["ogr_no"])][:20]
+    for o in adaylar:
+        kayit = con.execute(
+            """
+            SELECT odev_durum, odev_bildirim, kitap_adi FROM haftalik_takip
+            WHERE ogrenci_id = ? AND hafta_basi = ?
+            """,
+            (o["id"], hafta_basi),
+        ).fetchone()
+        o["odev_durum"] = (kayit["odev_durum"] if kayit else "") or ""
+        o["odev_bildirim"] = (kayit["odev_bildirim"] if kayit else "") or ""
+        o["kitap_adi"] = (kayit["kitap_adi"] if kayit else "") or ""
+        deneme = con.execute(
+            """
+            SELECT d.ad, d.tarih, COALESCE(SUM(s.net), 0) AS net
+            FROM lgs_deneme d LEFT JOIN lgs_deneme_ders s ON s.deneme_id = d.id
+            WHERE d.ogrenci_id = ?
+            GROUP BY d.id
+            ORDER BY d.tarih DESC, d.id DESC LIMIT 1
+            """,
+            (o["id"],),
+        ).fetchone()
+        o["son_deneme"] = deneme["ad"] if deneme else ""
+        o["son_net"] = round(float(deneme["net"]), 2) if deneme else None
+    con.close()
+    return adaylar
+
+
+def donem_karne_satirlari(haftalar: list[str], sinif_id: int | None = None, ogrenci_id: int | None = None) -> list[dict]:
+    if not haftalar or (not sinif_id and not ogrenci_id):
+        return []
+    con = _conn()
+    _haftalik_takip_init(con)
+    _lgs_init(con)
+    if ogrenci_id:
+        ogrenciler = [dict(r) for r in con.execute(
+            """
+            SELECT o.id, o.ad_soyad, o.ogr_no, s.sinif_adi
+            FROM ogrenciler o JOIN siniflar s ON s.id = o.sinif_id
+            WHERE o.id = ?
+            """,
+            (ogrenci_id,),
+        ).fetchall()]
+    else:
+        ogrenciler = [dict(r) for r in con.execute(
+            """
+            SELECT o.id, o.ad_soyad, o.ogr_no, s.sinif_adi
+            FROM ogrenciler o JOIN siniflar s ON s.id = o.sinif_id
+            WHERE o.sinif_id = ?
+            ORDER BY o.ad_soyad
+            """,
+            (sinif_id,),
+        ).fetchall()]
+    if not ogrenciler:
+        con.close()
+        return []
+    ids = [int(o["id"]) for o in ogrenciler]
+    yer_o = ",".join("?" * len(ids))
+    yer_h = ",".join("?" * len(haftalar))
+    sayim = {
+        int(r["ogrenci_id"]): dict(r)
+        for r in con.execute(
+            f"""
+            SELECT ogrenci_id,
+                   SUM(CASE WHEN kitap_okuma = 'okudu' THEN 1 ELSE 0 END) AS okudu,
+                   SUM(CASE WHEN kitap_okuma = 'okumadi' THEN 1 ELSE 0 END) AS okumadi,
+                   SUM(CASE WHEN odev_durum = 'tam' THEN 1 ELSE 0 END) AS tam,
+                   SUM(CASE WHEN odev_durum = 'eksik' THEN 1 ELSE 0 END) AS eksik,
+                   SUM(CASE WHEN odev_durum = 'yok' THEN 1 ELSE 0 END) AS yok
+            FROM haftalik_takip
+            WHERE ogrenci_id IN ({yer_o}) AND hafta_basi IN ({yer_h})
+            GROUP BY ogrenci_id
+            """,
+            (*ids, *haftalar),
+        ).fetchall()
+    }
+    bitis = (datetime.strptime(haftalar[-1], "%Y-%m-%d") + timedelta(days=6)).strftime("%Y-%m-%d")
+    deneme = {}
+    for r in con.execute(
+        f"""
+        SELECT d.ogrenci_id, d.ad, d.tarih, ROUND(COALESCE(SUM(s.net), 0), 2) AS net
+        FROM lgs_deneme d LEFT JOIN lgs_deneme_ders s ON s.deneme_id = d.id
+        WHERE d.ogrenci_id IN ({yer_o}) AND d.tarih >= ? AND d.tarih <= ?
+        GROUP BY d.id
+        ORDER BY d.tarih
+        """,
+        (*ids, haftalar[0], bitis),
+    ).fetchall():
+        deneme.setdefault(int(r["ogrenci_id"]), []).append(f"{r['tarih']} {r['ad']} {r['net']}")
+    profiller = {
+        int(r["ogrenci_id"]): dict(r)
+        for r in con.execute(
+            f"SELECT ogrenci_id, hedef, hedef_net FROM lgs_profil WHERE ogrenci_id IN ({yer_o})",
+            ids,
+        ).fetchall()
+    }
+    con.close()
+    sonuc = []
+    for o in ogrenciler:
+        oid = int(o["id"])
+        s = sayim.get(oid, {})
+        p = profiller.get(oid, {})
+        nets = deneme.get(oid, [])
+        sonuc.append({
+            "id": oid,
+            "ad_soyad": o["ad_soyad"],
+            "ogr_no": o["ogr_no"],
+            "sinif_adi": o["sinif_adi"],
+            "okudu": int(s.get("okudu") or 0),
+            "okumadi": int(s.get("okumadi") or 0),
+            "tam": int(s.get("tam") or 0),
+            "eksik": int(s.get("eksik") or 0),
+            "yok": int(s.get("yok") or 0),
+            "hedef": (p.get("hedef") or "") if p else "",
+            "hedef_net": int(p.get("hedef_net") or 0) if p else 0,
+            "denemeler": " · ".join(nets),
+            "hafta": len(haftalar),
+        })
+    return sonuc
+
+
+def haftalik_odev_onceki_kopyala(sinif_id: int, hafta_basi: str, ogretmen_id: int) -> dict:
+    con = _conn()
+    _haftalik_takip_init(con)
+    row = con.execute(
+        """
+        SELECT ders, aciklama FROM haftalik_odev_bilgi
+        WHERE sinif_id = ? AND hafta_basi < ? AND (ders != '' OR aciklama != '')
+        ORDER BY hafta_basi DESC LIMIT 1
+        """,
+        (sinif_id, hafta_basi),
+    ).fetchone()
+    con.close()
+    if not row:
+        return {"ok": False}
+    return haftalik_odev_bilgi_kaydet(sinif_id, hafta_basi, row["ders"], row["aciklama"], ogretmen_id)
 
 
 def haftalik_takip_toplu(

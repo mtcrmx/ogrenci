@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Onay kutusu{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-4xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
+  <header class="rounded-2xl bg-slate-900 p-5 text-white">
+    <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">Bu hafta</p>
+    <h1 class="mt-1 text-2xl font-black">Onay kutusu</h1>
+    <p class="mt-1 text-sm text-slate-300">Öğrencinin yaptım demesi burada bekler. Tam, eksik, yok veya LGS onayı sizden sonra kesinleşir.</p>
+    {% if geciken %}
+    <p class="mt-3 rounded-xl bg-rose-500/20 px-3 py-2 text-sm font-bold">{{ geciken }} kayıt 3 gündür onay bekliyor.</p>
+    {% endif %}
+  </header>
+
+  <section class="mt-4 space-y-2">
+    <h2 class="font-black">Ödev · {{ odevler|length }}</h2>
+    {% for o in odevler %}
+    <article class="rounded-2xl border {{ 'border-rose-300 bg-rose-50' if o.gecikti else 'border-slate-200 bg-white' }} p-4 text-sm">
+      <div class="font-black">{{ o.ad_soyad }} <span class="font-bold text-slate-500">{{ o.sinif_adi }} · No {{ o.ogr_no }}</span></div>
+      <p class="mt-1 text-slate-600">{{ o.sinif_ders or o.odev_ders or 'Ders yok' }} · {{ o.sinif_aciklama or o.odev_not or 'Açıklama yok' }}</p>
+      <p class="text-xs text-slate-400">{{ o.odev_bildirim_tarih or 'Tarih yok' }}{% if o.gecikti %} · 3 günü geçti{% endif %}</p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        {% for kod, ad in [('tam','Tam'), ('eksik','Eksik'), ('yok','Yok'), ('reddet','Geri çevir')] %}
+        <form method="post">
+          <input type="hidden" name="tip" value="odev">
+          <input type="hidden" name="sinif_id" value="{{ o.sinif_id }}">
+          <input type="hidden" name="ogrenci_id" value="{{ o.ogrenci_id }}">
+          <input type="hidden" name="karar" value="{{ kod }}">
+          <button class="min-h-11 rounded-xl px-3 py-2 text-xs font-black text-white {{ 'bg-rose-700' if kod == 'reddet' else 'bg-slate-900' }}">{{ ad }}</button>
+        </form>
+        {% endfor %}
+      </div>
+    </article>
+    {% else %}
+    <p class="text-sm text-slate-500">Ödev onayı bekleyen yok.</p>
+    {% endfor %}
+  </section>
+
+  <section class="mt-6 space-y-2">
+    <h2 class="font-black">LGS görevi · {{ gorevler|length }}</h2>
+    {% for g in gorevler %}
+    <article class="rounded-2xl border {{ 'border-rose-300 bg-rose-50' if g.gecikti else 'border-slate-200 bg-white' }} p-4 text-sm">
+      <div class="font-black">{{ g.ad_soyad }} <span class="font-bold text-slate-500">{{ g.sinif_adi }}</span></div>
+      <p class="mt-1">{{ g.gun_adi }} · {{ g.ders }} · {{ g.konu or 'Konu yok' }} · {{ g.hedef_soru }} soru</p>
+      <div class="mt-2 flex gap-2">
+        <form method="post"><input type="hidden" name="tip" value="lgs"><input type="hidden" name="ogrenci_id" value="{{ g.ogrenci_id }}"><input type="hidden" name="gorev_id" value="{{ g.id }}"><input type="hidden" name="karar" value="onay"><button class="min-h-11 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white">Onayla</button></form>
+        <form method="post"><input type="hidden" name="tip" value="lgs"><input type="hidden" name="ogrenci_id" value="{{ g.ogrenci_id }}"><input type="hidden" name="gorev_id" value="{{ g.id }}"><input type="hidden" name="karar" value="reddet"><button class="min-h-11 rounded-xl bg-rose-700 px-3 py-2 text-xs font-black text-white">Reddet</button></form>
+      </div>
+    </article>
+    {% else %}
+    <p class="text-sm text-slate-500">LGS onayı bekleyen yok.</p>
+    {% endfor %}
+  </section>
+
+  <section class="mt-6 space-y-2">
+    <h2 class="font-black">Günlük soru · {{ gunluk|length }}</h2>
+    <p class="text-xs text-slate-500">Öğrencinin yazdığı rakam, siz gördüm demeden tempo hesabına girmez.</p>
+    {% for g in gunluk %}
+    <article class="rounded-2xl border {{ 'border-rose-300 bg-rose-50' if g.gecikti else 'border-slate-200 bg-white' }} p-4 text-sm">
+      <div class="font-black">{{ g.ad_soyad }} <span class="font-bold text-slate-500">{{ g.sinif_adi }}</span></div>
+      <p class="mt-1">{{ g.tarih }} · {{ g.ders }} · {{ g.cozulen }} soru · {{ g.dogru }}/{{ g.yanlis }} · {{ g.sayfa }} sayfa</p>
+      <div class="mt-2 flex gap-2">
+        <form method="post"><input type="hidden" name="tip" value="gunluk"><input type="hidden" name="kayit_id" value="{{ g.id }}"><input type="hidden" name="karar" value="gor"><button class="min-h-11 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">Gördüm</button></form>
+        <form method="post"><input type="hidden" name="tip" value="gunluk"><input type="hidden" name="kayit_id" value="{{ g.id }}"><input type="hidden" name="karar" value="reddet"><button class="min-h-11 rounded-xl bg-rose-700 px-3 py-2 text-xs font-black text-white">Sayma</button></form>
+      </div>
+    </article>
+    {% else %}
+    <p class="text-sm text-slate-500">Görülmemiş günlük kayıt yok.</p>
+    {% endfor %}
+  </section>
+</main>
+{% endblock %}

@@ -1512,4 +1512,35 @@ def pdf_odev_raporu_bytes(
     return buf.getvalue()
 
 
+def pdf_donem_karnesi_bytes(satirlar: list[dict], donem: int) -> bytes:
+    """Kitap, ödev ve LGS netinden oluşan tek sayfalık dönem özeti."""
+    if not REPORTLAB_OK:
+        raise ImportError("reportlab kurulu degil")
+    fn = _register_font()
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=1.4 * cm, rightMargin=1.4 * cm, topMargin=1.4 * cm, bottomMargin=1.4 * cm)
+    stil = ParagraphStyle("k", fontName=fn, fontSize=9, leading=12)
+    bas = ParagraphStyle("b", fontName=fn, fontSize=14, leading=18)
+    story = [Paragraph(f"Erenler Cumhuriyet Ortaokulu · {donem}. dönem karnesi", bas), Spacer(1, 0.3 * cm)]
+    story.append(Paragraph("Kitap okuma, ödev ve LGS deneme neti. Davranış puanı yoktur.", stil))
+    story.append(Spacer(1, 0.3 * cm))
+    if not satirlar:
+        story.append(Paragraph("Bu dönem için kayıt yok.", stil))
+    for s in satirlar:
+        story.append(Paragraph(html_escape(f"{s['ad_soyad']} · {s['sinif_adi']} · No {s['ogr_no']}"), bas))
+        story.append(Paragraph(
+            html_escape(
+                f"Okudu {s['okudu']} hafta · okumadı {s['okumadi']} · ödev tam {s['tam']} · eksik {s['eksik']} · yok {s['yok']}"
+            ),
+            stil,
+        ))
+        hedef = s.get("hedef") or "yazılmadı"
+        net = s.get("hedef_net") or "yok"
+        story.append(Paragraph(html_escape(f"LGS hedefi: {hedef} · hedef net: {net}"), stil))
+        story.append(Paragraph(html_escape(s.get("denemeler") or "Deneme yok."), stil))
+        story.append(Spacer(1, 0.35 * cm))
+    doc.build(story)
+    return buf.getvalue()
+
+
 PDF_OK = REPORTLAB_OK
