@@ -529,10 +529,6 @@
            class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['karne', 'karne_excel', 'karne_pdf'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
           Karne
         </a>
-        <a href="{{ url_for('veri_girisi', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('veri_girisi') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['veri_girisi', 'odevler', 'odev_detay', 'yoklama', 'ogretmen_kitap_okuma', 'haftalik_takip'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
-          Veri
-        </a>
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}"
            class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['analiz_merkezi', 'kitap_odev_rapor'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
           Analiz
@@ -590,9 +586,8 @@
         <a href="{{ url_for('haftalik_takip', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('haftalik_takip') }}" class="mobile-link"><span class="nav-mark mark-emerald">K</span><span>Kitap ve ödev — haftalık işaret</span></a>
         <a href="{{ url_for('onay_kutusu') }}" class="mobile-link"><span class="nav-mark mark-amber">O</span><span>Onay kutusu — yaptım diyenler</span></a>
         <a href="{{ url_for('karne', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('karne') }}" class="mobile-link"><span class="nav-mark mark-slate">N</span><span>Dönem karnesi — kitap, ödev, LGS</span></a>
-        <a href="{{ url_for('veri_girisi', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('veri_girisi') }}" class="mobile-link"><span class="nav-mark mark-emerald">V</span><span>Veri girişi — kitap ve ödev</span></a>
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — kitap ve ödev raporu</span></a>
-        <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — program ve deneme girişi</span></a>
+        <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — yalnızca 8. sınıflar</span></a>
         {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
         <a href="{{ url_for('giris_raporu') }}" class="mobile-link"><span class="nav-mark mark-slate">G</span><span>Giriş raporu — kim veri girdi</span></a>
         <a href="{{ url_for('ogrenci_ara') }}" class="mobile-link"><span class="nav-mark mark-blue">S</span><span>Öğrenci ara</span></a>

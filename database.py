@@ -5127,10 +5127,10 @@ def onay_bekleyenler(hafta_basi: str) -> dict:
         JOIN ogrenciler o ON o.id = g.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
         WHERE g.hafta_basi = ? AND g.bildirdi = 1 AND g.tamamlandi = 0
-          AND s.sinif_adi IN ({yer})
+          AND s.sinif_adi IN ('8/A', '8/B')
         ORDER BY s.sinif_adi, o.ad_soyad, g.gun
         """,
-        (hafta_basi, *_AKTIF_SUBELER),
+        (hafta_basi,),
     ).fetchall()]
     gunluk = [dict(r) for r in con.execute(
         f"""
@@ -5139,11 +5139,10 @@ def onay_bekleyenler(hafta_basi: str) -> dict:
         FROM lgs_gunluk k
         JOIN ogrenciler o ON o.id = k.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
-        WHERE k.goruldu = 0 AND s.sinif_adi IN ({yer})
+        WHERE k.goruldu = 0 AND s.sinif_adi IN ('8/A', '8/B')
         ORDER BY k.kayit_zamani, k.id
         LIMIT 80
         """,
-        _AKTIF_SUBELER,
     ).fetchall()]
     con.close()
     for satir in odevler:

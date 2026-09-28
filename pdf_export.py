@@ -1534,10 +1534,11 @@ def pdf_donem_karnesi_bytes(satirlar: list[dict], donem: int) -> bytes:
             ),
             stil,
         ))
-        hedef = s.get("hedef") or "yazılmadı"
-        net = s.get("hedef_net") or "yok"
-        story.append(Paragraph(html_escape(f"LGS hedefi: {hedef} · hedef net: {net}"), stil))
-        story.append(Paragraph(html_escape(s.get("denemeler") or "Deneme yok."), stil))
+        if str(s.get("sinif_adi") or "").startswith("8/"):
+            hedef = s.get("hedef") or "yazılmadı"
+            net = s.get("hedef_net") or "yok"
+            story.append(Paragraph(html_escape(f"LGS hedefi: {hedef} · hedef net: {net}"), stil))
+            story.append(Paragraph(html_escape(s.get("denemeler") or "Deneme yok."), stil))
         story.append(Spacer(1, 0.35 * cm))
     doc.build(story)
     return buf.getvalue()

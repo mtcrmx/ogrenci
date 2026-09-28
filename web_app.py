@@ -2369,19 +2369,25 @@ def veli_panel():
     hafta["katalog_sayfa"] = katalog
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
-    gorevler = lgs_gorevler(int(ogrenci_id), hafta_basi)
-    bugun_gorev = [g for g in gorevler if int(g["gun"]) == bugun.weekday()]
-    tamam = sum(1 for g in gorevler if g["tamamlandi"])
-    oran = round(tamam * 100 / len(gorevler)) if gorevler else 0
-    denemeler = lgs_denemeler(int(ogrenci_id), 12)
-    profil = lgs_profil(int(ogrenci_id))
-    gunluk = lgs_gunluk_liste(int(ogrenci_id))
-    kocluk = _lgs_kocluk(
-        denemeler, oran, len(gorevler), bugun_gorev,
-        gunluk, profil["hedef"], profil.get("hedef_net") or 0,
-    )
-    bekleyen_lgs = [g for g in gorevler if g.get("bildirdi") and not g.get("tamamlandi")]
-    bekleyen_gunluk = sum(1 for g in gunluk if int(g.get("goruldu") or 0) == 0)
+    lgs_acik = (o.get("sinif_adi") or "") in {"8/A", "8/B"}
+    if lgs_acik:
+        gorevler = lgs_gorevler(int(ogrenci_id), hafta_basi)
+        bugun_gorev = [g for g in gorevler if int(g["gun"]) == bugun.weekday()]
+        tamam = sum(1 for g in gorevler if g["tamamlandi"])
+        oran = round(tamam * 100 / len(gorevler)) if gorevler else 0
+        denemeler = lgs_denemeler(int(ogrenci_id), 12)
+        profil = lgs_profil(int(ogrenci_id))
+        gunluk = lgs_gunluk_liste(int(ogrenci_id))
+        kocluk = _lgs_kocluk(
+            denemeler, oran, len(gorevler), bugun_gorev,
+            gunluk, profil["hedef"], profil.get("hedef_net") or 0,
+        )
+        bekleyen_lgs = [g for g in gorevler if g.get("bildirdi") and not g.get("tamamlandi")]
+        bekleyen_gunluk = sum(1 for g in gunluk if int(g.get("goruldu") or 0) == 0)
+    else:
+        kocluk = None
+        bekleyen_lgs = []
+        bekleyen_gunluk = 0
     satirlar = [f"{o['ad_soyad']} · {o['sinif_adi']} · bu hafta"]
     if hafta["kitap_adi"]:
         sayfa = f"{hafta['kitap_sayfa']}/{katalog} sayfa" if katalog else f"{hafta['kitap_sayfa']} sayfa"
@@ -2410,6 +2416,7 @@ def veli_panel():
         notlar=notlar,
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
         kocluk=kocluk,
+        lgs_acik=lgs_acik,
         ozet_metin="\n".join(satirlar),
     )
 
@@ -2659,7 +2666,7 @@ def dashboard():
 @app.route("/veri")
 @giris_zorunlu
 def veri_girisi():
-    return render_template("veri_girisi.html")
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/ders-programi")
@@ -3513,11 +3520,15 @@ def _lgs_ekran(veli: bool):
         if not ogr or ogr.get("sinif_adi") not in {"5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"}:
             session.pop("veli_ogrenci_id", None)
             return redirect(url_for("veli_giris"))
+        if ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+            return redirect(url_for("veli_panel"))
     else:
         oid = request.values.get("ogrenci", type=int)
         if request.method == "POST" and not oid:
             abort(400)
         ogr = _lgs_ogrenci(oid) if oid else None
+        if ogr and ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+            return redirect(url_for("lgs"))
     bolum = request.values.get("bolum") or ("ozet" if veli else "program")
     izinli = {"ozet", "program", "gunluk", "deneme"} if veli else {"program", "deneme"}
     if bolum not in izinli:
@@ -3582,7 +3593,12 @@ def _lgs_ekran(veli: bool):
         return redirect(url_for(hedef_url, **({} if veli else {"ogrenci": oid}), bolum=bolum))
 
     if not veli and not oid:
-        siniflar = ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari()
+        siniflar = [
+            s for s in (ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari())
+            if s.get("sinif_adi") in {"8/A", "8/B"}
+        ]
+        if not siniflar:
+            siniflar = [s for s in aktif_sube_siniflari() if s.get("sinif_adi") in {"8/A", "8/B"}]
         gruplar = [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in siniflar]
         return render_template("lgs.html", gruplar=gruplar, ogrenci=None, veli=False)
 

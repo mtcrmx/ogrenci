@@ -44,7 +44,7 @@
     <div class="brand">Erenler Cumhuriyet Ortaokulu</div>
     <div class="aksiyon">
       <a class="rapor" href="{{ url_for('veli_karne') }}">Karne</a>
-      <a class="rapor" href="{{ url_for('veli_lgs') }}">LGS</a>
+      {% if lgs_acik %}<a class="rapor" href="{{ url_for('veli_lgs') }}">LGS</a>{% endif %}
       <a class="rapor" href="{{ url_for('veli_kitap_odev_rapor') }}">Raporum</a>
       <a class="cikis" href="{{ url_for('veli_cikis') }}">Çıkış</a>
     </div>
@@ -99,6 +99,7 @@
     <button type="button" id="ana-ekran" hidden>Ana ekrana ekle</button>
   </section>
 
+  {% if lgs_acik and kocluk %}
   <section class="kart">
     <div class="soluk">LGS hedefi</div>
     <p style="margin:8px 0 0;font-weight:800">{{ kocluk.hedef or 'Hedef henüz yazılmadı' }}{% if kocluk.hedef_net %} · {{ kocluk.hedef_net }} net{% if kocluk.son %}, kalan {{ kocluk.kalan }}{% endif %}{% endif %}</p>
@@ -115,6 +116,7 @@
     {% endif %}
     <a class="rapor" href="{{ url_for('veli_lgs', bolum='deneme') }}" style="display:inline-block;margin-top:12px">Sonuç ve analiz</a>
   </section>
+  {% endif %}
 
   {% if kitaplar %}
   <section class="kart">

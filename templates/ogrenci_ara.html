@@ -18,7 +18,9 @@
       <p class="mt-1">Son deneme: {{ o.son_deneme or 'yok' }}{% if o.son_net is not none %} · {{ o.son_net }} net{% endif %}</p>
       <div class="mt-2 flex gap-2">
         <a class="rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white" href="{{ url_for('haftalik_takip', sinif=o.sinif_id) }}">Ödev</a>
+        {% if o.sinif_adi.startswith('8/') %}
         <a class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white" href="{{ url_for('lgs', ogrenci=o.id) }}">LGS</a>
+        {% endif %}
       </div>
     </article>
     {% else %}
