@@ -1442,6 +1442,47 @@ def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
     return denemeler
 
 
+def deneme_sinav_listesi() -> list[dict]:
+    con = _conn()
+    _lgs_init(con)
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT ad, tarih, COUNT(*) AS adet
+        FROM lgs_deneme
+        GROUP BY ad, tarih
+        ORDER BY tarih DESC, ad
+        """
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def deneme_sinav_ogrencileri(ad: str, tarih: str) -> list[dict]:
+    con = _conn()
+    _lgs_init(con)
+    denemeler = [dict(r) for r in con.execute(
+        """
+        SELECT d.id, d.ogrenci_id, d.puan, o.ad_soyad, o.ogr_no, s.sinif_adi
+        FROM lgs_deneme d
+        JOIN ogrenciler o ON o.id = d.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        WHERE d.ad = ? AND d.tarih = ?
+        ORDER BY s.sinif_adi, o.ad_soyad
+        """,
+        (ad, tarih),
+    ).fetchall()]
+    for d in denemeler:
+        satirlar = [dict(r) for r in con.execute(
+            "SELECT ders, dogru, yanlis, bos, net FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",
+            (d["id"],),
+        ).fetchall()]
+        d["dersler"] = satirlar
+        d["net"] = round(sum(float(s["net"] or 0) for s in satirlar), 2)
+        d["puan"] = round(float(d["puan"]), 3) if d["puan"] is not None else None
+    con.close()
+    return denemeler
+
+
 def _yardimci_tablolar_init(con: sqlite3.Connection) -> None:
     """Davranış hedefi, veli randevusu, günlük yansıma, denetim günlüğü, admin_meta."""
     con.execute("""

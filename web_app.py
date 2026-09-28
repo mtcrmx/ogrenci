@@ -78,6 +78,7 @@ from database import (
     ogrenci_verilen_kitaplar,
     lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_bildir, lgs_gorev_onayla,
     lgs_gunluk_ekle, lgs_gunluk_liste, lgs_gunluk_onayla, lgs_deneme_ekle, lgs_deneme_onek_sil, lgs_denemeler,
+    deneme_sinav_listesi, deneme_sinav_ogrencileri,
     LGS_DERSLER, LGS_GUNLER, LGS_SORU_SAYISI,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
@@ -3679,6 +3680,186 @@ def lgs_kurum_pdf():
             mesaj += f" ve {len(sonuc['kalan']) - 8} kişi daha"
     flash(mesaj, "success")
     return redirect(url_for("lgs"))
+
+
+_DENEME_DERS_SIRA = (
+    "Türkçe", "Sosyal Bilgiler", "T.C. İnkılap Tarihi", "Din Kültürü",
+    "İngilizce", "Matematik", "Fen Bilimleri",
+)
+
+
+def _deneme_ort(satirlar: list[dict]) -> dict:
+    if not satirlar:
+        return {"adet": 0, "puan": 0, "net": 0, "dersler": []}
+    puanlar = [s["puan"] for s in satirlar if s.get("puan") is not None]
+    ders_top: dict[str, list] = {}
+    for s in satirlar:
+        for d in s["dersler"]:
+            kutu = ders_top.setdefault(d["ders"], [0.0, 0.0, 0.0, 0.0, 0])
+            kutu[0] += float(d["net"] or 0)
+            kutu[1] += int(d["dogru"] or 0)
+            kutu[2] += int(d["yanlis"] or 0)
+            kutu[3] += int(d["bos"] or 0)
+            kutu[4] += 1
+    sirali = [d for d in _DENEME_DERS_SIRA if d in ders_top]
+    sirali += [d for d in ders_top if d not in sirali]
+    dersler = []
+    for ders in sirali:
+        net, dogru, yanlis, bos, adet = ders_top[ders]
+        dersler.append({
+            "ders": ders,
+            "net": round(net / adet, 2),
+            "dogru": round(dogru / adet, 1),
+            "yanlis": round(yanlis / adet, 1),
+            "bos": round(bos / adet, 1),
+        })
+    return {
+        "adet": len(satirlar),
+        "puan": round(sum(puanlar) / len(puanlar), 1) if puanlar else 0,
+        "net": round(sum(s["net"] for s in satirlar) / len(satirlar), 2),
+        "dersler": dersler,
+    }
+
+
+def _deneme_dagilim(satirlar: list[dict]) -> list[dict]:
+    puanli = [s for s in satirlar if s.get("puan") is not None]
+    if len(puanli) >= max(1, len(satirlar) // 2):
+        dilimler = [(0, 200, "200 altı"), (200, 250, "200-250"), (250, 300, "250-300"),
+                    (300, 350, "300-350"), (350, 400, "350-400"), (400, 1000, "400+")]
+        return [{"ad": ad, "adet": sum(1 for s in puanli if alt <= s["puan"] < ust)} for alt, ust, ad in dilimler]
+    dilimler = [(0, 20, "0-20"), (20, 40, "20-40"), (40, 60, "40-60"), (60, 200, "60+")]
+    return [{"ad": ad, "adet": sum(1 for s in satirlar if alt <= s["net"] < ust)} for alt, ust, ad in dilimler]
+
+
+def _deneme_sira(satirlar: list[dict], alan: str = "sira") -> list[dict]:
+    sirali = sorted(satirlar, key=lambda s: ((s.get("puan") if s.get("puan") is not None else -1), s["net"]), reverse=True)
+    for i, s in enumerate(sirali, start=1):
+        s[alan] = i
+    return sirali
+
+
+def _deneme_ekran_verisi(veli: bool, kendi_id: int | None = None) -> dict:
+    sinavlar = deneme_sinav_listesi()
+    if not sinavlar:
+        return {"sinavlar": [], "secili": None, "veli": veli}
+    istenen = (request.args.get("sinav") or "").strip()
+    secili = next((s for s in sinavlar if s["ad"] == istenen), sinavlar[0])
+    if veli and kendi_id:
+        sahip = [s for s in sinavlar if any(
+            int(o["ogrenci_id"]) == int(kendi_id)
+            for o in deneme_sinav_ogrencileri(s["ad"], s["tarih"])
+        )]
+        if sahip and not any(s["ad"] == secili["ad"] and s["tarih"] == secili["tarih"] for s in sahip):
+            secili = sahip[0]
+        sinavlar = sahip or sinavlar
+    hepsi = deneme_sinav_ogrencileri(secili["ad"], secili["tarih"])
+    _deneme_sira(hepsi, "okul_sira")
+    sinif_ad = (request.args.get("sinif") or "").strip()
+    if veli and kendi_id:
+        kendi = next((s for s in hepsi if int(s["ogrenci_id"]) == int(kendi_id)), None)
+        sinif_ad = kendi["sinif_adi"] if kendi else ""
+    elif sinif_ad and sinif_ad not in {s["sinif_adi"] for s in hepsi}:
+        sinif_ad = ""
+    kapsam = [s for s in hepsi if s["sinif_adi"] == sinif_ad] if sinif_ad else list(hepsi)
+    _deneme_sira(kapsam, "sira")
+    okul = _deneme_ort(hepsi)
+    sinif_ort = _deneme_ort(kapsam)
+    siniflar = []
+    for ad in sorted({s["sinif_adi"] for s in hepsi}):
+        grup = [s for s in hepsi if s["sinif_adi"] == ad]
+        ort = _deneme_ort(grup)
+        siniflar.append({"sinif": ad, "adet": ort["adet"], "puan": ort["puan"], "net": ort["net"]})
+    birey = None
+    if veli:
+        secilen_id = kendi_id
+    else:
+        secilen_id = request.args.get("ogrenci", type=int)
+    if secilen_id:
+        kayit = next((s for s in hepsi if int(s["ogrenci_id"]) == int(secilen_id)), None)
+        if kayit and (not veli or int(kayit["ogrenci_id"]) == int(kendi_id or 0)):
+            sinif_grup = [s for s in hepsi if s["sinif_adi"] == kayit["sinif_adi"]]
+            _deneme_sira(sinif_grup, "sinif_sira")
+            sinif_kayit = next(s for s in sinif_grup if int(s["ogrenci_id"]) == int(kayit["ogrenci_id"]))
+            ort_map = {d["ders"]: d for d in _deneme_ort(sinif_grup)["dersler"]}
+            dersler = []
+            for d in kayit["dersler"]:
+                ort = ort_map.get(d["ders"], {})
+                dersler.append({
+                    "ders": d["ders"],
+                    "net": float(d["net"] or 0),
+                    "dogru": int(d["dogru"] or 0),
+                    "yanlis": int(d["yanlis"] or 0),
+                    "bos": int(d["bos"] or 0),
+                    "ort": ort.get("net", 0),
+                })
+            birey = {
+                "ad": kayit["ad_soyad"],
+                "sinif": kayit["sinif_adi"],
+                "no": kayit["ogr_no"],
+                "id": kayit["ogrenci_id"],
+                "puan": kayit["puan"],
+                "net": kayit["net"],
+                "sira": kayit["okul_sira"],
+                "sinif_sira": sinif_kayit["sinif_sira"],
+                "sinif_adet": len(sinif_grup),
+                "okul_adet": len(hepsi),
+                "dersler": dersler,
+            }
+    ders_kaynak = (birey["dersler"] if birey else sinif_ort["dersler"])
+    ders_ad = [d["ders"] for d in ders_kaynak]
+    okul_net = {d["ders"]: d["net"] for d in okul["dersler"]}
+    sinif_net = {d["ders"]: d["net"] for d in sinif_ort["dersler"]}
+    grafik = {
+        "dersler": ders_ad,
+        "ogrenci": [d["net"] for d in birey["dersler"]] if birey else [],
+        "sinif": [sinif_net.get(d, 0) for d in ders_ad],
+        "okul": [okul_net.get(d, 0) for d in ders_ad],
+        "dagilim_ad": [d["ad"] for d in _deneme_dagilim(kapsam)],
+        "dagilim_adet": [d["adet"] for d in _deneme_dagilim(kapsam)],
+        "sinif_ad": [s["sinif"] for s in siniflar],
+        "sinif_puan": [s["puan"] for s in siniflar],
+        "dogru": round(sum(d["dogru"] for d in (birey["dersler"] if birey else sinif_ort["dersler"])), 1),
+        "yanlis": round(sum(d["yanlis"] for d in (birey["dersler"] if birey else sinif_ort["dersler"])), 1),
+        "bos": round(sum(d["bos"] for d in (birey["dersler"] if birey else sinif_ort["dersler"])), 1),
+    }
+    return {
+        "veli": veli,
+        "sinavlar": sinavlar,
+        "secili": secili,
+        "sinif": sinif_ad,
+        "siniflar": siniflar,
+        "okul": okul,
+        "sinif_ort": sinif_ort,
+        "dagilim": grafik["dagilim_ad"],
+        "siralama": kapsam if not veli else [],
+        "birey": birey,
+        "grafik": grafik,
+        "adaylar": [] if veli else [
+            {"id": s["ogrenci_id"], "ad": s["ad_soyad"], "sinif": s["sinif_adi"]} for s in hepsi
+        ],
+        "gorunum": "birey" if (veli or request.args.get("gorunum") == "birey" or (request.args.get("ogrenci") and request.args.get("gorunum") != "genel")) else (request.args.get("gorunum") or "genel"),
+    }
+
+
+@app.route("/deneme-analiz")
+@giris_zorunlu
+def deneme_analiz():
+    return render_template("deneme_analiz.html", **_deneme_ekran_verisi(veli=False))
+
+
+@app.route("/veli/deneme-analiz")
+def veli_deneme_analiz():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    ogr = _ogrenci_bul(int(oid))
+    if not ogr or ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+        return redirect(url_for("veli_panel"))
+    veri = _deneme_ekran_verisi(veli=True, kendi_id=int(oid))
+    veri["gorunum"] = request.args.get("gorunum") or "birey"
+    if veri["gorunum"] not in {"birey", "genel"}:
+        veri["gorunum"] = "birey"
+    return render_template("deneme_analiz.html", **veri)
 
 
 @app.route("/veli/lgs", methods=["GET", "POST"])

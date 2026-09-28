@@ -537,6 +537,10 @@
            class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'lgs' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
           LGS
         </a>
+        <a href="{{ url_for('deneme_analiz') }}"
+           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'deneme_analiz' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+          Deneme
+        </a>
         {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
         <a href="{{ url_for('giris_raporu') }}"
            class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['giris_raporu', 'giris_raporu_excel'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
@@ -588,6 +592,7 @@
         <a href="{{ url_for('karne', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('karne') }}" class="mobile-link"><span class="nav-mark mark-slate">N</span><span>Dönem karnesi — kitap, ödev, LGS</span></a>
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — kitap ve ödev raporu</span></a>
         <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — 8. sınıf deneme girişi</span></a>
+        <a href="{{ url_for('deneme_analiz') }}" class="mobile-link"><span class="nav-mark mark-rose">D</span><span>Deneme analizi — bireysel ve genel</span></a>
         {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
         <a href="{{ url_for('giris_raporu') }}" class="mobile-link"><span class="nav-mark mark-slate">G</span><span>Giriş raporu — kim veri girdi</span></a>
         <a href="{{ url_for('ogrenci_ara') }}" class="mobile-link"><span class="nav-mark mark-blue">S</span><span>Öğrenci ara</span></a>
