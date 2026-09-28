@@ -74,7 +74,7 @@ from database import (
     ogrenci_verilen_kitaplar,
     lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_toggle,
     lgs_gunluk_ekle, lgs_gunluk_liste, lgs_deneme_ekle, lgs_denemeler,
-    LGS_DERSLER, LGS_GUNLER,
+    LGS_DERSLER, LGS_GUNLER, LGS_SORU_SAYISI,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
     tik_kayitlari_siniflarda,
@@ -2329,6 +2329,16 @@ def veli_panel():
     }
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
+    gorevler = lgs_gorevler(int(ogrenci_id), hafta_basi)
+    bugun_gorev = [g for g in gorevler if int(g["gun"]) == bugun.weekday()]
+    tamam = sum(1 for g in gorevler if g["tamamlandi"])
+    oran = round(tamam * 100 / len(gorevler)) if gorevler else 0
+    denemeler = lgs_denemeler(int(ogrenci_id), 12)
+    profil = lgs_profil(int(ogrenci_id))
+    kocluk = _lgs_kocluk(
+        denemeler, oran, len(gorevler), bugun_gorev,
+        lgs_gunluk_liste(int(ogrenci_id)), profil["hedef"],
+    )
     return render_template(
         "veli_panel.html",
         ogrenci=o,
@@ -2338,6 +2348,7 @@ def veli_panel():
         odev_ogr=odev_ogr,
         notlar=notlar,
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
+        kocluk=kocluk,
     )
 
 
@@ -3096,6 +3107,152 @@ def giris_raporu_excel():
     )
 
 
+def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef) -> dict:
+    """Veli ve öğrencinin gördüğü sonuç, ders analizi ve bir sonraki adım."""
+    hedef = (hedef or "").strip()
+    son = denemeler[0] if denemeler else None
+    onceki = denemeler[1] if len(denemeler) > 1 else None
+    ders_satir = []
+    zayif = None
+    guclu = None
+    fark = None
+    if son:
+        girilen = {s["ders"]: s for s in son["dersler"]}
+        onceki_net = {
+            s["ders"]: float(s["net"] or 0)
+            for s in (onceki["dersler"] if onceki else [])
+        }
+        for ders in LGS_DERSLER:
+            tavan = LGS_SORU_SAYISI[ders]
+            satir = girilen.get(ders)
+            if not satir:
+                ders_satir.append({
+                    "ders": ders, "girildi": False, "dogru": 0, "yanlis": 0, "bos": 0,
+                    "net": 0, "tavan": tavan, "yuzde": 0, "fark": None,
+                    "ipucu": "Bu ders bu denemede yazılmadı.",
+                })
+                continue
+            net = float(satir["net"] or 0)
+            yuzde = max(0, min(100, round(net * 100 / tavan))) if tavan else 0
+            dogru = int(satir["dogru"] or 0)
+            yanlis = int(satir["yanlis"] or 0)
+            bos = int(satir["bos"] or 0)
+            if bos > yanlis and bos > 0:
+                ipucu = "Boşlar yanlıştan fazla. Bildiğin soruyu boş bırakma."
+            elif yanlis >= max(3, tavan // 4):
+                ipucu = "Yanlışlar fazla. Bu derste konu eksiği var."
+            elif yuzde >= 80:
+                ipucu = "Bu ders sağlam. Zor sorularla pekiştir."
+            else:
+                ipucu = "Bir tur konu tekrarı ve 10 yeni soru bu dersi taşır."
+            ders_satir.append({
+                "ders": ders, "girildi": True, "dogru": dogru, "yanlis": yanlis, "bos": bos,
+                "net": net, "tavan": tavan, "yuzde": yuzde,
+                "fark": round(net - onceki_net[ders], 2) if ders in onceki_net else None,
+                "ipucu": ipucu,
+            })
+        girilenler = [d for d in ders_satir if d["girildi"]]
+        if girilenler:
+            zayif = min(girilenler, key=lambda d: (d["yuzde"], d["net"]))
+            guclu = max(girilenler, key=lambda d: (d["yuzde"], d["net"]))
+        if onceki:
+            fark = round(float(son["net"]) - float(onceki["net"]), 2)
+    oneriler = []
+    if zayif:
+        liste = LGS_KONULAR.get(zayif["ders"], [])
+        seviye = "kolay" if zayif["yuzde"] < 45 else ("orta" if zayif["yuzde"] < 75 else "zor")
+        oneriler = [k for k in liste if k["zorluk"] == seviye][:3]
+        if len(oneriler) < 2:
+            oneriler = liste[:3]
+    adimlar = []
+    bekleyen = [g for g in bugun_gorev if not g.get("tamamlandi")]
+    if bekleyen:
+        g = bekleyen[0]
+        adimlar.append(f"Bugün {g['ders']} görevini bitir: {g.get('konu') or 'konu yazılmadı'}.")
+    elif gorev_sayisi and oran == 100:
+        adimlar.append("Bu haftanın görevleri bitti. Aynı düzeni gelecek hafta da koru.")
+    else:
+        adimlar.append("Öğretmenin bu haftanın programını yazınca görevler burada görünecek.")
+    if zayif:
+        if zayif["bos"] > zayif["yanlis"]:
+            adimlar.append(f"{zayif['ders']} dersinde boşları azalt. Önce kolay soruları bitir, sonra zora geç.")
+        else:
+            konu = oneriler[0]["konu"] if oneriler else zayif["ders"]
+            adimlar.append(f"{zayif['ders']} için {konu} konusundan en az 15 soru çöz.")
+        if fark is not None and fark < 0:
+            adimlar.append(f"Sonraki denemede hedef: {zayif['ders']} netini {zayif['net']} üstüne çıkarmak.")
+        else:
+            adimlar.append("Sonraki denemede toplam neti bu sonucun üstüne taşımak yeterli bir hedef.")
+    adimlar = adimlar[:3]
+    if not son:
+        if hedef:
+            mesaj = (
+                f"Hedefin belli: {hedef}. İlk deneme sonucu girilince ders ders nereye "
+                "çalışacağını burada göreceksin. O güne kadar bugünkü görevleri kapat."
+            )
+        else:
+            mesaj = (
+                "Öğretmenin hedefini ve deneme sonucunu yazınca bu ekran sana özel bir yol çizer. "
+                "Şimdilik programdaki işleri bitir."
+            )
+        kisa = "Deneme sonucu girilince analiz burada açılır."
+    elif not zayif:
+        mesaj = "Bu denemede ders satırı yok. Öğretmen sonuçları yazınca analiz açılır."
+        kisa = "Deneme kaydı var, ders sonucu henüz yok."
+    elif fark is None:
+        mesaj = (
+            f"İlk denemen {son['net']} net. Bundan sonrası yükseliş. Önce {zayif['ders']} "
+            "dersine çalış; orası toplam neti en çok yükseltir."
+        )
+        kisa = f"İlk deneme {son['net']} net. Sıradaki ders: {zayif['ders']}."
+    elif fark > 0:
+        mesaj = (
+            f"Son deneme {onceki['net']} netten {son['net']} nete çıktı. Artış {fark} net. "
+            f"Bunu korumak için {zayif['ders']} dersini bu hafta öne al."
+        )
+        kisa = f"Son deneme +{fark} net. Sıradaki ders: {zayif['ders']}."
+    elif fark < 0:
+        mesaj = (
+            f"Bu deneme {abs(fark)} net geride kaldı. {zayif['ders']} tek başına bunu toparlar. "
+            "Bu hafta yalnızca o derse yüklen."
+        )
+        kisa = f"Son deneme {abs(fark)} net geride. Toparlama dersi: {zayif['ders']}."
+    else:
+        mesaj = f"Netin {son['net']} seviyesinde duruyor. {zayif['ders']} yükselirse toplam da yükselir."
+        kisa = f"Net {son['net']} seviyesinde. Gelişecek ders: {zayif['ders']}."
+    rozetler = []
+    if gorev_sayisi and oran == 100:
+        rozetler.append({"ad": "Hafta tamam", "aciklama": "Bu haftanın bütün görevleri bitti."})
+    if fark is not None and fark > 0:
+        rozetler.append({"ad": "Yükseliş", "aciklama": f"Bir önceki denemeye göre +{fark} net."})
+    if len(denemeler) >= 3:
+        uc = list(reversed(denemeler[:3]))
+        if float(uc[0]["net"]) <= float(uc[1]["net"]) <= float(uc[2]["net"]):
+            rozetler.append({"ad": "İstikrar", "aciklama": "Son üç denemenin neti düşmedi."})
+    hafta_basi = _lgs_hafta()
+    soru = sum(int(g.get("cozulen") or 0) for g in gunluk if (g.get("tarih") or "") >= hafta_basi)
+    if soru >= 30:
+        rozetler.append({"ad": "Soru temposu", "aciklama": f"Bu hafta {soru} soru çözüldü."})
+    yuzde = max(0, min(100, round(float(son["net"]) * 100 / 90))) if son else 0
+    return {
+        "hedef": hedef,
+        "son": son,
+        "onceki": onceki,
+        "fark": fark,
+        "dersler": ders_satir,
+        "zayif": zayif,
+        "guclu": guclu,
+        "oneriler": oneriler,
+        "adimlar": adimlar,
+        "mesaj": mesaj,
+        "kisa": kisa,
+        "rozetler": rozetler,
+        "yuzde": yuzde,
+        "tavan": 90,
+        "hafta_soru": soru,
+    }
+
+
 def _lgs_hafta() -> str:
     bugun = date.today()
     return (bugun - timedelta(days=bugun.weekday())).isoformat()
@@ -3137,7 +3294,7 @@ def _lgs_ekran(veli: bool):
             abort(400)
         ogr = _lgs_ogrenci(oid) if oid else None
     bolum = request.values.get("bolum") or ("ozet" if veli else "program")
-    izinli = {"ozet", "program", "gunluk", "deneme"} if veli else {"program"}
+    izinli = {"ozet", "program", "gunluk", "deneme"} if veli else {"program", "deneme"}
     if bolum not in izinli:
         bolum = "ozet" if veli else "program"
     if request.method == "POST":
@@ -3156,18 +3313,6 @@ def _lgs_ekran(veli: bool):
                 request.form.get("sayfa", type=int) or 0,
             )
             bolum = "gunluk"
-        elif veli and islem == "deneme":
-            dersler = []
-            for ders in LGS_DERSLER:
-                anahtar = ders.replace(" ", "_")
-                dersler.append({
-                    "ders": ders,
-                    "dogru": request.form.get(f"d_{anahtar}", type=int) or 0,
-                    "yanlis": request.form.get(f"y_{anahtar}", type=int) or 0,
-                    "bos": request.form.get(f"b_{anahtar}", type=int) or 0,
-                })
-            lgs_deneme_ekle(oid, request.form.get("ad", ""), request.form.get("tarih") or date.today().isoformat(), dersler)
-            bolum = "deneme"
         elif not veli and islem == "hedef":
             lgs_profil_kaydet(oid, request.form.get("hedef", ""))
         elif not veli and islem == "gorev":
@@ -3179,6 +3324,25 @@ def _lgs_ekran(veli: bool):
                 request.form.get("hedef_soru", type=int) or 0,
             )
             bolum = "program"
+        elif not veli and islem == "deneme":
+            dersler = []
+            for ders in LGS_DERSLER:
+                anahtar = ders.replace(" ", "_")
+                dersler.append({
+                    "ders": ders,
+                    "dogru": request.form.get(f"d_{anahtar}", type=int) or 0,
+                    "yanlis": request.form.get(f"y_{anahtar}", type=int) or 0,
+                    "bos": request.form.get(f"b_{anahtar}", type=int) or 0,
+                })
+            sonuc = lgs_deneme_ekle(
+                oid,
+                request.form.get("ad", ""),
+                request.form.get("tarih") or date.today().isoformat(),
+                dersler,
+            )
+            if not sonuc.get("ok"):
+                flash(sonuc.get("hata") or "Deneme kaydedilemedi.", "warning")
+            bolum = "deneme"
         hedef_url = "veli_lgs" if veli else "lgs"
         return redirect(url_for(hedef_url, **({} if veli else {"ogrenci": oid}), bolum=bolum))
 
@@ -3201,25 +3365,30 @@ def _lgs_ekran(veli: bool):
     oran = round(tamam * 100 / len(gorevler)) if gorevler else 0
     saat = datetime.now().hour
     selam = "Günaydın" if saat < 12 else ("İyi günler" if saat < 18 else "İyi akşamlar")
-    denemeler = lgs_denemeler(oid) if veli else []
-    grafik = list(reversed(denemeler[:5]))
+    denemeler = lgs_denemeler(oid, 12)
+    grafik = list(reversed(denemeler[:8]))
+    gunluk = lgs_gunluk_liste(oid) if veli else []
+    profil = lgs_profil(oid)
+    kocluk = _lgs_kocluk(denemeler, oran, len(gorevler), bugun_gorev, gunluk, profil["hedef"]) if veli else None
     return render_template(
         "lgs.html",
         veli=veli,
         ogrenci=ogr,
         bolum=bolum,
-        profil=lgs_profil(oid),
+        profil=profil,
         gorevler=gorevler,
         gunler=LGS_GUNLER,
         dersler=LGS_DERSLER,
+        soru_sayisi=LGS_SORU_SAYISI,
         konular=LGS_KONULAR,
         bugun_gorev=bugun_gorev,
         bugun_ad=LGS_GUNLER[bugun_gun],
         tamam=tamam,
         oran=oran,
         selam=selam,
-        gunluk=lgs_gunluk_liste(oid) if veli else [],
+        gunluk=gunluk,
         denemeler=denemeler,
+        kocluk=kocluk,
         grafik_etiket=[d["ad"] for d in grafik],
         grafik_net=[d["net"] for d in grafik],
         bugun=date.today().isoformat(),

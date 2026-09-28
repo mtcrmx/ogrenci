@@ -72,6 +72,23 @@
     </div>
   </section>
 
+  <section class="kart">
+    <div class="soluk">LGS hedefi</div>
+    <p style="margin:8px 0 0;font-weight:800">{{ kocluk.hedef or 'Hedef henüz yazılmadı' }}</p>
+    {% if kocluk.son %}
+    <p class="soluk" style="margin-top:6px">Son deneme {{ kocluk.son.net }} / {{ kocluk.tavan }} net</p>
+    {% endif %}
+    <p style="margin:8px 0 0">{{ kocluk.kisa }}</p>
+    {% if kocluk.rozetler %}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+      {% for r in kocluk.rozetler %}
+      <span style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800">{{ r.ad }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <a class="rapor" href="{{ url_for('veli_lgs', bolum='deneme') }}" style="display:inline-block;margin-top:12px">Sonuç ve analiz</a>
+  </section>
+
   {% if kitaplar %}
   <section class="kart">
     <strong>Öğretmenin verdiği kitaplar</strong>

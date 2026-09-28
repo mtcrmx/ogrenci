@@ -1125,6 +1125,14 @@ LGS_DERSLER = (
     "Din Kültürü",
     "İngilizce",
 )
+LGS_SORU_SAYISI = {
+    "Matematik": 20,
+    "Türkçe": 20,
+    "Fen Bilimleri": 20,
+    "T.C. İnkılap Tarihi": 10,
+    "Din Kültürü": 10,
+    "İngilizce": 10,
+}
 LGS_GUNLER = ("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar")
 
 
@@ -1287,7 +1295,25 @@ def _lgs_net(dogru: int, yanlis: int) -> float:
 def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict]) -> dict:
     ad = (ad or "").strip()
     if not ad:
-        return {"ok": False}
+        return {"ok": False, "hata": "Deneme adı yazın."}
+    temiz = []
+    for d in dersler:
+        ders = d.get("ders")
+        if ders not in LGS_SORU_SAYISI:
+            continue
+        dogru = max(0, int(d.get("dogru") or 0))
+        yanlis = max(0, int(d.get("yanlis") or 0))
+        bos = max(0, int(d.get("bos") or 0))
+        tavan = LGS_SORU_SAYISI[ders]
+        if dogru + yanlis + bos > tavan:
+            return {
+                "ok": False,
+                "hata": f"{ders} en fazla {tavan} soru. Doğru, yanlış ve boş toplamı bunu geçemez.",
+            }
+        if dogru + yanlis + bos:
+            temiz.append((ders, dogru, yanlis, bos, _lgs_net(dogru, yanlis)))
+    if not temiz:
+        return {"ok": False, "hata": "En az bir derse doğru, yanlış veya boş yazın."}
     con = _conn()
     _lgs_init(con)
     cur = con.execute(
@@ -1295,24 +1321,17 @@ def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict]) -
         (ogrenci_id, ad[:80], (tarih or "")[:10]),
     )
     deneme_id = cur.lastrowid
-    for d in dersler:
-        if d.get("ders") not in LGS_DERSLER:
-            continue
-        dogru = max(0, int(d.get("dogru") or 0))
-        yanlis = max(0, int(d.get("yanlis") or 0))
-        bos = max(0, int(d.get("bos") or 0))
-        if dogru + yanlis + bos == 0:
-            continue
+    for ders, dogru, yanlis, bos, net in temiz:
         con.execute(
             """
             INSERT INTO lgs_deneme_ders (deneme_id, ders, dogru, yanlis, bos, net)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (deneme_id, d["ders"], dogru, yanlis, bos, _lgs_net(dogru, yanlis)),
+            (deneme_id, ders, dogru, yanlis, bos, net),
         )
     con.commit()
     con.close()
-    return {"ok": True}
+    return {"ok": True, "id": deneme_id}
 
 
 def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:

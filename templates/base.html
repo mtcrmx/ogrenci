@@ -577,7 +577,7 @@
         <a href="{{ url_for('haftalik_takip', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('haftalik_takip') }}" class="mobile-link"><span class="nav-mark mark-emerald">K</span><span>Kitap ve ödev — haftalık işaret</span></a>
         <a href="{{ url_for('veri_girisi', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('veri_girisi') }}" class="mobile-link"><span class="nav-mark mark-emerald">V</span><span>Veri girişi — kitap ve ödev</span></a>
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — kitap ve ödev raporu</span></a>
-        <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — program girişi</span></a>
+        <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — program ve deneme girişi</span></a>
         {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
         <a href="{{ url_for('giris_raporu') }}" class="mobile-link"><span class="nav-mark mark-slate">G</span><span>Giriş raporu — kim veri girdi</span></a>
         {% endif %}
