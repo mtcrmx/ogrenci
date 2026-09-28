@@ -336,16 +336,30 @@ def _odev_bildirimi_verisi(hedef: str) -> dict | None:
         return None
     if not ogrenci_id:
         return None
-    odevler = ogrenci_odevleri(int(ogrenci_id), 30)
-    if not odevler:
-        return None
+    odevler = ogrenci_odevleri(int(ogrenci_id), 30) or []
     bekleyen = [o for o in odevler if not o.get("tamamlandi")]
-    if not bekleyen:
+    son_odev = max(bekleyen, key=lambda o: int(o.get("id") or 0)) if bekleyen else None
+    haftalik = {"ders": "", "aciklama": "", "kitap_adi": "", "durum": ""}
+    if hedef == "veli":
+        ogr = _ogrenci_bul(int(ogrenci_id))
+        if ogr:
+            bugun = date.today()
+            hafta = (bugun - timedelta(days=bugun.weekday())).isoformat()
+            bilgi = haftalik_odev_bilgi_getir(int(ogr["sinif_id"]), hafta)
+            kayit = haftalik_takip_sinif(int(ogr["sinif_id"]), hafta).get(int(ogrenci_id), {})
+            etiket = {"tam": "Tam", "eksik": "Eksik", "yok": "Yok"}
+            haftalik = {
+                "ders": bilgi.get("ders") or "",
+                "aciklama": bilgi.get("aciklama") or "",
+                "kitap_adi": bilgi.get("kitap_adi") or "",
+                "durum": etiket.get(kayit.get("odev_durum") or "", ""),
+            }
+    if not son_odev and not any(haftalik.values()):
         return None
-    son_odev = max(bekleyen, key=lambda o: int(o.get("id") or 0))
     return {
         "hedef": hedef_adi,
         "odev": son_odev,
+        "haftalik": haftalik,
         "ogrenci_id": int(ogrenci_id),
     }
 
@@ -385,7 +399,12 @@ def _bilgilendirme_modal_ekle(response):
                 tanitim_hedef=hedef,
             ))
         odev_bildirimi = _odev_bildirimi_verisi(hedef)
-        if odev_bildirimi:
+        if hedef == "veli" and odev_bildirimi:
+            parcaciklar.append(render_template(
+                "_veli_odev_kose.html",
+                odev_bildirimi=odev_bildirimi,
+            ))
+        elif odev_bildirimi:
             parcaciklar.append(render_template(
                 "_odev_bildirimi_modal.html",
                 odev_bildirimi=odev_bildirimi,

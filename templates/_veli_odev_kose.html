@@ -1,0 +1,53 @@
+{% set odev = odev_bildirimi.odev %}
+{% set h = odev_bildirimi.haftalik %}
+<aside id="veli-odev-kose">
+  <div class="kose-ust">Ödev bildirimi</div>
+  {% if h.ders or h.kitap_adi or h.aciklama %}
+  <p class="kose-ders">{{ h.ders or "Ders" }}{% if h.durum %} · {{ h.durum }}{% endif %}</p>
+  {% if h.kitap_adi %}<p class="kose-kitap">{{ h.kitap_adi }}</p>{% endif %}
+  {% if h.aciklama %}<p class="kose-metin">{{ h.aciklama }}</p>{% endif %}
+  {% endif %}
+  {% if odev %}
+  <p class="kose-ders">{{ odev.ders or "Ödev" }}</p>
+  <p class="kose-kitap">{{ odev.baslik }}</p>
+  <p class="kose-metin">Son tarih: {{ odev.son_tarih }}{% if odev.ogretmen %} · {{ odev.ogretmen }}{% endif %}</p>
+  {% endif %}
+  <button type="button" id="veli-odev-kapat">Kapat</button>
+</aside>
+<style>
+  #veli-odev-kose {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 80;
+    width: min(300px, calc(100% - 32px));
+    background: #fff;
+    color: #0f172a;
+    border: 1px solid #fcd34d;
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, .18);
+    padding: 14px 14px 12px;
+    animation: kose-gir .35s ease;
+  }
+  #veli-odev-kose .kose-ust { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #b45309; }
+  #veli-odev-kose .kose-ders { margin: 8px 0 0; font-weight: 800; }
+  #veli-odev-kose .kose-kitap { margin: 4px 0 0; font-size: 14px; }
+  #veli-odev-kose .kose-metin { margin: 6px 0 0; font-size: 13px; line-height: 1.4; color: #475569; }
+  #veli-odev-kose button { margin-top: 10px; width: 100%; border: 0; border-radius: 10px; background: #0f2744; color: #fff; font-weight: 800; padding: 8px; cursor: pointer; }
+  @keyframes kose-gir { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+</style>
+<script>
+(function () {
+  const kutu = document.getElementById("veli-odev-kose");
+  if (!kutu) return;
+  const key = "veli-odev-kose-{{ odev_bildirimi.ogrenci_id }}-{{ (h.ders ~ h.kitap_adi ~ h.aciklama ~ (odev.id if odev else ''))|e }}";
+  if (localStorage.getItem(key)) {
+    kutu.remove();
+    return;
+  }
+  document.getElementById("veli-odev-kapat").addEventListener("click", function () {
+    localStorage.setItem(key, "1");
+    kutu.remove();
+  });
+})();
+</script>
