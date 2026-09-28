@@ -15,7 +15,7 @@
          class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-emerald-700 text-white' if not secili else 'border border-slate-200' }}">Tüm öğretmenler</a>
       {% for s in satirlar %}
       <a href="{{ url_for('giris_raporu', donem=donem, hafta=hafta, ogretmen=s.id) }}"
-         class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-sky-700 text-white' if secili and secili.id == s.id else 'border border-slate-200' }}">{{ s.ad_soyad }}</a>
+         class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-sky-700 text-white' if secili and secili.id == s.id else 'border border-slate-200' }}">{{ s.ad_soyad }}{% if s.ad_soyad == 'ADEM AKGÜL' %} · Müdür{% elif s.ad_soyad == 'METEHAN CÜCEN' %} · Müdür Yrd.{% endif %}</a>
       {% endfor %}
     </div>
   </header>
@@ -55,7 +55,7 @@
     {% set w = ((toplam * 100 / tavan)|round(0) if tavan else 0) %}
     <article class="rounded-2xl border border-slate-200 bg-white p-4">
       <div class="flex items-center justify-between gap-3">
-        <h2 class="font-black text-slate-950">{{ s.ad_soyad }}</h2>
+        <h2 class="font-black text-slate-950">{{ s.ad_soyad }}{% if s.ad_soyad == 'ADEM AKGÜL' %} · Müdür{% elif s.ad_soyad == 'METEHAN CÜCEN' %} · Müdür Yardımcısı{% endif %}</h2>
         <span class="rounded-full px-3 py-1 text-xs font-black {{ 'bg-emerald-100 text-emerald-800' if s.girdi else 'bg-rose-100 text-rose-800' }}">{{ 'Girdi' if s.girdi else 'Girmedi' }}</span>
       </div>
       <p class="mt-1 text-xs text-slate-500">Kitap {{ s.kitap }} · getirme {{ s.getirme }} · ödev {{ s.odev }} · {{ s.sinif_sayisi }} sınıf · ders metni {{ s.ders_yazdi }}</p>

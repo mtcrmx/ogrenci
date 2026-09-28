@@ -147,7 +147,7 @@ def _giris_raporu_acik_mi() -> bool:
         if isim.casefold() == ad and ogretmen_id_bul(isim) == oid:
             return True
     return False
-_EVRAK_TAKIP_YONETICI_ADLARI = ("ADEM AKGÜL", "YUSUF ERTÜRK")
+_EVRAK_TAKIP_YONETICI_ADLARI = ("ADEM AKGÜL", "METEHAN CÜCEN")
 
 
 def _toplu_sifirlamaya_izinli_mi(ogretmen_id: int) -> bool:

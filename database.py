@@ -389,8 +389,8 @@ def _programdan_siniflar() -> dict[str, list[str]]:
 
 
 _OGRETMEN_SINIF: dict[str, list[str]] = _programdan_siniflar()
-_KADRO_DISI_OGRETMENLER = ["YUSUF ERTÜRK"]
-_AYRILAN_OGRETMENLER = ("FATMA ÇAPKULAÇ",)
+_KADRO_DISI_OGRETMENLER = []
+_AYRILAN_OGRETMENLER = ("FATMA ÇAPKULAÇ", "YUSUF ERTÜRK")
 _AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B")
 _TUM_SUBE_OGRETMENLERI = tuple(
     dict.fromkeys(list(_OGRETMEN_SINIF.keys()) + _KADRO_DISI_OGRETMENLER)
@@ -2329,7 +2329,7 @@ LIG_GOREVLER = [
     "Gunun Ozeti Duzgun Yazilmasi",
 ]
 
-VAR_INCELEME_OGRETMENLER = ["ADEM AKGÜL", "YUSUF ERTÜRK"]
+VAR_INCELEME_OGRETMENLER = ["ADEM AKGÜL", "METEHAN CÜCEN"]
 
 
 def _mac_tablosu_olustur(con):
