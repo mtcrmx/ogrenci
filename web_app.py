@@ -376,7 +376,7 @@ def _bilgilendirme_modal_ekle(response):
                 aktif_bilgilendirme=bilgi,
                 bilgilendirme_hedef=hedef,
             ))
-        tanitim = _alan_tanitimi_verisi(hedef)
+        tanitim = None if hedef == "veli" else _alan_tanitimi_verisi(hedef)
         if tanitim:
             parcaciklar.append(render_template(
                 "_alan_tanitimi.html",
