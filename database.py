@@ -4428,6 +4428,108 @@ def haftalik_odev_bilgi_kaydet(
     return {"ok": True}
 
 
+def ogretmen_giris_raporu(hafta_basi: str) -> list[dict]:
+    """Seçilen haftada hangi öğretmenin kaç öğrenci işaretlediğini döndürür."""
+    con = _conn()
+    _haftalik_takip_init(con)
+    ogretmenler = [dict(r) for r in con.execute(
+        "SELECT id, ad_soyad FROM ogretmenler ORDER BY ad_soyad"
+    ).fetchall()]
+    sayim = {
+        int(r["ogretmen_id"]): dict(r)
+        for r in con.execute(
+            """
+            SELECT ogretmen_id,
+                   SUM(CASE WHEN kitap_okuma != '' THEN 1 ELSE 0 END) AS kitap,
+                   SUM(CASE WHEN kitap_getirme != '' THEN 1 ELSE 0 END) AS getirme,
+                   SUM(CASE WHEN odev_durum != '' THEN 1 ELSE 0 END) AS odev,
+                   COUNT(DISTINCT sinif_id) AS sinif_sayisi
+            FROM haftalik_takip
+            WHERE hafta_basi = ? AND ogretmen_id IS NOT NULL
+            GROUP BY ogretmen_id
+            """,
+            (hafta_basi,),
+        ).fetchall()
+    }
+    bilgi = [dict(r) for r in con.execute(
+        """
+        SELECT ogretmen_id FROM haftalik_odev_bilgi
+        WHERE hafta_basi = ? AND ogretmen_id IS NOT NULL
+        """,
+        (hafta_basi,),
+    ).fetchall()]
+    con.close()
+    ders_sayan: dict[int, int] = {}
+    for b in bilgi:
+        oid = int(b["ogretmen_id"])
+        ders_sayan[oid] = ders_sayan.get(oid, 0) + 1
+    sonuc = []
+    for og in ogretmenler:
+        if og["ad_soyad"] in _AYRILAN_OGRETMENLER:
+            continue
+        oid = int(og["id"])
+        s = sayim.get(oid, {})
+        kitap = int(s.get("kitap") or 0)
+        getirme = int(s.get("getirme") or 0)
+        odev = int(s.get("odev") or 0)
+        ders = ders_sayan.get(oid, 0)
+        sonuc.append({
+            "id": oid,
+            "ad_soyad": og["ad_soyad"],
+            "kitap": kitap,
+            "getirme": getirme,
+            "odev": odev,
+            "sinif_sayisi": int(s.get("sinif_sayisi") or 0),
+            "ders_yazdi": ders,
+            "girdi": kitap + getirme + odev + ders > 0,
+        })
+    return sonuc
+
+
+def ogretmen_giris_haftalari(ogretmen_id: int, haftalar: list[str]) -> list[dict]:
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = {
+        r["hafta_basi"]: dict(r)
+        for r in con.execute(
+            """
+            SELECT hafta_basi,
+                   SUM(CASE WHEN kitap_okuma != '' THEN 1 ELSE 0 END) AS kitap,
+                   SUM(CASE WHEN kitap_getirme != '' THEN 1 ELSE 0 END) AS getirme,
+                   SUM(CASE WHEN odev_durum != '' THEN 1 ELSE 0 END) AS odev
+            FROM haftalik_takip
+            WHERE ogretmen_id = ?
+            GROUP BY hafta_basi
+            """,
+            (ogretmen_id,),
+        ).fetchall()
+    }
+    bilgi = {
+        r["hafta_basi"]
+        for r in con.execute(
+            "SELECT hafta_basi FROM haftalik_odev_bilgi WHERE ogretmen_id = ?",
+            (ogretmen_id,),
+        ).fetchall()
+    }
+    con.close()
+    liste = []
+    for h in haftalar:
+        s = rows.get(h, {})
+        kitap = int(s.get("kitap") or 0)
+        getirme = int(s.get("getirme") or 0)
+        odev = int(s.get("odev") or 0)
+        ders = h in bilgi
+        liste.append({
+            "hafta": h,
+            "kitap": kitap,
+            "getirme": getirme,
+            "odev": odev,
+            "ders_yazdi": ders,
+            "girdi": kitap + getirme + odev > 0 or ders,
+        })
+    return liste
+
+
 def haftalik_takip_isaretle(
     sinif_id: int,
     ogrenci_id: int,

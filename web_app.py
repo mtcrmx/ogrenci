@@ -70,6 +70,7 @@ from database import (
     kitap_okuma_onayla, kitap_okuma_rapor,
     haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu,
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet,
+    ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
     tik_kayitlari_siniflarda,
     ogretmen_yetki_al, ogretmen_yetki_guncelle,
@@ -136,6 +137,16 @@ def _ogretmen_ogrencisine_erisebilir(ogretmen_id: int, ogrenci_id: int) -> bool:
 
 # Okul geneli sıfırlama (tüm tikler, lig sezonu, tam veri silme) — yalnızca bu öğretmen.
 _TOPLU_SIFIRLAMA_AD_SOYAD = "ADEM AKGÜL"
+_GIRIS_RAPORU_ADLARI = ("ADEM AKGÜL", "METEHAN CÜCEN")
+
+
+def _giris_raporu_acik_mi() -> bool:
+    ad = str(session.get("ogretmen_adi") or "").strip().casefold()
+    oid = session.get("ogretmen_id")
+    for isim in _GIRIS_RAPORU_ADLARI:
+        if isim.casefold() == ad and ogretmen_id_bul(isim) == oid:
+            return True
+    return False
 _EVRAK_TAKIP_YONETICI_ADLARI = ("ADEM AKGÜL", "YUSUF ERTÜRK")
 
 
@@ -2931,6 +2942,93 @@ def haftalik_odev_bilgi_route():
         session["ogretmen_id"],
     )
     return redirect(url_for("haftalik_takip", sinif=sinif_id, hafta=hafta, donem=donem))
+
+
+@app.route("/giris-raporu")
+@giris_zorunlu
+def giris_raporu():
+    if not _giris_raporu_acik_mi():
+        abort(403)
+    donem = request.args.get("donem", type=int)
+    if donem not in (1, 2):
+        donem = _bugunun_donemi()
+    haftalar = _donem_haftalari(donem)
+    hafta = _secili_hafta(haftalar, (request.args.get("hafta") or "").strip())
+    ogretmen_id = request.args.get("ogretmen", type=int)
+    satirlar = ogretmen_giris_raporu(hafta)
+    secili = next((s for s in satirlar if s["id"] == ogretmen_id), None)
+    if ogretmen_id and not secili:
+        abort(404)
+    detay = ogretmen_giris_haftalari(ogretmen_id, [h["basi"] for h in haftalar]) if secili else []
+    etiket = {h["basi"]: h["etiket"] for h in haftalar}
+    for d in detay:
+        d["etiket"] = etiket.get(d["hafta"], d["hafta"])
+    return render_template(
+        "giris_raporu.html",
+        donem=donem,
+        haftalar=haftalar,
+        hafta=hafta,
+        satirlar=satirlar,
+        secili=secili,
+        detay=detay,
+        giren=sum(1 for s in satirlar if s["girdi"]),
+    )
+
+
+@app.route("/giris-raporu.xlsx")
+@giris_zorunlu
+def giris_raporu_excel():
+    if not _giris_raporu_acik_mi():
+        abort(403)
+    if not OPENPYXL_OK:
+        return "Excel için openpyxl gerekir.", 500
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    donem = request.args.get("donem", type=int)
+    if donem not in (1, 2):
+        donem = _bugunun_donemi()
+    haftalar = _donem_haftalari(donem)
+    hafta = _secili_hafta(haftalar, (request.args.get("hafta") or "").strip())
+    ogretmen_id = request.args.get("ogretmen", type=int)
+    satirlar = ogretmen_giris_raporu(hafta)
+    if ogretmen_id:
+        satirlar = [s for s in satirlar if s["id"] == ogretmen_id]
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Öğretmen girişi"
+    baslik = ["Öğretmen", "Durum", "Kitap işareti", "Getirme işareti", "Ödev işareti", "Sınıf", "Ders metni"]
+    ws.append(baslik)
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="0F2744")
+        cell.alignment = Alignment(horizontal="center")
+    for s in satirlar:
+        ws.append([
+            s["ad_soyad"],
+            "Girdi" if s["girdi"] else "Girmedi",
+            s["kitap"], s["getirme"], s["odev"], s["sinif_sayisi"], s["ders_yazdi"],
+        ])
+    if ogretmen_id:
+        ws2 = wb.create_sheet("Haftalar")
+        ws2.append(["Hafta", "Durum", "Kitap", "Getirme", "Ödev", "Ders metni"])
+        for d in ogretmen_giris_haftalari(ogretmen_id, [h["basi"] for h in haftalar]):
+            ws2.append([
+                d["hafta"],
+                "Girdi" if d["girdi"] else "Girmedi",
+                d["kitap"], d["getirme"], d["odev"],
+                "Evet" if d["ders_yazdi"] else "Hayır",
+            ])
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    ad = "tum-ogretmenler" if not ogretmen_id else f"ogretmen-{ogretmen_id}"
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=f"giris-raporu-{hafta}-{ad}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @app.route("/odev/ekle", methods=["POST"])

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Giriş raporu{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-6xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
+  <header class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">Yalnızca yönetim</p>
+    <h1 class="mt-1 text-2xl font-black text-slate-950">Öğretmen veri girişi</h1>
+    <p class="mt-1 text-sm text-slate-500">Haftalık kitap, getirme ve ödev işaretini kim girdi, kim girmedi.</p>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for d in (1, 2) %}
+      <a href="{{ url_for('giris_raporu', donem=d) }}"
+         class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if donem == d else 'border border-slate-200 bg-slate-50' }}">{{ d }}. dönem</a>
+      {% endfor %}
+      <a href="{{ url_for('giris_raporu', donem=donem, hafta=hafta) }}"
+         class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-emerald-700 text-white' if not secili else 'border border-slate-200' }}">Tüm öğretmenler</a>
+      {% for s in satirlar %}
+      <a href="{{ url_for('giris_raporu', donem=donem, hafta=hafta, ogretmen=s.id) }}"
+         class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-sky-700 text-white' if secili and secili.id == s.id else 'border border-slate-200' }}">{{ s.ad_soyad }}</a>
+      {% endfor %}
+    </div>
+  </header>
+
+  <section class="mt-3 flex gap-2 overflow-x-auto">
+    {% for h in haftalar %}
+    <a href="{{ url_for('giris_raporu', donem=donem, hafta=h.basi, ogretmen=secili.id if secili else none) }}"
+       class="shrink-0 rounded-xl border px-3 py-2 text-center text-sm font-black {{ 'border-emerald-600 bg-emerald-600 text-white' if h.basi == hafta else 'border-slate-200 bg-white' }}">
+      <div class="text-[10px] uppercase">{{ h.no }}. hafta</div>{{ h.etiket }}
+    </a>
+    {% endfor %}
+  </section>
+
+  {% set goster = [secili] if secili else satirlar %}
+  {% set tepe = goster|map(attribute='kitap')|list + goster|map(attribute='odev')|list %}
+  {% set tavan = tepe|max if tepe else 1 %}
+  <style>
+    .cubuk { height: 12px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+    .cubuk > i { display: block; height: 100%; width: 0; border-radius: inherit; animation: dol .9s ease forwards; }
+    @keyframes dol { to { width: var(--w); } }
+  </style>
+
+  <section class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-[11px] font-black uppercase text-slate-400">Öğretmen</div><div class="text-3xl font-black">{{ goster|length }}</div></div>
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div class="text-[11px] font-black uppercase text-emerald-700">Girdi</div><div class="text-3xl font-black text-emerald-800">{{ goster|selectattr('girdi')|list|length }}</div></div>
+    <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4"><div class="text-[11px] font-black uppercase text-rose-700">Girmedi</div><div class="text-3xl font-black text-rose-800">{{ goster|rejectattr('girdi')|list|length }}</div></div>
+  </section>
+
+  <div class="mt-3 flex flex-wrap gap-2">
+    <a class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white"
+       href="{{ url_for('giris_raporu_excel', donem=donem, hafta=hafta, ogretmen=secili.id if secili else none) }}">Excel indir</a>
+  </div>
+
+  <section class="mt-3 space-y-3">
+    {% for s in goster %}
+    {% set toplam = s.kitap + s.getirme + s.odev %}
+    {% set w = ((toplam * 100 / tavan)|round(0) if tavan else 0) %}
+    <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-black text-slate-950">{{ s.ad_soyad }}</h2>
+        <span class="rounded-full px-3 py-1 text-xs font-black {{ 'bg-emerald-100 text-emerald-800' if s.girdi else 'bg-rose-100 text-rose-800' }}">{{ 'Girdi' if s.girdi else 'Girmedi' }}</span>
+      </div>
+      <p class="mt-1 text-xs text-slate-500">Kitap {{ s.kitap }} · getirme {{ s.getirme }} · ödev {{ s.odev }} · {{ s.sinif_sayisi }} sınıf · ders metni {{ s.ders_yazdi }}</p>
+      <div class="cubuk mt-3"><i class="{{ 'bg-emerald-500' if s.girdi else 'bg-rose-400' }}" style="--w: {{ w if s.girdi else 8 }}%"></i></div>
+    </article>
+    {% endfor %}
+  </section>
+
+  {% if secili %}
+  <section class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+    <h2 class="font-black">{{ secili.ad_soyad }} · dönem haftaları</h2>
+    <div class="mt-3 space-y-2">
+      {% for d in detay %}
+      <div class="flex items-center gap-3 text-sm">
+        <span class="w-28 shrink-0 font-bold">{{ d.etiket }}</span>
+        <div class="cubuk flex-1"><i class="{{ 'bg-sky-500' if d.girdi else 'bg-slate-300' }}" style="--w: {{ 100 if d.girdi else 6 }}%"></i></div>
+        <span class="w-16 text-right text-xs font-black {{ 'text-emerald-700' if d.girdi else 'text-rose-600' }}">{{ 'Girdi' if d.girdi else 'Yok' }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}
