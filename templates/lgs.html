@@ -6,8 +6,21 @@
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
     <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS koçluk</p>
     <h1 class="mt-1 text-2xl font-black">Öğrenci seç</h1>
-        <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Deneme sonucunu siz girersiniz; öğrenci ve veli analizi görür.</p>
+        <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Deneme sonucunu kurum listesinden yükleyin ya da öğrenciye siz girin.</p>
   </header>
+  {% with mesajlar = get_flashed_messages() %}
+  {% if mesajlar %}
+  <p class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-900">{{ mesajlar[0] }}</p>
+  {% endif %}
+  {% endwith %}
+  <form method="post" action="{{ url_for('lgs_kurum_pdf') }}" enctype="multipart/form-data" class="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+    <div class="min-w-0 flex-1">
+      <p class="text-sm font-black">Kurum deneme listesi</p>
+      <p class="text-xs text-slate-500">Puan sıralı PDF. İsimler öğrenciyle eşleşir, doğru yanlış ve net kendiliğinden yazılır.</p>
+    </div>
+    <input type="file" name="pdf" accept="application/pdf" required class="text-sm">
+    <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Listeyi al</button>
+  </form>
   <div class="mt-4 space-y-3">
     {% for g in gruplar %}
     <details class="rounded-2xl border border-slate-200 bg-white p-4" {% if loop.first %}open{% endif %}>
@@ -310,7 +323,7 @@
   <div class="mt-3 space-y-2">
     {% for d in denemeler %}
     <article class="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
-      <div class="flex justify-between gap-2 font-black"><span>{{ d.ad }}</span><span>{{ d.net }} net</span></div>
+      <div class="flex justify-between gap-2 font-black"><span>{{ d.ad }}</span><span>{{ d.net }} net{% if d.puan %} · {{ d.puan }} puan{% endif %}</span></div>
       <p class="text-xs text-slate-500">{{ d.tarih }}</p>
       <p class="mt-1 text-slate-600">{% for s in d.dersler %}{{ s.ders }} {{ s.dogru }}/{{ s.yanlis }}/{{ s.bos }} ({{ s.net }}){% if not loop.last %} · {% endif %}{% endfor %}</p>
     </article>
@@ -403,7 +416,7 @@
   <div class="mt-3 space-y-2">
     {% for d in denemeler %}
     <article class="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
-      <div class="flex justify-between gap-2 font-black"><span>{{ d.ad }}</span><span>{{ d.net }} net</span></div>
+      <div class="flex justify-between gap-2 font-black"><span>{{ d.ad }}</span><span>{{ d.net }} net{% if d.puan %} · {{ d.puan }} puan{% endif %}</span></div>
       <p class="text-xs text-slate-500">{{ d.tarih }}</p>
       <p class="mt-1 text-slate-600">{% for s in d.dersler %}{{ s.ders }} {{ s.dogru }}/{{ s.yanlis }}/{{ s.bos }} ({{ s.net }}){% if not loop.last %} · {% endif %}{% endfor %}</p>
     </article>

@@ -72,12 +72,12 @@ from database import (
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet, haftalik_odev_bildir,
     haftalik_odev_onceki_kopyala, sinif_hafta_durumu, onay_bekleyenler,
     ogrenci_adi_ara, donem_karne_satirlari,
-    veli_haber_yeni, devamsizlik_kaydet, devamsizlik_sinif, devamsizlik_ogrenci,
+    veli_haber_yeni, veli_haber_ekle, devamsizlik_kaydet, devamsizlik_sinif, devamsizlik_ogrenci,
     odev_foto_kaydet, veli_duzen,
     sinif_okuma_kitaplari,
     ogrenci_verilen_kitaplar,
     lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_bildir, lgs_gorev_onayla,
-    lgs_gunluk_ekle, lgs_gunluk_liste, lgs_gunluk_onayla, lgs_deneme_ekle, lgs_denemeler,
+    lgs_gunluk_ekle, lgs_gunluk_liste, lgs_gunluk_onayla, lgs_deneme_ekle, lgs_deneme_onek_sil, lgs_denemeler,
     LGS_DERSLER, LGS_GUNLER, LGS_SORU_SAYISI,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
@@ -3480,15 +3480,10 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
             s["ders"]: float(s["net"] or 0)
             for s in (onceki["dersler"] if onceki else [])
         }
-        for ders in LGS_DERSLER:
-            tavan = LGS_SORU_SAYISI[ders]
+        for ders in list(LGS_DERSLER) + [d for d in girilen if d not in LGS_DERSLER]:
+            tavan = LGS_SORU_SAYISI.get(ders, 10)
             satir = girilen.get(ders)
             if not satir:
-                ders_satir.append({
-                    "ders": ders, "girildi": False, "dogru": 0, "yanlis": 0, "bos": 0,
-                    "net": 0, "tavan": tavan, "yuzde": 0, "fark": None,
-                    "ipucu": "Bu ders bu denemede yazılmadı.",
-                })
                 continue
             net = float(satir["net"] or 0)
             yuzde = max(0, min(100, round(net * 100 / tavan))) if tavan else 0
@@ -3642,6 +3637,48 @@ def _lgs_ogrenci(ogrenci_id: int) -> dict:
 @giris_zorunlu
 def lgs():
     return _lgs_ekran(veli=False)
+
+
+@app.route("/lgs/kurum-pdf", methods=["POST"])
+@giris_zorunlu
+def lgs_kurum_pdf():
+    dosya = request.files.get("pdf")
+    if not dosya or not (dosya.filename or "").lower().endswith(".pdf"):
+        flash("Kurum listesinin PDF dosyasını seçin.", "warning")
+        return redirect(url_for("lgs"))
+    from deneme_kurum import kurum_pdf_oku, kurum_ogrenci_esle
+
+    try:
+        liste = kurum_pdf_oku(dosya.read(), dosya.filename or "")
+    except Exception:
+        flash("Bu PDF okunamadı. Kurum puan sıralı listesi olmalı.", "warning")
+        return redirect(url_for("lgs"))
+    if not liste["satirlar"]:
+        flash("Listede öğrenci satırı bulunamadı.", "warning")
+        return redirect(url_for("lgs"))
+    ogrenciler = []
+    for sinif in aktif_sube_siniflari():
+        for ogr in sinif_ogrencileri(sinif["id"]):
+            ogrenciler.append({"id": ogr["id"], "ad_soyad": ogr["ad_soyad"], "sinif_adi": sinif["sinif_adi"]})
+    sonuc = kurum_ogrenci_esle(liste["satirlar"], ogrenciler)
+    for satir in sonuc["eslesen"]:
+        lgs_deneme_onek_sil(satir["ogrenci_id"], "7. Sınıf Süreç İzleme%")
+        lgs_deneme_onek_sil(satir["ogrenci_id"], liste["ad"])
+        lgs_deneme_ekle(
+            satir["ogrenci_id"], liste["ad"], liste["tarih"], satir["dersler"],
+            puan=satir.get("puan"), siki=False,
+        )
+        veli_haber_ekle(
+            satir["ogrenci_id"],
+            f"{liste['ad']} sonucu geldi. Toplam net {satir['net']}.",
+        )
+    mesaj = f"{liste['ad']}: {len(sonuc['eslesen'])} öğrenci yazıldı."
+    if sonuc["kalan"]:
+        mesaj += " Eşleşmeyen: " + ", ".join(sonuc["kalan"][:8])
+        if len(sonuc["kalan"]) > 8:
+            mesaj += f" ve {len(sonuc['kalan']) - 8} kişi daha"
+    flash(mesaj, "success")
+    return redirect(url_for("lgs"))
 
 
 @app.route("/veli/lgs", methods=["GET", "POST"])

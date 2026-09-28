@@ -1200,6 +1200,9 @@ def _lgs_init(con: sqlite3.Connection) -> None:
     profil_kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_profil)").fetchall()}
     if "hedef_net" not in profil_kolon:
         con.execute("ALTER TABLE lgs_profil ADD COLUMN hedef_net INTEGER NOT NULL DEFAULT 0")
+    deneme_kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_deneme)").fetchall()}
+    if "puan" not in deneme_kolon:
+        con.execute("ALTER TABLE lgs_deneme ADD COLUMN puan REAL")
     con.commit()
 
 
@@ -1358,33 +1361,40 @@ def _lgs_net(dogru: int, yanlis: int) -> float:
     return round(max(0, int(dogru)) - max(0, int(yanlis)) / 3, 2)
 
 
-def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict]) -> dict:
+def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], puan: float | None = None, siki: bool = True) -> dict:
     ad = (ad or "").strip()
     if not ad:
         return {"ok": False, "hata": "Deneme adı yazın."}
     temiz = []
     for d in dersler:
         ders = d.get("ders")
-        if ders not in LGS_SORU_SAYISI:
+        tavan = LGS_SORU_SAYISI.get(ders)
+        if tavan is None and ders == "Sosyal Bilgiler":
+            tavan = 10
+        if tavan is None:
             continue
         dogru = max(0, int(d.get("dogru") or 0))
         yanlis = max(0, int(d.get("yanlis") or 0))
         bos = max(0, int(d.get("bos") or 0))
-        tavan = LGS_SORU_SAYISI[ders]
-        if dogru + yanlis + bos > tavan:
+        if siki and dogru + yanlis + bos > tavan:
             return {
                 "ok": False,
                 "hata": f"{ders} en fazla {tavan} soru. Doğru, yanlış ve boş toplamı bunu geçemez.",
             }
-        if dogru + yanlis + bos:
-            temiz.append((ders, dogru, yanlis, bos, _lgs_net(dogru, yanlis)))
+        if d.get("net") is None:
+            if dogru + yanlis + bos == 0:
+                continue
+            net = _lgs_net(dogru, yanlis)
+        else:
+            net = round(float(d.get("net")), 2)
+        temiz.append((ders, dogru, yanlis, bos, net))
     if not temiz:
         return {"ok": False, "hata": "En az bir derse doğru, yanlış veya boş yazın."}
     con = _conn()
     _lgs_init(con)
     cur = con.execute(
-        "INSERT INTO lgs_deneme (ogrenci_id, ad, tarih) VALUES (?, ?, ?)",
-        (ogrenci_id, ad[:80], (tarih or "")[:10]),
+        "INSERT INTO lgs_deneme (ogrenci_id, ad, tarih, puan) VALUES (?, ?, ?, ?)",
+        (ogrenci_id, ad[:80], (tarih or "")[:10], puan),
     )
     deneme_id = cur.lastrowid
     for ders, dogru, yanlis, bos, net in temiz:
@@ -1400,11 +1410,25 @@ def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict]) -
     return {"ok": True, "id": deneme_id}
 
 
+def lgs_deneme_onek_sil(ogrenci_id: int, onek: str) -> None:
+    con = _conn()
+    _lgs_init(con)
+    ids = [r["id"] for r in con.execute(
+        "SELECT id FROM lgs_deneme WHERE ogrenci_id = ? AND ad LIKE ?",
+        (ogrenci_id, onek),
+    ).fetchall()]
+    for deneme_id in ids:
+        con.execute("DELETE FROM lgs_deneme_ders WHERE deneme_id = ?", (deneme_id,))
+        con.execute("DELETE FROM lgs_deneme WHERE id = ?", (deneme_id,))
+    con.commit()
+    con.close()
+
+
 def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
     con = _conn()
     _lgs_init(con)
     denemeler = [dict(r) for r in con.execute(
-        "SELECT id, ad, tarih FROM lgs_deneme WHERE ogrenci_id = ? ORDER BY tarih DESC, id DESC LIMIT ?",
+        "SELECT id, ad, tarih, puan FROM lgs_deneme WHERE ogrenci_id = ? ORDER BY tarih DESC, id DESC LIMIT ?",
         (ogrenci_id, limit),
     ).fetchall()]
     for d in denemeler:
@@ -5059,6 +5083,18 @@ def haftalik_takip_isaretle(
     con.commit()
     con.close()
     return {"ok": True, "alan": alan, "deger": deger}
+
+
+def veli_haber_ekle(ogrenci_id: int, metin: str) -> None:
+    con = _conn()
+    _haftalik_takip_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        "INSERT INTO veli_haber (ogrenci_id, metin, zaman) VALUES (?, ?, ?)",
+        (ogrenci_id, (metin or "")[:240], now),
+    )
+    con.commit()
+    con.close()
 
 
 def veli_haber_yeni(ogrenci_id: int, son_id: int) -> list[dict]:
