@@ -4395,6 +4395,10 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_haftalik_takip_sinif_hafta "
         "ON haftalik_takip(sinif_id, hafta_basi)"
     )
+    takip_kolon = {r[1] for r in con.execute("PRAGMA table_info(haftalik_takip)").fetchall()}
+    for ad in ("kitap_adi", "odev_ders", "odev_not"):
+        if ad not in takip_kolon:
+            con.execute(f"ALTER TABLE haftalik_takip ADD COLUMN {ad} TEXT NOT NULL DEFAULT ''")
     con.execute("""
         CREATE TABLE IF NOT EXISTS haftalik_odev_bilgi (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4429,7 +4433,7 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
     _haftalik_takip_init(con)
     rows = con.execute(
         """
-        SELECT ogrenci_id, kitap_okuma, kitap_getirme, odev_durum
+        SELECT ogrenci_id, kitap_okuma, kitap_getirme, odev_durum, kitap_adi, odev_ders, odev_not
         FROM haftalik_takip
         WHERE sinif_id = ? AND hafta_basi = ?
         """,
@@ -4441,6 +4445,9 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
             "kitap_okuma": r["kitap_okuma"] or "",
             "kitap_getirme": r["kitap_getirme"] or "",
             "odev_durum": r["odev_durum"] or "",
+            "kitap_adi": r["kitap_adi"] or "",
+            "odev_ders": r["odev_ders"] or "",
+            "odev_not": r["odev_not"] or "",
         }
         for r in rows
     }
@@ -4502,6 +4509,40 @@ def haftalik_odev_bilgi_kaydet(
     con.commit()
     con.close()
     return {"ok": True}
+
+
+_HAFTALIK_METIN = {"kitap_adi": 160, "odev_ders": 80, "odev_not": 300}
+
+
+def haftalik_takip_metin(
+    sinif_id: int, ogrenci_id: int, hafta_basi: str, alan: str, deger: str, ogretmen_id: int
+) -> dict:
+    if alan not in _HAFTALIK_METIN:
+        return {"ok": False, "sebep": "alan"}
+    deger = (deger or "").strip()[: _HAFTALIK_METIN[alan]]
+    con = _conn()
+    _haftalik_takip_init(con)
+    ogr = con.execute("SELECT sinif_id FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
+    if not ogr or int(ogr["sinif_id"]) != int(sinif_id):
+        con.close()
+        return {"ok": False, "sebep": "ogrenci"}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        f"""
+        INSERT INTO haftalik_takip
+            (ogrenci_id, sinif_id, hafta_basi, {alan}, ogretmen_id, guncelleme)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(ogrenci_id, hafta_basi) DO UPDATE SET
+            sinif_id = excluded.sinif_id,
+            {alan} = excluded.{alan},
+            ogretmen_id = excluded.ogretmen_id,
+            guncelleme = excluded.guncelleme
+        """,
+        (ogrenci_id, sinif_id, hafta_basi, deger, ogretmen_id, now),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True, "alan": alan, "deger": deger}
 
 
 def ogretmen_giris_raporu(hafta_basi: str) -> list[dict]:

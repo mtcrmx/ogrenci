@@ -329,8 +329,9 @@ async function ogrenciBilgiAc(id) {
   document.getElementById('bilgi-odev').textContent = h.odev_durum || '—';
   const ders = h.ders ? h.ders : 'Ders yazılmadı';
   const kitap = h.kitap_adi ? h.kitap_adi : 'Kitap seçilmedi';
-  const acik = h.aciklama ? h.aciklama : 'Ödev açıklaması yok';
-  document.getElementById('bilgi-odev-metin').textContent = ders + ' — ' + kitap + ' — ' + acik;
+  const acik = h.aciklama ? h.aciklama : '';
+  const birey = (h.birey_ders || h.birey_not) ? ('Özel: ' + (h.birey_ders || '') + ' ' + (h.birey_not || '')) : '';
+  document.getElementById('bilgi-odev-metin').textContent = [ders, kitap, acik, birey].filter(Boolean).join(' — ');
   const notlar = j.notlar || [];
   document.getElementById('bilgi-notlar').innerHTML = notlar.length
     ? notlar.map(notSatiri).join('')

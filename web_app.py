@@ -68,7 +68,7 @@ from database import (
     evrak_takip_ozetleri, evrak_takip_matrisi,
     kitap_okuma_veli_kaydet, kitap_okuma_ogrenci_gecmis, kitap_okuma_ogretmen_listesi,
     kitap_okuma_onayla, kitap_okuma_rapor,
-    haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu,
+    haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu, haftalik_takip_metin,
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet,
     sinif_okuma_kitaplari,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
@@ -351,8 +351,10 @@ def _odev_bildirimi_verisi(hedef: str) -> dict | None:
             haftalik = {
                 "ders": bilgi.get("ders") or "",
                 "aciklama": bilgi.get("aciklama") or "",
-                "kitap_adi": bilgi.get("kitap_adi") or "",
+                "kitap_adi": kayit.get("kitap_adi") or "",
                 "durum": etiket.get(kayit.get("odev_durum") or "", ""),
+                "birey_ders": kayit.get("odev_ders") or "",
+                "birey_not": kayit.get("odev_not") or "",
             }
     if not son_odev and not any(haftalik.values()):
         return None
@@ -2305,6 +2307,11 @@ def veli_panel():
     bugun = date.today()
     hafta_basi = (bugun - timedelta(days=bugun.weekday())).isoformat()
     kayit = haftalik_takip_sinif(int(o["sinif_id"]), hafta_basi).get(int(ogrenci_id), {})
+    odev_ogr = {
+        "kitap_adi": kayit.get("kitap_adi") or "",
+        "odev_ders": kayit.get("odev_ders") or "",
+        "odev_not": kayit.get("odev_not") or "",
+    }
     etiket = {
         "okudu": "Okudu", "okumadi": "Okumadı",
         "getirdi": "Getirdi", "getirmedi": "Getirmedi",
@@ -2323,6 +2330,7 @@ def veli_panel():
         avatar=_avatar(o),
         hafta=hafta,
         odev=odev,
+        odev_ogr=odev_ogr,
         notlar=notlar,
         kitaplar=sinif_okuma_kitaplari(o.get("sinif_adi") or ""),
     )
@@ -2885,6 +2893,9 @@ def haftalik_takip():
         ogr["kitap_okuma"] = durum.get("kitap_okuma", "")
         ogr["kitap_getirme"] = durum.get("kitap_getirme", "")
         ogr["odev_durum"] = durum.get("odev_durum", "")
+        ogr["kitap_adi"] = durum.get("kitap_adi", "")
+        ogr["odev_ders"] = durum.get("odev_ders", "")
+        ogr["odev_not"] = durum.get("odev_not", "")
     ozet = {
         "okudu": sum(1 for o in ogrenciler if o["kitap_okuma"] == "okudu"),
         "getirdi": sum(1 for o in ogrenciler if o["kitap_getirme"] == "getirdi"),
@@ -2925,6 +2936,32 @@ def haftalik_takip_isaret():
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
         return jsonify({"ok": False}), 403
     sonuc = haftalik_takip_isaretle(
+        sinif_id, ogrenci_id, hafta, alan, deger, session["ogretmen_id"]
+    )
+    kod = 200 if sonuc.get("ok") else 400
+    return jsonify(sonuc), kod
+
+
+@app.route("/haftalik-takip/metin", methods=["POST"])
+@giris_zorunlu
+def haftalik_takip_metin_route():
+    payload = request.get_json(silent=True) or request.form
+    sinif_id = int(payload.get("sinif_id") or 0)
+    ogrenci_id = int(payload.get("ogrenci_id") or 0)
+    hafta = str(payload.get("hafta") or "").strip()
+    alan = str(payload.get("alan") or "").strip()
+    deger = str(payload.get("deger") or "")
+    if not _haftalik_takip_yetki(sinif_id) or not hafta:
+        return jsonify({"ok": False}), 403
+    if alan == "kitap_adi" and deger.strip():
+        from database import _conn as _db
+        con = _db()
+        row = con.execute("SELECT sinif_adi FROM siniflar WHERE id = ?", (sinif_id,)).fetchone()
+        con.close()
+        izin = {k["ad"] for k in sinif_okuma_kitaplari(row["sinif_adi"] if row else "")}
+        if deger.strip() not in izin:
+            return jsonify({"ok": False, "sebep": "kitap"}), 400
+    sonuc = haftalik_takip_metin(
         sinif_id, ogrenci_id, hafta, alan, deger, session["ogretmen_id"]
     )
     kod = 200 if sonuc.get("ok") else 400
@@ -3602,7 +3639,9 @@ def api_ogretmen_ogrenci_ozet(ogrenci_id: int):
             "odev_durum": etiket.get(kayit.get("odev_durum") or "", "İşaretlenmedi"),
             "ders": bilgi.get("ders") or "",
             "aciklama": bilgi.get("aciklama") or "",
-            "kitap_adi": bilgi.get("kitap_adi") or "",
+            "kitap_adi": kayit.get("kitap_adi") or "",
+            "birey_ders": kayit.get("odev_ders") or "",
+            "birey_not": kayit.get("odev_not") or "",
         },
         "notlar": ogretmen_notlari_veli_ozeti(int(ogrenci_id), 6),
     })
