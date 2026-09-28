@@ -90,6 +90,7 @@ from database import (
     ders_programi_grid, aktif_sube_siniflari,
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
+from lgs_konular import LGS_KONULAR
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes, pdf_odev_raporu_bytes
 from rapor_analiz import (
     aylik_tik_sayilari,
@@ -3170,6 +3171,13 @@ def lgs():
 
     ogr = _lgs_ogrenci(oid)
     gorevler = lgs_gorevler(oid, hafta)
+    konu_zor = {
+        (ders, k["konu"]): k["zorluk"]
+        for ders, liste in LGS_KONULAR.items()
+        for k in liste
+    }
+    for g in gorevler:
+        g["zorluk"] = konu_zor.get((g["ders"], g["konu"]), "")
     bugun_gun = date.today().weekday()
     bugun_gorev = [g for g in gorevler if int(g["gun"]) == bugun_gun]
     tamam = sum(1 for g in gorevler if g["tamamlandi"])
@@ -3186,6 +3194,7 @@ def lgs():
         gorevler=gorevler,
         gunler=LGS_GUNLER,
         dersler=LGS_DERSLER,
+        konular=LGS_KONULAR,
         bugun_gorev=bugun_gorev,
         bugun_ad=LGS_GUNLER[bugun_gun],
         tamam=tamam,

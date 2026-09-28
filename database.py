@@ -1118,10 +1118,9 @@ def ogrenci_verilen_kitaplar(ogrenci_id: int) -> list[dict]:
 
 
 LGS_DERSLER = (
-    "Türkçe",
     "Matematik",
+    "Türkçe",
     "Fen Bilimleri",
-    "Sosyal Bilgiler",
     "T.C. İnkılap Tarihi",
     "Din Kültürü",
     "İngilizce",
