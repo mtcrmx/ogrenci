@@ -79,25 +79,50 @@
     <input name="hedef_soru" type="number" min="0" placeholder="Soru" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
     <button class="rounded-xl bg-slate-900 px-3 py-2 text-sm font-black text-white sm:col-span-5">Görevi ekle</button>
   </form>
-  <div class="mt-3 space-y-3">
-    {% for i in range(7) %}
-    {% set gun_gorev = gorevler|selectattr('gun', 'equalto', i)|list %}
-    <section class="rounded-2xl border border-slate-200 bg-white p-4">
-      <h2 class="font-black">{{ gunler[i] }}</h2>
-      {% for g in gun_gorev %}
-      <form method="post" class="mt-2 flex items-center gap-3 text-sm">
-        <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-        <input type="hidden" name="islem" value="toggle">
-        <input type="hidden" name="gorev_id" value="{{ g.id }}">
-        <button class="h-6 w-6 rounded-md border {{ 'border-emerald-600 bg-emerald-600 text-white' if g.tamamlandi else 'border-slate-300' }}">{{ '✓' if g.tamamlandi else '' }}</button>
-        <span class="{{ 'line-through text-slate-400' if g.tamamlandi else '' }}">{{ g.ders }} · {{ g.konu or 'Konu yok' }} · {{ g.hedef_soru }} soru</span>
-      </form>
-      {% else %}
-      <p class="mt-1 text-sm text-slate-400">Görev yok.</p>
-      {% endfor %}
-    </section>
-    {% endfor %}
-  </div>
+  <style>
+    @keyframes lgs-belir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .lgs-hucre { animation: lgs-belir .45s ease both; animation-delay: calc(var(--i) * 50ms); }
+    .lgs-gorev { animation: lgs-belir .4s ease both; animation-delay: calc(var(--i) * 70ms); }
+  </style>
+  <section class="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <table class="w-full min-w-[920px] border-collapse text-sm">
+      <thead>
+        <tr>
+          {% for i in range(7) %}
+          <th class="lgs-hucre border-b border-slate-200 px-3 py-3 text-left text-xs font-black uppercase tracking-wide {{ 'bg-amber-50 text-amber-800' if gunler[i] == bugun_ad else 'bg-slate-50 text-slate-500' }}" style="--i: {{ i }}">
+            {{ gunler[i] }}{% if gunler[i] == bugun_ad %} · bugün{% endif %}
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          {% for i in range(7) %}
+          {% set gun_gorev = gorevler|selectattr('gun', 'equalto', i)|list %}
+          <td class="lgs-hucre align-top border-r border-slate-100 px-2 py-2 last:border-r-0 {{ 'bg-amber-50/40' if gunler[i] == bugun_ad else '' }}" style="--i: {{ i }}">
+            {% for g in gun_gorev %}
+            <form method="post" class="lgs-gorev mb-2 rounded-xl border px-2 py-2 {{ 'border-emerald-200 bg-emerald-50' if g.tamamlandi else 'border-slate-200 bg-white' }}" style="--i: {{ loop.index }}">
+              <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+              <input type="hidden" name="islem" value="toggle">
+              <input type="hidden" name="gorev_id" value="{{ g.id }}">
+              <button type="submit" class="flex w-full items-start gap-2 text-left">
+                <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-black {{ 'border-emerald-600 bg-emerald-600 text-white' if g.tamamlandi else 'border-slate-300 text-transparent' }}">✓</span>
+                <span>
+                  <span class="block font-black {{ 'text-slate-400 line-through' if g.tamamlandi else 'text-slate-900' }}">{{ g.ders }}</span>
+                  <span class="block text-xs text-slate-500">{{ g.konu or 'Konu yazılmadı' }}</span>
+                  <span class="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-600">{{ g.hedef_soru }} soru</span>
+                </span>
+              </button>
+            </form>
+            {% else %}
+            <p class="px-1 py-6 text-center text-xs font-bold text-slate-300">Boş</p>
+            {% endfor %}
+          </td>
+          {% endfor %}
+        </tr>
+      </tbody>
+    </table>
+  </section>
   {% elif bolum == 'gunluk' %}
   <form method="post" class="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
     <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
