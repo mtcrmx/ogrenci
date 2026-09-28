@@ -72,6 +72,8 @@ from database import (
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet, haftalik_odev_bildir,
     haftalik_odev_onceki_kopyala, sinif_hafta_durumu, onay_bekleyenler,
     ogrenci_adi_ara, donem_karne_satirlari,
+    veli_haber_yeni, devamsizlik_kaydet, devamsizlik_sinif, devamsizlik_ogrenci,
+    odev_foto_kaydet, veli_duzen,
     sinif_okuma_kitaplari,
     ogrenci_verilen_kitaplar,
     lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_bildir, lgs_gorev_onayla,
@@ -2328,6 +2330,24 @@ def veli_giris():
     return render_template("veli_login.html", hata=hata)
 
 
+def _deneme_hikaye(denemeler: list) -> str:
+    if len(denemeler) < 2:
+        return ""
+    yeni = {s["ders"]: float(s["net"] or 0) for s in denemeler[0]["dersler"]}
+    eski = {s["ders"]: float(s["net"] or 0) for s in denemeler[-1]["dersler"]}
+    secim = None
+    for ders, net in yeni.items():
+        if ders not in eski:
+            continue
+        fark = round(net - eski[ders], 2)
+        if secim is None or fark > secim[0]:
+            secim = (fark, ders, eski[ders], net)
+    adet = len(denemeler)
+    if not secim or secim[0] <= 0:
+        return f"{adet} deneme var. Son toplam {denemeler[0]['net']} net."
+    return f"{adet} denemede {secim[1]} {secim[2]} netten {secim[3]} nete çıktı."
+
+
 @app.route("/veli")
 def veli_panel():
     ogrenci_id = session.get("veli_ogrenci_id")
@@ -2386,8 +2406,32 @@ def veli_panel():
         bekleyen_gunluk = sum(1 for g in gunluk if int(g.get("goruldu") or 0) == 0)
     else:
         kocluk = None
+        denemeler = []
         bekleyen_lgs = []
         bekleyen_gunluk = 0
+    gunler_tr = ("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar")
+    ders_adi = odev_ogr["odev_ders"] or odev.get("ders") or ""
+    is_metni = hafta["odev_karar_not"] or odev_ogr["odev_not"] or odev.get("aciklama") or ""
+    if ders_adi or is_metni:
+        aksam = f"Bu akşam {ders_adi or 'ödev'}: {is_metni or 'öğretmenin yazdığı iş'}."
+    else:
+        aksam = "Bu akşam için yazılı bir ödev yok."
+    kitap_satir = hafta["kitap_adi"] or "kitap seçilmedi"
+    if hafta["kitap_adi"]:
+        kitap_satir += f" {hafta['kitap_sayfa']}" + (f"/{katalog}" if katalog else "") + " sayfa"
+    sabah = f"Bugün {gunler_tr[bugun.weekday()]}. Kitap: {kitap_satir}. Ödev: {ders_adi or 'yazılmadı'}. {is_metni}".strip()
+    duzen = veli_duzen(int(ogrenci_id))
+    if duzen["fark"] > 0:
+        duzen_metin = f"Bu ay {duzen['bu_ay']} hafta tam ödev, geçen ay {duzen['gecen_ay']}. {duzen['fark']} hafta daha düzenli."
+    elif duzen["fark"] < 0:
+        duzen_metin = f"Bu ay {duzen['bu_ay']} hafta tam ödev, geçen ay {duzen['gecen_ay']}."
+    else:
+        duzen_metin = f"Bu ay {duzen['bu_ay']} hafta tam ödev. Geçen ayla aynı tempoda."
+    hikaye = _deneme_hikaye(denemeler) if lgs_acik else ""
+    if lgs_acik and kocluk and kocluk.get("hedef_net") and kocluk.get("son"):
+        hikaye = (hikaye + f" Hedef {kocluk['hedef_net']} net, kalan {kocluk['kalan']}.").strip()
+    yarin = (bugun + timedelta(days=1)).isoformat()
+    hafta["odev_foto"] = bool(kayit.get("odev_foto"))
     satirlar = [f"{o['ad_soyad']} · {o['sinif_adi']} · bu hafta"]
     if hafta["kitap_adi"]:
         sayfa = f"{hafta['kitap_sayfa']}/{katalog} sayfa" if katalog else f"{hafta['kitap_sayfa']} sayfa"
@@ -2406,6 +2450,7 @@ def veli_panel():
         satirlar.append("LGS onay bekleyen: " + ", ".join(f"{g['ders']} {g.get('konu') or ''}".strip() for g in bekleyen_lgs))
     if bekleyen_gunluk:
         satirlar.append(f"Günlük kayıt onay bekliyor: {bekleyen_gunluk}")
+    satirlar.append(aksam)
     return render_template(
         "veli_panel.html",
         ogrenci=o,
@@ -2418,7 +2463,95 @@ def veli_panel():
         kocluk=kocluk,
         lgs_acik=lgs_acik,
         ozet_metin="\n".join(satirlar),
+        aksam=aksam,
+        sabah=sabah,
+        duzen=duzen,
+        duzen_metin=duzen_metin,
+        hikaye=hikaye,
+        yarin=yarin,
+        yarin_yok=devamsizlik_ogrenci(int(ogrenci_id), yarin),
     )
+
+
+@app.route("/veli/haber")
+def veli_haber():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return jsonify({"ok": False}), 401
+    son = request.args.get("son", type=int) or 0
+    return jsonify({"ok": True, "haber": veli_haber_yeni(int(oid), son)})
+
+
+@app.route("/veli/yok", methods=["POST"])
+def veli_yok():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    yarin = (date.today() + timedelta(days=1)).isoformat()
+    devamsizlik_kaydet(int(oid), yarin)
+    return redirect(url_for("veli_panel"))
+
+
+@app.route("/veli/belge")
+def veli_belge():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    o = _ogrenci_bul(int(oid))
+    if not o:
+        return redirect(url_for("veli_giris"))
+    return render_template("veli_belge.html", ogrenci=o, kitaplar=veli_duzen(int(oid))["okunan"])
+
+
+@app.route("/veli/odev-foto")
+def veli_odev_foto():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        abort(403)
+    bugun = date.today()
+    hafta = (bugun - timedelta(days=bugun.weekday())).isoformat()
+    o = _ogrenci_bul(int(oid))
+    if not o:
+        abort(404)
+    kayit = haftalik_takip_sinif(int(o["sinif_id"]), hafta).get(int(oid), {})
+    ad = kayit.get("odev_foto") or ""
+    if not ad.startswith(f"{int(oid)}_"):
+        abort(404)
+    klasor = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yuklemeler", "odev")
+    yol = os.path.join(klasor, os.path.basename(ad))
+    if not os.path.isfile(yol):
+        abort(404)
+    return send_file(yol)
+
+
+@app.route("/haftalik-takip/foto", methods=["POST"])
+@giris_zorunlu
+def haftalik_foto():
+    sinif_id = request.form.get("sinif_id", type=int) or 0
+    ogrenci_id = request.form.get("ogrenci_id", type=int) or 0
+    hafta = (request.form.get("hafta") or "").strip()
+    donem = request.form.get("donem", type=int) or 1
+    if not _haftalik_takip_yetki(sinif_id) or not hafta or not ogrenci_id:
+        abort(403)
+    dosya = request.files.get("foto")
+    hedef = url_for("haftalik_takip", sinif=sinif_id, hafta=hafta, donem=donem)
+    if not dosya or not dosya.filename:
+        return redirect(hedef)
+    uzanti = os.path.splitext(dosya.filename)[1].lower()
+    if uzanti not in {".jpg", ".jpeg", ".png", ".webp"}:
+        flash("Fotoğraf jpg, png veya webp olmalı.", "warning")
+        return redirect(hedef)
+    veri = dosya.read(4_000_001)
+    if len(veri) > 4_000_000:
+        flash("Fotoğraf 4 MB'dan küçük olmalı.", "warning")
+        return redirect(hedef)
+    klasor = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yuklemeler", "odev")
+    os.makedirs(klasor, exist_ok=True)
+    ad = f"{ogrenci_id}_{hafta}{uzanti}"
+    with open(os.path.join(klasor, ad), "wb") as cikti:
+        cikti.write(veri)
+    odev_foto_kaydet(sinif_id, ogrenci_id, hafta, ad, session["ogretmen_id"])
+    return redirect(hedef)
 
 
 @app.route("/veli/cikis")
@@ -2638,6 +2771,7 @@ def dashboard():
     hafta_bugun = (date.today() - timedelta(days=date.today().weekday())).isoformat()
     eksik_siniflar = sinif_hafta_durumu(hafta_bugun)
     kutu = onay_bekleyenler(hafta_bugun)
+    gelmeyen = devamsizlik_sinif(aktif["id"], date.today().isoformat()) if aktif else []
     ids_ogr = [o["id"] for o in ogrenciler]
     olumlu_h = ogrenci_olumlu_tik_sayilari(ids_ogr)
     roz_harita = ogrenci_rozetleri_yayin_map(ids_ogr, limit=6)
@@ -2660,7 +2794,8 @@ def dashboard():
                            toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id),
                            eksik_siniflar=eksik_siniflar,
                            onay_sayisi=len(kutu["odevler"]) + len(kutu["gorevler"]) + len(kutu["gunluk"]),
-                           onay_geciken=kutu["geciken"])
+                           onay_geciken=kutu["geciken"],
+                           gelmeyen=gelmeyen)
 
 
 @app.route("/veri")
@@ -3006,6 +3141,9 @@ def haftalik_takip():
         ogr["odev_karar_not"] = durum.get("odev_karar_not", "")
         ogr["kitap_sayfa"] = durum.get("kitap_sayfa", 0)
         ogr["ogretmen_adi"] = durum.get("ogretmen_adi", "")
+        ogr["odev_foto"] = durum.get("odev_foto", "")
+    bugun_iso = date.today().isoformat()
+    yok_bugun = {int(k["id"]) for k in devamsizlik_sinif(aktif["id"], bugun_iso)} if aktif else set()
     ozet = {
         "okudu": sum(1 for o in ogrenciler if o["kitap_okuma"] == "okudu"),
         "getirdi": sum(1 for o in ogrenciler if o["kitap_getirme"] == "getirdi"),
@@ -3026,6 +3164,7 @@ def haftalik_takip():
         ozet=ozet,
         odev=haftalik_odev_bilgi_getir(aktif["id"], hafta) if aktif and hafta else {"ders": "", "aciklama": "", "kitap_adi": ""},
         kitaplar=sinif_okuma_kitaplari(aktif["sinif_adi"]) if aktif else [],
+        yok_bugun=yok_bugun,
     )
 
 

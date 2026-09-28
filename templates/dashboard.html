@@ -74,6 +74,12 @@
       {% endfor %}
     </section>
     {% endif %}
+    {% if gelmeyen is defined and gelmeyen %}
+    <section class="mx-3 mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm sm:mx-4">
+      <p class="font-black text-rose-900">Bugün gelmeyecek</p>
+      <p class="mt-1 text-rose-800">{% for k in gelmeyen %}{{ k.ad_soyad }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+    </section>
+    {% endif %}
 
     {% if aktif %}
     <!-- Üst başlık + araçlar -->

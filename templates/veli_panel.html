@@ -40,7 +40,8 @@
     .duyuru[hidden] { display: none; }
     .duyuru-kutu { position: relative; width: min(520px, 100%); }
     .duyuru-kutu img { display: block; width: 100%; height: auto; max-height: 88vh; object-fit: contain; border-radius: 16px; background: #fff; }
-    #kulup-kapat { position: static; width: auto; margin: 0; border-radius: 999px; padding: 8px 14px; background: #0f2744; }
+    #kutlama { animation: alkis 1s ease both; }
+    @keyframes alkis { from { transform: scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
     .duyuru-alt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; background: #fff; border-radius: 12px; padding: 10px 12px; }
     .duyuru-sec { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; }
     .duyuru-sec input { width: 18px; height: 18px; margin: 0; }
@@ -63,6 +64,52 @@
     <div class="soluk">Veli paneli</div>
     <h1>{{ ogrenci.ad_soyad }}</h1>
     <div class="soluk">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}</div>
+    <p class="soluk" style="margin-top:8px">Anne ve baba aynı öğrenci numarasıyla girer. İkisi de aynı ödevi, kararı ve duyuruyu görür.</p>
+  </section>
+
+  <section class="kart" id="sabah-ozet" data-sabah="{{ sabah }}">
+    <div class="soluk">Sabah özeti</div>
+    <p style="margin:8px 0 0;font-weight:800">{{ sabah }}</p>
+    <button type="button" id="haber-izin" style="width:auto;margin-top:10px">Telefonda haber ver</button>
+  </section>
+
+  <section class="kart" style="background:#fffbeb;border-color:#fcd34d">
+    <div class="soluk">Bu akşam</div>
+    <p style="margin:8px 0 0;font-size:18px;font-weight:800">{{ aksam }}</p>
+    {% if hafta.odev_foto %}
+    <img src="{{ url_for('veli_odev_foto') }}" alt="Öğretmenin eklediği ödev fotoğrafı" style="margin-top:10px;width:100%;border-radius:12px">
+    {% endif %}
+  </section>
+
+  <section class="kart">
+    <div class="soluk">Kendi temposu</div>
+    <p style="margin:8px 0 0;font-weight:800">{{ duzen_metin }}</p>
+    {% if duzen.seri >= 4 %}
+    <p id="kutlama" style="margin:10px 0 0;font-weight:800;color:#047857">{{ duzen.seri }} haftadır ödev tam. Alkış!</p>
+    {% elif duzen.seri %}
+    <p class="soluk" style="margin-top:8px">Üst üste {{ duzen.seri }} hafta tam ödev.</p>
+    {% endif %}
+    {% if duzen.okunan %}
+    <a class="rapor" href="{{ url_for('veli_belge') }}" style="display:inline-block;margin-top:12px">Kitap belgesi</a>
+    {% endif %}
+  </section>
+
+  {% if hikaye %}
+  <section class="kart">
+    <div class="soluk">Denemenin hikâyesi</div>
+    <p style="margin:8px 0 0;font-weight:800">{{ hikaye }}</p>
+  </section>
+  {% endif %}
+
+  <section class="kart">
+    <div class="soluk">Yarın</div>
+    {% if yarin_yok %}
+    <p style="margin:8px 0 0;font-weight:800">Yarın gelmeyecek bilgisi öğretmene iletildi.</p>
+    {% else %}
+    <form method="post" action="{{ url_for('veli_yok') }}">
+      <button type="submit">Yarın gelmeyecek</button>
+    </form>
+    {% endif %}
   </section>
 
   <section class="kart">
@@ -234,6 +281,64 @@ document.getElementById("hafta-kopyala").addEventListener("click", function () {
     alert("Paylaş menüsünden Ana Ekrana Ekle seçin.");
   });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
+})();
+(function () {
+  const izin = document.getElementById("haber-izin");
+  if (izin && "Notification" in window && Notification.permission === "granted") izin.hidden = true;
+  if (izin) izin.addEventListener("click", function () {
+    if ("Notification" in window) Notification.requestPermission().then(function (sonuc) {
+      if (sonuc === "granted") izin.hidden = true;
+    });
+  });
+  function cal() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const kazanc = ctx.createGain();
+      osc.frequency.value = 880;
+      kazanc.gain.value = 0.05;
+      osc.connect(kazanc);
+      kazanc.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.18);
+    } catch (e) {}
+  }
+  function goster(metin) {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ tur: "haber", baslik: "Öğrenci takip", metin: metin });
+    } else if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("Öğrenci takip", { body: metin });
+    }
+    cal();
+  }
+  let son = Number(localStorage.getItem("veli-haber-son") || "0");
+  async function bak() {
+    const yanit = await fetch("/veli/haber?son=" + son);
+    if (!yanit.ok) return;
+    const veri = await yanit.json();
+    (veri.haber || []).forEach(function (h) {
+      goster(h.metin);
+      son = Math.max(son, h.id);
+    });
+    localStorage.setItem("veli-haber-son", String(son));
+  }
+  bak();
+  setInterval(bak, 25000);
+  const sabah = document.getElementById("sabah-ozet");
+  if (sabah && "Notification" in window) {
+    const bugun = new Date().toISOString().slice(0, 10);
+    function sabahHaber() {
+      if (Notification.permission !== "granted") return;
+      if (localStorage.getItem("sabah-ozet") === bugun) return;
+      localStorage.setItem("sabah-ozet", bugun);
+      goster(sabah.dataset.sabah);
+    }
+    const simdi = new Date();
+    const hedef = new Date();
+    hedef.setHours(7, 30, 0, 0);
+    if (simdi >= hedef) sabahHaber();
+    else setTimeout(sabahHaber, hedef - simdi);
+  }
 })();
 </script>
 </body>

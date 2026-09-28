@@ -4728,6 +4728,25 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
             con.execute(f"ALTER TABLE haftalik_takip ADD COLUMN {ad} TEXT NOT NULL DEFAULT ''")
     if "kitap_sayfa" not in takip_kolon:
         con.execute("ALTER TABLE haftalik_takip ADD COLUMN kitap_sayfa INTEGER NOT NULL DEFAULT 0")
+    if "odev_foto" not in takip_kolon:
+        con.execute("ALTER TABLE haftalik_takip ADD COLUMN odev_foto TEXT NOT NULL DEFAULT ''")
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS veli_haber (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            metin TEXT NOT NULL,
+            zaman TEXT NOT NULL
+        )
+    """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS devamsizlik_bildirim (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            tarih TEXT NOT NULL,
+            zaman TEXT NOT NULL,
+            UNIQUE(ogrenci_id, tarih)
+        )
+    """)
     con.execute("""
         CREATE TABLE IF NOT EXISTS haftalik_odev_bilgi (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4764,7 +4783,7 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
         """
         SELECT h.ogrenci_id, h.kitap_okuma, h.kitap_getirme, h.odev_durum, h.kitap_adi,
                h.odev_ders, h.odev_not, h.odev_bildirim, h.odev_karar_not, h.kitap_sayfa,
-               h.odev_bildirim_tarih, COALESCE(g.ad_soyad, '') AS ogretmen_adi
+               h.odev_bildirim_tarih, h.odev_foto, COALESCE(g.ad_soyad, '') AS ogretmen_adi
         FROM haftalik_takip h
         LEFT JOIN ogretmenler g ON g.id = h.ogretmen_id
         WHERE h.sinif_id = ? AND h.hafta_basi = ?
@@ -4783,6 +4802,7 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
             "odev_bildirim": r["odev_bildirim"] or "",
             "odev_karar_not": r["odev_karar_not"] or "",
             "kitap_sayfa": int(r["kitap_sayfa"] or 0),
+            "odev_foto": r["odev_foto"] or "",
             "odev_bildirim_tarih": r["odev_bildirim_tarih"] or "",
             "ogretmen_adi": r["ogretmen_adi"] or "",
         }
@@ -4986,6 +5006,21 @@ def ogretmen_giris_haftalari(ogretmen_id: int, haftalar: list[str]) -> list[dict
     return liste
 
 
+def _veli_haber_yaz(con: sqlite3.Connection, ogrenci_id: int, alan: str, deger: str, now: str) -> None:
+    if not ((alan == "odev_durum" and deger in {"tam", "eksik", "yok"}) or (alan == "kitap_okuma" and deger == "okudu")):
+        return
+    ad = con.execute("SELECT ad_soyad FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
+    ilk = ((ad["ad_soyad"] if ad else "Öğrenci").split() or ["Öğrenci"])[0]
+    if alan == "odev_durum":
+        metin = f"{ilk} için bu haftaki ödev {deger} işaretlendi."
+    else:
+        metin = f"{ilk} kitabı okudu olarak işaretlendi. Belgeyi açabilirsin."
+    con.execute(
+        "INSERT INTO veli_haber (ogrenci_id, metin, zaman) VALUES (?, ?, ?)",
+        (ogrenci_id, metin, now),
+    )
+
+
 def haftalik_takip_isaretle(
     sinif_id: int,
     ogrenci_id: int,
@@ -5020,9 +5055,129 @@ def haftalik_takip_isaretle(
         """,
         (ogrenci_id, sinif_id, hafta_basi, deger, ogretmen_id, now),
     )
+    _veli_haber_yaz(con, ogrenci_id, alan, deger, now)
     con.commit()
     con.close()
     return {"ok": True, "alan": alan, "deger": deger}
+
+
+def veli_haber_yeni(ogrenci_id: int, son_id: int) -> list[dict]:
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = [dict(r) for r in con.execute(
+        "SELECT id, metin, zaman FROM veli_haber WHERE ogrenci_id = ? AND id > ? ORDER BY id",
+        (ogrenci_id, max(0, int(son_id or 0))),
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def devamsizlik_kaydet(ogrenci_id: int, tarih: str) -> None:
+    con = _conn()
+    _haftalik_takip_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        """
+        INSERT INTO devamsizlik_bildirim (ogrenci_id, tarih, zaman) VALUES (?, ?, ?)
+        ON CONFLICT(ogrenci_id, tarih) DO UPDATE SET zaman = excluded.zaman
+        """,
+        (ogrenci_id, tarih[:10], now),
+    )
+    con.commit()
+    con.close()
+
+
+def devamsizlik_sinif(sinif_id: int, tarih: str) -> list[dict]:
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT o.id, o.ad_soyad, o.ogr_no
+        FROM devamsizlik_bildirim d
+        JOIN ogrenciler o ON o.id = d.ogrenci_id
+        WHERE o.sinif_id = ? AND d.tarih = ?
+        ORDER BY o.ad_soyad
+        """,
+        (sinif_id, tarih[:10]),
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def devamsizlik_ogrenci(ogrenci_id: int, tarih: str) -> bool:
+    con = _conn()
+    _haftalik_takip_init(con)
+    row = con.execute(
+        "SELECT 1 FROM devamsizlik_bildirim WHERE ogrenci_id = ? AND tarih = ?",
+        (ogrenci_id, tarih[:10]),
+    ).fetchone()
+    con.close()
+    return row is not None
+
+
+def odev_foto_kaydet(sinif_id: int, ogrenci_id: int, hafta_basi: str, yol: str, ogretmen_id: int) -> dict:
+    con = _conn()
+    _haftalik_takip_init(con)
+    ogr = con.execute("SELECT sinif_id FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
+    if not ogr or int(ogr["sinif_id"]) != int(sinif_id):
+        con.close()
+        return {"ok": False}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        """
+        INSERT INTO haftalik_takip (ogrenci_id, sinif_id, hafta_basi, odev_foto, ogretmen_id, guncelleme)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(ogrenci_id, hafta_basi) DO UPDATE SET
+            odev_foto = excluded.odev_foto,
+            guncelleme = excluded.guncelleme
+        """,
+        (ogrenci_id, sinif_id, hafta_basi, yol, ogretmen_id, now),
+    )
+    ad = con.execute("SELECT ad_soyad FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
+    ilk = ((ad["ad_soyad"] if ad else "Öğrenci").split() or ["Öğrenci"])[0]
+    con.execute(
+        "INSERT INTO veli_haber (ogrenci_id, metin, zaman) VALUES (?, ?, ?)",
+        (ogrenci_id, f"{ilk} için ödev fotoğrafı eklendi.", now),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def veli_duzen(ogrenci_id: int) -> dict:
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = con.execute(
+        """
+        SELECT hafta_basi, odev_durum, kitap_okuma, kitap_adi
+        FROM haftalik_takip WHERE ogrenci_id = ?
+        ORDER BY hafta_basi DESC
+        """,
+        (ogrenci_id,),
+    ).fetchall()
+    con.close()
+    seri = 0
+    basladi = False
+    for r in rows:
+        if not r["odev_durum"]:
+            if basladi:
+                break
+            continue
+        basladi = True
+        if r["odev_durum"] == "tam":
+            seri += 1
+        else:
+            break
+    bugun = datetime.now()
+    bu = bugun.strftime("%Y-%m")
+    gecen_ay = (bugun.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    bu_ay = sum(1 for r in rows if (r["hafta_basi"] or "").startswith(bu) and r["odev_durum"] == "tam")
+    gecen = sum(1 for r in rows if (r["hafta_basi"] or "").startswith(gecen_ay) and r["odev_durum"] == "tam")
+    okunan = []
+    for r in rows:
+        if r["kitap_okuma"] == "okudu" and r["kitap_adi"] and r["kitap_adi"] not in okunan:
+            okunan.append(r["kitap_adi"])
+    return {"seri": seri, "bu_ay": bu_ay, "gecen_ay": gecen, "fark": bu_ay - gecen, "okunan": okunan}
 
 
 def haftalik_odev_bildir(ogrenci_id: int, hafta_basi: str, yaptim: bool) -> dict:
@@ -5347,6 +5502,7 @@ def haftalik_takip_toplu(
             """,
             (int(row["id"]), sinif_id, hafta_basi, deger, ogretmen_id, now),
         )
+        _veli_haber_yaz(con, int(row["id"]), alan, deger, now)
     con.commit()
     con.close()
     return {"ok": True, "adet": len(ogrenciler), "alan": alan, "deger": deger}
