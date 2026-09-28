@@ -587,7 +587,7 @@
         <a href="{{ url_for('onay_kutusu') }}" class="mobile-link"><span class="nav-mark mark-amber">O</span><span>Onay kutusu — yaptım diyenler</span></a>
         <a href="{{ url_for('karne', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('karne') }}" class="mobile-link"><span class="nav-mark mark-slate">N</span><span>Dönem karnesi — kitap, ödev, LGS</span></a>
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — kitap ve ödev raporu</span></a>
-        <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — yalnızca 8. sınıflar</span></a>
+        <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — 8. sınıf deneme girişi</span></a>
         {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
         <a href="{{ url_for('giris_raporu') }}" class="mobile-link"><span class="nav-mark mark-slate">G</span><span>Giriş raporu — kim veri girdi</span></a>
         <a href="{{ url_for('ogrenci_ara') }}" class="mobile-link"><span class="nav-mark mark-blue">S</span><span>Öğrenci ara</span></a>

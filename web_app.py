@@ -3529,18 +3529,18 @@ def _lgs_ekran(veli: bool):
         ogr = _lgs_ogrenci(oid) if oid else None
         if ogr and ogr.get("sinif_adi") not in {"8/A", "8/B"}:
             return redirect(url_for("lgs"))
-    bolum = request.values.get("bolum") or ("ozet" if veli else "program")
-    izinli = {"ozet", "program", "gunluk", "deneme"} if veli else {"program", "deneme"}
+    bolum = request.values.get("bolum") or ("ozet" if veli else "deneme")
+    izinli = {"ozet", "gunluk", "deneme"} if veli else {"deneme"}
     if bolum not in izinli:
-        bolum = "ozet" if veli else "program"
+        bolum = "ozet" if veli else "deneme"
     if request.method == "POST":
         islem = request.form.get("islem")
         if veli and islem == "toggle":
             lgs_gorev_bildir(oid, request.form.get("gorev_id", type=int) or 0)
-            bolum = "program"
+            bolum = "ozet"
         elif not veli and islem == "onay":
             lgs_gorev_onayla(oid, request.form.get("gorev_id", type=int) or 0, request.form.get("karar") or "")
-            bolum = "program"
+            bolum = "deneme"
         elif veli and islem == "gunluk":
             lgs_gunluk_ekle(
                 oid,
@@ -3554,22 +3554,7 @@ def _lgs_ekran(veli: bool):
             bolum = "gunluk"
         elif not veli and islem == "hedef":
             lgs_profil_kaydet(oid, request.form.get("hedef", ""), request.form.get("hedef_net", type=int) or 0)
-        elif not veli and islem == "gorev":
-            lgs_gorev_ekle(
-                oid, hafta,
-                request.form.get("gun", type=int) or 0,
-                request.form.get("ders", ""),
-                request.form.get("konu", ""),
-                request.form.get("hedef_soru", type=int) or 0,
-            )
-            bolum = "program"
-        elif not veli and islem == "oneri":
-            konu = (request.form.get("konu") or "").strip()
-            ders_adi = (request.form.get("ders") or "").strip()
-            if any(k["konu"] == konu for k in LGS_KONULAR.get(ders_adi, [])):
-                sonraki = (date.fromisoformat(hafta) + timedelta(days=7)).isoformat()
-                lgs_gorev_ekle(oid, sonraki, 0, ders_adi, konu, 15)
-            bolum = "program"
+            bolum = "deneme"
         elif not veli and islem == "deneme":
             dersler = []
             for ders in LGS_DERSLER:
