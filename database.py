@@ -1038,7 +1038,57 @@ def initialize_db():
     _sinif_listesini_uygula(con)
     _ogretmen_kadrosunu_senkronize(con)
     _ders_programini_senkronize(con)
+    _okuma_kitaplarini_senkronize(con)
     con.close()
+
+
+def _okuma_kitaplarini_senkronize(con: sqlite3.Connection) -> None:
+    from okuma_kitaplari import OKUMA_KITAPLARI
+
+    _haftalik_takip_init(con)
+    con.execute("DROP TABLE IF EXISTS okuma_kitaplari")
+    con.execute("""
+        CREATE TABLE okuma_kitaplari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            seviye INTEGER NOT NULL,
+            ad TEXT NOT NULL,
+            yazar TEXT NOT NULL DEFAULT '',
+            yayinevi TEXT NOT NULL DEFAULT '',
+            sayfa INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    for seviye, liste in OKUMA_KITAPLARI.items():
+        for ad, yazar, yayinevi, sayfa in liste:
+            con.execute(
+                """
+                INSERT INTO okuma_kitaplari (seviye, ad, yazar, yayinevi, sayfa)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (seviye, ad, yazar, yayinevi, int(sayfa)),
+            )
+    con.commit()
+
+
+def sinif_okuma_kitaplari(sinif_adi: str) -> list[dict]:
+    seviye = None
+    ad = (sinif_adi or "").strip()
+    if ad and ad[0] in "5678":
+        seviye = int(ad[0])
+    if not seviye:
+        return []
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT ad, yazar, yayinevi, sayfa
+        FROM okuma_kitaplari
+        WHERE seviye = ?
+        ORDER BY ad
+        """,
+        (seviye,),
+    ).fetchall()]
+    con.close()
+    return rows
 
 
 def _yardimci_tablolar_init(con: sqlite3.Connection) -> None:
@@ -4357,6 +4407,20 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
             UNIQUE(sinif_id, hafta_basi)
         )
     """)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(haftalik_odev_bilgi)").fetchall()}
+    if "kitap_adi" not in cols:
+        con.execute("ALTER TABLE haftalik_odev_bilgi ADD COLUMN kitap_adi TEXT NOT NULL DEFAULT ''")
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS okuma_kitaplari (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            seviye INTEGER NOT NULL,
+            ad TEXT NOT NULL,
+            yazar TEXT NOT NULL DEFAULT '',
+            yayinevi TEXT NOT NULL DEFAULT '',
+            sayfa INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(seviye, ad, yazar)
+        )
+    """)
     con.commit()
 
 
@@ -4387,30 +4451,41 @@ def haftalik_odev_bilgi_getir(sinif_id: int, hafta_basi: str) -> dict:
     _haftalik_takip_init(con)
     row = con.execute(
         """
-        SELECT ders, aciklama FROM haftalik_odev_bilgi
+        SELECT ders, aciklama, kitap_adi FROM haftalik_odev_bilgi
         WHERE sinif_id = ? AND hafta_basi = ?
         """,
         (sinif_id, hafta_basi),
     ).fetchone()
     con.close()
     if not row:
-        return {"ders": "", "aciklama": ""}
-    return {"ders": row["ders"] or "", "aciklama": row["aciklama"] or ""}
+        return {"ders": "", "aciklama": "", "kitap_adi": ""}
+    return {
+        "ders": row["ders"] or "",
+        "aciklama": row["aciklama"] or "",
+        "kitap_adi": row["kitap_adi"] or "",
+    }
 
 
 def haftalik_odev_bilgi_kaydet(
-    sinif_id: int, hafta_basi: str, ders: str, aciklama: str, ogretmen_id: int
+    sinif_id: int,
+    hafta_basi: str,
+    ders: str,
+    aciklama: str,
+    ogretmen_id: int,
+    kitap_adi: str = "",
 ) -> dict:
     con = _conn()
     _haftalik_takip_init(con)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     con.execute(
         """
-        INSERT INTO haftalik_odev_bilgi (sinif_id, hafta_basi, ders, aciklama, ogretmen_id, guncelleme)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO haftalik_odev_bilgi
+            (sinif_id, hafta_basi, ders, aciklama, kitap_adi, ogretmen_id, guncelleme)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(sinif_id, hafta_basi) DO UPDATE SET
             ders = excluded.ders,
             aciklama = excluded.aciklama,
+            kitap_adi = excluded.kitap_adi,
             ogretmen_id = excluded.ogretmen_id,
             guncelleme = excluded.guncelleme
         """,
@@ -4419,6 +4494,7 @@ def haftalik_odev_bilgi_kaydet(
             hafta_basi,
             (ders or "").strip()[:80],
             (aciklama or "").strip()[:500],
+            (kitap_adi or "").strip()[:160],
             ogretmen_id,
             now,
         ),

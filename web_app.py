@@ -70,6 +70,7 @@ from database import (
     kitap_okuma_onayla, kitap_okuma_rapor,
     haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu,
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet,
+    sinif_okuma_kitaplari,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
     tik_kayitlari_siniflarda,
@@ -2304,6 +2305,7 @@ def veli_panel():
         hafta=hafta,
         odev=odev,
         notlar=notlar,
+        kitaplar=sinif_okuma_kitaplari(o.get("sinif_adi") or ""),
     )
 
 
@@ -2881,7 +2883,8 @@ def haftalik_takip():
         hafta=hafta,
         ogrenciler=ogrenciler,
         ozet=ozet,
-        odev=haftalik_odev_bilgi_getir(aktif["id"], hafta) if aktif and hafta else {"ders": "", "aciklama": ""},
+        odev=haftalik_odev_bilgi_getir(aktif["id"], hafta) if aktif and hafta else {"ders": "", "aciklama": "", "kitap_adi": ""},
+        kitaplar=sinif_okuma_kitaplari(aktif["sinif_adi"]) if aktif else [],
     )
 
 
@@ -2940,6 +2943,7 @@ def haftalik_odev_bilgi_route():
         request.form.get("ders", ""),
         request.form.get("aciklama", ""),
         session["ogretmen_id"],
+        request.form.get("kitap_adi", ""),
     )
     return redirect(url_for("haftalik_takip", sinif=sinif_id, hafta=hafta, donem=donem))
 
@@ -3579,6 +3583,7 @@ def api_ogretmen_ogrenci_ozet(ogrenci_id: int):
             "odev_durum": etiket.get(kayit.get("odev_durum") or "", "İşaretlenmedi"),
             "ders": bilgi.get("ders") or "",
             "aciklama": bilgi.get("aciklama") or "",
+            "kitap_adi": bilgi.get("kitap_adi") or "",
         },
         "notlar": ogretmen_notlari_veli_ozeti(int(ogrenci_id), 6),
     })

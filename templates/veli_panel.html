@@ -56,6 +56,7 @@
   <section class="kart">
     <div class="soluk">Bu hafta</div>
     <p style="margin:8px 0 0;font-weight:800">{{ odev.ders or 'Ders yazılmadı' }}</p>
+    <p style="margin:6px 0 0;font-weight:800">{{ odev.kitap_adi or 'Bu haftanın kitabı seçilmedi' }}</p>
     <p class="soluk" style="margin-top:4px">{{ odev.aciklama or 'Bu hafta için ödev açıklaması yok.' }}</p>
     <div class="uc" style="margin-top:10px">
       <div class="kutu"><span class="soluk">Kitap okuma</span><b>{{ hafta.kitap_okuma }}</b></div>
@@ -63,6 +64,18 @@
       <div class="kutu"><span class="soluk">Ödev durumu</span><b>{{ hafta.odev_durum }}</b></div>
     </div>
   </section>
+
+  {% if kitaplar %}
+  <section class="kart">
+    <strong>{{ ogrenci.sinif_adi }} kitapları</strong>
+    <p class="soluk">Bu sınıfın düzeyine uygun {{ kitaplar|length }} kitap.</p>
+    <ul style="max-height:280px;overflow:auto;margin:8px 0 0;padding-left:18px">
+      {% for k in kitaplar %}
+      <li><b>{{ k.ad }}</b> <span class="soluk">{{ k.yazar }} · {{ k.sayfa }} sayfa</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
 
   <div class="iki">
     <section class="kart">

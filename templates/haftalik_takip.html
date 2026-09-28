@@ -64,16 +64,32 @@
 
   <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
     <h2 class="text-sm font-black text-slate-950">Bu haftanın ödevi</h2>
-    <p class="mt-1 text-xs text-slate-500">Hangi dersten verildiğini ve ne yapılacağını yazın. Veli bu metni görür.</p>
+    <p class="mt-1 text-xs text-slate-500">Sınıfın düzeyine uygun kitabı seçin; dersi ve ödevi yazın. Veli bunu görür.</p>
     <form method="post" action="{{ url_for('haftalik_odev_bilgi_route') }}" class="mt-3 grid gap-2 sm:grid-cols-[180px_1fr_auto]">
       <input type="hidden" name="sinif_id" value="{{ aktif.id }}">
       <input type="hidden" name="hafta" value="{{ hafta }}">
       <input type="hidden" name="donem" value="{{ donem }}">
-      <input name="ders" value="{{ odev.ders }}" placeholder="Ders (ör. Matematik)" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+      <select name="kitap_adi" class="rounded-xl border border-slate-300 px-3 py-2 text-sm sm:col-span-3">
+        <option value="">Bu haftanın kitabı ({{ kitaplar|length }} kitap)</option>
+        {% for k in kitaplar %}
+        <option value="{{ k.ad }}" {% if odev.kitap_adi == k.ad %}selected{% endif %}>{{ k.ad }} — {{ k.yazar }} · {{ k.sayfa }} sayfa</option>
+        {% endfor %}
+      </select>
+      <input name="ders" value="{{ odev.ders }}" placeholder="Ders (ör. Türkçe)" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
       <input name="aciklama" value="{{ odev.aciklama }}" placeholder="Ödev: sayfa, konu, ne yapılacak" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
       <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Kaydet</button>
     </form>
   </section>
+  {% if kitaplar %}
+  <details class="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <summary class="cursor-pointer text-sm font-black text-slate-950">{{ aktif.sinif_adi }} kitapları ({{ kitaplar|length }})</summary>
+    <ul class="mt-3 max-h-72 space-y-1 overflow-auto text-sm">
+      {% for k in kitaplar %}
+      <li><span class="font-bold">{{ k.ad }}</span> <span class="text-slate-500">{{ k.yazar }} · {{ k.yayinevi }} · {{ k.sayfa }} s.</span></li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
 
   <section class="mt-3 flex flex-wrap gap-2">
     <button type="button" class="toplu rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white" data-alan="kitap_okuma" data-deger="okudu">Tümü okudu</button>
