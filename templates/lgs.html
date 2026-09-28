@@ -6,7 +6,7 @@
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
     <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS koçluk</p>
     <h1 class="mt-1 text-2xl font-black">Öğrenci seç</h1>
-    <p class="mt-1 text-sm text-slate-300">Program, günlük soru kaydı ve deneme analizi seçilen öğrenciye yazılır.</p>
+    <p class="mt-1 text-sm text-slate-300">Hedef ve haftalık programı siz girersiniz. Öğrenci bu planı veli panelindeki LGS ekranında görür.</p>
   </header>
   <div class="mt-4 space-y-3">
     {% for g in gruplar %}
@@ -24,11 +24,15 @@
   <header class="rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-900 p-5 text-white shadow-sm">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS koçluk</p>
+        <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{{ 'Öğrenci LGS' if veli else 'Öğretmen veri girişi' }}</p>
         <h1 class="mt-1 text-2xl font-black">{{ selam }}, {{ ogrenci.ad_soyad.split()[0] }}</h1>
         <p class="mt-1 text-sm text-indigo-100">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% if profil.hedef %} · Hedef: {{ profil.hedef }}{% endif %}</p>
       </div>
+      {% if veli %}
+      <a href="{{ url_for('veli_panel') }}" class="rounded-xl bg-white/10 px-3 py-2 text-xs font-black">Veli paneli</a>
+      {% else %}
       <a href="{{ url_for('lgs') }}" class="rounded-xl bg-white/10 px-3 py-2 text-xs font-black">Öğrenci değiştir</a>
+      {% endif %}
     </div>
     <div class="mt-4">
       <div class="mb-1 flex justify-between text-xs font-bold text-indigo-100">
@@ -42,24 +46,21 @@
   </header>
 
   <nav class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+    {% if veli %}
     {% for kod, ad in [('ozet','Özet'), ('program','Program'), ('gunluk','Günlük'), ('deneme','Deneme')] %}
-    <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum=kod) }}"
+    <a href="{{ url_for('veli_lgs', bolum=kod) }}"
        class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
     {% endfor %}
+    {% else %}
+    <span class="rounded-xl bg-slate-900 px-3 py-2 text-center text-sm font-black text-white sm:col-span-4">Haftalık program girişi</span>
+    {% endif %}
   </nav>
 
-  {% if bolum == 'ozet' %}
-  <section class="mt-3 grid gap-3 sm:grid-cols-2">
-    <form method="post" class="rounded-2xl border border-slate-200 bg-white p-4">
-      <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-      <input type="hidden" name="islem" value="hedef">
-      <label class="text-xs font-black text-slate-500">LGS / okul hedefi
-        <input name="hedef" value="{{ profil.hedef }}" placeholder="Örn. Fen lisesi, 450 puan" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-      </label>
-      <button class="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Hedefi kaydet</button>
-    </form>
-    <section class="rounded-2xl border border-slate-200 bg-white p-4">
-      <h2 class="font-black">Bugünkü görevler</h2>
+  {% if bolum == 'ozet' and veli %}
+  <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+      <h2 class="font-black">Hedef</h2>
+      <p class="mt-1 text-sm text-slate-600">{{ profil.hedef or 'Öğretmen henüz hedef yazmadı.' }}</p>
+      <h2 class="mt-4 font-black">Bugünkü görevler</h2>
       <ul class="mt-2 space-y-2 text-sm">
         {% for g in bugun_gorev %}
         <li class="flex justify-between gap-2"><span>{{ g.ders }} · {{ g.konu or 'Konu yok' }}</span><span class="font-black {{ 'text-emerald-700' if g.tamamlandi else 'text-amber-600' }}">{{ 'Bitti' if g.tamamlandi else 'Bekliyor' }}</span></li>
@@ -67,9 +68,17 @@
         <li class="text-slate-500">Bugün için görev yok. Program sekmesinden ekleyin.</li>
         {% endfor %}
       </ul>
-    </section>
   </section>
   {% elif bolum == 'program' %}
+  {% if not veli %}
+  <form method="post" class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+    <input type="hidden" name="islem" value="hedef">
+    <label class="text-xs font-black text-slate-500">LGS / okul hedefi
+      <input name="hedef" value="{{ profil.hedef }}" placeholder="Örn. Fen lisesi, 450 puan" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+    </label>
+    <button class="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Hedefi kaydet</button>
+  </form>
   <form method="post" class="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-5">
     <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
     <input type="hidden" name="islem" value="gorev">
@@ -109,6 +118,10 @@
     doldur();
   })();
   </script>
+  {% endif %}
+  {% if veli %}
+  <p class="mt-3 text-sm text-slate-600">Öğretmenin yazdığı program. Bitirdiğin göreve dokun.</p>
+  {% endif %}
   <style>
     @keyframes lgs-belir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
     .lgs-hucre { animation: lgs-belir .45s ease both; animation-delay: calc(var(--i) * 50ms); }
@@ -131,11 +144,15 @@
           {% set gun_gorev = gorevler|selectattr('gun', 'equalto', i)|list %}
           <td class="lgs-hucre align-top border-r border-slate-100 px-2 py-2 last:border-r-0 {{ 'bg-amber-50/40' if gunler[i] == bugun_ad else '' }}" style="--i: {{ i }}">
             {% for g in gun_gorev %}
-            <form method="post" class="lgs-gorev mb-2 rounded-xl border px-2 py-2 {{ 'border-emerald-200 bg-emerald-50' if g.tamamlandi else 'border-slate-200 bg-white' }}" style="--i: {{ loop.index }}">
-              <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-              <input type="hidden" name="islem" value="toggle">
-              <input type="hidden" name="gorev_id" value="{{ g.id }}">
-              <button type="submit" class="flex w-full items-start gap-2 text-left">
+            <div class="lgs-gorev mb-2 rounded-xl border px-2 py-2 {{ 'border-emerald-200 bg-emerald-50' if g.tamamlandi else 'border-slate-200 bg-white' }}" style="--i: {{ loop.index }}">
+              {% if veli %}
+              <form method="post">
+                <input type="hidden" name="islem" value="toggle">
+                <input type="hidden" name="gorev_id" value="{{ g.id }}">
+                <button type="submit" class="flex w-full items-start gap-2 text-left">
+              {% else %}
+              <div class="flex w-full items-start gap-2 text-left">
+              {% endif %}
                 <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-black {{ 'border-emerald-600 bg-emerald-600 text-white' if g.tamamlandi else 'border-slate-300 text-transparent' }}">✓</span>
                 <span>
                   <span class="block font-black {{ 'text-slate-400 line-through' if g.tamamlandi else 'text-slate-900' }}">{{ g.ders }}</span>
@@ -147,8 +164,8 @@
                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-600">{{ g.hedef_soru }} soru</span>
                   </span>
                 </span>
-              </button>
-            </form>
+              {% if veli %}</button></form>{% else %}</div>{% endif %}
+            </div>
             {% else %}
             <p class="px-1 py-6 text-center text-xs font-bold text-slate-300">Boş</p>
             {% endfor %}
@@ -160,7 +177,6 @@
   </section>
   {% elif bolum == 'gunluk' %}
   <form method="post" class="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
-    <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
     <input type="hidden" name="islem" value="gunluk">
     <input type="date" name="tarih" value="{{ bugun }}" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
     <select name="ders" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">{% for d in dersler %}<option>{{ d }}</option>{% endfor %}</select>
@@ -184,7 +200,6 @@
   </section>
   {% else %}
   <form method="post" class="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
-    <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
     <input type="hidden" name="islem" value="deneme">
     <div class="grid gap-2 sm:grid-cols-2">
       <input name="ad" required placeholder="Deneme adı" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">

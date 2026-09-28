@@ -296,7 +296,7 @@ def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
     ana_ekranlar = {
         "ogretmen": {"dashboard", "veri_girisi", "analiz_merkezi", "iletisim"},
         "ogrenci": {"ogrenci_gorunum"},
-        "veli": {"veli_panel"},
+        "veli": {"veli_panel", "veli_lgs"},
     }
     return request.endpoint in ana_ekranlar.get(hedef, set())
 
@@ -3113,31 +3113,39 @@ def _lgs_ogrenci(ogrenci_id: int) -> dict:
 @app.route("/lgs", methods=["GET", "POST"])
 @giris_zorunlu
 def lgs():
-    oid = request.values.get("ogrenci", type=int)
-    bolum = request.values.get("bolum") or "ozet"
-    if bolum not in {"ozet", "program", "gunluk", "deneme"}:
-        bolum = "ozet"
+    return _lgs_ekran(veli=False)
+
+
+@app.route("/veli/lgs", methods=["GET", "POST"])
+def veli_lgs():
+    if not session.get("veli_ogrenci_id"):
+        return redirect(url_for("veli_giris"))
+    return _lgs_ekran(veli=True)
+
+
+def _lgs_ekran(veli: bool):
     hafta = _lgs_hafta()
-    if request.method == "POST":
-        if not oid:
+    if veli:
+        oid = int(session["veli_ogrenci_id"])
+        ogr = _ogrenci_bul(oid)
+        if not ogr or ogr.get("sinif_adi") not in {"5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"}:
+            session.pop("veli_ogrenci_id", None)
+            return redirect(url_for("veli_giris"))
+    else:
+        oid = request.values.get("ogrenci", type=int)
+        if request.method == "POST" and not oid:
             abort(400)
-        _lgs_ogrenci(oid)
+        ogr = _lgs_ogrenci(oid) if oid else None
+    bolum = request.values.get("bolum") or ("ozet" if veli else "program")
+    izinli = {"ozet", "program", "gunluk", "deneme"} if veli else {"program"}
+    if bolum not in izinli:
+        bolum = "ozet" if veli else "program"
+    if request.method == "POST":
         islem = request.form.get("islem")
-        if islem == "hedef":
-            lgs_profil_kaydet(oid, request.form.get("hedef", ""))
-        elif islem == "gorev":
-            lgs_gorev_ekle(
-                oid, hafta,
-                request.form.get("gun", type=int) or 0,
-                request.form.get("ders", ""),
-                request.form.get("konu", ""),
-                request.form.get("hedef_soru", type=int) or 0,
-            )
-            bolum = "program"
-        elif islem == "toggle":
+        if veli and islem == "toggle":
             lgs_gorev_toggle(oid, request.form.get("gorev_id", type=int) or 0)
             bolum = "program"
-        elif islem == "gunluk":
+        elif veli and islem == "gunluk":
             lgs_gunluk_ekle(
                 oid,
                 request.form.get("tarih") or date.today().isoformat(),
@@ -3148,7 +3156,7 @@ def lgs():
                 request.form.get("sayfa", type=int) or 0,
             )
             bolum = "gunluk"
-        elif islem == "deneme":
+        elif veli and islem == "deneme":
             dersler = []
             for ders in LGS_DERSLER:
                 anahtar = ders.replace(" ", "_")
@@ -3160,16 +3168,25 @@ def lgs():
                 })
             lgs_deneme_ekle(oid, request.form.get("ad", ""), request.form.get("tarih") or date.today().isoformat(), dersler)
             bolum = "deneme"
-        return redirect(url_for("lgs", ogrenci=oid, bolum=bolum))
+        elif not veli and islem == "hedef":
+            lgs_profil_kaydet(oid, request.form.get("hedef", ""))
+        elif not veli and islem == "gorev":
+            lgs_gorev_ekle(
+                oid, hafta,
+                request.form.get("gun", type=int) or 0,
+                request.form.get("ders", ""),
+                request.form.get("konu", ""),
+                request.form.get("hedef_soru", type=int) or 0,
+            )
+            bolum = "program"
+        hedef_url = "veli_lgs" if veli else "lgs"
+        return redirect(url_for(hedef_url, **({} if veli else {"ogrenci": oid}), bolum=bolum))
 
-    siniflar = ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari()
-    if not oid:
-        gruplar = []
-        for s in siniflar:
-            gruplar.append({"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])})
-        return render_template("lgs.html", gruplar=gruplar, ogrenci=None)
+    if not veli and not oid:
+        siniflar = ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari()
+        gruplar = [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in siniflar]
+        return render_template("lgs.html", gruplar=gruplar, ogrenci=None, veli=False)
 
-    ogr = _lgs_ogrenci(oid)
     gorevler = lgs_gorevler(oid, hafta)
     konu_zor = {
         (ders, k["konu"]): k["zorluk"]
@@ -3184,10 +3201,11 @@ def lgs():
     oran = round(tamam * 100 / len(gorevler)) if gorevler else 0
     saat = datetime.now().hour
     selam = "Günaydın" if saat < 12 else ("İyi günler" if saat < 18 else "İyi akşamlar")
-    denemeler = lgs_denemeler(oid)
+    denemeler = lgs_denemeler(oid) if veli else []
     grafik = list(reversed(denemeler[:5]))
     return render_template(
         "lgs.html",
+        veli=veli,
         ogrenci=ogr,
         bolum=bolum,
         profil=lgs_profil(oid),
@@ -3200,7 +3218,7 @@ def lgs():
         tamam=tamam,
         oran=oran,
         selam=selam,
-        gunluk=lgs_gunluk_liste(oid),
+        gunluk=lgs_gunluk_liste(oid) if veli else [],
         denemeler=denemeler,
         grafik_etiket=[d["ad"] for d in grafik],
         grafik_net=[d["net"] for d in grafik],
