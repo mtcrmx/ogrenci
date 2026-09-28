@@ -6,7 +6,7 @@
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
     <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS koçluk</p>
     <h1 class="mt-1 text-2xl font-black">Öğrenci seç</h1>
-        <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Deneme sonucunu kurum listesinden yükleyin ya da öğrenciye siz girin.</p>
+        <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Tempo, çalışma defteri ve deneme buradan yürür.</p>
   </header>
   {% with mesajlar = get_flashed_messages() %}
   {% if mesajlar %}
@@ -26,9 +26,20 @@
     {% for g in gruplar %}
     <details class="rounded-2xl border border-slate-200 bg-white p-4" {% if loop.first %}open{% endif %}>
       <summary class="cursor-pointer font-black">{{ g.sinif.sinif_adi }} · {{ g.ogrenciler|length }} öğrenci</summary>
+      <form method="post" class="mt-3 flex flex-wrap items-center gap-2">
+        <input type="hidden" name="islem" value="sinif_tempo">
+        <input type="hidden" name="sinif_id" value="{{ g.sinif.id }}">
+        <select name="tempo" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <option value="">Temposuz</option>
+          {% for kod, ad in tempo_adlari.items() %}
+          <option value="{{ kod }}">{{ ad }}</option>
+          {% endfor %}
+        </select>
+        <button class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">Sınıfın temposunu kaydet</button>
+      </form>
       <div class="mt-3 grid gap-2 sm:grid-cols-2">
         {% for o in g.ogrenciler %}
-        <a href="{{ url_for('lgs', ogrenci=o.id) }}" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold hover:border-amber-400">{{ o.ad_soyad }} <span class="text-slate-400">No {{ o.ogr_no }}</span></a>
+        <a href="{{ url_for('lgs', ogrenci=o.id) }}" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold hover:border-amber-400">{{ o.ad_soyad }} <span class="text-slate-400">No {{ o.ogr_no }}</span>{% if o.tempo %} <span class="text-amber-700">{{ tempo_adlari[o.tempo] }}</span>{% endif %}</a>
         {% endfor %}
       </div>
     </details>
@@ -40,7 +51,7 @@
       <div>
         <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{{ 'Öğrenci LGS' if veli else 'Öğretmen veri girişi' }}</p>
         <h1 class="mt-1 text-2xl font-black">{{ selam }}, {{ ogrenci.ad_soyad.split()[0] }}</h1>
-        <p class="mt-1 text-sm text-indigo-100">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% if profil.hedef %} · Hedef: {{ profil.hedef }}{% endif %}</p>
+        <p class="mt-1 text-sm text-indigo-100">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% if tempo_ad %} · {{ tempo_ad }}{% endif %}{% if profil.hedef %} · {{ profil.hedef }}{% endif %}</p>
       </div>
       {% if veli %}
       <a href="{{ url_for('veli_panel') }}" class="rounded-xl bg-white/10 px-3 py-2 text-xs font-black">Veli paneli</a>
@@ -50,24 +61,32 @@
     </div>
     <div class="mt-4">
       <div class="mb-1 flex justify-between text-xs font-bold text-indigo-100">
-        <span>Bu haftanın görevleri</span><span>{{ tamam }}/{{ gorevler|length }} · %{{ oran }}</span>
+        <span>{{ 'Bu haftanın programı' if tempo_ad else 'Bu hafta' }}</span><span>{{ plan_tamam }}/{{ plan_toplam }} · %{{ oran }}</span>
       </div>
       <div class="h-3 overflow-hidden rounded-full bg-white/20">
         <div class="h-full rounded-full bg-amber-400 transition-all duration-700" style="width: {{ oran }}%"></div>
       </div>
     </div>
-    <p class="mt-3 text-sm">Bugün {{ bugun_ad }}: {{ bugun_gorev|selectattr('tamamlandi')|list|length }}/{{ bugun_gorev|length }} görev tamam.</p>
+    <p class="mt-3 text-sm">Bugün {{ bugun_ad }}{% if tempo_ad %}: {{ bugun_gorev|selectattr('tamamlandi')|list|length }}/{{ bugun_gorev|length }} iş onaylı{% elif veli %}. Öğretmen tempo seçince ders programın burada durur{% else %}. Program sekmesinden tempo seçilir{% endif %}.</p>
   </header>
 
   <nav class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
     {% if veli %}
-    {% for kod, ad in [('ozet','Özet'), ('gunluk','Günlük'), ('deneme','Analiz')] %}
-    <a href="{{ url_for('veli_lgs', bolum=kod) }}"
-       class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
-    {% endfor %}
+    {% set sekmeler = [('ozet','Özet'), ('program','Program'), ('defter','Defter'), ('deneme','Analiz')] %}
     {% else %}
-    <span class="rounded-xl bg-slate-900 px-3 py-2 text-center text-sm font-black text-white sm:col-span-4">Deneme girişi</span>
+    {% set sekmeler = [('deneme','Deneme'), ('program','Program'), ('defter','Defter')] %}
     {% endif %}
+    {% for kod, ad in sekmeler %}
+    {% if veli and kod == 'defter' %}
+    <a href="{{ url_for('veli_lgs', bolum=kod, hafta=hafta_sec) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
+    {% elif veli %}
+    <a href="{{ url_for('veli_lgs', bolum=kod) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
+    {% elif kod == 'defter' %}
+    <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum=kod, hafta=hafta_sec) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
+    {% else %}
+    <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum=kod) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
+    {% endif %}
+    {% endfor %}
   </nav>
   {% with mesajlar = get_flashed_messages() %}
   {% if mesajlar %}
@@ -92,209 +111,242 @@
     <a href="{{ url_for('veli_lgs', bolum='deneme') }}" class="mt-3 inline-block text-sm font-black text-indigo-800">Sonuç ve analizi aç</a>
   </section>
   <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-      <h2 class="font-black">Hedef</h2>
-      <p class="mt-1 text-sm text-slate-600">{{ profil.hedef or 'Öğretmen henüz hedef yazmadı.' }}</p>
-      <h2 class="mt-4 font-black">Bugünkü görevler</h2>
+      <h2 class="font-black">Hedefindeki lise</h2>
+      <p class="mt-1 text-sm text-slate-600">{{ profil.hedef or 'Öğretmen henüz yazmadı.' }}{% if tempo_ad %} · tempo {{ tempo_ad }}{% endif %}</p>
+      <h2 class="mt-4 font-black">Bugünkü program</h2>
       <ul class="mt-2 space-y-2 text-sm">
         {% for g in bugun_gorev %}
-        <li class="flex justify-between gap-2"><span>{{ g.ders }} · {{ g.konu or 'Konu yok' }}</span><span class="font-black {{ 'text-emerald-700' if g.tamamlandi else ('text-amber-600' if g.bildirdi else 'text-slate-400') }}">{{ 'Onaylandı' if g.tamamlandi else ('Onay bekliyor' if g.bildirdi else 'Bekliyor') }}</span></li>
+        <li class="flex justify-between gap-2"><span>{{ g.metin or (g.ders ~ ' · ' ~ (g.konu or 'Konu yok')) }}</span><span class="font-black {{ 'text-emerald-700' if g.tamamlandi else ('text-amber-600' if g.bildirdi else 'text-slate-400') }}">{{ 'Onaylandı' if g.tamamlandi else ('Onay bekliyor' if g.bildirdi else 'Bekliyor') }}</span></li>
         {% else %}
-        <li class="text-slate-500">Bugün için görev yok.</li>
+        <li class="text-slate-500">Bugün için program yok. Öğretmen tempo seçince açılır.</li>
         {% endfor %}
       </ul>
+      <a href="{{ url_for('veli_lgs', bolum='program') }}" class="mt-3 inline-block text-sm font-black text-indigo-800">Haftalık program</a>
+      <a href="{{ url_for('veli_lgs', bolum='defter', hafta=hafta_sec) }}" class="mt-3 ml-3 inline-block text-sm font-black text-indigo-800">Çalışma defteri</a>
   </section>
   {% elif bolum == 'program' %}
-  {% if not veli %}
-  <form method="post" class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-    <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-    <input type="hidden" name="islem" value="hedef">
-    <label class="text-xs font-black text-slate-500">LGS / okul hedefi
-      <input name="hedef" value="{{ profil.hedef }}" placeholder="Örn. Fen lisesi" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-    </label>
-    <label class="mt-3 block text-xs font-black text-slate-500">Hedef net (90 üzerinden)
-      <input name="hedef_net" type="number" min="0" max="90" value="{{ profil.hedef_net or '' }}" placeholder="Örn. 40" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-    </label>
-    <button class="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Hedefi kaydet</button>
-  </form>
-  <form method="post" class="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-5">
-    <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-    <input type="hidden" name="islem" value="gorev">
-    <select name="gun" class="rounded-xl border border-slate-300 px-2 py-2 text-sm">{% for i in range(7) %}<option value="{{ i }}" {% if gunler[i] == bugun_ad %}selected{% endif %}>{{ gunler[i] }}</option>{% endfor %}</select>
-    <select id="lgs-ders" name="ders" class="rounded-xl border border-slate-300 px-2 py-2 text-sm">{% for d in dersler %}<option>{{ d }}</option>{% endfor %}</select>
-    <select id="lgs-zorluk" class="rounded-xl border border-slate-300 px-2 py-2 text-sm">
-      <option value="">Tüm düzeyler</option>
-      <option value="kolay">Kolay</option>
-      <option value="orta">Orta</option>
-      <option value="zor">Zor</option>
-    </select>
-    <select id="lgs-konu" name="konu" required class="rounded-xl border border-slate-300 px-2 py-2 text-sm sm:col-span-2"></select>
-    <input name="hedef_soru" type="number" min="0" placeholder="Soru" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-    <button class="rounded-xl bg-slate-900 px-3 py-2 text-sm font-black text-white sm:col-span-5">Görevi ekle</button>
-  </form>
-  <script>
-  (function () {
-    const konular = {{ konular|tojson }};
-    const ders = document.getElementById("lgs-ders");
-    const zor = document.getElementById("lgs-zorluk");
-    const konu = document.getElementById("lgs-konu");
-    if (!ders || !konu) return;
-    const renk = { kolay: "Kolay", orta: "Orta", zor: "Zor" };
-    function doldur() {
-      const liste = (konular[ders.value] || []).filter(k => !zor.value || k.zorluk === zor.value);
-      konu.innerHTML = "";
-      liste.forEach(k => {
-        const opt = document.createElement("option");
-        opt.value = k.konu;
-        opt.textContent = renk[k.zorluk] + " · " + k.donem + ". dönem · " + k.konu;
-        opt.title = k.aciklama;
-        konu.appendChild(opt);
-      });
-    }
-    ders.addEventListener("change", doldur);
-    zor.addEventListener("change", doldur);
-    doldur();
-  })();
-  </script>
-  {% endif %}
-  {% if not veli and kocluk and kocluk.oneriler %}
-  <section class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
-    <h2 class="font-black">Zayıf ders: {{ kocluk.zayif.ders }}</h2>
-    <p class="mt-1 text-slate-700">Bu konuları gelecek haftanın pazartesine 15 soruluk görev olarak yaz.</p>
-    <div class="mt-2 flex flex-wrap gap-2">
-      {% for k in kocluk.oneriler %}
-      <form method="post">
-        <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-        <input type="hidden" name="islem" value="oneri">
-        <input type="hidden" name="ders" value="{{ kocluk.zayif.ders }}">
-        <input type="hidden" name="konu" value="{{ k.konu }}">
-        <button class="min-h-11 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{{ k.konu }}</button>
-      </form>
+  <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <h2 class="font-black">Ders programı</h2>
+    <p class="mt-1 text-sm text-slate-600">Ekim programı üç tempoda durur ve seçilen tempo her hafta aynı günlerde tekrarlanır. Yaptım demek, öğretmen onayından sonra tamam sayılır.</p>
+    {% if tempo_ad %}
+    <p class="mt-2 text-sm font-black">Tempo: {{ tempo_ad }}{% if profil.hedef %} · hedef lise: {{ profil.hedef }}{% endif %}</p>
+    {% endif %}
+    {% if not veli %}
+    <form method="post" class="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+      <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+      <input type="hidden" name="islem" value="tempo">
+      <select name="tempo" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+        <option value="">Tempo seçilmedi</option>
+        {% for kod, ad in tempolar %}
+        <option value="{{ kod }}" {% if tempo == kod %}selected{% endif %}>{{ ad }}</option>
+        {% endfor %}
+      </select>
+      <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Tempoyu kaydet</button>
+    </form>
+    <form method="post" class="mt-3 grid gap-2 sm:grid-cols-2">
+      <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+      <input type="hidden" name="islem" value="hedef">
+      <input type="hidden" name="donus" value="program">
+      <label class="text-xs font-black text-slate-500">Hedefindeki lise
+        <input name="hedef" value="{{ profil.hedef }}" placeholder="Örn. Fen lisesi" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+      </label>
+      <label class="text-xs font-black text-slate-500">Hedef net
+        <input name="hedef_net" type="number" min="0" max="90" value="{{ profil.hedef_net or '' }}" placeholder="Örn. 40" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+      </label>
+      <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white sm:col-span-2">Hedefi kaydet</button>
+    </form>
+    <form method="post" class="mt-4">
+      <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+      <input type="hidden" name="islem" value="ay">
+      <p class="text-xs font-black uppercase tracking-wide text-slate-500">Aylık program takibi</p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        {% for kod, ad in aylar %}
+        <label class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold">
+          <input type="checkbox" name="ay" value="{{ kod }}" {% if ay_durum.get(kod) %}checked{% endif %}> {{ ad }}
+        </label>
+        {% endfor %}
+      </div>
+      <button class="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Ayları kaydet</button>
+    </form>
+    {% else %}
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for kod, ad in aylar %}
+      <span class="rounded-full px-3 py-1 text-xs font-black {{ 'bg-emerald-100 text-emerald-800' if ay_durum.get(kod) else 'bg-slate-100 text-slate-400' }}">{{ ad }}</span>
       {% endfor %}
     </div>
+    <p class="mt-2 text-xs text-slate-500">Yeşil ayları öğretmen işaretler. Ekim’den Haziran’a programın uygulandığı aylar.</p>
+    {% endif %}
   </section>
-  {% endif %}
-  {% if veli %}
-  <p class="mt-3 text-sm text-slate-600">Yaptım dersen öğretmenine düşer. Onaylamadan tamam sayılmaz.</p>
-  {% endif %}
-  <style>
-    @keyframes lgs-belir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    .lgs-hucre { animation: lgs-belir .45s ease both; animation-delay: calc(var(--i) * 50ms); }
-    .lgs-gorev { animation: lgs-belir .4s ease both; animation-delay: calc(var(--i) * 70ms); }
-  </style>
-  <section class="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <table class="w-full min-w-[920px] border-collapse text-sm">
-      <thead>
-        <tr>
-          {% for i in range(7) %}
-          <th class="lgs-hucre border-b border-slate-200 px-3 py-3 text-left text-xs font-black uppercase tracking-wide {{ 'bg-amber-50 text-amber-800' if gunler[i] == bugun_ad else 'bg-slate-50 text-slate-500' }}" style="--i: {{ i }}">
-            {{ gunler[i] }}{% if gunler[i] == bugun_ad %} · bugün{% endif %}
-          </th>
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          {% for i in range(7) %}
-          {% set gun_gorev = gorevler|selectattr('gun', 'equalto', i)|list %}
-          <td class="lgs-hucre align-top border-r border-slate-100 px-2 py-2 last:border-r-0 {{ 'bg-amber-50/40' if gunler[i] == bugun_ad else '' }}" style="--i: {{ i }}">
-            {% for g in gun_gorev %}
-            <div class="lgs-gorev mb-2 rounded-xl border px-2 py-2 {{ 'border-emerald-200 bg-emerald-50' if g.tamamlandi else ('border-amber-300 bg-amber-50' if g.bildirdi else 'border-slate-200 bg-white') }}" style="--i: {{ loop.index }}">
-              {% if veli and not g.tamamlandi %}
-              <form method="post">
-                <input type="hidden" name="islem" value="toggle">
-                <input type="hidden" name="gorev_id" value="{{ g.id }}">
-                <button type="submit" class="flex w-full items-start gap-2 text-left">
-              {% else %}
-              <div class="flex w-full items-start gap-2 text-left">
-              {% endif %}
-                <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-black {{ 'border-emerald-600 bg-emerald-600 text-white' if g.tamamlandi else ('border-amber-500 bg-amber-400 text-white' if g.bildirdi else 'border-slate-300 text-transparent') }}">✓</span>
-                <span>
-                  <span class="block font-black {{ 'text-slate-400 line-through' if g.tamamlandi else 'text-slate-900' }}">{{ g.ders }}</span>
-                  <span class="block text-xs text-slate-500">{{ g.konu or 'Konu yazılmadı' }}</span>
-                  <span class="mt-1 inline-flex flex-wrap gap-1">
-                    {% if g.zorluk %}
-                    <span class="rounded-full px-2 py-0.5 text-[10px] font-black {{ 'bg-emerald-100 text-emerald-800' if g.zorluk == 'kolay' else ('bg-amber-100 text-amber-800' if g.zorluk == 'orta' else 'bg-rose-100 text-rose-800') }}">{{ g.zorluk }}</span>
-                    {% endif %}
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-600">{{ g.hedef_soru }} soru</span>
-                    {% if g.tamamlandi %}
-                    <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800">Onaylandı</span>
-                    {% elif g.bildirdi %}
-                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">{{ 'Onay bekliyor' if veli else 'Öğrenci yaptı' }}</span>
-                    {% elif veli %}
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-500">Yaptım de</span>
-                    {% endif %}
-                  </span>
-                </span>
-              {% if veli and not g.tamamlandi %}</button></form>{% else %}</div>{% endif %}
-              {% if not veli %}
-              <div class="mt-2 flex gap-1">
-                {% if g.tamamlandi %}
-                <form method="post" class="flex-1">
-                  <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-                  <input type="hidden" name="islem" value="onay">
-                  <input type="hidden" name="gorev_id" value="{{ g.id }}">
-                  <input type="hidden" name="karar" value="kaldir">
-                  <button class="w-full rounded-lg bg-white px-2 py-1 text-[10px] font-black text-slate-700">Onayı kaldır</button>
-                </form>
-                {% else %}
-                <form method="post" class="flex-1">
-                  <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-                  <input type="hidden" name="islem" value="onay">
-                  <input type="hidden" name="gorev_id" value="{{ g.id }}">
-                  <input type="hidden" name="karar" value="onay">
-                  <button class="w-full rounded-lg bg-emerald-700 px-2 py-1 text-[10px] font-black text-white">Onayla</button>
-                </form>
-                {% if g.bildirdi %}
-                <form method="post">
-                  <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
-                  <input type="hidden" name="islem" value="onay">
-                  <input type="hidden" name="gorev_id" value="{{ g.id }}">
-                  <input type="hidden" name="karar" value="reddet">
-                  <button class="rounded-lg bg-white px-2 py-1 text-[10px] font-black text-rose-700">Reddet</button>
-                </form>
-                {% endif %}
-                {% endif %}
-              </div>
-              {% endif %}
-            </div>
-            {% else %}
-            <p class="px-1 py-6 text-center text-xs font-bold text-slate-300">Boş</p>
-            {% endfor %}
-          </td>
-          {% endfor %}
-        </tr>
-      </tbody>
-    </table>
-  </section>
-  {% elif bolum == 'gunluk' and veli %}
-  <p class="mt-3 text-sm text-slate-600">Yazdığın soru, öğretmen gördüm demeden haftalık tempoya girmez.</p>
-  <form method="post" class="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
-    <input type="hidden" name="islem" value="gunluk">
-    <input type="date" name="tarih" value="{{ bugun }}" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-    <select name="ders" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">{% for d in dersler %}<option>{{ d }}</option>{% endfor %}</select>
-    <input name="cozulen" type="number" min="0" placeholder="Çözülen soru" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-    <input name="dogru" type="number" min="0" placeholder="Doğru" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-    <input name="yanlis" type="number" min="0" placeholder="Yanlış" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-    <input name="sayfa" type="number" min="0" placeholder="Okunan sayfa" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-    <button class="rounded-xl bg-slate-900 px-3 py-2 text-sm font-black text-white sm:col-span-3">Günü kaydet</button>
-  </form>
-  <section class="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-    <table class="w-full text-sm">
-      <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th class="px-3 py-2">Tarih</th><th class="px-3 py-2">Ders</th><th class="px-3 py-2">Soru</th><th class="px-3 py-2">D/Y</th><th class="px-3 py-2">Sayfa</th><th class="px-3 py-2">Onay</th></tr></thead>
-      <tbody>
-        {% for g in gunluk %}
-        <tr class="border-t border-slate-100"><td class="px-3 py-2">{{ g.tarih }}</td><td class="px-3 py-2 font-bold">{{ g.ders }}</td><td class="px-3 py-2">{{ g.cozulen }}</td><td class="px-3 py-2">{{ g.dogru }}/{{ g.yanlis }}</td><td class="px-3 py-2">{{ g.sayfa }}</td><td class="px-3 py-2 font-bold">{{ 'Görüldü' if g.goruldu == 1 else ('Sayılmadı' if g.goruldu == 2 else 'Onay bekliyor') }}</td></tr>
-        {% else %}
-        <tr><td class="px-3 py-6 text-slate-500" colspan="6">Henüz günlük kayıt yok.</td></tr>
+  {% if tempo %}
+  <div class="mt-3 space-y-3">
+    {% for gun in plan_gunler %}
+    <article class="rounded-2xl border p-3 {{ 'border-amber-300 bg-amber-50' if gun.tarih == bugun else 'border-slate-200 bg-white' }}">
+      <h3 class="font-black">{{ gunler[gun.gun] }} <span class="text-xs font-bold text-slate-500">{{ gun.tarih }}{% if gun.tarih == bugun %} · bugün{% endif %}</span></h3>
+      <ul class="mt-2 space-y-2">
+        {% for b in gun.bloklar %}
+        <li class="rounded-xl bg-white px-3 py-2 text-sm shadow-sm">
+          <div class="flex items-start justify-between gap-2">
+            <span class="font-bold">{{ b.metin }}</span>
+            <span class="shrink-0 text-xs font-black {{ 'text-emerald-700' if b.tamamlandi else ('text-amber-700' if b.bildirdi else 'text-slate-400') }}">{{ 'Onaylandı' if b.tamamlandi else ('Onay bekliyor' if b.bildirdi else 'Bekliyor') }}</span>
+          </div>
+          {% if veli and gun.tarih <= bugun and not b.tamamlandi %}
+          <form method="post" class="mt-2">
+            <input type="hidden" name="islem" value="program_bildir">
+            <input type="hidden" name="tarih" value="{{ gun.tarih }}">
+            <input type="hidden" name="sira" value="{{ b.sira }}">
+            <button class="min-h-11 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{{ 'Geri al' if b.bildirdi else 'Yaptım' }}</button>
+          </form>
+          {% elif not veli %}
+          <div class="mt-2 flex flex-wrap gap-2">
+            {% if b.tamamlandi %}
+            <form method="post">
+              <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+              <input type="hidden" name="islem" value="program_onay">
+              <input type="hidden" name="tarih" value="{{ gun.tarih }}">
+              <input type="hidden" name="sira" value="{{ b.sira }}">
+              <input type="hidden" name="karar" value="kaldir">
+              <button class="min-h-11 rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-700">Onayı kaldır</button>
+            </form>
+            {% elif b.bildirdi %}
+            <form method="post">
+              <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+              <input type="hidden" name="islem" value="program_onay">
+              <input type="hidden" name="tarih" value="{{ gun.tarih }}">
+              <input type="hidden" name="sira" value="{{ b.sira }}">
+              <input type="hidden" name="karar" value="onay">
+              <button class="min-h-11 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white">Onayla</button>
+            </form>
+            <form method="post">
+              <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+              <input type="hidden" name="islem" value="program_onay">
+              <input type="hidden" name="tarih" value="{{ gun.tarih }}">
+              <input type="hidden" name="sira" value="{{ b.sira }}">
+              <input type="hidden" name="karar" value="reddet">
+              <button class="min-h-11 rounded-xl bg-rose-700 px-3 py-2 text-xs font-black text-white">Reddet</button>
+            </form>
+            {% endif %}
+          </div>
+          {% endif %}
+        </li>
         {% endfor %}
-      </tbody>
-    </table>
+      </ul>
+    </article>
+    {% endfor %}
+  </div>
+  {% elif veli %}
+  <p class="mt-3 text-sm text-slate-500">Öğretmenin tempo seçince haftalık ders programın burada açılır.</p>
+  {% endif %}
+
+  {% elif bolum == 'defter' %}
+  <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <div class="flex items-center justify-between gap-2">
+      {% if veli %}
+      <a class="text-sm font-black text-indigo-800" href="{{ url_for('veli_lgs', bolum='defter', hafta=hafta_onceki) }}">Önceki</a>
+      <p class="text-center text-sm font-black">{{ hafta_sec }} haftası</p>
+      <a class="text-sm font-black text-indigo-800" href="{{ url_for('veli_lgs', bolum='defter', hafta=hafta_sonraki) }}">Sonraki</a>
+      {% else %}
+      <a class="text-sm font-black text-indigo-800" href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='defter', hafta=hafta_onceki) }}">Önceki</a>
+      <p class="text-center text-sm font-black">{{ hafta_sec }} haftası</p>
+      <a class="text-sm font-black text-indigo-800" href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='defter', hafta=hafta_sonraki) }}">Sonraki</a>
+      {% endif %}
+    </div>
+    <p class="mt-2 text-sm text-slate-600">Her gün çözülen soruyu, doğru, yanlış ve boşu yaz. En az yarım saat kitap oku. Öğretmen gördüm demeden bu hafta tamam sayılmaz.</p>
+    {% if defter.goruldu == 1 %}
+    <p class="mt-2 text-sm font-black text-emerald-800">Öğretmen gördü{% if defter.ogretmen_adi %} · {{ defter.ogretmen_adi }}{% endif %}</p>
+    {% else %}
+    <p class="mt-2 text-sm font-bold text-amber-800">Öğretmen henüz bu haftayı görmedi.</p>
+    {% endif %}
+    {% if defter.ogretmen_not %}
+    <p class="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-sm"><span class="font-black">Öğretmen notu.</span> {{ defter.ogretmen_not }}</p>
+    {% endif %}
+    {% if defter.soru %}
+    <p class="mt-2 text-sm font-bold">Bu hafta yazılan soru: {{ defter.soru }}</p>
+    {% endif %}
   </section>
+
+  {% if veli %}
+  <form method="post" class="mt-3 space-y-3">
+    <input type="hidden" name="islem" value="defter">
+    <input type="hidden" name="hafta" value="{{ hafta_sec }}">
+    {% for gun in range(7) %}
+    <article class="rounded-2xl border p-3 {{ 'border-amber-300 bg-amber-50' if gunler[gun] == bugun_ad else 'border-slate-200 bg-white' }}">
+      <h3 class="font-black">{{ gunler[gun] }}</h3>
+      <div class="mt-2 space-y-2">
+        {% for kod, ad in defter_dersler %}
+        {% set h = defter.hucre[gun][kod] %}
+        <div class="rounded-xl bg-white px-2 py-2">
+          <p class="text-xs font-black">{{ ad }}</p>
+          <div class="mt-1 grid grid-cols-4 gap-1">
+            <input name="c_{{ gun }}_{{ kod }}" type="number" min="0" max="300" inputmode="numeric" value="{{ h.cozulen or '' }}" placeholder="Soru" class="min-h-11 rounded-lg border border-slate-300 px-2 text-sm">
+            <input name="d_{{ gun }}_{{ kod }}" type="number" min="0" max="300" inputmode="numeric" value="{{ h.dogru or '' }}" placeholder="D" class="min-h-11 rounded-lg border border-slate-300 px-2 text-sm">
+            <input name="y_{{ gun }}_{{ kod }}" type="number" min="0" max="300" inputmode="numeric" value="{{ h.yanlis or '' }}" placeholder="Y" class="min-h-11 rounded-lg border border-slate-300 px-2 text-sm">
+            <input name="b_{{ gun }}_{{ kod }}" type="number" min="0" max="300" inputmode="numeric" value="{{ h.bos or '' }}" placeholder="B" class="min-h-11 rounded-lg border border-slate-300 px-2 text-sm">
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="mt-2 flex flex-wrap gap-3 text-sm font-bold">
+        <label class="inline-flex min-h-11 items-center gap-2"><input type="radio" name="ruh_{{ gun }}" value="iyi" {% if defter.ruh[gun] == 'iyi' %}checked{% endif %}> İyi geçti</label>
+        <label class="inline-flex min-h-11 items-center gap-2"><input type="radio" name="ruh_{{ gun }}" value="kotu" {% if defter.ruh[gun] == 'kotu' %}checked{% endif %}> Zor geçti</label>
+        <label class="inline-flex min-h-11 items-center gap-2"><input type="radio" name="ruh_{{ gun }}" value="" {% if not defter.ruh[gun] %}checked{% endif %}> Seçmedim</label>
+      </div>
+    </article>
+    {% endfor %}
+    <label class="block rounded-2xl border border-slate-200 bg-white p-4 text-xs font-black text-slate-500">Okuduğun kitabın adı
+      <input name="kitap_adi" value="{{ defter.kitap_adi }}" placeholder="Her gün en az yarım saat" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+    </label>
+    <label class="block rounded-2xl border border-slate-200 bg-white p-4 text-xs font-black text-slate-500">Haftanın değerlendirmesi
+      <textarea name="ogrenci_not" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">{{ defter.ogrenci_not }}</textarea>
+    </label>
+    <label class="block rounded-2xl border border-slate-200 bg-white p-4 text-xs font-black text-slate-500">Veli notu
+      <textarea name="veli_not" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">{{ defter.veli_not }}</textarea>
+    </label>
+    <button class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Haftayı kaydet</button>
+  </form>
+  {% else %}
+  <div class="mt-3 space-y-3">
+    {% for gun in range(7) %}
+    <article class="rounded-2xl border border-slate-200 bg-white p-3">
+      <h3 class="font-black">{{ gunler[gun] }}</h3>
+      <ul class="mt-2 space-y-1 text-sm">
+        {% for kod, ad in defter_dersler %}
+        {% set h = defter.hucre[gun][kod] %}
+        {% if h.cozulen or h.dogru or h.yanlis or h.bos %}
+        <li class="flex justify-between gap-2"><span class="font-bold">{{ ad }}</span><span>{{ h.cozulen }} soru · {{ h.dogru }}/{{ h.yanlis }}/{{ h.bos }}</span></li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+      {% if defter.ruh[gun] %}
+      <p class="mt-2 text-xs font-black {{ 'text-emerald-700' if defter.ruh[gun] == 'iyi' else 'text-rose-700' }}">{{ 'İyi geçti' if defter.ruh[gun] == 'iyi' else 'Zor geçti' }}</p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% if defter.kitap_adi or defter.ogrenci_not or defter.veli_not %}
+  <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+    {% if defter.kitap_adi %}<p><span class="font-black">Kitap.</span> {{ defter.kitap_adi }}</p>{% endif %}
+    {% if defter.ogrenci_not %}<p class="mt-2"><span class="font-black">Öğrenci.</span> {{ defter.ogrenci_not }}</p>{% endif %}
+    {% if defter.veli_not %}<p class="mt-2"><span class="font-black">Veli.</span> {{ defter.veli_not }}</p>{% endif %}
+  </section>
+  {% endif %}
+  <form method="post" class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+    <input type="hidden" name="islem" value="defter_ogretmen">
+    <input type="hidden" name="hafta" value="{{ hafta_sec }}">
+    <label class="text-xs font-black text-slate-500">Öğretmen notu
+      <textarea name="ogretmen_not" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">{{ defter.ogretmen_not }}</textarea>
+    </label>
+    <div class="mt-3 flex flex-wrap gap-2">
+      <button class="min-h-11 rounded-xl bg-white px-4 py-2 text-sm font-black text-slate-800">Notu kaydet</button>
+      <button name="karar" value="gor" class="min-h-11 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Gördüm</button>
+    </div>
+  </form>
+  {% endif %}
   {% elif bolum == 'deneme' and not veli %}
   <form method="post" class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
     <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
     <input type="hidden" name="islem" value="hedef">
-    <label class="text-xs font-black text-slate-500">LGS / okul hedefi
+    <label class="text-xs font-black text-slate-500">Hedefindeki lise
       <input name="hedef" value="{{ profil.hedef }}" placeholder="Örn. Fen lisesi" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
     </label>
     <label class="mt-3 block text-xs font-black text-slate-500">Hedef net (90 üzerinden)

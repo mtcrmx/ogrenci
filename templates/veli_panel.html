@@ -170,6 +170,14 @@
       {% endfor %}
     </div>
     {% endif %}
+    {% if tempo_ad %}
+    <p style="margin:8px 0 0">Tempo {{ tempo_ad }}{% if program_bugun %}: {{ program_bugun }}{% endif %}</p>
+    {% endif %}
+    {% if ay_yazisi %}
+    <p class="soluk" style="margin-top:6px">Program uygulanan aylar: {{ ay_yazisi }}</p>
+    {% endif %}
+    <a class="rapor" href="{{ url_for('veli_lgs', bolum='program') }}" style="display:inline-block;margin-top:12px">Ders programı</a>
+    <a class="rapor" href="{{ url_for('veli_lgs', bolum='defter') }}" style="display:inline-block;margin-top:12px">Çalışma defteri</a>
     <a class="rapor" href="{{ url_for('veli_lgs', bolum='deneme') }}" style="display:inline-block;margin-top:12px">Sonuç ve analiz</a>
   </section>
   {% endif %}

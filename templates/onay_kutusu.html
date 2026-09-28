@@ -52,6 +52,39 @@
   </section>
 
   <section class="mt-6 space-y-2">
+    <h2 class="font-black">LGS programı · {{ program|length }}</h2>
+    {% for g in program %}
+    <article class="rounded-2xl border {{ 'border-rose-300 bg-rose-50' if g.gecikti else 'border-slate-200 bg-white' }} p-4 text-sm">
+      <div class="font-black">{{ g.ad_soyad }} <span class="font-bold text-slate-500">{{ g.sinif_adi }}</span></div>
+      <p class="mt-1">{{ g.tarih }} · {{ g.metin or 'Program işi' }}</p>
+      <div class="mt-2 flex gap-2">
+        <form method="post"><input type="hidden" name="tip" value="program"><input type="hidden" name="ogrenci_id" value="{{ g.ogrenci_id }}"><input type="hidden" name="tarih" value="{{ g.tarih }}"><input type="hidden" name="sira" value="{{ g.sira }}"><input type="hidden" name="karar" value="onay"><button class="min-h-11 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white">Onayla</button></form>
+        <form method="post"><input type="hidden" name="tip" value="program"><input type="hidden" name="ogrenci_id" value="{{ g.ogrenci_id }}"><input type="hidden" name="tarih" value="{{ g.tarih }}"><input type="hidden" name="sira" value="{{ g.sira }}"><input type="hidden" name="karar" value="reddet"><button class="min-h-11 rounded-xl bg-rose-700 px-3 py-2 text-xs font-black text-white">Reddet</button></form>
+      </div>
+    </article>
+    {% else %}
+    <p class="text-sm text-slate-500">Program onayı bekleyen yok.</p>
+    {% endfor %}
+  </section>
+
+  <section class="mt-6 space-y-2">
+    <h2 class="font-black">Çalışma defteri · {{ defterler|length }}</h2>
+    {% for g in defterler %}
+    <article class="rounded-2xl border {{ 'border-rose-300 bg-rose-50' if g.gecikti else 'border-slate-200 bg-white' }} p-4 text-sm">
+      <div class="font-black">{{ g.ad_soyad }} <span class="font-bold text-slate-500">{{ g.sinif_adi }}</span></div>
+      <p class="mt-1">{{ g.hafta_basi }} haftası · {{ g.soru }} soru{% if g.kitap_adi %} · {{ g.kitap_adi }}{% endif %}</p>
+      {% if g.ogrenci_not %}<p class="mt-1 text-slate-600">{{ g.ogrenci_not }}</p>{% endif %}
+      <div class="mt-2 flex flex-wrap gap-2">
+        <a class="inline-flex min-h-11 items-center rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-800" href="{{ url_for('lgs', ogrenci=g.ogrenci_id, bolum='defter', hafta=g.hafta_basi) }}">Defteri aç</a>
+        <form method="post"><input type="hidden" name="tip" value="defter"><input type="hidden" name="ogrenci_id" value="{{ g.ogrenci_id }}"><input type="hidden" name="hafta" value="{{ g.hafta_basi }}"><button class="min-h-11 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">Gördüm</button></form>
+      </div>
+    </article>
+    {% else %}
+    <p class="text-sm text-slate-500">Görülmemiş çalışma defteri yok.</p>
+    {% endfor %}
+  </section>
+
+  <section class="mt-6 space-y-2">
     <h2 class="font-black">Günlük soru · {{ gunluk|length }}</h2>
     <p class="text-xs text-slate-500">Öğrencinin yazdığı rakam, siz gördüm demeden tempo hesabına girmez.</p>
     {% for g in gunluk %}

@@ -78,6 +78,9 @@ from database import (
     ogrenci_verilen_kitaplar,
     lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_bildir, lgs_gorev_onayla,
     lgs_gunluk_ekle, lgs_gunluk_liste, lgs_gunluk_onayla, lgs_deneme_ekle, lgs_deneme_onek_sil, lgs_denemeler,
+    lgs_tempo_kaydet, lgs_tempo_sinifa, lgs_tempo_harita, lgs_ay_durum, lgs_ay_kaydet,
+    lgs_program_isaretler, lgs_program_bildir, lgs_program_onayla,
+    lgs_defter_getir, lgs_defter_kaydet, lgs_defter_ogretmen, lgs_defter_onayli_soru,
     deneme_sinav_listesi, deneme_sinav_ogrencileri,
     LGS_DERSLER, LGS_GUNLER, LGS_SORU_SAYISI,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
@@ -96,6 +99,7 @@ from database import (
 )
 from export import excel_raporu_olustur, OPENPYXL_OK
 from lgs_konular import LGS_KONULAR
+from lgs_program import DEFTER_DERSLER, LGS_AYLAR, TEMPO_AD, blok_metin, gun_plani
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes, pdf_odev_raporu_bytes
 from rapor_analiz import (
     aylik_tik_sayilari,
@@ -2399,17 +2403,33 @@ def veli_panel():
         denemeler = lgs_denemeler(int(ogrenci_id), 12)
         profil = lgs_profil(int(ogrenci_id))
         gunluk = lgs_gunluk_liste(int(ogrenci_id))
+        tempo = profil.get("tempo") or ""
+        plan = _lgs_plan_paketi(int(ogrenci_id), tempo, hafta_basi) if tempo else None
+        if plan:
+            bugun_gorev = next(g["bloklar"] for g in plan["gunler"] if g["gun"] == bugun.weekday())
+            oran = round(plan["tamam"] * 100 / plan["toplam"]) if plan["toplam"] else 0
+            defter_soru = lgs_defter_onayli_soru(int(ogrenci_id), hafta_basi)
+            if defter_soru:
+                gunluk = list(gunluk) + [{"cozulen": defter_soru, "goruldu": 1, "tarih": hafta_basi}]
         kocluk = _lgs_kocluk(
-            denemeler, oran, len(gorevler), bugun_gorev,
+            denemeler, oran, plan["toplam"] if plan else len(gorevler), bugun_gorev,
             gunluk, profil["hedef"], profil.get("hedef_net") or 0,
         )
         bekleyen_lgs = [g for g in gorevler if g.get("bildirdi") and not g.get("tamamlandi")]
+        if plan:
+            bekleyen_lgs += [b for g in plan["gunler"] for b in g["bloklar"] if b["bildirdi"] and not b["tamamlandi"]]
         bekleyen_gunluk = sum(1 for g in gunluk if int(g.get("goruldu") or 0) == 0)
+        ay_durum = lgs_ay_durum(int(ogrenci_id))
+        program_bugun = " · ".join(b["metin"] for b in bugun_gorev) if plan else ""
+        ay_yazisi = ", ".join(ad for kod, ad in LGS_AYLAR if ay_durum.get(kod))
     else:
         kocluk = None
         denemeler = []
         bekleyen_lgs = []
         bekleyen_gunluk = 0
+        tempo = ""
+        program_bugun = ""
+        ay_yazisi = ""
     gunler_tr = ("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar")
     ders_adi = odev_ogr["odev_ders"] or odev.get("ders") or ""
     is_metni = hafta["odev_karar_not"] or odev_ogr["odev_not"] or odev.get("aciklama") or ""
@@ -2417,6 +2437,8 @@ def veli_panel():
         aksam = f"Bu akşam {ders_adi or 'ödev'}: {is_metni or 'öğretmenin yazdığı iş'}."
     else:
         aksam = "Bu akşam için yazılı bir ödev yok."
+    if program_bugun:
+        aksam = f"LGS {TEMPO_AD.get(tempo, tempo)}: {program_bugun}. " + aksam
     kitap_satir = hafta["kitap_adi"] or "kitap seçilmedi"
     if hafta["kitap_adi"]:
         kitap_satir += f" {hafta['kitap_sayfa']}" + (f"/{katalog}" if katalog else "") + " sayfa"
@@ -2448,7 +2470,9 @@ def veli_panel():
     elif hafta["odev_bildirim"] == "yaptim":
         satirlar.append("Öğrenci ödevi yaptım dedi, öğretmen onayı bekleniyor.")
     if bekleyen_lgs:
-        satirlar.append("LGS onay bekleyen: " + ", ".join(f"{g['ders']} {g.get('konu') or ''}".strip() for g in bekleyen_lgs))
+        satirlar.append("LGS onay bekleyen: " + ", ".join(
+            (g.get("metin") or f"{g['ders']} {g.get('konu') or ''}".strip()) for g in bekleyen_lgs
+        ))
     if bekleyen_gunluk:
         satirlar.append(f"Günlük kayıt onay bekliyor: {bekleyen_gunluk}")
     satirlar.append(aksam)
@@ -2471,6 +2495,9 @@ def veli_panel():
         hikaye=hikaye,
         yarin=yarin,
         yarin_yok=devamsizlik_ogrenci(int(ogrenci_id), yarin),
+        tempo_ad=TEMPO_AD.get(tempo, ""),
+        program_bugun=program_bugun,
+        ay_yazisi=ay_yazisi,
     )
 
 
@@ -3292,6 +3319,21 @@ def onay_kutusu():
             )
         elif tip == "gunluk":
             lgs_gunluk_onayla(request.form.get("kayit_id", type=int) or 0, request.form.get("karar") or "")
+        elif tip == "program":
+            oid = request.form.get("ogrenci_id", type=int) or 0
+            tarih = (request.form.get("tarih") or "")[:10]
+            sira = request.form.get("sira", type=int) or 0
+            karar = request.form.get("karar") or ""
+            if oid and _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], oid):
+                lgs_program_onayla(oid, tarih, sira, "onay" if karar == "onay" else ("kaldir" if karar == "kaldir" else "reddet"))
+                if karar == "onay":
+                    veli_haber_ekle(oid, "Öğretmen bugünkü LGS programını onayladı.")
+        elif tip == "defter":
+            oid = request.form.get("ogrenci_id", type=int) or 0
+            hafta_defter = _lgs_hafta_sec(request.form.get("hafta"))
+            if oid and _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], oid):
+                lgs_defter_ogretmen(oid, hafta_defter, "", True, session.get("ogretmen_adi") or "")
+                veli_haber_ekle(oid, "Öğretmen çalışma defterini gördü.")
         return redirect(url_for("onay_kutusu"))
     kutu = onay_bekleyenler(hafta)
     return render_template("onay_kutusu.html", hafta=hafta, **kutu)
@@ -3529,7 +3571,10 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
     elif gorev_sayisi and oran == 100:
         adimlar.append("Bu haftanın görevleri bitti. Aynı düzeni gelecek hafta da koru.")
     else:
-        adimlar.append("Öğretmenin bu haftanın programını yazınca görevler burada görünecek.")
+        if gorev_sayisi:
+            adimlar.append("Bugünün işleri tamam. Haftanın kalan günlerine de aynı düzende devam et.")
+        else:
+            adimlar.append("Öğretmen tempo seçince bugünün ders programı burada görünür.")
     if zayif:
         if zayif["bos"] > zayif["yanlis"]:
             adimlar.append(f"{zayif['ders']} dersinde boşları azalt. Önce kolay soruları bitir, sonra zora geç.")
@@ -3623,6 +3668,68 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
 def _lgs_hafta() -> str:
     bugun = date.today()
     return (bugun - timedelta(days=bugun.weekday())).isoformat()
+
+
+def _lgs_hafta_sec(ham: str | None) -> str:
+    bugun = date.today()
+    try:
+        gun = datetime.strptime((ham or "")[:10], "%Y-%m-%d").date()
+    except ValueError:
+        gun = bugun
+    basi = gun - timedelta(days=gun.weekday())
+    en_erken = date(2025, 9, 1)
+    en_gec = date(2027, 6, 28)
+    if basi < en_erken:
+        basi = en_erken
+    if basi > en_gec:
+        basi = en_gec - timedelta(days=en_gec.weekday())
+    return basi.isoformat()
+
+
+def _lgs_plan_paketi(ogrenci_id: int, tempo: str, hafta_basi: str) -> dict:
+    basi = datetime.strptime(hafta_basi, "%Y-%m-%d").date()
+    isaret = lgs_program_isaretler(ogrenci_id, hafta_basi, (basi + timedelta(days=6)).isoformat())
+    gunler = []
+    toplam = 0
+    tamam = 0
+    for gun in range(7):
+        tarih = (basi + timedelta(days=gun)).isoformat()
+        bloklar = []
+        for sira, blok in enumerate(gun_plani(tempo, gun)):
+            kayit = isaret.get((tarih, sira), {})
+            bildirdi = int(kayit.get("bildirdi") or 0)
+            tamamlandi = int(kayit.get("tamamlandi") or 0)
+            toplam += 1
+            if tamamlandi:
+                tamam += 1
+            metin = blok_metin(blok)
+            bloklar.append({
+                "sira": sira,
+                "ders": blok["ders"],
+                "konu": metin,
+                "metin": metin,
+                "bildirdi": bildirdi,
+                "tamamlandi": tamamlandi,
+                "tarih": tarih,
+            })
+        gunler.append({"gun": gun, "tarih": tarih, "bloklar": bloklar})
+    return {"gunler": gunler, "toplam": toplam, "tamam": tamam}
+
+
+def _lgs_defter_form() -> tuple[list[dict], dict]:
+    hucreler = []
+    for gun in range(7):
+        for kod, _ad in DEFTER_DERSLER:
+            hucreler.append({
+                "gun": gun,
+                "ders": kod,
+                "cozulen": request.form.get(f"c_{gun}_{kod}", type=int) or 0,
+                "dogru": request.form.get(f"d_{gun}_{kod}", type=int) or 0,
+                "yanlis": request.form.get(f"y_{gun}_{kod}", type=int) or 0,
+                "bos": request.form.get(f"b_{gun}_{kod}", type=int) or 0,
+            })
+    ruhlar = {gun: (request.form.get(f"ruh_{gun}") or "") for gun in range(7)}
+    return hucreler, ruhlar
 
 
 def _lgs_ogrenci(ogrenci_id: int) -> dict:
@@ -3871,6 +3978,15 @@ def veli_lgs():
 
 def _lgs_ekran(veli: bool):
     hafta = _lgs_hafta()
+    if not veli and request.method == "POST" and request.form.get("islem") == "sinif_tempo":
+        sinif_id = request.form.get("sinif_id", type=int) or 0
+        tempo = request.form.get("tempo") or ""
+        adet = lgs_tempo_sinifa(sinif_id, tempo)
+        if adet:
+            flash(f"{adet} öğrenciye {TEMPO_AD.get(tempo, 'temposuz')} yazıldı.", "success")
+        else:
+            flash("Tempo yalnızca 8/A ve 8/B için kaydedilir.", "warning")
+        return redirect(url_for("lgs"))
     if veli:
         oid = int(session["veli_ogrenci_id"])
         ogr = _ogrenci_bul(oid)
@@ -3887,9 +4003,12 @@ def _lgs_ekran(veli: bool):
         if ogr and ogr.get("sinif_adi") not in {"8/A", "8/B"}:
             return redirect(url_for("lgs"))
     bolum = request.values.get("bolum") or ("ozet" if veli else "deneme")
-    izinli = {"ozet", "gunluk", "deneme"} if veli else {"deneme"}
+    if bolum == "gunluk":
+        bolum = "defter"
+    izinli = {"ozet", "program", "defter", "deneme"} if veli else {"deneme", "program", "defter"}
     if bolum not in izinli:
         bolum = "ozet" if veli else "deneme"
+    hafta_sec = _lgs_hafta_sec(request.values.get("hafta"))
     if request.method == "POST":
         islem = request.form.get("islem")
         if veli and islem == "toggle":
@@ -3898,20 +4017,71 @@ def _lgs_ekran(veli: bool):
         elif not veli and islem == "onay":
             lgs_gorev_onayla(oid, request.form.get("gorev_id", type=int) or 0, request.form.get("karar") or "")
             bolum = "deneme"
-        elif veli and islem == "gunluk":
-            lgs_gunluk_ekle(
+        elif veli and islem == "program_bildir":
+            tarih = (request.form.get("tarih") or "")[:10]
+            sira = request.form.get("sira", type=int)
+            try:
+                gun = datetime.strptime(tarih, "%Y-%m-%d").date()
+            except ValueError:
+                gun = None
+            bugun_gun = date.today()
+            basi = bugun_gun - timedelta(days=bugun_gun.weekday())
+            profil_tempo = lgs_profil(oid).get("tempo") or ""
+            plan_blok = gun_plani(profil_tempo, gun.weekday()) if gun else []
+            if (
+                gun and basi <= gun <= bugun_gun and sira is not None
+                and 0 <= sira < len(plan_blok)
+            ):
+                lgs_program_bildir(oid, tarih, sira, blok_metin(plan_blok[sira]))
+            else:
+                flash("Yalnızca bu haftanın gelmiş günlerini işaretleyebilirsin.", "warning")
+            bolum = "program"
+        elif not veli and islem == "program_onay":
+            lgs_program_onayla(
                 oid,
-                request.form.get("tarih") or date.today().isoformat(),
-                request.form.get("ders", ""),
-                request.form.get("cozulen", type=int) or 0,
-                request.form.get("dogru", type=int) or 0,
-                request.form.get("yanlis", type=int) or 0,
-                request.form.get("sayfa", type=int) or 0,
+                (request.form.get("tarih") or "")[:10],
+                request.form.get("sira", type=int) or 0,
+                request.form.get("karar") or "",
             )
-            bolum = "gunluk"
+            if request.form.get("karar") == "onay":
+                veli_haber_ekle(oid, "Öğretmen bugünkü LGS programını onayladı.")
+            bolum = "program"
+        elif not veli and islem == "tempo":
+            lgs_tempo_kaydet(oid, request.form.get("tempo") or "")
+            bolum = "program"
+        elif not veli and islem == "ay":
+            secili = set()
+            for ham in request.form.getlist("ay"):
+                try:
+                    secili.add(int(ham))
+                except ValueError:
+                    continue
+            lgs_ay_kaydet(oid, secili)
+            bolum = "program"
+        elif veli and islem == "defter":
+            hafta_sec = _lgs_hafta_sec(request.form.get("hafta"))
+            hucreler, ruhlar = _lgs_defter_form()
+            lgs_defter_kaydet(
+                oid, hafta_sec, hucreler, ruhlar,
+                request.form.get("kitap_adi") or "",
+                request.form.get("ogrenci_not") or "",
+                request.form.get("veli_not") or "",
+            )
+            bolum = "defter"
+        elif not veli and islem == "defter_ogretmen":
+            hafta_sec = _lgs_hafta_sec(request.form.get("hafta"))
+            lgs_defter_ogretmen(
+                oid, hafta_sec,
+                request.form.get("ogretmen_not") or "",
+                request.form.get("karar") == "gor",
+                session.get("ogretmen_adi") or "",
+            )
+            if request.form.get("karar") == "gor":
+                veli_haber_ekle(oid, "Öğretmen çalışma defterini gördü.")
+            bolum = "defter"
         elif not veli and islem == "hedef":
             lgs_profil_kaydet(oid, request.form.get("hedef", ""), request.form.get("hedef_net", type=int) or 0)
-            bolum = "deneme"
+            bolum = "program" if request.form.get("donus") == "program" else "deneme"
         elif not veli and islem == "deneme":
             dersler = []
             for ders in LGS_DERSLER:
@@ -3932,7 +4102,11 @@ def _lgs_ekran(veli: bool):
                 flash(sonuc.get("hata") or "Deneme kaydedilemedi.", "warning")
             bolum = "deneme"
         hedef_url = "veli_lgs" if veli else "lgs"
-        return redirect(url_for(hedef_url, **({} if veli else {"ogrenci": oid}), bolum=bolum))
+        parametre = {} if veli else {"ogrenci": oid}
+        parametre["bolum"] = bolum
+        if bolum == "defter":
+            parametre["hafta"] = hafta_sec
+        return redirect(url_for(hedef_url, **parametre))
 
     if not veli and not oid:
         siniflar = [
@@ -3942,7 +4116,13 @@ def _lgs_ekran(veli: bool):
         if not siniflar:
             siniflar = [s for s in aktif_sube_siniflari() if s.get("sinif_adi") in {"8/A", "8/B"}]
         gruplar = [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in siniflar]
-        return render_template("lgs.html", gruplar=gruplar, ogrenci=None, veli=False)
+        harita = lgs_tempo_harita()
+        for grup in gruplar:
+            for ogrenci_satir in grup["ogrenciler"]:
+                ogrenci_satir["tempo"] = harita.get(int(ogrenci_satir["id"]), "")
+        return render_template(
+            "lgs.html", gruplar=gruplar, ogrenci=None, veli=False, tempo_adlari=TEMPO_AD,
+        )
 
     gorevler = lgs_gorevler(oid, hafta)
     konu_zor = {
@@ -3962,8 +4142,18 @@ def _lgs_ekran(veli: bool):
     grafik = list(reversed(denemeler[:8]))
     gunluk = lgs_gunluk_liste(oid) if veli else []
     profil = lgs_profil(oid)
+    tempo = profil.get("tempo") or ""
+    plan = _lgs_plan_paketi(oid, tempo, hafta) if tempo else {"gunler": [], "toplam": 0, "tamam": 0}
+    if tempo:
+        bugun_gorev = next(g["bloklar"] for g in plan["gunler"] if g["gun"] == bugun_gun)
+        tamam = plan["tamam"]
+        oran = round(tamam * 100 / plan["toplam"]) if plan["toplam"] else 0
+    defter_soru = lgs_defter_onayli_soru(oid, hafta)
+    if defter_soru:
+        gunluk = list(gunluk) + [{"cozulen": defter_soru, "goruldu": 1, "tarih": hafta}]
     kocluk = _lgs_kocluk(
-        denemeler, oran, len(gorevler), bugun_gorev, gunluk, profil["hedef"], profil.get("hedef_net") or 0,
+        denemeler, oran, plan["toplam"] if tempo else len(gorevler), bugun_gorev,
+        gunluk, profil["hedef"], profil.get("hedef_net") or 0,
     )
     return render_template(
         "lgs.html",
@@ -3987,6 +4177,23 @@ def _lgs_ekran(veli: bool):
         grafik_etiket=[d["ad"] for d in grafik],
         grafik_net=[d["net"] for d in grafik],
         bugun=date.today().isoformat(),
+        tempo=tempo,
+        tempo_ad=TEMPO_AD.get(tempo, ""),
+        tempolar=tuple(TEMPO_AD.items()),
+        plan_gunler=plan["gunler"],
+        plan_toplam=plan["toplam"] if tempo else len(gorevler),
+        plan_tamam=tamam,
+        aylar=LGS_AYLAR,
+        ay_durum=lgs_ay_durum(oid),
+        defter=lgs_defter_getir(oid, hafta_sec),
+        defter_dersler=DEFTER_DERSLER,
+        hafta_sec=hafta_sec,
+        hafta_onceki=_lgs_hafta_sec(
+            (datetime.strptime(hafta_sec, "%Y-%m-%d").date() - timedelta(days=7)).isoformat()
+        ),
+        hafta_sonraki=_lgs_hafta_sec(
+            (datetime.strptime(hafta_sec, "%Y-%m-%d").date() + timedelta(days=7)).isoformat()
+        ),
     )
 
 
