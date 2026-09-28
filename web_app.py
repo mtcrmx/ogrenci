@@ -2415,18 +2415,12 @@ def veli_panel():
             denemeler, oran, plan["toplam"] if plan else len(gorevler), bugun_gorev,
             gunluk, profil["hedef"], profil.get("hedef_net") or 0,
         )
-        bekleyen_lgs = [g for g in gorevler if g.get("bildirdi") and not g.get("tamamlandi")]
-        if plan:
-            bekleyen_lgs += [b for g in plan["gunler"] for b in g["bloklar"] if b["bildirdi"] and not b["tamamlandi"]]
-        bekleyen_gunluk = sum(1 for g in gunluk if int(g.get("goruldu") or 0) == 0)
         ay_durum = lgs_ay_durum(int(ogrenci_id))
         program_bugun = " · ".join(b["metin"] for b in bugun_gorev) if plan else ""
         ay_yazisi = ", ".join(ad for kod, ad in LGS_AYLAR if ay_durum.get(kod))
     else:
         kocluk = None
         denemeler = []
-        bekleyen_lgs = []
-        bekleyen_gunluk = 0
         tempo = ""
         program_bugun = ""
         ay_yazisi = ""
@@ -2453,29 +2447,7 @@ def veli_panel():
     hikaye = _deneme_hikaye(denemeler) if lgs_acik else ""
     if lgs_acik and kocluk and kocluk.get("hedef_net") and kocluk.get("son"):
         hikaye = (hikaye + f" Hedef {kocluk['hedef_net']} net, kalan {kocluk['kalan']}.").strip()
-    yarin = (bugun + timedelta(days=1)).isoformat()
     hafta["odev_foto"] = bool(kayit.get("odev_foto"))
-    satirlar = [f"{o['ad_soyad']} · {o['sinif_adi']} · bu hafta"]
-    if hafta["kitap_adi"]:
-        sayfa = f"{hafta['kitap_sayfa']}/{katalog} sayfa" if katalog else f"{hafta['kitap_sayfa']} sayfa"
-        satirlar.append(f"Kitap: {hafta['kitap_adi']} ({sayfa}) · {hafta['kitap_okuma']}")
-    satirlar.append(f"Ödev: {odev.get('ders') or 'ders yok'} — {odev.get('aciklama') or 'açıklama yok'}")
-    if hafta["odev_kod"]:
-        karar = f"Öğretmen kararı: {hafta['odev_durum']}"
-        if hafta["odev_karar_not"]:
-            karar += f". {hafta['odev_karar_not']}"
-        if hafta["ogretmen_adi"]:
-            karar += f" ({hafta['ogretmen_adi']})"
-        satirlar.append(karar)
-    elif hafta["odev_bildirim"] == "yaptim":
-        satirlar.append("Öğrenci ödevi yaptım dedi, öğretmen onayı bekleniyor.")
-    if bekleyen_lgs:
-        satirlar.append("LGS onay bekleyen: " + ", ".join(
-            (g.get("metin") or f"{g['ders']} {g.get('konu') or ''}".strip()) for g in bekleyen_lgs
-        ))
-    if bekleyen_gunluk:
-        satirlar.append(f"Günlük kayıt onay bekliyor: {bekleyen_gunluk}")
-    satirlar.append(aksam)
     return render_template(
         "veli_panel.html",
         ogrenci=o,
@@ -2487,14 +2459,11 @@ def veli_panel():
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
         kocluk=kocluk,
         lgs_acik=lgs_acik,
-        ozet_metin="\n".join(satirlar),
         aksam=aksam,
         sabah=sabah,
         duzen=duzen,
         duzen_metin=duzen_metin,
         hikaye=hikaye,
-        yarin=yarin,
-        yarin_yok=devamsizlik_ogrenci(int(ogrenci_id), yarin),
         tempo_ad=TEMPO_AD.get(tempo, ""),
         program_bugun=program_bugun,
         ay_yazisi=ay_yazisi,

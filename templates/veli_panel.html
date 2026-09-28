@@ -71,6 +71,7 @@
     <div class="soluk">Sabah özeti</div>
     <p style="margin:8px 0 0;font-weight:800">{{ sabah }}</p>
     <button type="button" id="haber-izin" style="width:auto;margin-top:10px">Telefonda haber ver</button>
+    <button type="button" id="ana-ekran" hidden style="width:auto;margin-top:10px">Ana ekrana ekle</button>
   </section>
 
   <section class="kart" style="background:#fffbeb;border-color:#fcd34d">
@@ -101,17 +102,6 @@
     <a class="rapor" href="{{ url_for('veli_deneme_analiz') }}" style="display:inline-block;margin-top:12px">Grafikli analiz</a>
   </section>
   {% endif %}
-
-  <section class="kart">
-    <div class="soluk">Yarın</div>
-    {% if yarin_yok %}
-    <p style="margin:8px 0 0;font-weight:800">Yarın gelmeyecek bilgisi öğretmene iletildi.</p>
-    {% else %}
-    <form method="post" action="{{ url_for('veli_yok') }}">
-      <button type="submit">Yarın gelmeyecek</button>
-    </form>
-    {% endif %}
-  </section>
 
   <section class="kart">
     <div class="soluk">Bu hafta</div>
@@ -146,13 +136,6 @@
       <button type="submit">Ödevi yaptım</button>
     </form>
     {% endif %}
-  </section>
-
-  <section class="kart">
-    <div class="soluk">Bu haftanın metni</div>
-    <textarea id="hafta-metin" readonly rows="6">{{ ozet_metin }}</textarea>
-    <button type="button" id="hafta-kopyala">Kopyala</button>
-    <button type="button" id="ana-ekran" hidden>Ana ekrana ekle</button>
   </section>
 
   {% if lgs_acik and kocluk %}
@@ -264,15 +247,6 @@
 </script>
 {% endif %}
 <script>
-document.getElementById("hafta-kopyala").addEventListener("click", function () {
-  const kutu = document.getElementById("hafta-metin");
-  navigator.clipboard.writeText(kutu.value).then(function () {
-    document.getElementById("hafta-kopyala").textContent = "Kopyalandı";
-  }).catch(function () {
-    kutu.focus();
-    kutu.select();
-  });
-});
 (function () {
   const dugme = document.getElementById("ana-ekran");
   const kurulu = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
