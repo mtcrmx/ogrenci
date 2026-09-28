@@ -69,6 +69,7 @@ from database import (
     kitap_okuma_veli_kaydet, kitap_okuma_ogrenci_gecmis, kitap_okuma_ogretmen_listesi,
     kitap_okuma_onayla, kitap_okuma_rapor,
     haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu,
+    kitap_odev_analiz,
     tik_kayitlari_siniflarda,
     ogretmen_yetki_al, ogretmen_yetki_guncelle,
     randevu_talep_ekle, randevu_talep_by_id, randevu_listesi_siniflar, randevu_durum_guncelle,
@@ -473,21 +474,19 @@ def _ogrenci_bul(ogrenci_id: int) -> dict | None:
 def _ogrenci_no_ile_bul(ogr_no: int) -> dict | None:
     from database import _conn as _db
     con = _db()
-    row = con.execute("""
+    rows = con.execute("""
         SELECT o.id, o.ad_soyad, o.ogr_no, o.sinif_id, s.sinif_adi,
                COUNT(t.id) AS tik_sayisi
         FROM ogrenciler o
         JOIN siniflar s ON s.id = o.sinif_id
         LEFT JOIN tik_kayitlari t ON t.ogrenci_id = o.id
-        WHERE o.ogr_no = ?
+        WHERE o.ogr_no = ? AND s.sinif_adi IN ('5/A','5/B','6/A','6/B','7/A','7/B','8/A','8/B')
         GROUP BY o.id
-        ORDER BY s.sinif_adi, o.ad_soyad
-        LIMIT 1
-    """, (ogr_no,)).fetchone()
+    """, (ogr_no,)).fetchall()
     con.close()
-    if not row:
+    if len(rows) != 1:
         return None
-    return _ogrencilere_durum_ekle([dict(row)])[0]
+    return _ogrencilere_durum_ekle([dict(rows[0])])[0]
 
 
 def _ogrenci_rozetleri(ogrenci_id: int) -> list[dict]:
@@ -1420,6 +1419,7 @@ def veli_karne():
 @app.route("/ogretmen/sinav-analiz")
 @giris_zorunlu
 def ogretmen_sinav_analiz():
+    return redirect(url_for("analiz_merkezi"))
     """Cebirci tarzı sınav/kazanım analizi (tarayıcıda saklanır; ECO sınıf listesiyle entegre)."""
     oid = session["ogretmen_id"]
     siniflar = ogretmen_siniflari(oid)
@@ -1453,6 +1453,7 @@ def _sinav_dersleri() -> list[str]:
 @app.route("/ogretmen/sinav-hazirla")
 @giris_zorunlu
 def ogretmen_sinav_hazirla():
+    return redirect(url_for("analiz_merkezi"))
     """Defterdoldur benzeri sınav hazırlama akışı: bilgi, kazanım, soru planı, önizleme."""
     oid = session["ogretmen_id"]
     siniflar = ogretmen_siniflari(oid)
@@ -2283,24 +2284,15 @@ def veli_panel():
         "odev_durum": etiket.get(kayit.get("odev_durum") or "", "Henüz işaretlenmedi"),
     }
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
-    program = ders_programi_sinif(int(o["sinif_id"])) if o.get("sinif_id") else []
     pencereler = []
     for n in veli_davranis_pencereleri(int(ogrenci_id)):
+        baslik = {"uyari": "Uyarı", "olumlu": "Olumlu davranış", "duyuru": "Duyuru"}.get(n["tur"], "Duyuru")
         pencereler.append({
             "anahtar": f"not-{n['id']}",
             "tur": n["tur"],
-            "baslik": "Uyarı" if n["tur"] == "uyari" else "Olumlu davranış",
+            "baslik": baslik,
             "metin": n["not_metni"],
             "alt": f"{n.get('ogretmen') or ''} · {(n.get('tarih') or '')[:16]}",
-        })
-    duyuru = son_bilgilendirme("veli")
-    if duyuru:
-        pencereler.append({
-            "anahtar": f"duyuru-{duyuru['id']}",
-            "tur": "duyuru",
-            "baslik": duyuru.get("baslik") or "Duyuru",
-            "metin": duyuru.get("metin") or "",
-            "alt": f"{duyuru.get('yayinlayan') or ''} · {(duyuru.get('tarih') or '')[:16]}",
         })
     return render_template(
         "veli_panel.html",
@@ -2308,8 +2300,6 @@ def veli_panel():
         avatar=_avatar(o),
         hafta=hafta,
         notlar=notlar,
-        gunler=DERS_GUNLERI,
-        program_grid=ders_programi_grid(program),
         veli_pencereler=pencereler,
     )
 
@@ -2318,6 +2308,54 @@ def veli_panel():
 def veli_cikis():
     session.pop("veli_ogrenci_id", None)
     return redirect(url_for("veli_giris"))
+
+
+@app.route("/veli/rapor")
+def veli_kitap_odev_rapor():
+    """Veli yalnızca oturumundaki öğrencinin raporunu görür. Adresteki numara yok sayılır."""
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    o = _ogrenci_bul(int(oid))
+    if not o or o.get("sinif_adi") not in {"5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"}:
+        session.pop("veli_ogrenci_id", None)
+        return redirect(url_for("veli_giris"))
+    return render_template(
+        "kitap_odev_rapor.html",
+        analiz=kitap_odev_analiz(ogrenci_id=int(oid)),
+        bireysel=True,
+        veli=True,
+        baslik=o["ad_soyad"],
+    )
+
+
+@app.route("/rapor/kitap-odev")
+@giris_zorunlu
+def kitap_odev_rapor():
+    ogrenci_id = request.args.get("ogrenci", type=int)
+    sinif_id = request.args.get("sinif", type=int)
+    if ogrenci_id:
+        if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
+            abort(403)
+        o = _ogrenci_bul(ogrenci_id)
+        return render_template(
+            "kitap_odev_rapor.html",
+            analiz=kitap_odev_analiz(ogrenci_id=ogrenci_id),
+            bireysel=True,
+            veli=False,
+            baslik=(o or {}).get("ad_soyad") or "Öğrenci",
+        )
+    if not sinif_id or not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
+        abort(403)
+    sinif_adi = next((s["sinif_adi"] for s in ogretmen_siniflari(session["ogretmen_id"]) if int(s["id"]) == int(sinif_id)), "Sınıf")
+    return render_template(
+        "kitap_odev_rapor.html",
+        analiz=kitap_odev_analiz(sinif_id=sinif_id),
+        bireysel=False,
+        veli=False,
+        baslik=sinif_adi,
+        sinif_id=sinif_id,
+    )
 
 
 @app.route("/admin/sifreler", methods=["GET", "POST"])
@@ -2496,6 +2534,7 @@ def veri_girisi():
 @app.route("/ders-programi")
 @giris_zorunlu
 def ders_programi():
+    return redirect(url_for("dashboard"))
     oid = int(session["ogretmen_id"])
     subeler = aktif_sube_siniflari()
     gorunum = (request.args.get("gorunum") or "ben").strip()
@@ -2547,6 +2586,7 @@ def ders_programi():
 @app.route("/iletisim")
 @giris_zorunlu
 def iletisim():
+    return redirect(url_for("dashboard"))
     return render_template("iletisim.html")
 
 
@@ -3723,25 +3763,7 @@ def analiz_merkezi():
         "analiz_merkezi.html",
         siniflar=siniflar,
         secili_sinif_id=secili_sinif_id,
-        odev_rapor_sinif=odev_rapor_sinif,
-        pdf_ok=PDF_OK,
-        excel_ok=OPENPYXL_OK,
-        ogretmen_adi=session.get("ogretmen_adi", ""),
-        ozet={
-            "ogrenci": len(ogrenciler),
-            "tik": toplam_tik,
-            "temiz": temiz,
-            "risk": risk,
-            "olumlu": olumlu_toplam,
-            "odev_kayit": len(odev_rapor_sinif),
-            "odev_tamam": odev_tamam,
-            "odev_toplam": odev_toplam,
-        },
-        kriterler=kriterler,
-        risk_ogrenciler=sorted(
-            [o for o in ogrenciler if int(o.get("tik_sayisi") or 0) >= 3],
-            key=lambda x: (-int(x.get("tik_sayisi") or 0), x.get("ad_soyad") or ""),
-        )[:12],
+        analiz=kitap_odev_analiz(secili_sinif_id) if secili_sinif_id else {"haftalar": [], "ogrenciler": [], "ozet": {}},
     )
 
 

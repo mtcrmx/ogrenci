@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kitap ve ödev raporu</title>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; margin: 0; background: #f8fafc; color: #0f172a; }
+    main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    h1 { margin: 0; font-size: 26px; }
+    .ust { display: flex; justify-content: space-between; gap: 12px; align-items: end; }
+    .ozet { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }
+    .kutu { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
+    .kutu b { display: block; font-size: 22px; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 8px; text-align: left; font-size: 13px; }
+    th { background: #f1f5f9; }
+    a, button { font-weight: 800; }
+    .yazdir { border: 0; background: #0f2744; color: #fff; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+    @media print { .yazdir, .geri { display: none; } body { background: #fff; } }
+    @media (max-width: 700px) { .ozet { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <div class="ust">
+    <div>
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b">
+        {{ 'Öğrenci raporu' if bireysel else 'Sınıf raporu' }}
+      </div>
+      <h1>{{ baslik }}</h1>
+    </div>
+    <div>
+      {% if veli %}
+      <a class="geri" href="{{ url_for('veli_panel') }}">Panele dön</a>
+      {% else %}
+      <a class="geri" href="{{ url_for('analiz_merkezi') }}">Analize dön</a>
+      {% endif %}
+      <button class="yazdir" type="button" onclick="window.print()">Yazdır / PDF</button>
+    </div>
+  </div>
+  {% set o = analiz.ozet %}
+  <section class="ozet">
+    <div class="kutu">Hafta<b>{{ o.hafta }}</b></div>
+    <div class="kutu">Okudu / okumadı<b>{{ o.okudu }} / {{ o.okumadi }}</b></div>
+    <div class="kutu">Getirdi / getirmedi<b>{{ o.getirdi }} / {{ o.getirmedi }}</b></div>
+    <div class="kutu">Tam / eksik / yok<b>{{ o.tam }} / {{ o.eksik }} / {{ o.yok }}</b></div>
+  </section>
+  <table>
+    <thead>
+      <tr>
+        <th>Öğrenci</th>
+        <th>Okudu</th><th>Okumadı</th>
+        <th>Getirdi</th><th>Getirmedi</th>
+        <th>Tam</th><th>Eksik</th><th>Yok</th>
+        {% if not veli %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in analiz.ogrenciler %}
+      <tr>
+        <td><b>{{ s.ad_soyad }}</b><br><span style="color:#64748b">No {{ s.ogr_no }} · {{ s.sinif_adi }}</span></td>
+        <td>{{ s.okudu }}</td><td>{{ s.okumadi }}</td>
+        <td>{{ s.getirdi }}</td><td>{{ s.getirmedi }}</td>
+        <td>{{ s.tam }}</td><td>{{ s.eksik }}</td><td>{{ s.yok }}</td>
+        {% if not veli %}
+        <td><a href="{{ url_for('kitap_odev_rapor', ogrenci=s.id) }}">Bireysel</a></td>
+        {% endif %}
+      </tr>
+      {% if bireysel %}
+      <tr>
+        <td colspan="{{ 8 if veli else 9 }}">
+          {% for h in s.haftalar %}
+          <div>{{ h.hafta }} · okuma: {{ h.kitap_okuma or '—' }} · getirme: {{ h.kitap_getirme or '—' }} · ödev: {{ h.odev_durum or '—' }}</div>
+          {% else %}
+          <div>Henüz haftalık işaret yok.</div>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="8">Kayıt yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

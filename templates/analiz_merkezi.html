@@ -1,17 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Analiz{% endblock %}
-
 {% block body %}
 <main class="px-4 py-6">
   <section class="mx-auto max-w-6xl space-y-5">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p class="text-xs font-black uppercase tracking-widest text-rose-700">Analiz</p>
-        <h1 class="mt-1 text-2xl font-black text-slate-950">Sınıf özeti</h1>
-        <p class="mt-1 text-sm text-slate-600">Sınıf listesi ve sınav çıktıları.</p>
+        <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Analiz</p>
+        <h1 class="mt-1 text-2xl font-black text-slate-950">Kitap okuma ve ödev</h1>
+        <p class="mt-1 text-sm text-slate-600">Sınıf geneli ve öğrenci bazında işaretler.</p>
       </div>
       {% if siniflar %}
-      <form method="GET" action="{{ url_for('analiz_merkezi') }}" class="flex items-center gap-2">
+      <form method="GET" class="flex items-center gap-2">
         <label class="text-xs font-bold text-slate-600">Sınıf
           <select name="sinif_id" onchange="this.form.submit()"
                   class="ml-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800">
@@ -24,22 +23,52 @@
       {% endif %}
     </div>
 
-    <section class="grid grid-cols-2 gap-3">
-      <div class="rounded-2xl border border-slate-200 bg-white p-4">
-        <div class="text-[11px] font-black uppercase text-slate-500">Öğrenci</div>
-        <div class="mt-1 text-2xl font-black text-slate-950">{{ ozet.ogrenci }}</div>
-      </div>
-      <a href="{{ url_for('haftalik_takip', sinif=secili_sinif_id) if secili_sinif_id else url_for('haftalik_takip') }}"
-         class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-        <div class="text-[11px] font-black uppercase text-emerald-800">Giriş</div>
-        <div class="mt-1 text-lg font-black text-slate-950">Kitap ve ödev</div>
-      </a>
+    {% set o = analiz.ozet %}
+    <section class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-[11px] font-black uppercase text-slate-500">Öğrenci</div><div class="mt-1 text-2xl font-black">{{ o.ogrenci or 0 }}</div></div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-[11px] font-black uppercase text-slate-500">İşaretli hafta</div><div class="mt-1 text-2xl font-black">{{ o.hafta or 0 }}</div></div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-[11px] font-black uppercase text-emerald-700">Okudu</div><div class="mt-1 text-2xl font-black text-emerald-700">{{ o.okudu or 0 }}</div></div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-[11px] font-black uppercase text-sky-700">Ödev tam</div><div class="mt-1 text-2xl font-black text-sky-700">{{ o.tam or 0 }}</div></div>
     </section>
 
-    <section class="rounded-2xl border border-slate-200 bg-white p-5">
-      <h2 class="text-lg font-black text-slate-950">Sınav</h2>
-      <a href="{{ url_for('ogretmen_sinav_analiz') }}"
-         class="mt-3 inline-flex rounded-xl bg-amber-600 px-4 py-3 text-sm font-black text-white">Sınav analizi</a>
+    {% if secili_sinif_id %}
+    <a href="{{ url_for('kitap_odev_rapor', sinif=secili_sinif_id) }}"
+       class="inline-flex rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Sınıf raporu</a>
+    {% endif %}
+
+    <section class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Öğrenci</th>
+            <th class="px-3 py-2">Okudu</th>
+            <th class="px-3 py-2">Okumadı</th>
+            <th class="px-3 py-2">Getirdi</th>
+            <th class="px-3 py-2">Getirmedi</th>
+            <th class="px-3 py-2">Tam</th>
+            <th class="px-3 py-2">Eksik</th>
+            <th class="px-3 py-2">Yok</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for s in analiz.ogrenciler %}
+          <tr>
+            <td class="px-3 py-2 font-bold">{{ s.ad_soyad }}<div class="text-xs font-medium text-slate-400">No {{ s.ogr_no }}</div></td>
+            <td class="px-3 py-2">{{ s.okudu }}</td>
+            <td class="px-3 py-2">{{ s.okumadi }}</td>
+            <td class="px-3 py-2">{{ s.getirdi }}</td>
+            <td class="px-3 py-2">{{ s.getirmedi }}</td>
+            <td class="px-3 py-2">{{ s.tam }}</td>
+            <td class="px-3 py-2">{{ s.eksik }}</td>
+            <td class="px-3 py-2">{{ s.yok }}</td>
+            <td class="px-3 py-2"><a class="font-black text-sky-700" href="{{ url_for('kitap_odev_rapor', ogrenci=s.id) }}">Bireysel rapor</a></td>
+          </tr>
+          {% else %}
+          <tr><td class="px-3 py-6 text-slate-500" colspan="9">Bu sınıfta öğrenci yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </section>
   </section>
 </main>

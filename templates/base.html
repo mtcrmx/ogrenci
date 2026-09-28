@@ -522,16 +522,12 @@
           Kitap / Ödev
         </a>
         <a href="{{ url_for('veri_girisi', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('veri_girisi') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['veri_girisi', 'odevler', 'odev_detay', 'yoklama', 'ogretmen_kitap_okuma', 'ogretmen_sinav_analiz', 'ogretmen_sinav_hazirla', 'ders_programi'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['veri_girisi', 'odevler', 'odev_detay', 'yoklama', 'ogretmen_kitap_okuma', 'haftalik_takip'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
           Veri
         </a>
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'analiz_merkezi' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['analiz_merkezi', 'kitap_odev_rapor'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
           Analiz
-        </a>
-        <a href="{{ url_for('iletisim') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['iletisim', 'bilgilendirme_yonetimi', 'ogretmen_randevular'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
-          İletişim
         </a>
       </nav>
 
@@ -569,10 +565,8 @@
       <div class="grid gap-2">
         <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}" class="mobile-link"><span class="nav-mark mark-blue">P</span><span>Panel — öğrenci listesi</span></a>
         <a href="{{ url_for('haftalik_takip', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('haftalik_takip') }}" class="mobile-link"><span class="nav-mark mark-emerald">K</span><span>Kitap ve ödev — haftalık işaret</span></a>
-        <a href="{{ url_for('veri_girisi', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('veri_girisi') }}" class="mobile-link"><span class="nav-mark mark-emerald">V</span><span>Veri girişi — ödev, kitap, sınav</span></a>
-        <a href="{{ url_for('ders_programi') }}" class="mobile-link"><span class="nav-mark mark-blue">D</span><span>Ders programı — haftalık saatler</span></a>
-        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — özet, Excel, PDF</span></a>
-        <a href="{{ url_for('iletisim') }}" class="mobile-link"><span class="nav-mark mark-sky">İ</span><span>İletişim — duyuru ve randevu</span></a>
+        <a href="{{ url_for('veri_girisi', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('veri_girisi') }}" class="mobile-link"><span class="nav-mark mark-emerald">V</span><span>Veri girişi — kitap ve ödev</span></a>
+        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — kitap ve ödev raporu</span></a>
       </div>
     </section>
 

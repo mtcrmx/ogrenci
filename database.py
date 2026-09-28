@@ -4445,6 +4445,101 @@ def haftalik_takip_toplu(
     return {"ok": True, "adet": len(ogrenciler), "alan": alan, "deger": deger}
 
 
+def kitap_odev_analiz(sinif_id: int | None = None, ogrenci_id: int | None = None) -> dict:
+    """Haftalık kitap ve ödev işaretlerinden sınıf veya tek öğrenci özeti."""
+    con = _conn()
+    _haftalik_takip_init(con)
+    if ogrenci_id:
+        ogrenciler = [dict(r) for r in con.execute(
+            """
+            SELECT o.id, o.ad_soyad, o.ogr_no, s.sinif_adi, o.sinif_id
+            FROM ogrenciler o JOIN siniflar s ON s.id = o.sinif_id
+            WHERE o.id = ?
+            """,
+            (ogrenci_id,),
+        ).fetchall()]
+        kayitlar = [dict(r) for r in con.execute(
+            """
+            SELECT ogrenci_id, hafta_basi, kitap_okuma, kitap_getirme, odev_durum
+            FROM haftalik_takip WHERE ogrenci_id = ?
+            ORDER BY hafta_basi
+            """,
+            (ogrenci_id,),
+        ).fetchall()]
+    else:
+        ogrenciler = [dict(r) for r in con.execute(
+            """
+            SELECT o.id, o.ad_soyad, o.ogr_no, s.sinif_adi, o.sinif_id
+            FROM ogrenciler o JOIN siniflar s ON s.id = o.sinif_id
+            WHERE o.sinif_id = ?
+            ORDER BY o.ad_soyad
+            """,
+            (sinif_id,),
+        ).fetchall()]
+        kayitlar = [dict(r) for r in con.execute(
+            """
+            SELECT ogrenci_id, hafta_basi, kitap_okuma, kitap_getirme, odev_durum
+            FROM haftalik_takip WHERE sinif_id = ?
+            ORDER BY hafta_basi, ogrenci_id
+            """,
+            (sinif_id,),
+        ).fetchall()]
+    con.close()
+    haftalar = sorted({r["hafta_basi"] for r in kayitlar})
+    harita: dict[tuple[int, str], dict] = {
+        (int(r["ogrenci_id"]), r["hafta_basi"]): r for r in kayitlar
+    }
+
+    def say(alan: str, deger: str, oid: int | None = None) -> int:
+        return sum(
+            1 for r in kayitlar
+            if r.get(alan) == deger and (oid is None or int(r["ogrenci_id"]) == oid)
+        )
+
+    satirlar = []
+    for o in ogrenciler:
+        oid = int(o["id"])
+        hafta_satir = []
+        for h in haftalar:
+            k = harita.get((oid, h), {})
+            hafta_satir.append({
+                "hafta": h,
+                "kitap_okuma": k.get("kitap_okuma") or "",
+                "kitap_getirme": k.get("kitap_getirme") or "",
+                "odev_durum": k.get("odev_durum") or "",
+            })
+        satirlar.append({
+            "id": oid,
+            "ad_soyad": o["ad_soyad"],
+            "ogr_no": o["ogr_no"],
+            "sinif_adi": o["sinif_adi"],
+            "sinif_id": o["sinif_id"],
+            "okudu": say("kitap_okuma", "okudu", oid),
+            "okumadi": say("kitap_okuma", "okumadi", oid),
+            "getirdi": say("kitap_getirme", "getirdi", oid),
+            "getirmedi": say("kitap_getirme", "getirmedi", oid),
+            "tam": say("odev_durum", "tam", oid),
+            "eksik": say("odev_durum", "eksik", oid),
+            "yok": say("odev_durum", "yok", oid),
+            "haftalar": hafta_satir,
+        })
+    return {
+        "haftalar": haftalar,
+        "ogrenciler": satirlar,
+        "ozet": {
+            "ogrenci": len(ogrenciler),
+            "hafta": len(haftalar),
+            "okudu": say("kitap_okuma", "okudu"),
+            "okumadi": say("kitap_okuma", "okumadi"),
+            "getirdi": say("kitap_getirme", "getirdi"),
+            "getirmedi": say("kitap_getirme", "getirmedi"),
+            "tam": say("odev_durum", "tam"),
+            "eksik": say("odev_durum", "eksik"),
+            "yok": say("odev_durum", "yok"),
+        },
+    }
+
+
 def _kitap_okuma_puan(sayfa_sayisi: int, saat: float, gun: int) -> tuple[int, int]:
     sayfa = max(0, int(sayfa_sayisi or 0))
     sure = max(0.0, float(saat or 0))
@@ -5123,7 +5218,7 @@ def ogretmen_notu_ekle(
     not_metni = (not_metni or "").strip()
     if not not_metni:
         return {"ok": False, "sebep": "Not bos olamaz"}
-    if tur not in ("", "uyari", "olumlu"):
+    if tur not in ("", "uyari", "olumlu", "duyuru"):
         return {"ok": False, "sebep": "Gecersiz tur"}
     con = _conn()
     _gelisim_init(con)
@@ -5931,11 +6026,11 @@ def veli_davranis_pencereleri(ogrenci_id: int) -> list[dict]:
     gorulen = set()
     for n in notlar:
         tur = (n.get("tur") or "").strip()
-        if tur not in ("uyari", "olumlu") or tur in gorulen:
+        if tur not in ("uyari", "olumlu", "duyuru") or tur in gorulen:
             continue
         gorulen.add(tur)
         secilen.append(n)
-        if len(gorulen) == 2:
+        if len(gorulen) == 3:
             break
     return secilen
 

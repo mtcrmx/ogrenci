@@ -35,7 +35,8 @@
     #veli-popup-katman .vp-kutu { width: min(440px, 100%); border-radius: 18px; padding: 22px; color: #fff; }
     #veli-popup-katman .vp-uyari { background: #be123c; }
     #veli-popup-katman .vp-olumlu { background: #047857; }
-    #veli-popup-katman .vp-duyuru { background: #1d4ed8; }
+    #veli-popup-katman .vp-duyuru { background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; }
+  #veli-popup-katman .vp-duyuru button { background: #0f2744; color: #fff; }
     #veli-popup-katman h2 { margin: 8px 0 0; }
     #veli-popup-katman button { width: auto; background: #fff; color: #0f172a; }
   </style>
@@ -46,6 +47,7 @@
 <header>
   <div class="bar">
     <div class="brand">Erenler Cumhuriyet Ortaokulu</div>
+    <a class="cikis" href="{{ url_for('veli_kitap_odev_rapor') }}" style="background:#0f2744;margin-right:8px">Raporum</a>
     <a class="cikis" href="{{ url_for('veli_cikis') }}">Çıkış</a>
   </div>
 </header>
@@ -70,7 +72,7 @@
       <strong>Öğretmen notları</strong>
       {% for n in notlar %}
       <article class="not {{ 'uyari' if n.tur == 'uyari' else ('olumlu' if n.tur == 'olumlu' else 'diger') }}">
-        <div class="soluk">{{ 'Uyarı' if n.tur == 'uyari' else ('Olumlu davranış' if n.tur == 'olumlu' else 'Not') }}</div>
+        <div class="soluk">{{ 'Uyarı' if n.tur == 'uyari' else ('Olumlu davranış' if n.tur == 'olumlu' else 'Duyuru') }}</div>
         <div>{{ n.not_metni }}</div>
         <div class="soluk">{{ n.ogretmen }} · {{ (n.tarih or '')[:16] }}</div>
       </article>
@@ -87,29 +89,6 @@
       </form>
     </section>
   </div>
-
-  {% if program_grid %}
-  <section class="kart">
-    <strong>{{ ogrenci.sinif_adi }} ders programı</strong>
-    <div style="overflow:auto;margin-top:8px">
-      <table>
-        <thead>
-          <tr><th>Saat</th>{% for gun in gunler %}<th>{{ gun }}</th>{% endfor %}</tr>
-        </thead>
-        <tbody>
-          {% for satir in program_grid %}
-          <tr>
-            <td>{{ satir.ders_no }}. {{ satir.saat }}</td>
-            {% for h in satir.hucreler %}
-            <td>{% for d in h.dersler %}{{ d.ders_kisa }}<br><span class="soluk">{{ d.ogretmen_adi }}</span><br>{% else %}—{% endfor %}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
-  {% endif %}
 </main>
 <script>
 (function () {
