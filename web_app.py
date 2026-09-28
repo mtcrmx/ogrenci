@@ -69,6 +69,7 @@ from database import (
     kitap_okuma_veli_kaydet, kitap_okuma_ogrenci_gecmis, kitap_okuma_ogretmen_listesi,
     kitap_okuma_onayla, kitap_okuma_rapor,
     haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu,
+    haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet,
     kitap_odev_analiz,
     tik_kayitlari_siniflarda,
     ogretmen_yetki_al, ogretmen_yetki_guncelle,
@@ -2284,23 +2285,14 @@ def veli_panel():
         "odev_durum": etiket.get(kayit.get("odev_durum") or "", "Henüz işaretlenmedi"),
     }
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
-    pencereler = []
-    for n in veli_davranis_pencereleri(int(ogrenci_id)):
-        baslik = {"uyari": "Uyarı", "olumlu": "Olumlu davranış", "duyuru": "Duyuru"}.get(n["tur"], "Duyuru")
-        pencereler.append({
-            "anahtar": f"not-{n['id']}",
-            "tur": n["tur"],
-            "baslik": baslik,
-            "metin": n["not_metni"],
-            "alt": f"{n.get('ogretmen') or ''} · {(n.get('tarih') or '')[:16]}",
-        })
+    odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
     return render_template(
         "veli_panel.html",
         ogrenci=o,
         avatar=_avatar(o),
         hafta=hafta,
+        odev=odev,
         notlar=notlar,
-        veli_pencereler=pencereler,
     )
 
 
@@ -2878,6 +2870,7 @@ def haftalik_takip():
         hafta=hafta,
         ogrenciler=ogrenciler,
         ozet=ozet,
+        odev=haftalik_odev_bilgi_getir(aktif["id"], hafta) if aktif and hafta else {"ders": "", "aciklama": ""},
     )
 
 
@@ -2920,6 +2913,24 @@ def haftalik_takip_toplu_route():
     )
     kod = 200 if sonuc.get("ok") else 400
     return jsonify(sonuc), kod
+
+
+@app.route("/haftalik-takip/odev-bilgi", methods=["POST"])
+@giris_zorunlu
+def haftalik_odev_bilgi_route():
+    sinif_id = request.form.get("sinif_id", type=int) or 0
+    hafta = (request.form.get("hafta") or "").strip()
+    donem = request.form.get("donem", type=int) or 1
+    if not _haftalik_takip_yetki(sinif_id) or not hafta:
+        abort(403)
+    haftalik_odev_bilgi_kaydet(
+        sinif_id,
+        hafta,
+        request.form.get("ders", ""),
+        request.form.get("aciklama", ""),
+        session["ogretmen_id"],
+    )
+    return redirect(url_for("haftalik_takip", sinif=sinif_id, hafta=hafta, donem=donem))
 
 
 @app.route("/odev/ekle", methods=["POST"])
@@ -3449,6 +3460,7 @@ def api_ogretmen_ogrenci_ozet(ogrenci_id: int):
     bugun = date.today()
     hafta = (bugun - timedelta(days=bugun.weekday())).isoformat()
     kayit = haftalik_takip_sinif(int(ogr["sinif_id"]), hafta).get(int(ogrenci_id), {})
+    bilgi = haftalik_odev_bilgi_getir(int(ogr["sinif_id"]), hafta)
     etiket = {
         "okudu": "Okudu", "okumadi": "Okumadı",
         "getirdi": "Getirdi", "getirmedi": "Getirmedi",
@@ -3467,6 +3479,8 @@ def api_ogretmen_ogrenci_ozet(ogrenci_id: int):
             "kitap_okuma": etiket.get(kayit.get("kitap_okuma") or "", "İşaretlenmedi"),
             "kitap_getirme": etiket.get(kayit.get("kitap_getirme") or "", "İşaretlenmedi"),
             "odev_durum": etiket.get(kayit.get("odev_durum") or "", "İşaretlenmedi"),
+            "ders": bilgi.get("ders") or "",
+            "aciklama": bilgi.get("aciklama") or "",
         },
         "notlar": ogretmen_notlari_veli_ozeti(int(ogrenci_id), 6),
     })

@@ -4345,6 +4345,18 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_haftalik_takip_sinif_hafta "
         "ON haftalik_takip(sinif_id, hafta_basi)"
     )
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS haftalik_odev_bilgi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sinif_id INTEGER NOT NULL REFERENCES siniflar(id),
+            hafta_basi TEXT NOT NULL,
+            ders TEXT NOT NULL DEFAULT '',
+            aciklama TEXT NOT NULL DEFAULT '',
+            ogretmen_id INTEGER REFERENCES ogretmenler(id),
+            guncelleme TEXT NOT NULL DEFAULT '',
+            UNIQUE(sinif_id, hafta_basi)
+        )
+    """)
     con.commit()
 
 
@@ -4368,6 +4380,52 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
         }
         for r in rows
     }
+
+
+def haftalik_odev_bilgi_getir(sinif_id: int, hafta_basi: str) -> dict:
+    con = _conn()
+    _haftalik_takip_init(con)
+    row = con.execute(
+        """
+        SELECT ders, aciklama FROM haftalik_odev_bilgi
+        WHERE sinif_id = ? AND hafta_basi = ?
+        """,
+        (sinif_id, hafta_basi),
+    ).fetchone()
+    con.close()
+    if not row:
+        return {"ders": "", "aciklama": ""}
+    return {"ders": row["ders"] or "", "aciklama": row["aciklama"] or ""}
+
+
+def haftalik_odev_bilgi_kaydet(
+    sinif_id: int, hafta_basi: str, ders: str, aciklama: str, ogretmen_id: int
+) -> dict:
+    con = _conn()
+    _haftalik_takip_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        """
+        INSERT INTO haftalik_odev_bilgi (sinif_id, hafta_basi, ders, aciklama, ogretmen_id, guncelleme)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(sinif_id, hafta_basi) DO UPDATE SET
+            ders = excluded.ders,
+            aciklama = excluded.aciklama,
+            ogretmen_id = excluded.ogretmen_id,
+            guncelleme = excluded.guncelleme
+        """,
+        (
+            sinif_id,
+            hafta_basi,
+            (ders or "").strip()[:80],
+            (aciklama or "").strip()[:500],
+            ogretmen_id,
+            now,
+        ),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True}
 
 
 def haftalik_takip_isaretle(

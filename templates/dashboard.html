@@ -182,6 +182,7 @@
         <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Getirme</div><div id="bilgi-getirme" class="mt-1 font-black text-slate-950">—</div></div>
         <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Ödev</div><div id="bilgi-odev" class="mt-1 font-black text-slate-950">—</div></div>
       </div>
+      <div id="bilgi-odev-metin" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"></div>
       <div>
         <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">Veliye giden notlar</h4>
         <div id="bilgi-notlar" class="mt-2 space-y-2"></div>
@@ -326,6 +327,9 @@ async function ogrenciBilgiAc(id) {
   document.getElementById('bilgi-okuma').textContent = h.kitap_okuma || '—';
   document.getElementById('bilgi-getirme').textContent = h.kitap_getirme || '—';
   document.getElementById('bilgi-odev').textContent = h.odev_durum || '—';
+  const ders = h.ders ? h.ders : 'Ders yazılmadı';
+  const acik = h.aciklama ? h.aciklama : 'Ödev açıklaması yok';
+  document.getElementById('bilgi-odev-metin').textContent = ders + ' — ' + acik;
   const notlar = j.notlar || [];
   document.getElementById('bilgi-notlar').innerHTML = notlar.length
     ? notlar.map(notSatiri).join('')

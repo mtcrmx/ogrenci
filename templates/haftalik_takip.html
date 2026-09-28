@@ -62,6 +62,19 @@
     </div>
   </section>
 
+  <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <h2 class="text-sm font-black text-slate-950">Bu haftanın ödevi</h2>
+    <p class="mt-1 text-xs text-slate-500">Hangi dersten verildiğini ve ne yapılacağını yazın. Veli bu metni görür.</p>
+    <form method="post" action="{{ url_for('haftalik_odev_bilgi_route') }}" class="mt-3 grid gap-2 sm:grid-cols-[180px_1fr_auto]">
+      <input type="hidden" name="sinif_id" value="{{ aktif.id }}">
+      <input type="hidden" name="hafta" value="{{ hafta }}">
+      <input type="hidden" name="donem" value="{{ donem }}">
+      <input name="ders" value="{{ odev.ders }}" placeholder="Ders (ör. Matematik)" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+      <input name="aciklama" value="{{ odev.aciklama }}" placeholder="Ödev: sayfa, konu, ne yapılacak" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+      <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Kaydet</button>
+    </form>
+  </section>
+
   <section class="mt-3 flex flex-wrap gap-2">
     <button type="button" class="toplu rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white" data-alan="kitap_okuma" data-deger="okudu">Tümü okudu</button>
     <button type="button" class="toplu rounded-xl bg-sky-700 px-3 py-2 text-xs font-black text-white" data-alan="kitap_getirme" data-deger="getirdi">Tümü getirdi</button>

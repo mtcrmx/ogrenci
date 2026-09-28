@@ -34,23 +34,9 @@
     .iki { display: grid; gap: 12px; }
     @media (min-width: 800px) { .iki { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 640px) { .uc { grid-template-columns: 1fr; } }
-    #veli-popup-katman .vp-arkaplan { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 23, 42, .55); }
-    #veli-popup-katman .vp-kutu { width: min(420px, 100%); border-radius: 20px; padding: 22px 22px 18px; box-shadow: 0 24px 60px rgba(0,0,0,.28); }
-    #veli-popup-katman .vp-uyari { background: #be123c; color: #fff; }
-    #veli-popup-katman .vp-olumlu { background: #047857; color: #fff; }
-    #veli-popup-katman .vp-duyuru { background: #fff; color: #0f172a; border: 1px solid #e2e8f0; }
-    #veli-popup-katman .vp-ust { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
-    #veli-popup-katman h2 { margin: 8px 0 0; font-size: 22px; line-height: 1.25; color: inherit; }
-    #veli-popup-katman .vp-metin { margin: 12px 0 0; line-height: 1.55; font-size: 15px; white-space: pre-wrap; color: inherit; }
-    #veli-popup-katman .vp-alt { margin-top: 10px; font-size: 12px; opacity: .8; color: inherit; }
-    #veli-popup-katman .vp-kutu button { display: block; width: 100%; margin-top: 16px; border: 0; border-radius: 12px; padding: 12px; font-weight: 800; cursor: pointer; }
-    #veli-popup-katman .vp-uyari button, #veli-popup-katman .vp-olumlu button { background: #fff; color: #0f172a; }
-    #veli-popup-katman .vp-duyuru button { background: #0f2744; color: #fff; }
   </style>
 </head>
 <body>
-<div id="veli-popup-katman"></div>
-<script type="application/json" id="veli-popup-veri">{{ veli_pencereler|tojson }}</script>
 <header>
   <div class="bar">
     <div class="brand">Erenler Cumhuriyet Ortaokulu</div>
@@ -69,10 +55,12 @@
 
   <section class="kart">
     <div class="soluk">Bu hafta</div>
+    <p style="margin:8px 0 0;font-weight:800">{{ odev.ders or 'Ders yazılmadı' }}</p>
+    <p class="soluk" style="margin-top:4px">{{ odev.aciklama or 'Bu hafta için ödev açıklaması yok.' }}</p>
     <div class="uc" style="margin-top:10px">
       <div class="kutu"><span class="soluk">Kitap okuma</span><b>{{ hafta.kitap_okuma }}</b></div>
       <div class="kutu"><span class="soluk">Kitabı getirme</span><b>{{ hafta.kitap_getirme }}</b></div>
-      <div class="kutu"><span class="soluk">Ödev</span><b>{{ hafta.odev_durum }}</b></div>
+      <div class="kutu"><span class="soluk">Ödev durumu</span><b>{{ hafta.odev_durum }}</b></div>
     </div>
   </section>
 
@@ -99,39 +87,5 @@
     </section>
   </div>
 </main>
-<script>
-(function () {
-  const ham = document.getElementById('veli-popup-veri');
-  const katman = document.getElementById('veli-popup-katman');
-  if (!ham || !katman) return;
-  let liste = [];
-  try { liste = JSON.parse(ham.textContent || '[]'); } catch (e) { liste = []; }
-  let gorulen = [];
-  try { gorulen = JSON.parse(sessionStorage.getItem('veli-popup-goruldu') || '[]'); } catch (e) { gorulen = []; }
-  const bekleyen = liste.filter(p => gorulen.indexOf(p.anahtar) < 0);
-  function kapat(p) {
-    gorulen.push(p.anahtar);
-    sessionStorage.setItem('veli-popup-goruldu', JSON.stringify(gorulen));
-    katman.innerHTML = '';
-    goster();
-  }
-  function goster() {
-    const p = bekleyen.shift();
-    if (!p) return;
-    const renk = p.tur === 'uyari' ? 'vp-uyari' : (p.tur === 'olumlu' ? 'vp-olumlu' : 'vp-duyuru');
-    const etiket = p.tur === 'uyari' ? 'Uyarı' : (p.tur === 'olumlu' ? 'Olumlu davranış' : 'Duyuru');
-    const kutu = document.createElement('div');
-    kutu.className = 'vp-arkaplan';
-    kutu.innerHTML = '<div class="vp-kutu ' + renk + '"><div class="vp-ust"></div><h2></h2><p></p><div class="vp-alt"></div><button type="button">Tamam</button></div>';
-    kutu.querySelector('.vp-ust').textContent = etiket;
-    kutu.querySelector('h2').textContent = p.baslik || '';
-    kutu.querySelector('p').textContent = p.metin || '';
-    kutu.querySelector('.vp-alt').textContent = p.alt || '';
-    kutu.querySelector('button').addEventListener('click', () => kapat(p));
-    katman.appendChild(kutu);
-  }
-  goster();
-})();
-</script>
 </body>
 </html>
