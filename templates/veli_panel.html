@@ -70,6 +70,21 @@
       <div class="kutu"><span class="soluk">Kitabı getirme</span><b>{{ hafta.kitap_getirme }}</b></div>
       <div class="kutu"><span class="soluk">Ödev durumu</span><b>{{ hafta.odev_durum }}</b></div>
     </div>
+    {% if hafta.odev_kod %}
+    <p class="soluk" style="margin-top:10px">Öğretmen kararı kesin. Öğrencinin “yaptım” demesi bu kaydı değiştirmez.</p>
+    {% elif hafta.odev_bildirim == 'yaptim' %}
+    <p style="margin:10px 0 0;font-weight:800">Yaptım dedin. Öğretmen onaylayınca kesinleşir.</p>
+    <form method="post" action="{{ url_for('veli_odev_bildir') }}">
+      <input type="hidden" name="yaptim" value="0">
+      <button type="submit">Bildirimi geri al</button>
+    </form>
+    {% else %}
+    <p class="soluk" style="margin-top:10px">Yaptım demen tek başına yetmez. Öğretmen onaylar.</p>
+    <form method="post" action="{{ url_for('veli_odev_bildir') }}">
+      <input type="hidden" name="yaptim" value="1">
+      <button type="submit">Ödevi yaptım</button>
+    </form>
+    {% endif %}
   </section>
 
   <section class="kart">

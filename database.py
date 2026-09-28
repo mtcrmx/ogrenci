@@ -1151,7 +1151,8 @@ def _lgs_init(con: sqlite3.Connection) -> None:
             ders TEXT NOT NULL,
             konu TEXT NOT NULL DEFAULT '',
             hedef_soru INTEGER NOT NULL DEFAULT 0,
-            tamamlandi INTEGER NOT NULL DEFAULT 0
+            tamamlandi INTEGER NOT NULL DEFAULT 0,
+            bildirdi INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS lgs_gunluk (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1179,6 +1180,15 @@ def _lgs_init(con: sqlite3.Connection) -> None:
             net REAL NOT NULL DEFAULT 0
         );
     """)
+    gorev_kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_gorev)").fetchall()}
+    if "bildirdi" not in gorev_kolon:
+        con.execute("ALTER TABLE lgs_gorev ADD COLUMN bildirdi INTEGER NOT NULL DEFAULT 0")
+        con.execute(
+            """
+            UPDATE lgs_gorev SET bildirdi = 1, tamamlandi = 0
+            WHERE tamamlandi = 1
+            """
+        )
     con.commit()
 
 
@@ -1210,7 +1220,7 @@ def lgs_gorevler(ogrenci_id: int, hafta_basi: str) -> list[dict]:
     _lgs_init(con)
     rows = [dict(r) for r in con.execute(
         """
-        SELECT id, gun, ders, konu, hedef_soru, tamamlandi
+        SELECT id, gun, ders, konu, hedef_soru, tamamlandi, bildirdi
         FROM lgs_gorev WHERE ogrenci_id = ? AND hafta_basi = ?
         ORDER BY gun, id
         """,
@@ -1238,16 +1248,40 @@ def lgs_gorev_ekle(ogrenci_id: int, hafta_basi: str, gun: int, ders: str, konu: 
     return {"ok": True}
 
 
-def lgs_gorev_toggle(ogrenci_id: int, gorev_id: int) -> None:
+def lgs_gorev_bildir(ogrenci_id: int, gorev_id: int) -> None:
+    """Öğrenci yaptım der. Öğretmen onaylamadan tamam sayılmaz."""
     con = _conn()
     _lgs_init(con)
     con.execute(
         """
-        UPDATE lgs_gorev SET tamamlandi = CASE WHEN tamamlandi = 1 THEN 0 ELSE 1 END
-        WHERE id = ? AND ogrenci_id = ?
+        UPDATE lgs_gorev
+        SET bildirdi = CASE WHEN bildirdi = 1 THEN 0 ELSE 1 END
+        WHERE id = ? AND ogrenci_id = ? AND tamamlandi = 0
         """,
         (gorev_id, ogrenci_id),
     )
+    con.commit()
+    con.close()
+
+
+def lgs_gorev_onayla(ogrenci_id: int, gorev_id: int, karar: str) -> None:
+    con = _conn()
+    _lgs_init(con)
+    if karar == "onay":
+        con.execute(
+            "UPDATE lgs_gorev SET tamamlandi = 1 WHERE id = ? AND ogrenci_id = ?",
+            (gorev_id, ogrenci_id),
+        )
+    elif karar == "kaldir":
+        con.execute(
+            "UPDATE lgs_gorev SET tamamlandi = 0 WHERE id = ? AND ogrenci_id = ?",
+            (gorev_id, ogrenci_id),
+        )
+    elif karar == "reddet":
+        con.execute(
+            "UPDATE lgs_gorev SET tamamlandi = 0, bildirdi = 0 WHERE id = ? AND ogrenci_id = ?",
+            (gorev_id, ogrenci_id),
+        )
     con.commit()
     con.close()
 
@@ -4657,7 +4691,7 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
         "ON haftalik_takip(sinif_id, hafta_basi)"
     )
     takip_kolon = {r[1] for r in con.execute("PRAGMA table_info(haftalik_takip)").fetchall()}
-    for ad in ("kitap_adi", "odev_ders", "odev_not"):
+    for ad in ("kitap_adi", "odev_ders", "odev_not", "odev_bildirim"):
         if ad not in takip_kolon:
             con.execute(f"ALTER TABLE haftalik_takip ADD COLUMN {ad} TEXT NOT NULL DEFAULT ''")
     con.execute("""
@@ -4694,7 +4728,7 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
     _haftalik_takip_init(con)
     rows = con.execute(
         """
-        SELECT ogrenci_id, kitap_okuma, kitap_getirme, odev_durum, kitap_adi, odev_ders, odev_not
+        SELECT ogrenci_id, kitap_okuma, kitap_getirme, odev_durum, kitap_adi, odev_ders, odev_not, odev_bildirim
         FROM haftalik_takip
         WHERE sinif_id = ? AND hafta_basi = ?
         """,
@@ -4709,6 +4743,7 @@ def haftalik_takip_sinif(sinif_id: int, hafta_basi: str) -> dict[int, dict]:
             "kitap_adi": r["kitap_adi"] or "",
             "odev_ders": r["odev_ders"] or "",
             "odev_not": r["odev_not"] or "",
+            "odev_bildirim": r["odev_bildirim"] or "",
         }
         for r in rows
     }
@@ -4945,6 +4980,39 @@ def haftalik_takip_isaretle(
     con.commit()
     con.close()
     return {"ok": True, "alan": alan, "deger": deger}
+
+
+def haftalik_odev_bildir(ogrenci_id: int, hafta_basi: str, yaptim: bool) -> dict:
+    """Öğrenci ödevi yaptığını bildirir. Resmi durum öğretmenin tikidir."""
+    con = _conn()
+    _haftalik_takip_init(con)
+    ogr = con.execute("SELECT sinif_id FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
+    if not ogr:
+        con.close()
+        return {"ok": False, "sebep": "ogrenci"}
+    row = con.execute(
+        "SELECT odev_durum FROM haftalik_takip WHERE ogrenci_id = ? AND hafta_basi = ?",
+        (ogrenci_id, hafta_basi),
+    ).fetchone()
+    if row and (row["odev_durum"] or ""):
+        con.close()
+        return {"ok": False, "sebep": "onaylandi"}
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    deger = "yaptim" if yaptim else ""
+    con.execute(
+        """
+        INSERT INTO haftalik_takip
+            (ogrenci_id, sinif_id, hafta_basi, odev_bildirim, guncelleme)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(ogrenci_id, hafta_basi) DO UPDATE SET
+            odev_bildirim = excluded.odev_bildirim,
+            guncelleme = excluded.guncelleme
+        """,
+        (ogrenci_id, int(ogr["sinif_id"]), hafta_basi, deger, now),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True, "deger": deger}
 
 
 def haftalik_takip_toplu(

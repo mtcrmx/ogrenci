@@ -69,10 +69,10 @@ from database import (
     kitap_okuma_veli_kaydet, kitap_okuma_ogrenci_gecmis, kitap_okuma_ogretmen_listesi,
     kitap_okuma_onayla, kitap_okuma_rapor,
     haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu, haftalik_takip_metin,
-    haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet,
+    haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet, haftalik_odev_bildir,
     sinif_okuma_kitaplari,
     ogrenci_verilen_kitaplar,
-    lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_toggle,
+    lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_bildir, lgs_gorev_onayla,
     lgs_gunluk_ekle, lgs_gunluk_liste, lgs_deneme_ekle, lgs_denemeler,
     LGS_DERSLER, LGS_GUNLER, LGS_SORU_SAYISI,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
@@ -2326,6 +2326,8 @@ def veli_panel():
         "kitap_okuma": etiket.get(kayit.get("kitap_okuma") or "", "Henüz işaretlenmedi"),
         "kitap_getirme": etiket.get(kayit.get("kitap_getirme") or "", "Henüz işaretlenmedi"),
         "odev_durum": etiket.get(kayit.get("odev_durum") or "", "Henüz işaretlenmedi"),
+        "odev_kod": kayit.get("odev_durum") or "",
+        "odev_bildirim": kayit.get("odev_bildirim") or "",
     }
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
@@ -2356,6 +2358,21 @@ def veli_panel():
 def veli_cikis():
     session.pop("veli_ogrenci_id", None)
     return redirect(url_for("veli_giris"))
+
+
+@app.route("/veli/odev-bildir", methods=["POST"])
+def veli_odev_bildir():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return redirect(url_for("veli_giris"))
+    ogr = _ogrenci_bul(int(oid))
+    if not ogr or ogr.get("sinif_adi") not in {"5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"}:
+        session.pop("veli_ogrenci_id", None)
+        return redirect(url_for("veli_giris"))
+    bugun = date.today()
+    hafta_basi = (bugun - timedelta(days=bugun.weekday())).isoformat()
+    haftalik_odev_bildir(int(oid), hafta_basi, request.form.get("yaptim") == "1")
+    return redirect(url_for("veli_panel"))
 
 
 @app.route("/veli/rapor")
@@ -2912,12 +2929,14 @@ def haftalik_takip():
         ogr["kitap_adi"] = durum.get("kitap_adi", "")
         ogr["odev_ders"] = durum.get("odev_ders", "")
         ogr["odev_not"] = durum.get("odev_not", "")
+        ogr["odev_bildirim"] = durum.get("odev_bildirim", "")
     ozet = {
         "okudu": sum(1 for o in ogrenciler if o["kitap_okuma"] == "okudu"),
         "getirdi": sum(1 for o in ogrenciler if o["kitap_getirme"] == "getirdi"),
         "tam": sum(1 for o in ogrenciler if o["odev_durum"] == "tam"),
         "eksik": sum(1 for o in ogrenciler if o["odev_durum"] == "eksik"),
         "yok": sum(1 for o in ogrenciler if o["odev_durum"] == "yok"),
+        "onay_bekleyen": sum(1 for o in ogrenciler if o["odev_bildirim"] == "yaptim" and not o["odev_durum"]),
         "toplam": len(ogrenciler),
     }
     return render_template(
@@ -3166,7 +3185,10 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef) -> di
             oneriler = liste[:3]
     adimlar = []
     bekleyen = [g for g in bugun_gorev if not g.get("tamamlandi")]
-    if bekleyen:
+    if bekleyen and bekleyen[0].get("bildirdi"):
+        g = bekleyen[0]
+        adimlar.append(f"{g['ders']} için yaptım dedin. Öğretmen onaylamadan tamam sayılmaz.")
+    elif bekleyen:
         g = bekleyen[0]
         adimlar.append(f"Bugün {g['ders']} görevini bitir: {g.get('konu') or 'konu yazılmadı'}.")
     elif gorev_sayisi and oran == 100:
@@ -3300,7 +3322,10 @@ def _lgs_ekran(veli: bool):
     if request.method == "POST":
         islem = request.form.get("islem")
         if veli and islem == "toggle":
-            lgs_gorev_toggle(oid, request.form.get("gorev_id", type=int) or 0)
+            lgs_gorev_bildir(oid, request.form.get("gorev_id", type=int) or 0)
+            bolum = "program"
+        elif not veli and islem == "onay":
+            lgs_gorev_onayla(oid, request.form.get("gorev_id", type=int) or 0, request.form.get("karar") or "")
             bolum = "program"
         elif veli and islem == "gunluk":
             lgs_gunluk_ekle(
