@@ -71,6 +71,7 @@ from database import (
     haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu, haftalik_takip_metin,
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet,
     sinif_okuma_kitaplari,
+    ogrenci_verilen_kitaplar,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
     tik_kayitlari_siniflarda,
@@ -2332,7 +2333,7 @@ def veli_panel():
         odev=odev,
         odev_ogr=odev_ogr,
         notlar=notlar,
-        kitaplar=sinif_okuma_kitaplari(o.get("sinif_adi") or ""),
+        kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
     )
 
 

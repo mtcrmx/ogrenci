@@ -73,13 +73,36 @@
 
   {% if kitaplar %}
   <section class="kart">
-    <strong>{{ ogrenci.sinif_adi }} kitapları</strong>
-    <p class="soluk">Bu sınıfın düzeyine uygun {{ kitaplar|length }} kitap.</p>
-    <ul style="max-height:280px;overflow:auto;margin:8px 0 0;padding-left:18px">
+    <strong>Öğretmenin verdiği kitaplar</strong>
+    <ul style="margin:8px 0 0;padding-left:18px">
       {% for k in kitaplar %}
-      <li><b>{{ k.ad }}</b> <span class="soluk">{{ k.yazar }} · {{ k.sayfa }} sayfa</span></li>
+      <li>
+        <b>{{ k.kitap_adi }}</b>
+        <span class="soluk">{{ k.hafta_basi }}{% if k.yazar %} · {{ k.yazar }}{% endif %}{% if k.sayfa %} · {{ k.sayfa }} sayfa{% endif %}</span>
+        {% if k.kitap_okuma == 'okudu' %}
+        <span class="soluk"> · Okudu</span>
+        {% elif k.kitap_okuma == 'okumadi' %}
+        <span class="soluk"> · Okumadı</span>
+        {% endif %}
+      </li>
       {% endfor %}
     </ul>
+  </section>
+  {% set okunan = kitaplar|selectattr('kitap_okuma', 'equalto', 'okudu')|list %}
+  {% if okunan %}
+  <section class="kart">
+    <strong>Şimdiye kadar okudukları</strong>
+    <ul style="margin:8px 0 0;padding-left:18px">
+      {% for k in okunan %}
+      <li><b>{{ k.kitap_adi }}</b> <span class="soluk">{{ k.hafta_basi }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {% else %}
+  <section class="kart">
+    <strong>Kitaplar</strong>
+    <p class="soluk">Öğretmen henüz bu öğrenciye kitap vermedi.</p>
   </section>
   {% endif %}
 

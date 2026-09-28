@@ -1091,6 +1091,28 @@ def sinif_okuma_kitaplari(sinif_adi: str) -> list[dict]:
     return rows
 
 
+def ogrenci_verilen_kitaplar(ogrenci_id: int) -> list[dict]:
+    """Öğretmence bu öğrenciye yazılmış kitaplar ve okuma durumu."""
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT h.hafta_basi, h.kitap_adi, h.kitap_okuma, h.kitap_getirme,
+               k.yazar, k.sayfa
+        FROM haftalik_takip h
+        JOIN ogrenciler o ON o.id = h.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        LEFT JOIN okuma_kitaplari k
+          ON k.ad = h.kitap_adi AND k.seviye = CAST(substr(s.sinif_adi, 1, 1) AS INTEGER)
+        WHERE h.ogrenci_id = ? AND h.kitap_adi != ''
+        ORDER BY h.hafta_basi DESC
+        """,
+        (ogrenci_id,),
+    ).fetchall()]
+    con.close()
+    return rows
+
+
 def _yardimci_tablolar_init(con: sqlite3.Connection) -> None:
     """Davranış hedefi, veli randevusu, günlük yansıma, denetim günlüğü, admin_meta."""
     con.execute("""
