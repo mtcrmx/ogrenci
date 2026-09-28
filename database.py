@@ -1039,6 +1039,7 @@ def initialize_db():
     _ogretmen_kadrosunu_senkronize(con)
     _ders_programini_senkronize(con)
     _okuma_kitaplarini_senkronize(con)
+    _lgs_init(con)
     con.close()
 
 
@@ -1111,6 +1112,226 @@ def ogrenci_verilen_kitaplar(ogrenci_id: int) -> list[dict]:
     ).fetchall()]
     con.close()
     return rows
+
+
+    con.commit()
+
+
+LGS_DERSLER = (
+    "Türkçe",
+    "Matematik",
+    "Fen Bilimleri",
+    "Sosyal Bilgiler",
+    "T.C. İnkılap Tarihi",
+    "Din Kültürü",
+    "İngilizce",
+)
+LGS_GUNLER = ("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar")
+
+
+def _lgs_init(con: sqlite3.Connection) -> None:
+    con.executescript("""
+        CREATE TABLE IF NOT EXISTS lgs_profil (
+            ogrenci_id INTEGER PRIMARY KEY REFERENCES ogrenciler(id),
+            hedef TEXT NOT NULL DEFAULT '',
+            guncelleme TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS lgs_gorev (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            hafta_basi TEXT NOT NULL,
+            gun INTEGER NOT NULL,
+            ders TEXT NOT NULL,
+            konu TEXT NOT NULL DEFAULT '',
+            hedef_soru INTEGER NOT NULL DEFAULT 0,
+            tamamlandi INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS lgs_gunluk (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            tarih TEXT NOT NULL,
+            ders TEXT NOT NULL,
+            cozulen INTEGER NOT NULL DEFAULT 0,
+            dogru INTEGER NOT NULL DEFAULT 0,
+            yanlis INTEGER NOT NULL DEFAULT 0,
+            sayfa INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS lgs_deneme (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            ad TEXT NOT NULL,
+            tarih TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS lgs_deneme_ders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            deneme_id INTEGER NOT NULL REFERENCES lgs_deneme(id) ON DELETE CASCADE,
+            ders TEXT NOT NULL,
+            dogru INTEGER NOT NULL DEFAULT 0,
+            yanlis INTEGER NOT NULL DEFAULT 0,
+            bos INTEGER NOT NULL DEFAULT 0,
+            net REAL NOT NULL DEFAULT 0
+        );
+    """)
+    con.commit()
+
+
+def lgs_profil(ogrenci_id: int) -> dict:
+    con = _conn()
+    _lgs_init(con)
+    row = con.execute("SELECT hedef FROM lgs_profil WHERE ogrenci_id = ?", (ogrenci_id,)).fetchone()
+    con.close()
+    return {"hedef": (row["hedef"] if row else "") or ""}
+
+
+def lgs_profil_kaydet(ogrenci_id: int, hedef: str) -> None:
+    con = _conn()
+    _lgs_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        """
+        INSERT INTO lgs_profil (ogrenci_id, hedef, guncelleme) VALUES (?, ?, ?)
+        ON CONFLICT(ogrenci_id) DO UPDATE SET hedef = excluded.hedef, guncelleme = excluded.guncelleme
+        """,
+        (ogrenci_id, (hedef or "").strip()[:160], now),
+    )
+    con.commit()
+    con.close()
+
+
+def lgs_gorevler(ogrenci_id: int, hafta_basi: str) -> list[dict]:
+    con = _conn()
+    _lgs_init(con)
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT id, gun, ders, konu, hedef_soru, tamamlandi
+        FROM lgs_gorev WHERE ogrenci_id = ? AND hafta_basi = ?
+        ORDER BY gun, id
+        """,
+        (ogrenci_id, hafta_basi),
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def lgs_gorev_ekle(ogrenci_id: int, hafta_basi: str, gun: int, ders: str, konu: str, hedef_soru: int) -> dict:
+    ders = (ders or "").strip()
+    if ders not in LGS_DERSLER or gun not in range(7):
+        return {"ok": False}
+    con = _conn()
+    _lgs_init(con)
+    con.execute(
+        """
+        INSERT INTO lgs_gorev (ogrenci_id, hafta_basi, gun, ders, konu, hedef_soru)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (ogrenci_id, hafta_basi, gun, ders, (konu or "").strip()[:160], max(0, int(hedef_soru or 0))),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def lgs_gorev_toggle(ogrenci_id: int, gorev_id: int) -> None:
+    con = _conn()
+    _lgs_init(con)
+    con.execute(
+        """
+        UPDATE lgs_gorev SET tamamlandi = CASE WHEN tamamlandi = 1 THEN 0 ELSE 1 END
+        WHERE id = ? AND ogrenci_id = ?
+        """,
+        (gorev_id, ogrenci_id),
+    )
+    con.commit()
+    con.close()
+
+
+def lgs_gunluk_ekle(ogrenci_id: int, tarih: str, ders: str, cozulen: int, dogru: int, yanlis: int, sayfa: int) -> dict:
+    if (ders or "").strip() not in LGS_DERSLER:
+        return {"ok": False}
+    con = _conn()
+    _lgs_init(con)
+    con.execute(
+        """
+        INSERT INTO lgs_gunluk (ogrenci_id, tarih, ders, cozulen, dogru, yanlis, sayfa)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            ogrenci_id, tarih[:10], ders.strip(),
+            max(0, int(cozulen or 0)), max(0, int(dogru or 0)),
+            max(0, int(yanlis or 0)), max(0, int(sayfa or 0)),
+        ),
+    )
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def lgs_gunluk_liste(ogrenci_id: int, limit: int = 30) -> list[dict]:
+    con = _conn()
+    _lgs_init(con)
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT tarih, ders, cozulen, dogru, yanlis, sayfa
+        FROM lgs_gunluk WHERE ogrenci_id = ?
+        ORDER BY tarih DESC, id DESC LIMIT ?
+        """,
+        (ogrenci_id, limit),
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def _lgs_net(dogru: int, yanlis: int) -> float:
+    return round(max(0, int(dogru)) - max(0, int(yanlis)) / 3, 2)
+
+
+def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict]) -> dict:
+    ad = (ad or "").strip()
+    if not ad:
+        return {"ok": False}
+    con = _conn()
+    _lgs_init(con)
+    cur = con.execute(
+        "INSERT INTO lgs_deneme (ogrenci_id, ad, tarih) VALUES (?, ?, ?)",
+        (ogrenci_id, ad[:80], (tarih or "")[:10]),
+    )
+    deneme_id = cur.lastrowid
+    for d in dersler:
+        if d.get("ders") not in LGS_DERSLER:
+            continue
+        dogru = max(0, int(d.get("dogru") or 0))
+        yanlis = max(0, int(d.get("yanlis") or 0))
+        bos = max(0, int(d.get("bos") or 0))
+        if dogru + yanlis + bos == 0:
+            continue
+        con.execute(
+            """
+            INSERT INTO lgs_deneme_ders (deneme_id, ders, dogru, yanlis, bos, net)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (deneme_id, d["ders"], dogru, yanlis, bos, _lgs_net(dogru, yanlis)),
+        )
+    con.commit()
+    con.close()
+    return {"ok": True}
+
+
+def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
+    con = _conn()
+    _lgs_init(con)
+    denemeler = [dict(r) for r in con.execute(
+        "SELECT id, ad, tarih FROM lgs_deneme WHERE ogrenci_id = ? ORDER BY tarih DESC, id DESC LIMIT ?",
+        (ogrenci_id, limit),
+    ).fetchall()]
+    for d in denemeler:
+        satirlar = [dict(r) for r in con.execute(
+            "SELECT ders, dogru, yanlis, bos, net FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",
+            (d["id"],),
+        ).fetchall()]
+        d["dersler"] = satirlar
+        d["net"] = round(sum(float(s["net"] or 0) for s in satirlar), 2)
+    con.close()
+    return denemeler
 
 
 def _yardimci_tablolar_init(con: sqlite3.Connection) -> None:

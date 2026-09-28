@@ -72,6 +72,9 @@ from database import (
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet,
     sinif_okuma_kitaplari,
     ogrenci_verilen_kitaplar,
+    lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_toggle,
+    lgs_gunluk_ekle, lgs_gunluk_liste, lgs_deneme_ekle, lgs_denemeler,
+    LGS_DERSLER, LGS_GUNLER,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
     tik_kayitlari_siniflarda,
@@ -3089,6 +3092,110 @@ def giris_raporu_excel():
         as_attachment=True,
         download_name=f"giris-raporu-{hafta}-{ad}.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+def _lgs_hafta() -> str:
+    bugun = date.today()
+    return (bugun - timedelta(days=bugun.weekday())).isoformat()
+
+
+def _lgs_ogrenci(ogrenci_id: int) -> dict:
+    if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
+        abort(403)
+    ogr = _ogrenci_bul(ogrenci_id)
+    if not ogr:
+        abort(404)
+    return ogr
+
+
+@app.route("/lgs", methods=["GET", "POST"])
+@giris_zorunlu
+def lgs():
+    oid = request.values.get("ogrenci", type=int)
+    bolum = request.values.get("bolum") or "ozet"
+    if bolum not in {"ozet", "program", "gunluk", "deneme"}:
+        bolum = "ozet"
+    hafta = _lgs_hafta()
+    if request.method == "POST":
+        if not oid:
+            abort(400)
+        _lgs_ogrenci(oid)
+        islem = request.form.get("islem")
+        if islem == "hedef":
+            lgs_profil_kaydet(oid, request.form.get("hedef", ""))
+        elif islem == "gorev":
+            lgs_gorev_ekle(
+                oid, hafta,
+                request.form.get("gun", type=int) or 0,
+                request.form.get("ders", ""),
+                request.form.get("konu", ""),
+                request.form.get("hedef_soru", type=int) or 0,
+            )
+            bolum = "program"
+        elif islem == "toggle":
+            lgs_gorev_toggle(oid, request.form.get("gorev_id", type=int) or 0)
+            bolum = "program"
+        elif islem == "gunluk":
+            lgs_gunluk_ekle(
+                oid,
+                request.form.get("tarih") or date.today().isoformat(),
+                request.form.get("ders", ""),
+                request.form.get("cozulen", type=int) or 0,
+                request.form.get("dogru", type=int) or 0,
+                request.form.get("yanlis", type=int) or 0,
+                request.form.get("sayfa", type=int) or 0,
+            )
+            bolum = "gunluk"
+        elif islem == "deneme":
+            dersler = []
+            for ders in LGS_DERSLER:
+                anahtar = ders.replace(" ", "_")
+                dersler.append({
+                    "ders": ders,
+                    "dogru": request.form.get(f"d_{anahtar}", type=int) or 0,
+                    "yanlis": request.form.get(f"y_{anahtar}", type=int) or 0,
+                    "bos": request.form.get(f"b_{anahtar}", type=int) or 0,
+                })
+            lgs_deneme_ekle(oid, request.form.get("ad", ""), request.form.get("tarih") or date.today().isoformat(), dersler)
+            bolum = "deneme"
+        return redirect(url_for("lgs", ogrenci=oid, bolum=bolum))
+
+    siniflar = ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari()
+    if not oid:
+        gruplar = []
+        for s in siniflar:
+            gruplar.append({"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])})
+        return render_template("lgs.html", gruplar=gruplar, ogrenci=None)
+
+    ogr = _lgs_ogrenci(oid)
+    gorevler = lgs_gorevler(oid, hafta)
+    bugun_gun = date.today().weekday()
+    bugun_gorev = [g for g in gorevler if int(g["gun"]) == bugun_gun]
+    tamam = sum(1 for g in gorevler if g["tamamlandi"])
+    oran = round(tamam * 100 / len(gorevler)) if gorevler else 0
+    saat = datetime.now().hour
+    selam = "Günaydın" if saat < 12 else ("İyi günler" if saat < 18 else "İyi akşamlar")
+    denemeler = lgs_denemeler(oid)
+    grafik = list(reversed(denemeler[:5]))
+    return render_template(
+        "lgs.html",
+        ogrenci=ogr,
+        bolum=bolum,
+        profil=lgs_profil(oid),
+        gorevler=gorevler,
+        gunler=LGS_GUNLER,
+        dersler=LGS_DERSLER,
+        bugun_gorev=bugun_gorev,
+        bugun_ad=LGS_GUNLER[bugun_gun],
+        tamam=tamam,
+        oran=oran,
+        selam=selam,
+        gunluk=lgs_gunluk_liste(oid),
+        denemeler=denemeler,
+        grafik_etiket=[d["ad"] for d in grafik],
+        grafik_net=[d["net"] for d in grafik],
+        bugun=date.today().isoformat(),
     )
 
 
