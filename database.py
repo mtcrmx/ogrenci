@@ -1202,6 +1202,8 @@ def _lgs_init(con: sqlite3.Connection) -> None:
         con.execute("ALTER TABLE lgs_profil ADD COLUMN hedef_net INTEGER NOT NULL DEFAULT 0")
     if "tempo" not in profil_kolon:
         con.execute("ALTER TABLE lgs_profil ADD COLUMN tempo TEXT NOT NULL DEFAULT ''")
+    if "tempo_hafta_sonu" not in profil_kolon:
+        con.execute("ALTER TABLE lgs_profil ADD COLUMN tempo_hafta_sonu TEXT NOT NULL DEFAULT ''")
     con.executescript("""
         CREATE TABLE IF NOT EXISTS lgs_ay (
             ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
@@ -1218,6 +1220,24 @@ def _lgs_init(con: sqlite3.Connection) -> None:
             bildirim_tarih TEXT NOT NULL DEFAULT '',
             metin TEXT NOT NULL DEFAULT '',
             PRIMARY KEY (ogrenci_id, tarih, sira)
+        );
+        CREATE TABLE IF NOT EXISTS lgs_program_isaret_arsiv (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id) ON DELETE CASCADE,
+            tarih TEXT NOT NULL,
+            sira INTEGER NOT NULL,
+            bildirdi INTEGER NOT NULL DEFAULT 0,
+            tamamlandi INTEGER NOT NULL DEFAULT 0,
+            bildirim_tarih TEXT NOT NULL DEFAULT '',
+            metin TEXT NOT NULL DEFAULT '',
+            arsiv_zamani TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS lgs_program_ozel (
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id) ON DELETE CASCADE,
+            gun INTEGER NOT NULL CHECK(gun BETWEEN 0 AND 6),
+            gorevler_json TEXT NOT NULL DEFAULT '[]',
+            updated TEXT NOT NULL DEFAULT '',
+            PRIMARY KEY (ogrenci_id, gun)
         );
         CREATE TABLE IF NOT EXISTS lgs_defter (
             ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
@@ -1260,16 +1280,17 @@ def lgs_profil(ogrenci_id: int) -> dict:
     con = _conn()
     _lgs_init(con)
     row = con.execute(
-        "SELECT hedef, hedef_net, tempo FROM lgs_profil WHERE ogrenci_id = ?",
+        "SELECT hedef, hedef_net, tempo, tempo_hafta_sonu FROM lgs_profil WHERE ogrenci_id = ?",
         (ogrenci_id,),
     ).fetchone()
     con.close()
     if not row:
-        return {"hedef": "", "hedef_net": 0, "tempo": ""}
+        return {"hedef": "", "hedef_net": 0, "tempo": "", "tempo_hafta_sonu": ""}
     return {
         "hedef": row["hedef"] or "",
         "hedef_net": int(row["hedef_net"] or 0),
         "tempo": row["tempo"] or "",
+        "tempo_hafta_sonu": row["tempo_hafta_sonu"] or row["tempo"] or "",
     }
 
 
@@ -1414,7 +1435,7 @@ def lgs_gunluk_onayla(kayit_id: int, karar: str) -> None:
     con.close()
 
 
-_LGS_TEMPO = {"", "alisma", "siki", "tempo"}
+_LGS_TEMPO = {"", "baslangic", "alisma", "siki", "tempo"}
 _LGS_AY = {10, 11, 12, 1, 2, 3, 4, 5, 6}
 _DEFTER_DERS = {"odev", "turkce", "matematik", "fen", "inkilap", "ingilizce", "din"}
 _DEFTER_RUH = {"", "iyi", "kotu"}
@@ -1427,26 +1448,46 @@ def _lgs_sayi(deger) -> int:
         return 0
 
 
-def _lgs_tempo_yaz(con: sqlite3.Connection, ogrenci_id: int, tempo: str, now: str) -> None:
-    con.execute(
-        """
-        INSERT INTO lgs_profil (ogrenci_id, hedef, hedef_net, tempo, guncelleme)
-        VALUES (?, '', 0, ?, ?)
-        ON CONFLICT(ogrenci_id) DO UPDATE SET
-            tempo = excluded.tempo,
-            guncelleme = excluded.guncelleme
-        """,
-        (ogrenci_id, tempo, now),
-    )
+def _lgs_tempo_yaz(
+    con: sqlite3.Connection, ogrenci_id: int, tempo: str, now: str,
+    hafta_sonu: str | None = None,
+) -> None:
+    if hafta_sonu is None:
+        # Eski çağrılar, önceden seçilmiş hafta sonu temposunu değiştirmez.
+        con.execute(
+            """
+            INSERT INTO lgs_profil (ogrenci_id, hedef, hedef_net, tempo, guncelleme)
+            VALUES (?, '', 0, ?, ?)
+            ON CONFLICT(ogrenci_id) DO UPDATE SET
+                tempo = excluded.tempo,
+                guncelleme = excluded.guncelleme
+            """,
+            (ogrenci_id, tempo, now),
+        )
+    else:
+        con.execute(
+            """
+            INSERT INTO lgs_profil
+                (ogrenci_id, hedef, hedef_net, tempo, tempo_hafta_sonu, guncelleme)
+            VALUES (?, '', 0, ?, ?, ?)
+            ON CONFLICT(ogrenci_id) DO UPDATE SET
+                tempo = excluded.tempo,
+                tempo_hafta_sonu = excluded.tempo_hafta_sonu,
+                guncelleme = excluded.guncelleme
+            """,
+            (ogrenci_id, tempo, hafta_sonu, now),
+        )
 
 
-def lgs_tempo_kaydet(ogrenci_id: int, tempo: str) -> bool:
+def lgs_tempo_kaydet(ogrenci_id: int, tempo: str, hafta_sonu: str | None = None) -> bool:
     tempo = (tempo or "").strip()
-    if tempo not in _LGS_TEMPO:
+    if hafta_sonu is not None:
+        hafta_sonu = (hafta_sonu or "").strip()
+    if tempo not in _LGS_TEMPO or (hafta_sonu is not None and hafta_sonu not in _LGS_TEMPO):
         return False
     con = _conn()
     _lgs_init(con)
-    _lgs_tempo_yaz(con, ogrenci_id, tempo, datetime.now().strftime("%Y-%m-%d %H:%M"))
+    _lgs_tempo_yaz(con, ogrenci_id, tempo, datetime.now().strftime("%Y-%m-%d %H:%M"), hafta_sonu)
     con.commit()
     con.close()
     return True
@@ -1467,7 +1508,7 @@ def lgs_tempo_sinifa(sinif_id: int, tempo: str) -> int:
     ).fetchall()]
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     for oid in ids:
-        _lgs_tempo_yaz(con, oid, tempo, now)
+        _lgs_tempo_yaz(con, oid, tempo, now, tempo)
     con.commit()
     con.close()
     return len(ids)
@@ -1481,6 +1522,81 @@ def lgs_tempo_harita() -> dict[int, str]:
     ).fetchall()
     con.close()
     return {int(r["ogrenci_id"]): r["tempo"] or "" for r in rows}
+
+
+def lgs_program_ozel_getir(ogrenci_id: int) -> dict[int, list[str]]:
+    """Öğrencinin haftanın günlerine ait özel, tekrarlayan görevlerini getirir.
+
+    Sözlükte olmayan günler varsayılan programa bırakılır; boş liste ise o gün
+    için bilinçli olarak boş bir özel program seçildiğini belirtir.
+    """
+    con = _conn()
+    _lgs_init(con)
+    rows = con.execute(
+        "SELECT gun, gorevler_json FROM lgs_program_ozel WHERE ogrenci_id = ? ORDER BY gun",
+        (ogrenci_id,),
+    ).fetchall()
+    con.close()
+    sonuc: dict[int, list[str]] = {}
+    for row in rows:
+        try:
+            gorevler = json.loads(row["gorevler_json"] or "[]")
+        except (TypeError, ValueError):
+            continue
+        if isinstance(gorevler, list):
+            sonuc[int(row["gun"])] = [g for g in gorevler[:8] if isinstance(g, str)]
+    return sonuc
+
+
+def lgs_program_ozel_kaydet(ogrenci_id: int, gun: int, gorevler: list[str]) -> bool:
+    """Bir günün özel görevlerini kaydeder; boş liste de geçerli bir seçimdir."""
+    try:
+        gun = int(gun)
+    except (TypeError, ValueError):
+        return False
+    if gun not in range(7) or not isinstance(gorevler, (list, tuple)):
+        return False
+    temiz = [" ".join(str(g or "").split())[:160] for g in gorevler]
+    temiz = [g for g in temiz if g]
+    if len(temiz) > 8:
+        return False
+    con = _conn()
+    _lgs_init(con)
+    con.execute(
+        """
+        INSERT INTO lgs_program_ozel (ogrenci_id, gun, gorevler_json, updated)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(ogrenci_id, gun) DO UPDATE SET
+            gorevler_json = excluded.gorevler_json,
+            updated = excluded.updated
+        """,
+        (
+            ogrenci_id, gun, json.dumps(temiz, ensure_ascii=False),
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+        ),
+    )
+    con.commit()
+    con.close()
+    return True
+
+
+def lgs_program_ozel_sil(ogrenci_id: int, gun: int) -> bool:
+    """Özel günü kaldırarak varsayılan programa geri döner."""
+    try:
+        gun = int(gun)
+    except (TypeError, ValueError):
+        return False
+    if gun not in range(7):
+        return False
+    con = _conn()
+    _lgs_init(con)
+    con.execute(
+        "DELETE FROM lgs_program_ozel WHERE ogrenci_id = ? AND gun = ?",
+        (ogrenci_id, gun),
+    )
+    con.commit()
+    con.close()
+    return True
 
 
 def lgs_ay_durum(ogrenci_id: int) -> dict[int, int]:
@@ -1510,6 +1626,28 @@ def lgs_ay_kaydet(ogrenci_id: int, secili: set[int]) -> None:
     con.close()
 
 
+def lgs_ay_tek_kaydet(ogrenci_id: int, ay: int, uygulandi: bool) -> bool:
+    """Diğer ayları değiştirmeden tek bir ayın durumunu kaydeder."""
+    try:
+        ay = int(ay)
+    except (TypeError, ValueError):
+        return False
+    if ay not in _LGS_AY:
+        return False
+    con = _conn()
+    _lgs_init(con)
+    con.execute(
+        """
+        INSERT INTO lgs_ay (ogrenci_id, ay, uygulandi) VALUES (?, ?, ?)
+        ON CONFLICT(ogrenci_id, ay) DO UPDATE SET uygulandi = excluded.uygulandi
+        """,
+        (ogrenci_id, ay, 1 if uygulandi else 0),
+    )
+    con.commit()
+    con.close()
+    return True
+
+
 def lgs_program_isaretler(ogrenci_id: int, bas: str, bit: str) -> dict[tuple[str, int], dict]:
     con = _conn()
     _lgs_init(con)
@@ -1527,40 +1665,70 @@ def lgs_program_isaretler(ogrenci_id: int, bas: str, bit: str) -> dict[tuple[str
 
 def lgs_program_bildir(ogrenci_id: int, tarih: str, sira: int, metin: str) -> bool:
     tarih = (tarih or "")[:10]
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", tarih) or not 0 <= int(sira) <= 12:
+    try:
+        sira = int(sira)
+    except (TypeError, ValueError):
         return False
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", tarih) or not 0 <= sira <= 12:
+        return False
+    yeni_metin = (metin or "")[:160]
     con = _conn()
-    _lgs_init(con)
-    row = con.execute(
-        """
-        SELECT bildirdi, tamamlandi FROM lgs_program_isaret
-        WHERE ogrenci_id = ? AND tarih = ? AND sira = ?
-        """,
-        (ogrenci_id, tarih, int(sira)),
-    ).fetchone()
-    if row and int(row["tamamlandi"] or 0) == 1:
+    try:
+        _lgs_init(con)
+        con.execute("BEGIN IMMEDIATE")
+        row = con.execute(
+            """
+            SELECT bildirdi, tamamlandi, bildirim_tarih, metin
+            FROM lgs_program_isaret
+            WHERE ogrenci_id = ? AND tarih = ? AND sira = ?
+            """,
+            (ogrenci_id, tarih, sira),
+        ).fetchone()
+        if row and (row["metin"] or "") != yeni_metin:
+            con.execute(
+                """
+                INSERT INTO lgs_program_isaret_arsiv
+                    (ogrenci_id, tarih, sira, bildirdi, tamamlandi,
+                     bildirim_tarih, metin, arsiv_zamani)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    ogrenci_id, tarih, sira,
+                    int(row["bildirdi"] or 0), int(row["tamamlandi"] or 0),
+                    row["bildirim_tarih"] or "", row["metin"] or "",
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                ),
+            )
+            con.execute(
+                "DELETE FROM lgs_program_isaret WHERE ogrenci_id = ? AND tarih = ? AND sira = ?",
+                (ogrenci_id, tarih, sira),
+            )
+            row = None
+        if row and int(row["tamamlandi"] or 0) == 1:
+            con.rollback()
+            return False
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if row and int(row["bildirdi"] or 0) == 1:
+            # Metni korumak, sonraki bildirimin aynı göreve ait olduğunu anlamayı sağlar.
+            bildirdi, damga, yazi = 0, "", yeni_metin
+        else:
+            bildirdi, damga, yazi = 1, now, yeni_metin
+        con.execute(
+            """
+            INSERT INTO lgs_program_isaret
+                (ogrenci_id, tarih, sira, bildirdi, tamamlandi, bildirim_tarih, metin)
+            VALUES (?, ?, ?, ?, 0, ?, ?)
+            ON CONFLICT(ogrenci_id, tarih, sira) DO UPDATE SET
+                bildirdi = excluded.bildirdi,
+                bildirim_tarih = excluded.bildirim_tarih,
+                metin = excluded.metin
+            """,
+            (ogrenci_id, tarih, sira, bildirdi, damga, yazi),
+        )
+        con.commit()
+        return True
+    finally:
         con.close()
-        return False
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    if row and int(row["bildirdi"] or 0) == 1:
-        bildirdi, damga, yazi = 0, "", ""
-    else:
-        bildirdi, damga, yazi = 1, now, (metin or "")[:160]
-    con.execute(
-        """
-        INSERT INTO lgs_program_isaret
-            (ogrenci_id, tarih, sira, bildirdi, tamamlandi, bildirim_tarih, metin)
-        VALUES (?, ?, ?, ?, 0, ?, ?)
-        ON CONFLICT(ogrenci_id, tarih, sira) DO UPDATE SET
-            bildirdi = excluded.bildirdi,
-            bildirim_tarih = excluded.bildirim_tarih,
-            metin = excluded.metin
-        """,
-        (ogrenci_id, tarih, int(sira), bildirdi, damga, yazi),
-    )
-    con.commit()
-    con.close()
-    return True
 
 
 def lgs_program_onayla(ogrenci_id: int, tarih: str, sira: int, karar: str) -> None:
@@ -1590,7 +1758,7 @@ def lgs_program_onayla(ogrenci_id: int, tarih: str, sira: int, karar: str) -> No
         con.execute(
             """
             UPDATE lgs_program_isaret
-            SET tamamlandi = 0, bildirdi = 0, bildirim_tarih = '', metin = ''
+            SET tamamlandi = 0, bildirdi = 0, bildirim_tarih = ''
             WHERE sira = ? AND ogrenci_id = ? AND tarih = ?
             """,
             anahtar,

@@ -1,6 +1,7 @@
-"""8. sınıf LGS ders programı: Ekim tempoları, aylar ve çalışma defteri dersleri."""
+"""8. sınıf LGS ders programı: Ekim önerileri ve çalışma defteri dersleri."""
 
 TEMPO_AD = {
+    "baslangic": "Başlangıç",
     "alisma": "Alışma",
     "siki": "Sıkı",
     "tempo": "Tempo",
@@ -33,68 +34,59 @@ def _b(ders: str, soru: int = 0, sure: str = "") -> dict:
     return {"ders": ders, "soru": int(soru or 0), "sure": sure}
 
 
-def _gun_ici(birinci, ikinci, ucuncu, sure: str, soru: int) -> list[dict]:
+def _hafta_ici(ana_dersler: tuple[str, ...], tekrar: str, paragraf: int, sure: str) -> list[dict]:
     return [
-        _b("Paragraf", 15),
-        _b(birinci, sure=sure),
-        _b(ikinci, sure=sure),
-        _b(ucuncu, soru=soru, sure=sure),
+        _b("Günlük tekrar", sure=tekrar),
+        _b("Paragraf", soru=paragraf),
+        *(_b(ders, sure=sure) for ders in ana_dersler),
     ]
 
 
-def _alisma_siki(sure: str, paragraf: int, sozel: int, sayisal: int, dil: int) -> tuple:
-    return (
-        _gun_ici("Matematik", "Fen Bilimleri", "T.C. İnkılap Tarihi", sure, 75),
-        _gun_ici("Türkçe", "Matematik", "İngilizce", sure, 75),
-        _gun_ici("Fen Bilimleri", "Matematik", "Din Kültürü", sure, 75),
-        _gun_ici("Türkçe", "Fen Bilimleri", "T.C. İnkılap Tarihi", sure, 75),
-        [_b("Hafta tekrarı", sure="45 dk")],
-        [
-            _b("Paragraf", paragraf),
-            _b("Türkçe", sozel),
-            _b("Matematik", sayisal),
-            _b("İngilizce", dil),
-        ],
-        [
-            _b("Paragraf", paragraf),
-            _b("Fen Bilimleri", sozel),
-            _b("T.C. İnkılap Tarihi", sayisal),
-            _b("Din Kültürü", dil),
-        ],
-    )
+def _tempo_hafta_ici(ana_dersler: tuple[str, ...]) -> list[dict]:
+    return [_b("Paragraf", soru=15), *(_b(ders, sure="50 dk") for ders in ana_dersler)]
 
 
-def _tempo_gun(a, b, c, d) -> list[dict]:
-    return [
-        _b("Paragraf", 15),
-        _b(a, sure="50 dk"),
-        _b(b, sure="50 dk"),
-        _b(c, soru=100, sure="50 dk"),
-        _b(d, sure="50 dk"),
-    ]
+def _cuma(tekrar: str, soru: int) -> list[dict]:
+    # Belgedeki soru adedi belirli bir derse bağlı değil; ayrı hedef olarak tutulur.
+    return [_b("Hafta tekrarı", sure=tekrar), _b("Soru hedefi", soru=soru)]
 
 
 PROGRAM = {
-    "alisma": _alisma_siki("40-45 dk", 15, 30, 30, 25),
-    "siki": _alisma_siki("50-55 dk", 20, 40, 50, 30),
+    "baslangic": (
+        _hafta_ici(("Matematik", "Din Kültürü"), "10-15 dk", 10, "30 dk"),
+        _hafta_ici(("Fen Bilimleri", "İngilizce"), "10-15 dk", 10, "30 dk"),
+        _hafta_ici(("Matematik", "T.C. İnkılap Tarihi"), "10-15 dk", 10, "30 dk"),
+        _hafta_ici(("Türkçe", "Fen Bilimleri"), "10-15 dk", 10, "30 dk"),
+        _cuma("35 dk", 60),
+        [_b("Paragraf", 10), _b("Türkçe", 20), _b("Matematik", 20), _b("İngilizce", 10)],
+        [_b("Paragraf", 10), _b("Fen Bilimleri", 20), _b("T.C. İnkılap Tarihi", 20), _b("Din Kültürü", 10)],
+    ),
+    "alisma": (
+        _hafta_ici(("Matematik", "Din Kültürü"), "15-20 dk", 15, "35-40 dk"),
+        _hafta_ici(("Fen Bilimleri", "İngilizce"), "15-20 dk", 15, "35-40 dk"),
+        _hafta_ici(("Matematik", "T.C. İnkılap Tarihi"), "15-20 dk", 15, "35-40 dk"),
+        _hafta_ici(("Türkçe", "Fen Bilimleri"), "15-20 dk", 15, "35-40 dk"),
+        _cuma("45 dk", 75),
+        [_b("Paragraf", 10), _b("Türkçe", 25), _b("Matematik", 25), _b("İngilizce", 20)],
+        [_b("Paragraf", 10), _b("Fen Bilimleri", 25), _b("T.C. İnkılap Tarihi", 25), _b("Din Kültürü", 20)],
+    ),
+    "siki": (
+        _hafta_ici(("Matematik", "T.C. İnkılap Tarihi", "Din Kültürü"), "15-20 dk", 15, "40-45 dk"),
+        _hafta_ici(("Fen Bilimleri", "Türkçe", "İngilizce"), "15-20 dk", 15, "40-45 dk"),
+        _hafta_ici(("Matematik", "Fen Bilimleri", "T.C. İnkılap Tarihi"), "15-20 dk", 15, "40-45 dk"),
+        _hafta_ici(("Türkçe", "Matematik", "İngilizce"), "15-20 dk", 15, "40-45 dk"),
+        _cuma("45 dk", 90),
+        [_b("Paragraf", 20), _b("Türkçe", 40), _b("Matematik", 40), _b("İngilizce", 30)],
+        [_b("Paragraf", 20), _b("Fen Bilimleri", 40), _b("T.C. İnkılap Tarihi", 40), _b("Din Kültürü", 30)],
+    ),
     "tempo": (
-        _tempo_gun("Matematik", "Matematik", "Fen Bilimleri", "T.C. İnkılap Tarihi"),
-        _tempo_gun("Türkçe", "Matematik", "T.C. İnkılap Tarihi", "İngilizce"),
-        _tempo_gun("Fen Bilimleri", "Fen Bilimleri", "Matematik", "Din Kültürü"),
-        _tempo_gun("Türkçe", "Fen Bilimleri", "T.C. İnkılap Tarihi", "İngilizce"),
-        [_b("Hafta tekrarı", sure="45 dk")],
-        [
-            _b("Paragraf", 25),
-            _b("Matematik", 60),
-            _b("Türkçe", 50),
-            _b("İngilizce", 45),
-        ],
-        [
-            _b("Paragraf", 20),
-            _b("Fen Bilimleri", 50),
-            _b("T.C. İnkılap Tarihi", 50),
-            _b("Din Kültürü", 30),
-        ],
+        _tempo_hafta_ici(("Matematik", "Matematik", "Fen Bilimleri", "T.C. İnkılap Tarihi")),
+        _tempo_hafta_ici(("Türkçe", "Matematik", "T.C. İnkılap Tarihi", "İngilizce")),
+        _tempo_hafta_ici(("Fen Bilimleri", "Fen Bilimleri", "Matematik", "Din Kültürü")),
+        _tempo_hafta_ici(("Türkçe", "Fen Bilimleri", "T.C. İnkılap Tarihi", "İngilizce")),
+        _cuma("45 dk", 100),
+        [_b("Paragraf", 25), _b("Matematik", 60), _b("T.C. İnkılap Tarihi", 50), _b("İngilizce", 35)],
+        [_b("Paragraf", 20), _b("Türkçe", 50), _b("Fen Bilimleri", 50), _b("Din Kültürü", 30)],
     ),
 }
 

@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}LGS{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=coach2026b">{% endblock %}
 {% block body %}
-<main class="mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
+<main class="lgs-page mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
   {% if not ogrenci %}
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
     <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS koçluk</p>
@@ -45,13 +46,47 @@
     </details>
     {% endfor %}
   </div>
+  <section id="aylik-takip" class="lgs-month-board mt-5 rounded-3xl border border-slate-200 bg-white p-4" aria-labelledby="aylik-takip-baslik">
+    <div class="mb-3">
+      <p class="text-[11px] font-black uppercase tracking-widest text-violet-700">Koçluk çizelgesi</p>
+      <h2 id="aylik-takip-baslik" class="text-lg font-black">Aylık program takibi</h2>
+      <p class="mt-1 text-xs text-slate-600">Öğrencinin programını uyguladığı ayı işaretleyin. Bu çizelge Ekim–Haziran dönemini gösterir.</p>
+    </div>
+    <div class="lgs-month-table-wrap overflow-x-auto">
+      <table class="lgs-month-table w-full min-w-[760px] border-separate border-spacing-1 text-xs">
+        <thead><tr><th scope="col" class="text-left">Öğrenci</th>{% for kod, ad in aylar %}<th scope="col">{{ ad }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for g in gruplar %}
+        <tr class="lgs-month-group"><th colspan="10" scope="rowgroup" class="text-left">{{ g.sinif.sinif_adi }}</th></tr>
+        {% for o in g.ogrenciler %}
+        <tr>
+          <th scope="row" class="text-left"><a href="{{ url_for('lgs', ogrenci=o.id, bolum='program') }}">{{ o.ad_soyad }}</a></th>
+          {% for kod, ad in aylar %}
+          {% set isaretli = ay_harita.get(o.id, {}).get(kod) %}
+          <td>
+            <form method="post">
+              <input type="hidden" name="islem" value="ay_tek">
+              <input type="hidden" name="ogrenci" value="{{ o.id }}">
+              <input type="hidden" name="ay" value="{{ kod }}">
+              <input type="hidden" name="uygulandi" value="{{ 0 if isaretli else 1 }}">
+              <button type="submit" class="lgs-month-toggle {{ 'is-on' if isaretli else '' }}" aria-label="{{ o.ad_soyad }} · {{ ad }} · {{ 'işaretli, kaldır' if isaretli else 'işaretle' }}" aria-pressed="{{ 'true' if isaretli else 'false' }}">{{ '✓' if isaretli else '·' }}</button>
+            </form>
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
   {% else %}
   <header class="rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-900 p-5 text-white shadow-sm">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{{ 'Öğrenci LGS' if veli else 'Öğretmen veri girişi' }}</p>
         <h1 class="mt-1 text-2xl font-black">{{ selam }}, {{ ogrenci.ad_soyad.split()[0] }}</h1>
-        <p class="mt-1 text-sm text-indigo-100">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% if tempo_ad %} · {{ tempo_ad }}{% endif %}{% if profil.hedef %} · {{ profil.hedef }}{% endif %}</p>
+        <p class="mt-1 text-sm text-indigo-100">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% if tempo_ad %} · Hafta içi {{ tempo_ad }}{% if tempo_hafta_sonu_ad != tempo_ad %}, hafta sonu {{ tempo_hafta_sonu_ad }}{% endif %}{% endif %}{% if profil.hedef %} · {{ profil.hedef }}{% endif %}</p>
       </div>
       {% if veli %}
       <a href="{{ url_for('veli_panel') }}" class="rounded-xl bg-white/10 px-3 py-2 text-xs font-black">Veli paneli</a>
@@ -127,21 +162,37 @@
   {% elif bolum == 'program' %}
   <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
     <h2 class="font-black">Ders programı</h2>
-    <p class="mt-1 text-sm text-slate-600">Ekim programı üç tempoda durur ve seçilen tempo her hafta aynı günlerde tekrarlanır. Yaptım demek, öğretmen onayından sonra tamam sayılır.</p>
+    <p class="mt-1 text-sm text-slate-600">Belgedeki Ekim örnek programı dört seviyededir. Hafta içi ve hafta sonu ayrı seçilebilir; öğretmen her günü öğrenciye göre değiştirebilir. Seçilen akış haftalık tekrar eder. Yapılan iş öğretmen onayıyla tamam sayılır.</p>
     {% if tempo_ad %}
-    <p class="mt-2 text-sm font-black">Tempo: {{ tempo_ad }}{% if profil.hedef %} · hedef lise: {{ profil.hedef }}{% endif %}</p>
+    <p class="mt-2 text-sm font-black">Hafta içi: {{ tempo_ad }} · Hafta sonu: {{ tempo_hafta_sonu_ad }}{% if profil.hedef %} · hedef lise: {{ profil.hedef }}{% endif %}</p>
     {% endif %}
     {% if not veli %}
-    <form method="post" class="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+    <details class="mt-3 rounded-2xl border border-violet-100 bg-violet-50 p-3 text-xs text-slate-700">
+      <summary class="cursor-pointer font-black">Dört program seviyesi nasıl seçilir?</summary>
+      <div class="mt-2 grid gap-2 sm:grid-cols-2">
+        <p><strong>Başlangıç:</strong> Çalışma süresi henüz düzenli olmayan öğrenci.</p>
+        <p><strong>Alışma:</strong> Genellikle 0–2 saat çalışan öğrenci.</p>
+        <p><strong>Sıkı:</strong> Genellikle 1–3 saat çalışan öğrenci.</p>
+        <p><strong>Tempo:</strong> Genellikle 2–4 saat çalışan öğrenci.</p>
+      </div>
+      <p class="mt-2">Süreler yalnızca rehberdir; seviyeyi öğretmen öğrencinin durumuna göre seçer.</p>
+    </details>
+    <form method="post" class="mt-3 grid gap-2 sm:grid-cols-2">
       <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
       <input type="hidden" name="islem" value="tempo">
-      <select name="tempo" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-        <option value="">Tempo seçilmedi</option>
-        {% for kod, ad in tempolar %}
-        <option value="{{ kod }}" {% if tempo == kod %}selected{% endif %}>{{ ad }}</option>
-        {% endfor %}
-      </select>
-      <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Tempoyu kaydet</button>
+      <label class="text-xs font-black text-slate-500">Hafta içi seviyesi
+        <select name="tempo" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <option value="">Seviye seçilmedi</option>
+          {% for kod, ad in tempolar %}<option value="{{ kod }}" {% if tempo == kod %}selected{% endif %}>{{ ad }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="text-xs font-black text-slate-500">Hafta sonu seviyesi
+        <select name="tempo_hafta_sonu" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <option value="">Hafta içiyle aynı</option>
+          {% for kod, ad in tempolar %}<option value="{{ kod }}" {% if tempo_hafta_sonu == kod and tempo_hafta_sonu != tempo %}selected{% endif %}>{{ ad }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white sm:col-span-2">Seviyeleri kaydet</button>
     </form>
     <form method="post" class="mt-3 grid gap-2 sm:grid-cols-2">
       <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
@@ -177,11 +228,33 @@
     <p class="mt-2 text-xs text-slate-500">Yeşil ayları öğretmen işaretler. Ekim’den Haziran’a programın uygulandığı aylar.</p>
     {% endif %}
   </section>
-  {% if tempo %}
+  {% if not veli %}
+  <section class="lgs-custom-plan mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <h2 class="font-black">Kişisel haftalık program</h2>
+    <p class="mt-1 text-xs text-slate-600">Her satır ayrı bir görevdir. Boş bıraktığınız gün dinlenme günü olur. Bir günü öneri programa döndürmek için “Öneriyi kullan”ı seçin. Programı değiştirirseniz önceki görevlere ait onaylar saklanır ama yeni göreve sayılmaz.</p>
+    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+      {% for gun in range(7) %}
+      <form method="post" class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
+        <input type="hidden" name="islem" value="ozel_program">
+        <input type="hidden" name="gun" value="{{ gun }}">
+        <label class="block text-xs font-black text-slate-700">{{ gunler[gun] }} {% if gun in ozel_program %}<span class="text-violet-700">· Kişisel</span>{% else %}<span class="text-slate-500">· Öneri</span>{% endif %}
+          <textarea name="gorevler" rows="5" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium" placeholder="Her satıra bir görev">{{ program_satirlari[gun]|join('\n') }}</textarea>
+        </label>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button name="karar" value="kaydet" class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">Günü kaydet</button>
+          <button name="karar" value="varsayilan" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black">Öneriyi kullan</button>
+        </div>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+  {% if plan_gunler %}
   <div class="mt-3 space-y-3">
     {% for gun in plan_gunler %}
     <article class="rounded-2xl border p-3 {{ 'border-amber-300 bg-amber-50' if gun.tarih == bugun else 'border-slate-200 bg-white' }}">
-      <h3 class="font-black">{{ gunler[gun.gun] }} <span class="text-xs font-bold text-slate-500">{{ gun.tarih }}{% if gun.tarih == bugun %} · bugün{% endif %}</span></h3>
+      <h3 class="font-black">{{ gunler[gun.gun] }} <span class="text-xs font-bold text-slate-500">{{ gun.tarih }}{% if gun.tarih == bugun %} · bugün{% endif %}{% if gun.ozel %} · kişisel program{% endif %}</span></h3>
       <ul class="mt-2 space-y-2">
         {% for b in gun.bloklar %}
         <li class="rounded-xl bg-white px-3 py-2 text-sm shadow-sm">
@@ -189,6 +262,7 @@
             <span class="font-bold">{{ b.metin }}</span>
             <span class="shrink-0 text-xs font-black {{ 'text-emerald-700' if b.tamamlandi else ('text-amber-700' if b.bildirdi else 'text-slate-400') }}">{{ 'Onaylandı' if b.tamamlandi else ('Onay bekliyor' if b.bildirdi else 'Bekliyor') }}</span>
           </div>
+          {% if b.eski_isaret %}<p class="mt-1 text-xs font-bold text-amber-800">Önceki işaret farklı göreve aitti; yeni görev için sayılmadı.</p>{% endif %}
           {% if veli and gun.tarih <= bugun and not b.tamamlandi %}
           <form method="post" class="mt-2">
             <input type="hidden" name="islem" value="program_bildir">

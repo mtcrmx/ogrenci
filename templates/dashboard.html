@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ aktif.sinif_adi if aktif else 'Panel' }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='dashboard_clay.css') }}?v=clay2026b">{% endblock %}
 
 {% block body %}
 <div class="dashboard-shell flex">
@@ -11,11 +12,22 @@
                  -translate-x-full lg:translate-x-0 transition-transform duration-200">
 
     <div class="sidebar-brand mx-3 mt-4 px-4 py-5">
-      <div class="sidebar-brand-icon" aria-hidden="true">📚</div>
-      <p class="mt-3 text-[10px] font-black uppercase tracking-widest">Öğretmen alanı</p>
-      <h2 class="mt-1 text-lg font-black leading-tight break-words">Merhaba! 👋</h2>
-      <p class="mt-1 text-xs font-semibold break-words">{{ session.ogretmen_adi }}</p>
+      <div class="sidebar-avatar-frame" aria-hidden="true">
+        <img src="{{ url_for('static', filename='clay-student-avatar.webp') }}" alt="" width="128" height="128">
+      </div>
+      <h2 class="sidebar-hello mt-4 text-lg font-black leading-tight break-words">Merhaba, {{ session.ogretmen_adi.split()[0]|title }}! 👋</h2>
+      <p class="sidebar-role mt-1 text-xs font-semibold">Öğretmen paneli</p>
     </div>
+
+    <nav class="dashboard-side-menu px-3 pt-4" aria-label="Ana menü">
+      <a href="{{ url_for('dashboard', sinif=aktif.id) if aktif else url_for('dashboard') }}" class="dashboard-side-link is-current" aria-current="page"><img src="{{ url_for('static', filename='clay-icon-students.webp') }}" alt="" width="30" height="30"><span>Kontrol paneli</span></a>
+      <a href="{{ url_for('haftalik_takip', sinif=aktif.id) if aktif else url_for('haftalik_takip') }}" class="dashboard-side-link"><img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="30" height="30"><span>Kitap / Ödev</span></a>
+      <a href="{{ url_for('onay_kutusu') }}" class="dashboard-side-link"><img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="30" height="30"><span>Onay kutusu</span></a>
+      <a href="{{ url_for('karne', sinif=aktif.id) if aktif else url_for('karne') }}" class="dashboard-side-link"><span class="dashboard-side-symbol" aria-hidden="true">▣</span><span>Karne</span></a>
+      <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) if aktif else url_for('analiz_merkezi') }}" class="dashboard-side-link"><span class="dashboard-side-symbol" aria-hidden="true">◒</span><span>Analiz</span></a>
+      <a href="{{ url_for('lgs') }}" class="dashboard-side-link"><span class="dashboard-side-symbol" aria-hidden="true">✦</span><span>LGS</span></a>
+      <a href="{{ url_for('deneme_analiz') }}" class="dashboard-side-link"><span class="dashboard-side-symbol" aria-hidden="true">◈</span><span>Deneme</span></a>
+    </nav>
 
     <div class="dashboard-sidebar-nav px-3 pt-5 pb-2">
       <div class="mb-3 flex items-center justify-between gap-2 px-1">
@@ -30,6 +42,7 @@
         </button>
       </div>
 
+      <div class="dashboard-class-grid">
       {% for s in siniflar %}
       <a href="{{ url_for('dashboard', sinif=s.id) }}"
          class="class-link flex items-center gap-2.5 w-full font-bold text-sm px-3 py-2.5 mb-1.5 rounded-lg
@@ -45,16 +58,27 @@
         <span class="min-w-0 break-words">{{ s.sinif_adi }}</span>
       </a>
       {% endfor %}
+      </div>
     </div>
 
     {% if aktif %}
     <div class="dashboard-sidebar-footer px-3 pb-5 mt-3 pt-4">
       <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}"
-         class="dashboard-sidebar-action flex items-center justify-center gap-2 w-full text-center text-xs font-black py-3 rounded-full bg-emerald-300 text-emerald-950">
-        <span aria-hidden="true">✏️</span> Kitap ve ödev <span aria-hidden="true">→</span>
+         class="dashboard-sidebar-action flex flex-col items-start w-full text-left text-xs font-black rounded-3xl">
+        <img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="94" height="82" aria-hidden="true">
+        <strong>Bugün de birlikte öğrenelim</strong>
+        <span>Kitap ve ödev takibini aç</span>
+        <span class="dashboard-sidebar-action-cta">Takibi aç →</span>
       </a>
     </div>
     {% endif %}
+    <div class="dashboard-utility-links" aria-label="Hesap bağlantıları">
+      {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
+      <a href="{{ url_for('giris_raporu') }}">Giriş raporu</a>
+      <a href="{{ url_for('ogrenci_ara') }}">Öğrenci ara</a>
+      {% endif %}
+      <a href="{{ url_for('logout') }}">Çıkış</a>
+    </div>
   </aside>
 
   <!-- Overlay mobilde sidebar açıkken -->
@@ -66,59 +90,28 @@
        Sağ: Ana İçerik
   ══════════════════════════════════════════════════════════════ -->
   <main class="main-canvas flex-1 min-w-0 lg:ml-0">
-    {% if eksik_siniflar is defined and (eksik_siniflar or onay_sayisi) %}
-    <section class="mx-3 mt-3 space-y-2 sm:mx-4">
-      {% if onay_sayisi %}
-      <a href="{{ url_for('onay_kutusu') }}" class="block rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
-        {{ onay_sayisi }} onay bekliyor{% if onay_geciken %} · {{ onay_geciken }} tanesi 3 günü geçti{% endif %}
-      </a>
-      {% endif %}
-      {% for s in eksik_siniflar %}
-      <a href="{{ url_for('haftalik_takip', sinif=s.id) }}" class="block rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-950">
-        {{ s.sinif_adi }} bu hafta {% if s.isaretli == 0 %}henüz işaretlenmedi{% else %}eksik: {{ s.isaretli }}/{{ s.toplam }}{% endif %}
-      </a>
-      {% endfor %}
-    </section>
-    {% endif %}
-    {% if gelmeyen is defined and gelmeyen %}
-    <section class="mx-3 mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm sm:mx-4">
-      <p class="font-black text-rose-900">Bugün gelmeyecek</p>
-      <p class="mt-1 text-rose-800">{% for k in gelmeyen %}{{ k.ad_soyad }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
-    </section>
-    {% endif %}
-
     {% if aktif %}
-    <div class="teacher-toolbar sticky top-0 z-10 px-3 sm:px-4 py-3
-                flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-      <button type="button"
-              onclick="toggleSidebar()"
-              class="lg:hidden inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700">
-        ☰ Sınıflar
-      </button>
-      <div class="w-full sm:flex-1 min-w-0">
-        <p class="dashboard-kicker text-[10px] font-black uppercase tracking-widest">Öğretmen paneli</p>
-        <h1 class="dashboard-page-title text-xl sm:text-2xl font-black break-words">Kontrol paneli</h1>
-        <p class="text-xs text-slate-500" id="guncelleme-info">{{ aktif.sinif_adi }} şubesi · {{ ogrenciler|length }} öğrenci</p>
+    <div class="dashboard-topbar teacher-toolbar">
+      <button type="button" class="dashboard-classes-trigger lg:hidden" onclick="toggleSidebar()" aria-label="Sınıfları aç">☰</button>
+      <div class="dashboard-title-block">
+        <p class="dashboard-kicker">{{ aktif.sinif_adi }} ŞUBESİ</p>
+        <h1 class="dashboard-page-title">Kontrol paneli</h1>
+        <p class="dashboard-title-meta" id="guncelleme-info">{{ ogrenciler|length }} öğrenci · öğretmen alanı</p>
       </div>
-
       <label for="ara" class="sr-only">Öğrenci ara</label>
-      <div class="dashboard-search relative w-full sm:w-56">
+      <div class="dashboard-search relative">
         <span class="dashboard-search-icon absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true">⌕</span>
-        <input type="search" id="ara" placeholder="Öğrenci ara..."
-               oninput="filtrele()"
-               class="search-field border border-slate-300 rounded-full pl-9 pr-3 py-2 text-sm
-                      w-full focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <input type="search" id="ara" placeholder="Öğrenci ara..." oninput="filtrele()" class="search-field w-full">
       </div>
-
-      <div class="flex gap-1.5 sm:hidden w-full flex-wrap">
-        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}"
-           class="flex-1 min-w-[40%] text-center bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          Analiz
+      <div class="dashboard-top-actions">
+        <a href="{{ url_for('onay_kutusu') }}" class="dashboard-notification" aria-label="{{ onay_sayisi }} onay bekliyor">
+          <img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="38" height="38">
+          {% if onay_sayisi %}<span class="dashboard-notification-count">{{ onay_sayisi }}</span>{% endif %}
         </a>
-        <a href="{{ url_for('kitap_odev_rapor', sinif=aktif.id) }}"
-           class="flex-1 min-w-[40%] text-center bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-          Sınıf raporu
-        </a>
+        <button type="button" data-renk-ac class="dashboard-color-button">Renk</button>
+        <span class="dashboard-profile-button" aria-label="Öğretmen profili" role="img">
+          <img src="{{ url_for('static', filename='clay-student-avatar.webp') }}" alt="" width="42" height="42">
+        </span>
       </div>
     </div>
 
@@ -129,43 +122,44 @@
     </div>
 
     <section class="dashboard-hero dashboard-mobile-section mx-3 mt-3 p-5 sm:p-6" data-dashboard-section="ozet">
-      <div class="dashboard-welcome flex items-center justify-between gap-5">
+      <div class="dashboard-welcome">
+        <div class="dashboard-hero-art" aria-hidden="true">
+          <img src="{{ url_for('static', filename='clay-student-hero.webp') }}" alt="" width="272" height="266">
+        </div>
         <div class="dashboard-welcome-copy min-w-0">
-          <p class="dashboard-kicker text-[11px] font-black uppercase tracking-widest">✨ Bugünün sınıfı</p>
-          <h2 class="dashboard-welcome-title mt-2 text-2xl sm:text-3xl font-black break-words">Merhaba, {{ session.ogretmen_adi }}! 👋</h2>
-          <p class="dashboard-welcome-subtitle mt-2 text-sm font-medium">{{ aktif.sinif_adi }} şubesinin kitap ve ödev takibini buradan kolayca sürdürebilirsiniz.</p>
-          <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}" class="dashboard-hero-action inline-flex items-center gap-2 mt-4 rounded-full px-5 py-2.5 text-sm font-black">
-            Takibi aç <span aria-hidden="true">→</span>
+          <p class="dashboard-kicker">BUGÜNÜN SINIFI</p>
+          <h2 class="dashboard-welcome-title">Günaydın, {{ session.ogretmen_adi.split()[0]|title }}! <span class="dashboard-sun" aria-hidden="true">☀️</span></h2>
+          <p class="dashboard-welcome-subtitle">{{ aktif.sinif_adi }} şubesinde güzel bir öğrenme günü sizi bekliyor.</p>
+          <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}" class="dashboard-hero-action">
+            <span aria-hidden="true">▶</span> Takibi aç
           </a>
         </div>
-        <div class="dashboard-hero-art hidden sm:flex" aria-hidden="true">
-          <img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="240" height="200">
-        </div>
+        <img class="dashboard-hero-plant" src="{{ url_for('static', filename='clay-plant.webp') }}" alt="" width="138" height="185" aria-hidden="true">
       </div>
     </section>
 
     <section class="dashboard-stats dashboard-mobile-section mx-3 mt-4" data-dashboard-section="ozet" aria-label="Sınıf özeti">
       <div class="dashboard-stat-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
       <div class="metric-card dashboard-stat dashboard-stat--lilac p-4">
-        <span class="dashboard-stat-icon" aria-hidden="true">👥</span>
+        <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-students.webp') }}" alt="" width="62" height="62"></span>
         <p class="dashboard-stat-label mt-3 text-xs font-bold">Öğrenciler</p>
         <strong class="dashboard-stat-value block text-2xl font-black" id="ozet-ogrenci-sayisi">{{ ogrenciler|length }}</strong>
         <span class="dashboard-stat-hint text-xs">{{ aktif.sinif_adi }} şubesinde</span>
       </div>
       <div class="metric-card dashboard-stat dashboard-stat--pink p-4">
-        <span class="dashboard-stat-icon" aria-hidden="true">🏫</span>
+        <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-classes.webp') }}" alt="" width="62" height="62"></span>
         <p class="dashboard-stat-label mt-3 text-xs font-bold">Sınıflar</p>
         <strong class="dashboard-stat-value block text-2xl font-black">{{ siniflar|length }}</strong>
         <span class="dashboard-stat-hint text-xs">Panelinizde kayıtlı</span>
       </div>
       <div class="metric-card dashboard-stat dashboard-stat--peach p-4">
-        <span class="dashboard-stat-icon" aria-hidden="true">✉️</span>
+        <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="62" height="62"></span>
         <p class="dashboard-stat-label mt-3 text-xs font-bold">Bekleyen onay</p>
         <strong class="dashboard-stat-value block text-2xl font-black">{{ onay_sayisi }}</strong>
         <span class="dashboard-stat-hint text-xs">İncelenecek bildirim</span>
       </div>
       <div class="metric-card dashboard-stat dashboard-stat--sky p-4">
-        <span class="dashboard-stat-icon" aria-hidden="true">☀️</span>
+        <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-absent.webp') }}" alt="" width="62" height="62"></span>
         <p class="dashboard-stat-label mt-3 text-xs font-bold">Bugün gelmeyecek</p>
         <strong class="dashboard-stat-value block text-2xl font-black">{{ gelmeyen|length }}</strong>
         <span class="dashboard-stat-hint text-xs">{{ aktif.sinif_adi }} şubesinde</span>
@@ -173,6 +167,7 @@
       </div>
     </section>
 
+    <div class="dashboard-lower-grid">
     <div class="dashboard-mobile-section px-3 pt-6" data-dashboard-section="islem">
       <div class="dashboard-section-heading mb-3">
         <div>
@@ -181,6 +176,28 @@
         </div>
         <span class="dashboard-heading-spark" aria-hidden="true">✦</span>
       </div>
+    {% if (eksik_siniflar is defined and (eksik_siniflar or onay_sayisi)) or (gelmeyen is defined and gelmeyen) %}
+    <div class="dashboard-notices" aria-label="Güncel bildirimler">
+      {% if onay_sayisi %}
+      <a href="{{ url_for('onay_kutusu') }}" class="dashboard-notice dashboard-notice--peach">
+        <img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="28" height="28">
+        <span>{{ onay_sayisi }} onay bekliyor{% if onay_geciken %} · {{ onay_geciken }} tanesi 3 günü geçti{% endif %}</span>
+      </a>
+      {% endif %}
+      {% if eksik_siniflar is defined %}{% for s in eksik_siniflar %}
+      <a href="{{ url_for('haftalik_takip', sinif=s.id) }}" class="dashboard-notice dashboard-notice--blue">
+        <span>{{ s.sinif_adi }} bu hafta {% if s.isaretli == 0 %}henüz işaretlenmedi{% else %}eksik: {{ s.isaretli }}/{{ s.toplam }}{% endif %}</span>
+      </a>
+      {% endfor %}{% endif %}
+      {% if gelmeyen is defined and gelmeyen %}
+      <div class="dashboard-notice dashboard-notice--pink">
+        <strong>Bugün gelmeyecek:</strong>
+        <span>{% for k in gelmeyen %}{{ k.ad_soyad }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
       <section class="dashboard-actions grid gap-3 lg:grid-cols-2">
         <div class="action-group dashboard-action-card dashboard-action-card--mint p-4">
           <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Günlük takip</h3>
@@ -210,6 +227,7 @@
       </section>
     </div>
 
+    <section class="dashboard-student-panel" aria-label="Öğrenci listesi">
     <div class="dashboard-section-heading dashboard-mobile-section is-mobile-active mx-3 mt-6 mb-1" data-dashboard-section="liste">
       <div class="dashboard-section-heading-inner flex items-center justify-between gap-3">
         <div>
@@ -229,6 +247,14 @@
     <div class="dashboard-mobile-section is-mobile-active text-center text-xs text-slate-400 py-3" id="durum-bar" data-dashboard-section="liste">
       {{ ogrenciler|length }} öğrenci
     </div>
+    </section>
+    </div>
+
+    <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}" class="dashboard-bottom-banner dashboard-mobile-section" data-dashboard-section="ozet">
+      <img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="118" height="100" aria-hidden="true">
+      <span class="dashboard-bottom-copy"><strong>Öğrenmeye devam et</strong><small>{{ aktif.sinif_adi }} sınıfının kitap ve ödev yolculuğu burada.</small></span>
+      <span class="dashboard-bottom-cta">Takibi aç</span>
+    </a>
 
     {% else %}
     <div class="dashboard-empty-state mx-3 mt-5 p-6 text-center">
@@ -300,6 +326,7 @@
 {% block scripts %}
 <script>
 // ── Sidebar ──────────────────────────────────────────────────────────────
+let sidebarOpenedAt = 0;
 function setDashboardSection(section, shouldScroll = true) {
   const allowed = ['ozet', 'islem', 'liste'];
   const targetSection = allowed.includes(section) ? section : 'liste';
@@ -327,11 +354,14 @@ function toggleSidebar() {
   const sb  = document.getElementById('sidebar');
   const ov  = document.getElementById('sidebar-overlay');
   const vis = !sb.classList.contains('-translate-x-full');
+  if (vis && performance.now() - sidebarOpenedAt < 800) return;
+  if (!vis) sidebarOpenedAt = performance.now();
   sb.classList.toggle('-translate-x-full', vis);
   ov.classList.toggle('hidden', vis);
   document.body.classList.toggle('overflow-hidden', !vis);
 }
 function closeSidebar() {
+  if (performance.now() - sidebarOpenedAt < 800) return;
   document.getElementById('sidebar').classList.add('-translate-x-full');
   document.getElementById('sidebar-overlay').classList.add('hidden');
   document.body.classList.remove('overflow-hidden');

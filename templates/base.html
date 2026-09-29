@@ -456,7 +456,7 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body class="ui-theme app-background bg-slate-100 overflow-x-hidden {% if session.ogretmen_adi %}has-teacher-mobile-nav{% endif %}">
+<body class="ui-theme app-background bg-slate-100 overflow-x-hidden {% if session.ogretmen_adi %}has-teacher-mobile-nav{% endif %} {% if request.endpoint == 'dashboard' %}dashboard-page{% endif %}">
 
 {% if session.ogretmen_adi %}
 {% set aktif_sinif_id = aktif.id if aktif is defined and aktif else None %}

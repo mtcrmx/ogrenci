@@ -1,0 +1,395 @@
+/* LGS page: soft clay surfaces scoped to the LGS main element. */
+body.ui-theme main.lgs-page {
+  --lgs-ink: var(--ui-ink, #342747);
+  --lgs-muted: var(--ui-muted, #756982);
+  --lgs-accent: var(--ui-accent, #c8b1ed);
+  --lgs-accent-deep: var(--ui-accent-deep, #7954bb);
+  --lgs-surface: #fff9f6;
+  --lgs-border: rgba(255, 255, 255, .78);
+  --lgs-card-shadow: inset 2px 3px 5px rgba(255,255,255,.9),
+    inset -4px -6px 10px rgba(93,62,123,.07),
+    0 7px 12px -7px rgba(87,58,117,.19),
+    0 20px 30px -18px rgba(80,54,111,.22);
+  --lgs-soft-shadow: inset 2px 3px 4px rgba(255,255,255,.84),
+    inset -3px -4px 7px rgba(93,62,123,.07),
+    0 5px 9px -6px rgba(87,58,117,.18),
+    0 12px 19px -13px rgba(80,54,111,.19);
+  --lgs-button-shadow: inset 2px 3px 4px rgba(255,255,255,.72),
+    inset -3px -5px 8px rgba(78,50,111,.11),
+    0 5px 8px -5px rgba(77,51,110,.24),
+    0 12px 19px -12px rgba(73,47,107,.23);
+  width: min(1040px, calc(100% - 28px));
+  max-width: none;
+  min-width: 0;
+  margin: 22px auto 32px;
+  padding: clamp(16px, 2.7vw, 30px) !important;
+  border: 1px solid var(--lgs-border);
+  border-radius: 36px;
+  background: linear-gradient(150deg, #fffaf7 0%, #fff4f1 58%, #f9ebf1 100%);
+  color: var(--lgs-ink) !important;
+  box-shadow: inset 3px 4px 6px rgba(255,255,255,.88),
+    inset -9px -11px 17px rgba(120,83,151,.06),
+    0 14px 23px -15px rgba(89,61,121,.23),
+    0 30px 49px -27px rgba(76,52,112,.23);
+}
+
+/* Introduction, student heading and weekly progress. */
+body.ui-theme .lgs-page > header {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(20px, 3vw, 30px) !important;
+  border: 1px solid rgba(255,255,255,.7);
+  border-radius: 30px !important;
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--lgs-accent) 52%, #fff),
+    color-mix(in srgb, var(--lgs-accent) 80%, #fff)) !important;
+  color: var(--lgs-ink) !important;
+  box-shadow: inset 3px 4px 6px rgba(255,255,255,.58),
+    inset -5px -7px 10px rgba(83,51,127,.11),
+    0 7px 10px -6px rgba(82,52,120,.25),
+    0 18px 27px -16px rgba(82,52,120,.26) !important;
+}
+body.ui-theme .lgs-page > header h1 {
+  color: var(--lgs-ink);
+  font-size: clamp(26px, 3.8vw, 35px);
+  letter-spacing: -.035em;
+  line-height: 1.12;
+}
+body.ui-theme .lgs-page > header :is(.text-amber-300, .text-indigo-100, .text-slate-300) {
+  color: var(--lgs-muted) !important;
+}
+body.ui-theme .lgs-page > header > p:first-child,
+body.ui-theme .lgs-page > header > div:first-child > div > p:first-child {
+  color: color-mix(in srgb, var(--lgs-accent-deep) 75%, var(--lgs-ink)) !important;
+}
+body.ui-theme .lgs-page > header a {
+  min-height: 40px;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.6) !important;
+  color: var(--lgs-ink) !important;
+  box-shadow: var(--lgs-soft-shadow);
+}
+body.ui-theme .lgs-page > header .h-3.overflow-hidden {
+  border: 1px solid rgba(255,255,255,.6);
+  background: rgba(255,255,255,.55) !important;
+  box-shadow: inset 1px 2px 4px rgba(93,62,123,.16);
+}
+body.ui-theme .lgs-page > header .h-3.overflow-hidden > div {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--lgs-accent-deep) 75%, #fff),
+    var(--lgs-accent-deep)) !important;
+}
+
+/* The class chooser and student pills. */
+body.ui-theme .lgs-page > form,
+body.ui-theme .lgs-page details,
+body.ui-theme .lgs-page :is(section, article, form, label)[class*="rounded-2xl"] {
+  border: 1px solid var(--lgs-border) !important;
+  border-radius: 25px !important;
+  background: linear-gradient(155deg, #fffdfa, #fff3ef) !important;
+  color: var(--lgs-ink);
+  box-shadow: var(--lgs-card-shadow) !important;
+}
+body.ui-theme .lgs-page details {
+  padding: clamp(15px, 2.5vw, 22px) !important;
+}
+body.ui-theme .lgs-page details[open] {
+  border-color: color-mix(in srgb, var(--lgs-accent) 65%, #fff) !important;
+}
+body.ui-theme .lgs-page details summary {
+  color: var(--lgs-ink);
+  font-size: 16px;
+  line-height: 1.45;
+}
+body.ui-theme .lgs-page details a {
+  display: block;
+  min-height: 44px;
+  border: 1px solid rgba(255,255,255,.75) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(150deg, #fffdfb, #f7eff8) !important;
+  color: var(--lgs-ink);
+  box-shadow: var(--lgs-soft-shadow);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+body.ui-theme .lgs-page details a:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--lgs-card-shadow);
+}
+
+/* Section tabs: the selected piece is raised and clearly identifiable. */
+body.ui-theme .lgs-page > nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+body.ui-theme .lgs-page > nav a {
+  display: grid;
+  flex: 1 1 140px;
+  min-height: 46px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.76) !important;
+  border-radius: 999px !important;
+  background: linear-gradient(150deg, #fffdfb, #f8f0f5) !important;
+  color: var(--lgs-ink) !important;
+  box-shadow: var(--lgs-soft-shadow) !important;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+body.ui-theme .lgs-page > nav a.bg-slate-900 {
+  background: linear-gradient(150deg,
+    color-mix(in srgb, var(--lgs-accent) 68%, #fff),
+    var(--lgs-accent)) !important;
+  box-shadow: var(--lgs-button-shadow) !important;
+}
+body.ui-theme .lgs-page > nav a:hover {
+  transform: translateY(-1px);
+}
+
+/* Cards for coaching, monthly tracking, program, notebook and exams. */
+body.ui-theme .lgs-page :is(section, article, form, label).bg-amber-50 {
+  border-color: rgba(245,209,168,.8) !important;
+  background: linear-gradient(150deg, #fff7e7, #ffe9d5) !important;
+}
+body.ui-theme .lgs-page :is(section, article, form, label).bg-rose-50 {
+  border-color: rgba(238,187,202,.82) !important;
+  background: linear-gradient(150deg, #fff3f5, #f8dbe6) !important;
+}
+body.ui-theme .lgs-page :is(section, article, form, label).bg-emerald-50 {
+  border-color: rgba(180,219,196,.82) !important;
+  background: linear-gradient(150deg, #f6fbf2, #def0dc) !important;
+}
+body.ui-theme .lgs-page :is(article, section, form) :is(li, div)[class*="rounded-xl"][class*="bg-white"] {
+  border: 1px solid rgba(255,255,255,.74);
+  border-radius: 16px !important;
+  background: linear-gradient(150deg, #fffefd, #fbf4f8) !important;
+  box-shadow: var(--lgs-soft-shadow);
+}
+body.ui-theme .lgs-page :is(article, section, form) h2,
+body.ui-theme .lgs-page :is(article, section, form) h3 {
+  color: var(--lgs-ink);
+  line-height: 1.3;
+}
+body.ui-theme .lgs-page :is(.text-slate-400, .text-slate-500, .text-slate-600) {
+  color: var(--lgs-muted) !important;
+}
+body.ui-theme .lgs-page :is(.text-slate-700, .text-slate-800) {
+  color: var(--lgs-ink) !important;
+}
+body.ui-theme .lgs-page .text-indigo-800,
+body.ui-theme .lgs-page .text-sky-800 {
+  color: color-mix(in srgb, var(--lgs-accent-deep) 72%, var(--lgs-ink)) !important;
+}
+body.ui-theme .lgs-page .text-emerald-700,
+body.ui-theme .lgs-page .text-emerald-800 { color: #24664e !important; }
+body.ui-theme .lgs-page .text-rose-700,
+body.ui-theme .lgs-page .text-rose-800 { color: #883d5d !important; }
+
+/* Month cells remain legible when checked and work on touch screens. */
+body.ui-theme .lgs-page label:has(input[name="ay"]) {
+  min-height: 44px;
+  border: 1px solid rgba(255,255,255,.76) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(150deg, #fffdfb, #f8f0f5) !important;
+  color: var(--lgs-ink);
+  box-shadow: var(--lgs-soft-shadow);
+  cursor: pointer;
+}
+body.ui-theme .lgs-page label:has(input[name="ay"]:checked) {
+  background: linear-gradient(150deg,
+    color-mix(in srgb, var(--lgs-accent) 35%, #fff),
+    color-mix(in srgb, var(--lgs-accent) 65%, #fff)) !important;
+}
+
+/* Monthly matrix and the student's own plan keep a clear reading order. */
+body.ui-theme .lgs-page .lgs-month-board,
+body.ui-theme .lgs-page .lgs-custom-plan {
+  min-width: 0;
+  border: 1px solid var(--lgs-border) !important;
+  border-radius: 25px !important;
+  background: linear-gradient(150deg, #fffaf7, #f9eff7) !important;
+  color: var(--lgs-ink);
+  box-shadow: var(--lgs-card-shadow) !important;
+}
+body.ui-theme .lgs-page .lgs-month-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(170,139,199,.23);
+  border-radius: 18px;
+  background: rgba(255,255,255,.7);
+  scrollbar-color: color-mix(in srgb, var(--lgs-accent) 80%, #fff) transparent;
+  scrollbar-width: thin;
+}
+body.ui-theme .lgs-page .lgs-month-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--lgs-ink);
+  font-size: 13px;
+}
+body.ui-theme .lgs-page .lgs-month-table :is(th, td) {
+  min-width: 48px;
+  padding: 11px 9px;
+  border-bottom: 1px solid rgba(160,127,188,.18);
+  text-align: center;
+  vertical-align: middle;
+}
+body.ui-theme .lgs-page .lgs-month-table :is(th, td):first-child {
+  min-width: 130px;
+  text-align: left;
+}
+body.ui-theme .lgs-page .lgs-month-table thead th {
+  background: color-mix(in srgb, var(--lgs-accent) 43%, #fff);
+  color: var(--lgs-ink);
+  font-weight: 900;
+  white-space: nowrap;
+}
+body.ui-theme .lgs-page .lgs-month-table tbody tr:nth-child(even) {
+  background: rgba(247,237,249,.48);
+}
+body.ui-theme .lgs-page .lgs-month-table tbody tr:hover {
+  background: color-mix(in srgb, var(--lgs-accent) 16%, #fff);
+}
+body.ui-theme .lgs-page input.lgs-month-toggle {
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  accent-color: var(--lgs-accent-deep);
+  box-shadow: none !important;
+  cursor: pointer;
+}
+body.ui-theme .lgs-page :is(button, label).lgs-month-toggle {
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.8) !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--lgs-accent) 30%, #fff) !important;
+  color: var(--lgs-ink) !important;
+  box-shadow: var(--lgs-soft-shadow) !important;
+}
+body.ui-theme .lgs-page .lgs-custom-plan :is(li, article)[class*="rounded"] {
+  border: 1px solid rgba(255,255,255,.72);
+  background: linear-gradient(150deg, #fffefd, #f6edf7) !important;
+  box-shadow: var(--lgs-soft-shadow);
+}
+
+/* Form controls keep their labels and values clear at mobile widths. */
+body.ui-theme .lgs-page :is(select, textarea, input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"])) {
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid rgba(168,135,197,.38) !important;
+  border-radius: 15px !important;
+  background: #fffdfb !important;
+  color: var(--lgs-ink) !important;
+  box-shadow: inset 2px 3px 6px rgba(98,68,132,.09),
+    inset -1px -2px 3px rgba(255,255,255,.84) !important;
+}
+body.ui-theme .lgs-page :is(input, textarea)::placeholder { color: #82738b; opacity: 1; }
+body.ui-theme .lgs-page input[type="file"] {
+  width: min(100%, 280px);
+  color: var(--lgs-ink) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+body.ui-theme .lgs-page input[type="file"]::file-selector-button {
+  margin-right: 9px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lgs-accent) 48%, #fff);
+  color: var(--lgs-ink);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+body.ui-theme .lgs-page :is(input[type="checkbox"], input[type="radio"]) {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--lgs-accent-deep);
+  box-shadow: none !important;
+}
+body.ui-theme .lgs-page .grid-cols-4 > input { width: 100%; min-width: 0; }
+
+/* Action hierarchy: pastel primary and distinct approval / rejection states. */
+body.ui-theme .lgs-page button {
+  min-height: 44px;
+  border: 1px solid rgba(255,255,255,.69) !important;
+  border-radius: 999px !important;
+  font-weight: 800;
+  box-shadow: var(--lgs-button-shadow) !important;
+}
+body.ui-theme .lgs-page button.bg-slate-900 {
+  background: linear-gradient(155deg,
+    color-mix(in srgb, var(--lgs-accent) 65%, #fff),
+    var(--lgs-accent)) !important;
+  color: var(--lgs-ink) !important;
+}
+body.ui-theme .lgs-page button.bg-white {
+  background: linear-gradient(155deg, #fffefd, #f5eaf4) !important;
+  color: var(--lgs-ink) !important;
+}
+body.ui-theme .lgs-page button.bg-emerald-700 {
+  background: linear-gradient(155deg, #d4efda, #abd8bb) !important;
+  color: #20513b !important;
+}
+body.ui-theme .lgs-page button.bg-rose-700 {
+  background: linear-gradient(155deg, #f8d5df, #eeb3c6) !important;
+  color: #733452 !important;
+}
+body.ui-theme .lgs-page button:hover { transform: translateY(-1px); }
+body.ui-theme .lgs-page button:active,
+body.ui-theme .lgs-page > nav a:active,
+body.ui-theme .lgs-page details a:active {
+  transform: translateY(1px) scale(.99);
+  box-shadow: inset 2px 4px 8px rgba(93,62,123,.16),
+    inset -1px -2px 3px rgba(255,255,255,.7),
+    0 2px 5px -3px rgba(80,54,111,.2) !important;
+}
+body.ui-theme .lgs-page :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--lgs-accent-deep) !important;
+  outline-offset: 3px;
+}
+body.ui-theme .lgs-page :is(input, select, textarea):focus {
+  border-color: color-mix(in srgb, var(--lgs-accent-deep) 50%, #fff) !important;
+  box-shadow: inset 2px 3px 6px rgba(98,68,132,.09),
+    0 0 0 4px color-mix(in srgb, var(--lgs-accent) 38%, transparent) !important;
+}
+
+@media (max-width: 640px) {
+  body.ui-theme main.lgs-page {
+    width: calc(100% - 16px);
+    margin: 8px auto 20px;
+    padding: 13px 12px calc(var(--app-mobile-tabbar-height, 74px) + 24px) !important;
+    border-radius: 27px;
+  }
+  body.ui-theme .lgs-page > header {
+    padding: 18px !important;
+    border-radius: 23px !important;
+  }
+  body.ui-theme .lgs-page > header h1 { font-size: 26px; }
+  body.ui-theme .lgs-page > nav a { flex-basis: calc(50% - 5px); }
+  body.ui-theme .lgs-page details { padding: 15px !important; }
+  body.ui-theme main.lgs-page > form[enctype="multipart/form-data"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body.ui-theme main.lgs-page > form[enctype="multipart/form-data"] > :is(div, input, button) {
+    min-width: 0;
+    width: 100%;
+  }
+  body.ui-theme .lgs-page :is(section, article, form, label)[class*="rounded-2xl"] {
+    border-radius: 22px !important;
+  }
+  body.ui-theme .lgs-page form > input[type="file"] { flex: 1 1 190px; }
+  body.ui-theme .lgs-page .grid-cols-4 { gap: 5px; }
+  body.ui-theme .lgs-page .grid-cols-4 > input { padding-left: 6px; padding-right: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.ui-theme .lgs-page :is(button, a) { transition-duration: .01ms !important; }
+}
