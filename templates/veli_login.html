@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Veli Girişi - Erenler Cumhuriyet Ortaokulu</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
 </head>
 <body class="ui-theme min-h-screen overflow-x-hidden">
@@ -77,5 +78,6 @@
       </form>
     </section>
   </main>
+{% include "_renk_ayari.html" %}
 </body>
 </html>

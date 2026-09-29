@@ -1,4 +1,5 @@
-:root {
+:root,
+html[data-renk="leylak"] {
   color-scheme: light;
   --ui-ink: #3d2a5c;
   --ui-muted: #7a6a96;
@@ -17,10 +18,144 @@
   --ui-green: #5fb89a;
   --ui-amber: #e7a35a;
   --ui-rose: #e07aa8;
+  --ui-accent: #c9b4f0;
+  --ui-accent-deep: #8b6ad4;
+  --ui-hero: linear-gradient(135deg, #d7c4f6 0%, #f3c6e0 48%, #ffe1c4 100%);
+  --ui-page: linear-gradient(180deg, #f4e9ff 0%, #efe4fb 46%, #f7eefc 100%);
+  --ui-blob-a: rgba(201, 180, 240, .55);
+  --ui-blob-b: rgba(247, 183, 212, .42);
+  --ui-blob-c: rgba(189, 233, 216, .38);
+  --ui-blob-d: rgba(255, 214, 168, .45);
+  --ui-blob-e: rgba(184, 216, 255, .42);
+  --ui-btn: linear-gradient(180deg, #c9b4f0, #8b6ad4);
+  --ui-chip: linear-gradient(180deg, #efe4ff, #c9b4f0);
+  --ui-btn-shadow: 0 12px 22px rgba(139, 106, 212, .32);
+  --ui-focus: rgba(201, 180, 240, .35);
+  --ui-th: rgba(244, 233, 255, .78);
   --ui-radius: 28px;
   --ui-shadow: 10px 18px 34px rgba(124, 92, 188, .18), -6px -8px 18px rgba(255, 255, 255, .9);
   --ui-shadow-soft: 8px 14px 28px rgba(124, 92, 188, .14), -5px -7px 16px rgba(255, 255, 255, .92);
   --ui-inset: inset 4px 5px 10px rgba(124, 92, 188, .08), inset -4px -5px 10px rgba(255, 255, 255, .92);
+}
+
+html[data-renk="pembe"] {
+  --ui-ink: #5c2440;
+  --ui-muted: #9a6280;
+  --ui-line: rgba(240, 160, 190, .4);
+  --ui-surface: #fff7fb;
+  --ui-accent: #f7b7d4;
+  --ui-accent-deep: #d46a9a;
+  --ui-hero: linear-gradient(135deg, #f7b7d4 0%, #ffc9b8 48%, #ffe1c4 100%);
+  --ui-page: linear-gradient(180deg, #ffeef6 0%, #fff4f8 46%, #fff7fb 100%);
+  --ui-blob-a: rgba(247, 183, 212, .55);
+  --ui-blob-b: rgba(255, 196, 184, .42);
+  --ui-blob-c: rgba(255, 214, 168, .38);
+  --ui-blob-d: rgba(247, 183, 212, .45);
+  --ui-blob-e: rgba(201, 180, 240, .42);
+  --ui-btn: linear-gradient(180deg, #f7b7d4, #d46a9a);
+  --ui-chip: linear-gradient(180deg, #ffe6f2, #f7b7d4);
+  --ui-btn-shadow: 0 12px 22px rgba(212, 106, 154, .32);
+  --ui-focus: rgba(247, 183, 212, .4);
+  --ui-th: rgba(255, 238, 246, .85);
+  --ui-shadow: 10px 18px 34px rgba(196, 92, 132, .18), -6px -8px 18px rgba(255, 255, 255, .9);
+  --ui-shadow-soft: 8px 14px 28px rgba(196, 92, 132, .14), -5px -7px 16px rgba(255, 255, 255, .92);
+  --ui-inset: inset 4px 5px 10px rgba(196, 92, 132, .08), inset -4px -5px 10px rgba(255, 255, 255, .92);
+}
+
+html[data-renk="seftali"] {
+  --ui-ink: #5c3a1a;
+  --ui-muted: #9a7448;
+  --ui-line: rgba(240, 190, 140, .42);
+  --ui-surface: #fffaf3;
+  --ui-accent: #ffd6a8;
+  --ui-accent-deep: #e7a35a;
+  --ui-hero: linear-gradient(135deg, #ffd6a8 0%, #ffc4b0 48%, #f7b7d4 100%);
+  --ui-page: linear-gradient(180deg, #fff4e6 0%, #fff7ee 46%, #fffaf3 100%);
+  --ui-blob-a: rgba(255, 214, 168, .55);
+  --ui-blob-b: rgba(247, 183, 212, .38);
+  --ui-blob-c: rgba(189, 233, 216, .32);
+  --ui-blob-d: rgba(255, 214, 168, .5);
+  --ui-blob-e: rgba(247, 183, 212, .36);
+  --ui-btn: linear-gradient(180deg, #ffd6a8, #e7a35a);
+  --ui-chip: linear-gradient(180deg, #fff0d8, #ffd6a8);
+  --ui-btn-shadow: 0 12px 22px rgba(231, 163, 90, .32);
+  --ui-focus: rgba(255, 214, 168, .45);
+  --ui-th: rgba(255, 244, 230, .85);
+  --ui-shadow: 10px 18px 34px rgba(196, 132, 64, .18), -6px -8px 18px rgba(255, 255, 255, .9);
+  --ui-shadow-soft: 8px 14px 28px rgba(196, 132, 64, .14), -5px -7px 16px rgba(255, 255, 255, .92);
+  --ui-inset: inset 4px 5px 10px rgba(196, 132, 64, .08), inset -4px -5px 10px rgba(255, 255, 255, .92);
+}
+
+html[data-renk="nane"] {
+  --ui-ink: #1f4a3c;
+  --ui-muted: #5a8a78;
+  --ui-line: rgba(140, 210, 180, .4);
+  --ui-surface: #f5fffb;
+  --ui-accent: #bde9d8;
+  --ui-accent-deep: #4eae8e;
+  --ui-hero: linear-gradient(135deg, #bde9d8 0%, #c9f0e4 48%, #b8d8ff 100%);
+  --ui-page: linear-gradient(180deg, #e8faf3 0%, #f0fdf8 46%, #f5fffb 100%);
+  --ui-blob-a: rgba(189, 233, 216, .55);
+  --ui-blob-b: rgba(184, 216, 255, .38);
+  --ui-blob-c: rgba(201, 180, 240, .28);
+  --ui-blob-d: rgba(189, 233, 216, .48);
+  --ui-blob-e: rgba(184, 216, 255, .4);
+  --ui-btn: linear-gradient(180deg, #bde9d8, #4eae8e);
+  --ui-chip: linear-gradient(180deg, #e8faf3, #bde9d8);
+  --ui-btn-shadow: 0 12px 22px rgba(78, 174, 142, .32);
+  --ui-focus: rgba(189, 233, 216, .45);
+  --ui-th: rgba(232, 250, 243, .85);
+  --ui-shadow: 10px 18px 34px rgba(64, 148, 120, .18), -6px -8px 18px rgba(255, 255, 255, .9);
+  --ui-shadow-soft: 8px 14px 28px rgba(64, 148, 120, .14), -5px -7px 16px rgba(255, 255, 255, .92);
+  --ui-inset: inset 4px 5px 10px rgba(64, 148, 120, .08), inset -4px -5px 10px rgba(255, 255, 255, .92);
+}
+
+html[data-renk="gok"] {
+  --ui-ink: #1e3a5f;
+  --ui-muted: #5a7aa0;
+  --ui-line: rgba(140, 180, 230, .4);
+  --ui-surface: #f5f9ff;
+  --ui-accent: #b8d8ff;
+  --ui-accent-deep: #5a8fd6;
+  --ui-hero: linear-gradient(135deg, #b8d8ff 0%, #c9b4f0 48%, #bde9d8 100%);
+  --ui-page: linear-gradient(180deg, #e8f2ff 0%, #eef5ff 46%, #f5f9ff 100%);
+  --ui-blob-a: rgba(184, 216, 255, .55);
+  --ui-blob-b: rgba(201, 180, 240, .38);
+  --ui-blob-c: rgba(189, 233, 216, .32);
+  --ui-blob-d: rgba(184, 216, 255, .48);
+  --ui-blob-e: rgba(201, 180, 240, .4);
+  --ui-btn: linear-gradient(180deg, #b8d8ff, #5a8fd6);
+  --ui-chip: linear-gradient(180deg, #e8f2ff, #b8d8ff);
+  --ui-btn-shadow: 0 12px 22px rgba(90, 143, 214, .32);
+  --ui-focus: rgba(184, 216, 255, .45);
+  --ui-th: rgba(232, 242, 255, .85);
+  --ui-shadow: 10px 18px 34px rgba(64, 112, 176, .18), -6px -8px 18px rgba(255, 255, 255, .9);
+  --ui-shadow-soft: 8px 14px 28px rgba(64, 112, 176, .14), -5px -7px 16px rgba(255, 255, 255, .92);
+  --ui-inset: inset 4px 5px 10px rgba(64, 112, 176, .08), inset -4px -5px 10px rgba(255, 255, 255, .92);
+}
+
+html[data-renk="limon"] {
+  --ui-ink: #4a3d12;
+  --ui-muted: #8a7a3a;
+  --ui-line: rgba(230, 200, 90, .42);
+  --ui-surface: #fffdf4;
+  --ui-accent: #ffe08a;
+  --ui-accent-deep: #e0b63a;
+  --ui-hero: linear-gradient(135deg, #ffe08a 0%, #ffe9b8 48%, #bde9d8 100%);
+  --ui-page: linear-gradient(180deg, #fff8dc 0%, #fffbec 46%, #fffdf4 100%);
+  --ui-blob-a: rgba(255, 224, 138, .55);
+  --ui-blob-b: rgba(189, 233, 216, .38);
+  --ui-blob-c: rgba(255, 214, 168, .32);
+  --ui-blob-d: rgba(255, 224, 138, .48);
+  --ui-blob-e: rgba(189, 233, 216, .4);
+  --ui-btn: linear-gradient(180deg, #ffe08a, #e0b63a);
+  --ui-chip: linear-gradient(180deg, #fff6d0, #ffe08a);
+  --ui-btn-shadow: 0 12px 22px rgba(224, 182, 58, .32);
+  --ui-focus: rgba(255, 224, 138, .45);
+  --ui-th: rgba(255, 248, 220, .85);
+  --ui-shadow: 10px 18px 34px rgba(176, 140, 32, .16), -6px -8px 18px rgba(255, 255, 255, .9);
+  --ui-shadow-soft: 8px 14px 28px rgba(176, 140, 32, .12), -5px -7px 16px rgba(255, 255, 255, .92);
+  --ui-inset: inset 4px 5px 10px rgba(176, 140, 32, .08), inset -4px -5px 10px rgba(255, 255, 255, .92);
 }
 
 html {
@@ -78,10 +213,10 @@ body.app-background {
   min-height: 100svh !important;
   color: var(--ui-ink);
   background:
-    radial-gradient(circle at 12% 10%, rgba(201, 180, 240, .55), transparent 32%),
-    radial-gradient(circle at 88% 8%, rgba(247, 183, 212, .42), transparent 28%),
-    radial-gradient(circle at 78% 88%, rgba(189, 233, 216, .38), transparent 32%),
-    linear-gradient(180deg, #f4e9ff 0%, #efe4fb 46%, #f7eefc 100%) !important;
+    radial-gradient(circle at 12% 10%, var(--ui-blob-a), transparent 32%),
+    radial-gradient(circle at 88% 8%, var(--ui-blob-b), transparent 28%),
+    radial-gradient(circle at 78% 88%, var(--ui-blob-c), transparent 32%),
+    var(--ui-page) !important;
   background-size: 140% 140%, 140% 140%, 140% 140%, 100% 100% !important;
   animation: ui-page-shift 22s ease-in-out infinite;
   overflow-x: hidden;
@@ -103,7 +238,7 @@ body.app-background::before {
   z-index: -1;
   pointer-events: none;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 214, 168, .45), transparent 68%);
+  background: radial-gradient(circle, var(--ui-blob-d), transparent 68%);
   animation: ui-blob 14s ease-in-out infinite;
 }
 
@@ -118,7 +253,7 @@ body.app-background::after {
   z-index: -1;
   pointer-events: none;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(184, 216, 255, .42), transparent 68%);
+  background: radial-gradient(circle, var(--ui-blob-e), transparent 68%);
   animation: ui-blob 16s ease-in-out infinite reverse;
 }
 
@@ -169,8 +304,8 @@ body.ui-theme .bg-slate-950,
 body.ui-theme .bg-slate-800,
 body.ui-theme .bg-slate-900\/50,
 body.ui-theme .bg-slate-800\/50 {
-  background: linear-gradient(180deg, #efe4ff, #c9b4f0) !important;
-  color: #4a3670 !important;
+  background: var(--ui-chip) !important;
+  color: var(--ui-ink) !important;
 }
 
 body.ui-theme a.bg-slate-900,
@@ -180,7 +315,7 @@ body.ui-theme button.bg-slate-900,
 body.ui-theme button.bg-slate-950,
 body.ui-theme button.bg-sky-700,
 body.ui-theme button.bg-emerald-700 {
-  background: linear-gradient(180deg, #c9b4f0, #8b6ad4) !important;
+  background: var(--ui-btn) !important;
   color: #fff !important;
 }
 
@@ -189,8 +324,8 @@ body.ui-theme header.from-slate-900,
 body.ui-theme .bg-gradient-to-br.from-slate-900,
 body.ui-theme .from-indigo-600,
 body.ui-theme .bg-gradient-to-r.from-indigo-600 {
-  background: linear-gradient(135deg, #d7c4f6 0%, #f3c6e0 52%, #ffe1c4 100%) !important;
-  color: #4a3670 !important;
+  background: var(--ui-hero) !important;
+  color: var(--ui-ink) !important;
 }
 
 body.ui-theme header.bg-slate-900 .text-white,
@@ -198,7 +333,7 @@ body.ui-theme header.bg-slate-900 .text-slate-300,
 body.ui-theme header.bg-slate-900 .text-amber-300,
 body.ui-theme .dashboard-hero .text-blue-700,
 body.ui-theme .dashboard-hero .text-slate-950 {
-  color: #4a3670 !important;
+  color: var(--ui-ink) !important;
 }
 
 body.ui-theme .text-slate-400,
@@ -260,7 +395,7 @@ body.app-background select:focus,
 body.app-background textarea:focus {
   outline: none !important;
   border-color: transparent !important;
-  box-shadow: var(--ui-inset), 0 0 0 5px rgba(201, 180, 240, .35) !important;
+  box-shadow: var(--ui-inset), 0 0 0 5px var(--ui-focus) !important;
 }
 
 body.ui-theme button,
@@ -289,11 +424,11 @@ body.ui-theme .bg-sky-800,
 body.app-background button[type="submit"],
 body.app-background .bg-blue-600,
 body.app-background .bg-indigo-600 {
-  background: linear-gradient(180deg, #c9b4f0, #8b6ad4) !important;
+  background: var(--ui-btn) !important;
   color: #fff !important;
   border-color: transparent !important;
   border-radius: 999px !important;
-  box-shadow: 0 12px 22px rgba(139, 106, 212, .32) !important;
+  box-shadow: var(--ui-btn-shadow) !important;
 }
 
 body.ui-theme a.bg-sky-50,
@@ -336,14 +471,14 @@ body.app-background table {
 
 body.ui-theme th,
 body.app-background th {
-  background: rgba(244, 233, 255, .78) !important;
+  background: var(--ui-th) !important;
   color: var(--ui-muted) !important;
   font-weight: 1000 !important;
 }
 
 body.ui-theme td,
 body.app-background td {
-  color: #4a3670 !important;
+  color: var(--ui-ink) !important;
 }
 
 .ui-shell {
@@ -355,8 +490,8 @@ body.app-background td {
   position: relative;
   overflow: hidden;
   border-radius: 36px;
-  background: linear-gradient(135deg, #d7c4f6 0%, #f3c6e0 48%, #ffe1c4 100%);
-  color: #4a3670;
+  background: var(--ui-hero);
+  color: var(--ui-ink);
   box-shadow: var(--ui-shadow);
 }
 
@@ -381,17 +516,17 @@ body.ui-theme .ui-hero .text-white,
 body.ui-theme .ui-hero [class*="text-white/"],
 body.app-background .ui-hero .text-white,
 body.app-background .ui-hero [class*="text-white/"] {
-  color: #4a3670 !important;
+  color: var(--ui-ink) !important;
 }
 
 body.ui-theme .ui-hero [class*="text-white/7"],
 body.app-background .ui-hero [class*="text-white/7"] {
-  color: rgba(74, 54, 112, .76) !important;
+  color: color-mix(in srgb, var(--ui-ink) 76%, transparent) !important;
 }
 
 body.ui-theme .ui-hero [class*="text-white/8"],
 body.app-background .ui-hero [class*="text-white/8"] {
-  color: rgba(74, 54, 112, .84) !important;
+  color: color-mix(in srgb, var(--ui-ink) 84%, transparent) !important;
 }
 
 .ui-card {
@@ -475,4 +610,136 @@ body.ui-game #canvas-wrap {
   body.ui-theme table {
     font-size: .8125rem;
   }
+}
+
+.renk-ust-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: .55rem 1rem;
+  font: inherit;
+  font-size: .75rem;
+  font-weight: 900;
+  color: #fff !important;
+  background: var(--ui-btn);
+  box-shadow: var(--ui-btn-shadow);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.renk-ayari-fab {
+  position: fixed;
+  left: .75rem;
+  bottom: .75rem;
+  z-index: 45;
+  border: 0;
+  border-radius: 999px;
+  padding: .75rem 1.15rem;
+  font: inherit;
+  font-size: .85rem;
+  font-weight: 900;
+  color: #fff;
+  background: var(--ui-btn);
+  box-shadow: var(--ui-btn-shadow);
+  cursor: pointer;
+}
+
+body.has-teacher-mobile-nav .renk-ayari-fab,
+body.veli-ekran .renk-ayari-fab {
+  display: none;
+}
+
+.renk-ayari {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(45, 28, 64, .55);
+}
+
+.renk-ayari[hidden] { display: none !important; }
+
+.renk-ayari-kutu {
+  width: min(420px, 100%);
+  border-radius: 28px;
+  padding: 20px;
+  background: #fff;
+  color: var(--ui-ink);
+  box-shadow: var(--ui-shadow);
+}
+
+.renk-ayari-ust {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
+.renk-ayari-kutu h2 {
+  margin: 6px 0 0;
+  font-size: 22px;
+}
+
+.renk-ayari-alt {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ui-muted);
+}
+
+.renk-secenekler {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.renk-secenekler button {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  border: 0;
+  border-radius: 22px;
+  padding: 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--ui-ink);
+  background: #fff;
+  box-shadow: var(--ui-shadow-soft);
+  cursor: pointer;
+  transform: none;
+}
+
+.renk-secenekler button.is-active {
+  box-shadow: var(--ui-inset), 0 0 0 4px var(--ui-focus);
+}
+
+.renk-onizleme {
+  display: block;
+  height: 44px;
+  border-radius: 16px;
+}
+
+.renk-ayari-kapat {
+  width: 100%;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px;
+  font: inherit;
+  font-weight: 900;
+  color: #fff;
+  background: var(--ui-btn);
+  box-shadow: var(--ui-btn-shadow);
+  cursor: pointer;
 }

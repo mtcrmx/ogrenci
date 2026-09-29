@@ -6,6 +6,7 @@
   <title>{% block title %}Öğrenci Takip{% endblock %} — Erenler Cumhuriyet Ortaokulu</title>
   <link rel="manifest" href="{{ url_for('manifest') }}">
   <meta name="theme-color" content="#c9b4f0">
+  <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -92,9 +93,9 @@
       position: relative;
       margin: .7rem .7rem 0;
       border-radius: 28px;
-      background: linear-gradient(135deg, #dcc9fb, #f3c6e0 58%, #ffe1c4);
-      box-shadow: 8px 14px 28px rgba(124, 92, 188, .18), -4px -6px 14px rgba(255,255,255,.8);
-      color: #4a3670;
+      background: var(--ui-hero);
+      box-shadow: var(--ui-shadow-soft);
+      color: var(--ui-ink);
     }
     header.app-header {
       position: sticky;
@@ -113,7 +114,7 @@
     .app-header a,
     .app-header button,
     .app-header span {
-      color: #4a3670 !important;
+      color: var(--ui-ink) !important;
     }
     .nav-pill {
       display: inline-flex;
@@ -122,9 +123,9 @@
       border: 0;
       border-radius: 999px;
       padding: .52rem .9rem;
-      color: #4a3670;
+      color: var(--ui-ink);
       background: rgba(255,255,255,.45);
-      box-shadow: 4px 6px 12px rgba(124,92,188,.12);
+      box-shadow: 4px 6px 12px color-mix(in srgb, var(--ui-accent-deep) 22%, transparent);
       transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease;
     }
     .nav-pill::after {
@@ -150,8 +151,8 @@
       animation: menu-pop .18s ease-out both;
       border-radius: 1.5rem;
       border: 0;
-      background: #fff9ff;
-      box-shadow: 8px 16px 32px rgba(124,92,188,.16);
+      background: var(--ui-surface);
+      box-shadow: var(--ui-shadow-soft);
       overflow: hidden;
     }
     .nav-link {
@@ -212,11 +213,11 @@
       align-items: center;
       border-radius: 1.2rem;
       border: 0;
-      background: #fff9ff;
+      background: var(--ui-surface);
       padding: .72rem .8rem;
       font-size: .875rem;
       font-weight: 900;
-      box-shadow: 6px 10px 18px rgba(124,92,188,.1);
+      box-shadow: var(--ui-shadow-soft);
       transition: transform .18s ease, box-shadow .18s ease;
     }
     .mobile-link:active { transform: scale(.99); }
@@ -250,8 +251,8 @@
     }
     .teacher-mobile-tabbar a.is-active,
     .teacher-mobile-tabbar button.is-active {
-      background: linear-gradient(180deg,#efe4ff,#c9b4f0);
-      color: #5b3f96;
+      background: var(--ui-chip);
+      color: var(--ui-ink);
     }
     .dashboard-mobile-switcher {
       display: none;
@@ -265,16 +266,16 @@
       transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
     }
     .dashboard-mobile-switcher button.is-active {
-      background: linear-gradient(180deg,#c9b4f0,#8b6ad4);
+      background: var(--ui-btn);
       color: #fff;
-      box-shadow: 0 10px 24px rgba(139,106,212,.28);
+      box-shadow: var(--ui-btn-shadow);
     }
     .action-group {
       animation: soft-rise .34s ease both;
       border: 0;
       border-radius: 1.6rem;
-      background: #fff9ff;
-      box-shadow: 8px 16px 28px rgba(124,92,188,.14);
+      background: var(--ui-surface);
+      box-shadow: var(--ui-shadow-soft);
       backdrop-filter: none;
       transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
     }
@@ -303,8 +304,8 @@
       padding: .64rem;
     }
     .dashboard-sidebar {
-      background: #fff9ff;
-      box-shadow: 10px 0 28px rgba(124,92,188,.1);
+      background: var(--ui-surface);
+      box-shadow: var(--ui-shadow-soft);
     }
     .class-link {
       transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease;
@@ -317,9 +318,9 @@
       background: transparent;
     }
     .teacher-toolbar {
-      background: #fff9ff;
+      background: var(--ui-surface);
       border-bottom: 0;
-      box-shadow: 0 10px 24px rgba(124,92,188,.08);
+      box-shadow: var(--ui-shadow-soft);
     }
     .search-field {
       background: #fff;
@@ -333,17 +334,17 @@
       animation: card-lift .42s ease both;
       border: 0;
       border-radius: 2rem;
-      background: linear-gradient(135deg, #dcc9fb, #f3c6e0 52%, #ffe1c4);
-      box-shadow: 10px 18px 32px rgba(124,92,188,.18);
-      color: #4a3670;
+      background: var(--ui-hero);
+      box-shadow: var(--ui-shadow);
+      color: var(--ui-ink);
     }
     .metric-card {
       position: relative;
       overflow: hidden;
       border: 0;
       border-radius: 1.4rem;
-      background: linear-gradient(180deg, #fff9ff, #efe4ff);
-      box-shadow: 6px 10px 18px rgba(124,92,188,.12);
+      background: var(--ui-chip);
+      box-shadow: var(--ui-shadow-soft);
     }
     .metric-card::after { display: none; }
     .metric-card:hover {
@@ -354,9 +355,9 @@
       animation: card-lift .44s ease both;
     }
     .ogrenci-kart {
-      background: #fff9ff !important;
+      background: var(--ui-surface) !important;
       border-color: transparent !important;
-      box-shadow: 6px 12px 22px rgba(124,92,188,.1);
+      box-shadow: var(--ui-shadow-soft);
     }
     .ogrenci-kart:hover {
       transform: translateY(-3px);
@@ -406,8 +407,8 @@
         padding: .42rem;
         border: 0;
         border-radius: 1.6rem;
-        background: #fff9ff;
-        box-shadow: 8px 16px 32px rgba(124,92,188,.2);
+        background: var(--ui-surface);
+        box-shadow: var(--ui-shadow);
       }
       .dashboard-mobile-switcher {
         display: grid;
@@ -417,8 +418,8 @@
         padding: .35rem;
         border: 0;
         border-radius: 1.4rem;
-        background: #fff9ff;
-        box-shadow: 6px 12px 22px rgba(124,92,188,.12);
+        background: var(--ui-surface);
+        box-shadow: var(--ui-shadow-soft);
       }
       .dashboard-mobile-section {
         display: none !important;
@@ -531,6 +532,7 @@
       </nav>
 
       <button id="ana-ekran" type="button" hidden class="rounded-full bg-amber-200 px-3 py-2 text-xs font-black text-amber-900">Ana ekrana ekle</button>
+      <button type="button" data-renk-ac class="renk-ust-btn">Renk</button>
       <span class="hidden sm:block text-xs text-violet-900 truncate max-w-52">👤 {{ session.ogretmen_adi }}{% if session.ogretmen_adi == 'ADEM AKGÜL' %} · Müdür{% elif session.ogretmen_adi == 'METEHAN CÜCEN' %} · Müdür Yardımcısı{% endif %}</span>
       <a href="{{ url_for('logout') }}"
          class="hidden sm:inline-flex bg-white/70 hover:bg-white text-violet-900 text-xs
@@ -570,6 +572,7 @@
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — kitap ve ödev raporu</span></a>
         <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — 8. sınıf deneme girişi</span></a>
         <a href="{{ url_for('deneme_analiz') }}" class="mobile-link"><span class="nav-mark mark-rose">D</span><span>Deneme analizi — bireysel ve genel</span></a>
+        <button type="button" data-renk-ac class="mobile-link w-full text-left"><span class="nav-mark mark-violet">R</span><span>Renk — görünümü değiştir</span></button>
         {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
         <a href="{{ url_for('giris_raporu') }}" class="mobile-link"><span class="nav-mark mark-slate">G</span><span>Giriş raporu — kim veri girdi</span></a>
         <a href="{{ url_for('ogrenci_ara') }}" class="mobile-link"><span class="nav-mark mark-blue">S</span><span>Öğrenci ara</span></a>
@@ -607,6 +610,7 @@
 {% block body %}{% endblock %}
 
 {% block scripts %}{% endblock %}
+{% include "_renk_ayari.html" %}
 <script>
 function toggleTeacherMenu() {
   const menu = document.getElementById('teacher-menu');
