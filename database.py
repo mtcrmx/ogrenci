@@ -1044,7 +1044,7 @@ def initialize_db():
 
 
 def _okuma_kitaplarini_senkronize(con: sqlite3.Connection) -> None:
-    from okuma_kitaplari import OKUMA_KITAPLARI
+    from okuma_kitaplari import OKUMA_KITAPLARI, OKUMA_KITAPLARI_SINIF
 
     _haftalik_takip_init(con)
     con.execute("DROP TABLE IF EXISTS okuma_kitaplari")
@@ -1052,6 +1052,7 @@ def _okuma_kitaplarini_senkronize(con: sqlite3.Connection) -> None:
         CREATE TABLE okuma_kitaplari (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             seviye INTEGER NOT NULL,
+            sinif_adi TEXT NOT NULL DEFAULT '',
             ad TEXT NOT NULL,
             yazar TEXT NOT NULL DEFAULT '',
             yayinevi TEXT NOT NULL DEFAULT '',
@@ -1062,32 +1063,53 @@ def _okuma_kitaplarini_senkronize(con: sqlite3.Connection) -> None:
         for ad, yazar, yayinevi, sayfa in liste:
             con.execute(
                 """
-                INSERT INTO okuma_kitaplari (seviye, ad, yazar, yayinevi, sayfa)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO okuma_kitaplari (seviye, sinif_adi, ad, yazar, yayinevi, sayfa)
+                VALUES (?, '', ?, ?, ?, ?)
                 """,
                 (seviye, ad, yazar, yayinevi, int(sayfa)),
+            )
+    for sinif, liste in OKUMA_KITAPLARI_SINIF.items():
+        ad_sinif = (sinif or "").strip()
+        seviye = int(ad_sinif[0]) if ad_sinif and ad_sinif[0] in "5678" else 0
+        for ad, yazar, yayinevi, sayfa in liste:
+            con.execute(
+                """
+                INSERT INTO okuma_kitaplari (seviye, sinif_adi, ad, yazar, yayinevi, sayfa)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (seviye, ad_sinif, ad, yazar, yayinevi, int(sayfa)),
             )
     con.commit()
 
 
 def sinif_okuma_kitaplari(sinif_adi: str) -> list[dict]:
-    seviye = None
     ad = (sinif_adi or "").strip()
-    if ad and ad[0] in "5678":
-        seviye = int(ad[0])
-    if not seviye:
+    seviye = int(ad[0]) if ad and ad[0] in "5678" else None
+    if not ad and not seviye:
         return []
     con = _conn()
     _haftalik_takip_init(con)
-    rows = [dict(r) for r in con.execute(
-        """
-        SELECT ad, yazar, yayinevi, sayfa
-        FROM okuma_kitaplari
-        WHERE seviye = ?
-        ORDER BY ad
-        """,
-        (seviye,),
-    ).fetchall()]
+    rows = []
+    if ad:
+        rows = [dict(r) for r in con.execute(
+            """
+            SELECT ad, yazar, yayinevi, sayfa
+            FROM okuma_kitaplari
+            WHERE sinif_adi = ?
+            ORDER BY ad
+            """,
+            (ad,),
+        ).fetchall()]
+    if not rows and seviye:
+        rows = [dict(r) for r in con.execute(
+            """
+            SELECT ad, yazar, yayinevi, sayfa
+            FROM okuma_kitaplari
+            WHERE seviye = ? AND sinif_adi = ''
+            ORDER BY ad
+            """,
+            (seviye,),
+        ).fetchall()]
     con.close()
     return rows
 
@@ -1104,7 +1126,16 @@ def ogrenci_verilen_kitaplar(ogrenci_id: int) -> list[dict]:
         JOIN ogrenciler o ON o.id = h.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
         LEFT JOIN okuma_kitaplari k
-          ON k.ad = h.kitap_adi AND k.seviye = CAST(substr(s.sinif_adi, 1, 1) AS INTEGER)
+          ON k.ad = h.kitap_adi AND (
+            k.sinif_adi = s.sinif_adi
+            OR (
+              k.sinif_adi = ''
+              AND k.seviye = CAST(substr(s.sinif_adi, 1, 1) AS INTEGER)
+              AND NOT EXISTS (
+                SELECT 1 FROM okuma_kitaplari x WHERE x.sinif_adi = s.sinif_adi
+              )
+            )
+          )
         WHERE h.ogrenci_id = ? AND h.kitap_adi != ''
         ORDER BY h.hafta_basi DESC
         """,
@@ -5436,11 +5467,12 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS okuma_kitaplari (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             seviye INTEGER NOT NULL,
+            sinif_adi TEXT NOT NULL DEFAULT '',
             ad TEXT NOT NULL,
             yazar TEXT NOT NULL DEFAULT '',
             yayinevi TEXT NOT NULL DEFAULT '',
             sayfa INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(seviye, ad, yazar)
+            UNIQUE(seviye, sinif_adi, ad, yazar)
         )
     """)
     con.commit()
