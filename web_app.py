@@ -303,7 +303,10 @@ def _bilgilendirme_hedefi() -> str | None:
 
 def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
     ana_ekranlar = {
-        "ogretmen": {"dashboard", "veri_girisi", "analiz_merkezi", "iletisim"},
+        "ogretmen": {
+            "dashboard", "haftalik_takip", "onay_kutusu", "karne",
+            "analiz_merkezi", "lgs", "deneme_analiz",
+        },
         "ogrenci": {"ogrenci_gorunum"},
         "veli": {"veli_panel", "veli_lgs"},
     }
@@ -313,12 +316,16 @@ def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
 def _alan_tanitimi_verisi(hedef: str) -> dict | None:
     veriler = {
         "ogretmen": {
-            "baslik": "Öğretmen paneline hoş geldiniz",
-            "alt": "Öğrencileri takip edin, veri girin, analiz alın.",
+            "baslik": "Öğretmen paneli",
+            "alt": "Kitap, ödev, onay ve 8. sınıf LGS bu menüden yürür.",
             "adimlar": [
-                {"etiket": "Panel", "metin": "Sınıf seçin; öğrenci kartından olumsuz veya olumlu tik kaydı girin."},
-                {"etiket": "Veri", "metin": "Ödev, ödev işaretleme, kitap okuma onayı ve sınav analizi burada."},
-                {"etiket": "Analiz", "metin": "Sınıf özeti, risk listesi, Excel ve PDF çıktıları Analiz sayfasındadır."},
+                {"etiket": "Panel", "metin": "Sınıfı seçin. Öğrenci kartında bu haftanın kitabı, ödevi ve öğretmen notu durur."},
+                {"etiket": "Kitap / Ödev", "metin": "Haftalık kitap okuma, kitabı getirme ve ödev durumunu siz işaretlersiniz. Sınıf ödevini bir kez yazınca bütün sınıfa düşer."},
+                {"etiket": "Onay", "metin": "Öğrenci veya veli yaptım derse kayıt burada bekler. Ödev, LGS programı ve çalışma defteri siz onaylamadan tamam sayılmaz."},
+                {"etiket": "Karne", "metin": "Dönem özeti kitap, ödev ve LGS netini gösterir. Excel ve PDF alınır."},
+                {"etiket": "Analiz", "metin": "Kitap ve ödev raporunu sınıf ya da tek öğrenci için açın."},
+                {"etiket": "LGS", "metin": "Yalnız 8/A ve 8/B. Tempoyu seçin: Alışma, Sıkı veya Tempo. Aylık kutuları siz işaretlersiniz. Denemeyi kendiniz girer ya da kurum listesinin PDF’inden alırsınız."},
+                {"etiket": "Deneme", "metin": "Bireysel ve genel grafik buradadır. Veli yalnız kendi çocuğunun adını görür."},
             ],
         },
         "ogrenci": {
