@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ aktif.sinif_adi if aktif else 'Panel' }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='dashboard_clay.css') }}?v=clay2026b">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='dashboard_clay.css') }}?v=teacher2026a">{% endblock %}
 
 {% block body %}
+{% set teacher_visual = ogretmen_gorsel_tipi|default('', true) %}
+{% set teacher_avatar = 'clay-teacher-' ~ teacher_visual ~ '-avatar.png' if teacher_visual in ['kadin', 'erkek'] else 'hero-clay-books.png' %}
+{% set teacher_hero = 'clay-teacher-' ~ teacher_visual ~ '-hero.png' if teacher_visual in ['kadin', 'erkek'] else 'hero-clay-books.png' %}
 <div class="dashboard-shell flex">
 
   <aside id="sidebar"
@@ -13,7 +16,7 @@
 
     <div class="sidebar-brand mx-3 mt-4 px-4 py-5">
       <div class="sidebar-avatar-frame" aria-hidden="true">
-        <img src="{{ url_for('static', filename='clay-student-avatar.webp') }}" alt="" width="128" height="128">
+        <img src="{{ url_for('static', filename=teacher_avatar) }}" alt="" width="128" height="128">
       </div>
       <h2 class="sidebar-hello mt-4 text-lg font-black leading-tight break-words">Merhaba, {{ session.ogretmen_adi.split()[0]|title }}! 👋</h2>
       <p class="sidebar-role mt-1 text-xs font-semibold">Öğretmen paneli</p>
@@ -79,6 +82,25 @@
       {% endif %}
       <a href="{{ url_for('logout') }}">Çıkış</a>
     </div>
+    <details class="dashboard-visual-settings">
+      <summary>Öğretmen görselim <span aria-hidden="true">▾</span></summary>
+      <div class="dashboard-visual-choices">
+        <form method="post" action="{{ url_for('profil_gorsel') }}">
+          <input type="hidden" name="gorsel_tipi" value="kadin">
+          {% if aktif %}<input type="hidden" name="sinif" value="{{ aktif.id }}">{% endif %}
+          <button type="submit" class="dashboard-visual-option {{ 'is-selected' if teacher_visual == 'kadin' else '' }}" {% if teacher_visual == 'kadin' %}aria-current="true"{% endif %}>
+            <img src="{{ url_for('static', filename='clay-teacher-kadin-avatar.png') }}" alt="" width="38" height="38"><span>Kadın öğretmen</span>
+          </button>
+        </form>
+        <form method="post" action="{{ url_for('profil_gorsel') }}">
+          <input type="hidden" name="gorsel_tipi" value="erkek">
+          {% if aktif %}<input type="hidden" name="sinif" value="{{ aktif.id }}">{% endif %}
+          <button type="submit" class="dashboard-visual-option {{ 'is-selected' if teacher_visual == 'erkek' else '' }}" {% if teacher_visual == 'erkek' %}aria-current="true"{% endif %}>
+            <img src="{{ url_for('static', filename='clay-teacher-erkek-avatar.png') }}" alt="" width="38" height="38"><span>Erkek öğretmen</span>
+          </button>
+        </form>
+      </div>
+    </details>
   </aside>
 
   <!-- Overlay mobilde sidebar açıkken -->
@@ -110,7 +132,7 @@
         </a>
         <button type="button" data-renk-ac class="dashboard-color-button">Renk</button>
         <span class="dashboard-profile-button" aria-label="Öğretmen profili" role="img">
-          <img src="{{ url_for('static', filename='clay-student-avatar.webp') }}" alt="" width="42" height="42">
+          <img src="{{ url_for('static', filename=teacher_avatar) }}" alt="" width="42" height="42">
         </span>
       </div>
     </div>
@@ -124,7 +146,7 @@
     <section class="dashboard-hero dashboard-mobile-section mx-3 mt-3 p-5 sm:p-6" data-dashboard-section="ozet">
       <div class="dashboard-welcome">
         <div class="dashboard-hero-art" aria-hidden="true">
-          <img src="{{ url_for('static', filename='clay-student-hero.webp') }}" alt="" width="272" height="266">
+          <img src="{{ url_for('static', filename=teacher_hero) }}" alt="" width="272" height="266">
         </div>
         <div class="dashboard-welcome-copy min-w-0">
           <p class="dashboard-kicker">BUGÜNÜN SINIFI</p>
@@ -137,6 +159,27 @@
         <img class="dashboard-hero-plant" src="{{ url_for('static', filename='clay-plant.webp') }}" alt="" width="138" height="185" aria-hidden="true">
       </div>
     </section>
+
+    {% if not teacher_visual %}
+    <section class="dashboard-visual-setup dashboard-mobile-section" data-dashboard-section="ozet" aria-label="Öğretmen görseli seçimi">
+      <div>
+        <strong>Öğretmen görselinizi seçin</strong>
+        <p>Seçiminiz hesabınıza kaydedilir ve sonraki girişlerde otomatik gösterilir.</p>
+      </div>
+      <div class="dashboard-visual-choices">
+        <form method="post" action="{{ url_for('profil_gorsel') }}">
+          <input type="hidden" name="gorsel_tipi" value="kadin">
+          {% if aktif %}<input type="hidden" name="sinif" value="{{ aktif.id }}">{% endif %}
+          <button type="submit" class="dashboard-visual-option"><img src="{{ url_for('static', filename='clay-teacher-kadin-avatar.png') }}" alt="" width="42" height="42"><span>Kadın öğretmen</span></button>
+        </form>
+        <form method="post" action="{{ url_for('profil_gorsel') }}">
+          <input type="hidden" name="gorsel_tipi" value="erkek">
+          {% if aktif %}<input type="hidden" name="sinif" value="{{ aktif.id }}">{% endif %}
+          <button type="submit" class="dashboard-visual-option"><img src="{{ url_for('static', filename='clay-teacher-erkek-avatar.png') }}" alt="" width="42" height="42"><span>Erkek öğretmen</span></button>
+        </form>
+      </div>
+    </section>
+    {% endif %}
 
     <section class="dashboard-stats dashboard-mobile-section mx-3 mt-4" data-dashboard-section="ozet" aria-label="Sınıf özeti">
       <div class="dashboard-stat-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -347,7 +390,11 @@ document.querySelectorAll('[data-dashboard-section-btn]').forEach((btn) => {
   btn.addEventListener('click', () => setDashboardSection(btn.dataset.dashboardSectionBtn));
 });
 let savedDashboardSection = 'liste';
+{% if not teacher_visual %}
+savedDashboardSection = 'ozet';
+{% else %}
 try { savedDashboardSection = localStorage.getItem('eco_dashboard_mobile_section') || 'liste'; } catch (e) {}
+{% endif %}
 setDashboardSection(savedDashboardSection, false);
 
 function toggleSidebar() {

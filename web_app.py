@@ -16,6 +16,7 @@ from database import (
     initialize_db, KRITERLER, OLUMLU_KRITERLER,
     tum_ogretmenler, tum_sifre_listesi,
     ogretmen_dogrula, ogretmen_id_bul, ogretmen_siniflari,
+    ogretmen_gorsel_tipi_al, ogretmen_gorsel_tipi_guncelle,
     sinif_ogrencileri, tum_okul_ogrencileri, ogrenci_tik_gecmisi,
     ogrenci_tik_sayisi, OLUMSUZ_TIK_LIMIT, OLUMSUZ_TIK_CEZA_ESIGI, OLUMLU_TIK_LIMIT,
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
@@ -225,6 +226,7 @@ def _moral_etkili_ovr(ovr: int, moral: int) -> int:
 # Yalnızca rapor/analiz görebilen öğretmenler (`yetki=rapor`) bu endpoint’lere girebilir;
 # tik/ödev vb. diğerleri rapor_ozet’e yönlendirilir.
 _RAPOR_SADECE_ROTALAR = frozenset({
+    "profil_gorsel",
     "rapor_ozet", "rapor_ozet_csv", "rapor_excel", "rapor_excel_detayli",
     "rapor_analiz_pdf", "rapor_arsiv_sayfa", "rapor_arsiv_sifirla",
     "rapor_arsiv_yedek_geri_yukle", "rapor_arsiv_indir",
@@ -2752,6 +2754,7 @@ def bilgilendirme_yonetimi():
 def dashboard():
     ogretmen_id  = session["ogretmen_id"]
     ogretmen_adi = session.get("ogretmen_adi", "")
+    ogretmen_gorsel_tipi = ogretmen_gorsel_tipi_al(ogretmen_id)
     siniflar     = aktif_sube_siniflari() or ogretmen_siniflari(ogretmen_id)
 
     if not siniflar:
@@ -2763,6 +2766,7 @@ def dashboard():
                                bugunki_mufettis=None,
                                bekleyen_talepler=[],
                                tum_sinif_ogrencileri_popup=[],
+                               ogretmen_gorsel_tipi=ogretmen_gorsel_tipi,
                                toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id))
 
     try:
@@ -2819,11 +2823,30 @@ def dashboard():
                            bugunki_mufettis=bugunki_muf,
                            bekleyen_talepler=bek_talepler,
                            tum_sinif_ogrencileri_popup=popup_ogrenciler,
+                           ogretmen_gorsel_tipi=ogretmen_gorsel_tipi,
                            toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id),
                            eksik_siniflar=eksik_siniflar,
                            onay_sayisi=len(kutu["odevler"]) + len(kutu["gorevler"]) + len(kutu["gunluk"]),
                            onay_geciken=kutu["geciken"],
                            gelmeyen=gelmeyen)
+
+
+@app.route("/profil/gorsel", methods=["POST"])
+@giris_zorunlu
+def profil_gorsel():
+    gorsel_tipi = (request.form.get("gorsel_tipi") or "").strip()
+    if gorsel_tipi not in {"kadin", "erkek"}:
+        abort(400)
+
+    ogretmen_id = int(session["ogretmen_id"])
+    if not ogretmen_gorsel_tipi_guncelle(ogretmen_id, gorsel_tipi):
+        abort(404)
+
+    sinif_id = request.form.get("sinif", type=int)
+    siniflar = aktif_sube_siniflari() or ogretmen_siniflari(ogretmen_id)
+    if sinif_id in {s["id"] for s in siniflar}:
+        return redirect(url_for("dashboard", sinif=sinif_id))
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/veri")

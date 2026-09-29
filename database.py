@@ -951,7 +951,8 @@ def initialize_db():
         CREATE TABLE IF NOT EXISTS ogretmenler (
             id       INTEGER PRIMARY KEY AUTOINCREMENT,
             ad_soyad TEXT NOT NULL UNIQUE,
-            sifre    TEXT NOT NULL DEFAULT ''
+            sifre    TEXT NOT NULL DEFAULT '',
+            gorsel_tipi TEXT NOT NULL DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS siniflar (
             id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1010,6 +1011,14 @@ def initialize_db():
     if "yetki" not in sutunlar2:
         con.execute(
             "ALTER TABLE ogretmenler ADD COLUMN yetki TEXT NOT NULL DEFAULT 'tam'"
+        )
+        con.commit()
+        sutunlar2 = [r[1] for r in con.execute("PRAGMA table_info(ogretmenler)").fetchall()]
+
+    # Önceki kurulumlarda tercih yoktur; öğretmen ilk seçiminde kendisi kaydeder.
+    if "gorsel_tipi" not in sutunlar2:
+        con.execute(
+            "ALTER TABLE ogretmenler ADD COLUMN gorsel_tipi TEXT NOT NULL DEFAULT ''"
         )
         con.commit()
 
@@ -2839,6 +2848,32 @@ def ogretmen_yetki_guncelle(ogretmen_id: int, yetki: str) -> None:
     con.execute("UPDATE ogretmenler SET yetki = ? WHERE id = ?", (yetki, ogretmen_id))
     con.commit()
     con.close()
+
+
+def ogretmen_gorsel_tipi_al(ogretmen_id: int) -> str:
+    """Öğretmenin açıkça seçtiği ana sayfa görselini döndürür."""
+    con = _conn()
+    row = con.execute(
+        "SELECT gorsel_tipi FROM ogretmenler WHERE id = ?",
+        (int(ogretmen_id),),
+    ).fetchone()
+    con.close()
+    tercih = str(row["gorsel_tipi"] or "") if row else ""
+    return tercih if tercih in {"kadin", "erkek"} else ""
+
+
+def ogretmen_gorsel_tipi_guncelle(ogretmen_id: int, gorsel_tipi: str) -> bool:
+    """Yalnız desteklenen görselleri kaydeder; kayıt yoksa False döndürür."""
+    if gorsel_tipi not in {"kadin", "erkek"}:
+        raise ValueError("Geçersiz öğretmen görseli seçimi")
+    con = _conn()
+    cur = con.execute(
+        "UPDATE ogretmenler SET gorsel_tipi = ? WHERE id = ?",
+        (gorsel_tipi, int(ogretmen_id)),
+    )
+    con.commit()
+    con.close()
+    return cur.rowcount > 0
 
 
 def ogretmen_siniflari(ogretmen_id: int) -> list[dict]:
