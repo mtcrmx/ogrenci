@@ -138,10 +138,10 @@
   const dersler = {{ grafik.dersler|tojson }};
   const setler = [];
   {% if gorunum == 'birey' and birey %}
-  setler.push({ label: "Öğrenci", data: {{ grafik.ogrenci|tojson }}, backgroundColor: "#f59e0b", borderRadius: 8 });
+  setler.push({ label: "Öğrenci", data: {{ grafik.ogrenci|tojson }}, backgroundColor: "#f7b7d4", borderRadius: 16 });
   {% endif %}
-  setler.push({ label: "Sınıf", data: {{ grafik.sinif|tojson }}, backgroundColor: "#6366f1", borderRadius: 8 });
-  setler.push({ label: "Okul", data: {{ grafik.okul|tojson }}, backgroundColor: "#94a3b8", borderRadius: 8 });
+  setler.push({ label: "Sınıf", data: {{ grafik.sinif|tojson }}, backgroundColor: "#c9b4f0", borderRadius: 16 });
+  setler.push({ label: "Okul", data: {{ grafik.okul|tojson }}, backgroundColor: "#b8d8ff", borderRadius: 16 });
   new Chart(document.getElementById("ders-net"), {
     type: "bar",
     data: { labels: dersler, datasets: setler },
@@ -151,7 +151,7 @@
     type: "doughnut",
     data: {
       labels: ["Doğru", "Yanlış", "Boş"],
-      datasets: [{ data: [{{ grafik.dogru }}, {{ grafik.yanlis }}, {{ grafik.bos }}], backgroundColor: ["#10b981", "#f43f5e", "#cbd5e1"] }]
+      datasets: [{ data: [{{ grafik.dogru }}, {{ grafik.yanlis }}, {{ grafik.bos }}], backgroundColor: ["#bde9d8", "#f7b7d4", "#ffd6a8"] }]
     },
     options: ortak
   });
@@ -159,7 +159,7 @@
     type: "bar",
     data: {
       labels: {{ grafik.dagilim_ad|tojson }},
-      datasets: [{ label: "Öğrenci", data: {{ grafik.dagilim_adet|tojson }}, backgroundColor: "#0f2744", borderRadius: 8 }]
+      datasets: [{ label: "Öğrenci", data: {{ grafik.dagilim_adet|tojson }}, backgroundColor: "#8b6ad4", borderRadius: 16 }]
     },
     options: { ...ortak, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   });
@@ -169,7 +169,7 @@
       type: "bar",
       data: {
         labels: {{ grafik.sinif_ad|tojson }},
-        datasets: [{ label: "Puan ortalaması", data: {{ grafik.sinif_puan|tojson }}, backgroundColor: ["#6366f1", "#f59e0b", "#10b981", "#f43f5e"], borderRadius: 8 }]
+        datasets: [{ label: "Puan ortalaması", data: {{ grafik.sinif_puan|tojson }}, backgroundColor: ["#c9b4f0", "#ffd6a8", "#bde9d8", "#f7b7d4"], borderRadius: 16 }]
       },
       options: { ...ortak, indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
     });

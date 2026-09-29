@@ -1,41 +1,41 @@
 <div id="alan-tanitimi"
      class="fixed bottom-4 right-4 z-[9998] hidden w-[calc(100%-2rem)] max-w-md">
-  <div class="overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
-    <div class="relative bg-gradient-to-r from-blue-800 via-indigo-700 to-cyan-700 px-5 py-4 text-white">
+  <div class="overflow-hidden rounded-[28px] bg-[#fff9ff] shadow-2xl">
+    <div class="relative bg-gradient-to-r from-violet-300 via-pink-200 to-orange-200 px-5 py-4 text-violet-950">
       <div class="absolute right-4 top-4 flex gap-1">
-        <span class="h-2 w-2 animate-pulse rounded-full bg-white/90"></span>
-        <span class="h-2 w-2 animate-pulse rounded-full bg-white/70 [animation-delay:120ms]"></span>
-        <span class="h-2 w-2 animate-pulse rounded-full bg-white/50 [animation-delay:240ms]"></span>
+        <span class="h-2 w-2 animate-pulse rounded-full bg-violet-500/90"></span>
+        <span class="h-2 w-2 animate-pulse rounded-full bg-pink-400/80 [animation-delay:120ms]"></span>
+        <span class="h-2 w-2 animate-pulse rounded-full bg-orange-300/80 [animation-delay:240ms]"></span>
       </div>
-      <div class="text-xs font-black uppercase tracking-wide text-cyan-100">Yardımcı</div>
+      <div class="text-xs font-black uppercase tracking-wide text-violet-700">Yardımcı</div>
       <h2 class="mt-1 pr-14 text-lg font-black">{{ tanitim.baslik }}</h2>
-      <p class="mt-1 pr-8 text-sm text-blue-100">{{ tanitim.alt }}</p>
+      <p class="mt-1 pr-8 text-sm text-violet-800/80">{{ tanitim.alt }}</p>
     </div>
 
     <div class="px-5 py-4">
       <div class="mb-3 flex items-center gap-2" data-tanitim-noktalar></div>
       <div class="transition-all duration-300" data-tanitim-icerik>
-        <div class="text-xs font-black uppercase tracking-wide text-blue-700" data-tanitim-sayi></div>
-        <h3 class="mt-1 text-xl font-black text-slate-900" data-tanitim-baslik></h3>
-        <p class="mt-2 min-h-16 text-sm leading-6 text-slate-600" data-tanitim-metin></p>
+        <div class="text-xs font-black uppercase tracking-wide text-violet-600" data-tanitim-sayi></div>
+        <h3 class="mt-1 text-xl font-black text-violet-950" data-tanitim-baslik></h3>
+        <p class="mt-2 min-h-16 text-sm leading-6 text-violet-800/70" data-tanitim-metin></p>
       </div>
     </div>
 
     <div class="flex flex-col gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <button type="button"
               data-tanitim-bir-daha
-              class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+              class="rounded-full border-0 bg-white px-4 py-2 text-sm font-bold text-violet-800 hover:bg-violet-50">
         Bir daha gösterme
       </button>
       <div class="flex gap-2">
         <button type="button"
                 data-tanitim-geri
-                class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                class="rounded-full border-0 bg-white px-4 py-2 text-sm font-bold text-violet-800 hover:bg-violet-50">
           Geri
         </button>
         <button type="button"
                 data-tanitim-ileri
-                class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800">
+                class="rounded-full bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-600">
           İleri
         </button>
       </div>
@@ -45,7 +45,7 @@
 
 <button id="alan-tanitimi-ac"
         type="button"
-        class="fixed bottom-4 right-4 z-[9997] hidden rounded-full bg-blue-700 px-4 py-3 text-sm font-black text-white shadow-xl ring-1 ring-white/30 hover:bg-blue-800">
+        class="fixed bottom-4 right-4 z-[9997] hidden rounded-full bg-gradient-to-b from-violet-300 to-violet-500 px-4 py-3 text-sm font-black text-white shadow-xl hover:from-violet-400 hover:to-violet-600">
   Yardımcı
 </button>
 
@@ -55,8 +55,8 @@
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
   @keyframes alanTanitimParla {
-    0%, 100% { box-shadow: 0 18px 45px rgba(15, 23, 42, .22); }
-    50% { box-shadow: 0 22px 55px rgba(37, 99, 235, .35); }
+    0%, 100% { box-shadow: 0 18px 45px rgba(124, 92, 188, .18); }
+    50% { box-shadow: 0 22px 55px rgba(139, 106, 212, .32); }
   }
   #alan-tanitimi.aktif {
     display: block;
@@ -91,7 +91,7 @@
     steps.forEach(function (_, index) {
       const dot = document.createElement("button");
       dot.type = "button";
-      dot.className = "h-2 rounded-full transition-all " + (index === current ? "w-8 bg-blue-700" : "w-2 bg-slate-300");
+      dot.className = "h-2 rounded-full transition-all " + (index === current ? "w-8 bg-violet-500" : "w-2 bg-violet-200");
       dot.addEventListener("click", function () {
         current = index;
         render();

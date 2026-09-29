@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% block title %}Öğrenci Takip{% endblock %} — Erenler Cumhuriyet Ortaokulu</title>
   <link rel="manifest" href="{{ url_for('manifest') }}">
-  <meta name="theme-color" content="#1a3a6b">
+  <meta name="theme-color" content="#c9b4f0">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            okul: { 900:'#0f2144', 800:'#1a3a6b', 700:'#1e4a8a', 100:'#dbeafe' }
+            okul: { 900:'#8b6ad4', 800:'#c9b4f0', 700:'#a88adf', 100:'#efe4ff' }
           }
         }
       }
@@ -69,12 +69,6 @@
     body.app-background {
       min-height: 100vh;
       min-height: 100svh;
-      background:
-        linear-gradient(120deg, rgba(219,234,254,.72), rgba(240,253,244,.7) 44%, rgba(255,251,235,.68)),
-        linear-gradient(90deg, rgba(15,23,42,.035) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(15,23,42,.035) 1px, transparent 1px);
-      background-size: 220% 220%, 36px 36px, 36px 36px;
-      animation: ambient-pan 24s ease-in-out infinite;
     }
     .dashboard-shell {
       position: relative;
@@ -82,16 +76,7 @@
       min-height: calc(100vh - var(--app-header-height));
       min-height: calc(100svh - var(--app-header-height));
     }
-    .dashboard-shell::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: -1;
-      background:
-        linear-gradient(120deg, rgba(29,78,216,.06), transparent 28%, rgba(5,150,105,.07) 56%, transparent 78%),
-        linear-gradient(180deg, rgba(255,255,255,.42), transparent 46%);
-    }
+    .dashboard-shell::before { display: none; }
     .nav-details > summary { list-style: none; }
     .nav-details > summary::-webkit-details-marker { display: none; }
 
@@ -105,32 +90,42 @@
     }
     .app-header {
       position: relative;
-      background:
-        linear-gradient(115deg, rgba(15,33,68,.96), rgba(30,74,138,.94) 54%, rgba(13,92,109,.93));
-      box-shadow: 0 14px 34px rgba(15, 23, 42, .22);
-      backdrop-filter: blur(18px);
+      margin: .7rem .7rem 0;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #dcc9fb, #f3c6e0 58%, #ffe1c4);
+      box-shadow: 8px 14px 28px rgba(124, 92, 188, .18), -4px -6px 14px rgba(255,255,255,.8);
+      color: #4a3670;
     }
     header.app-header {
       position: sticky;
+      top: .7rem;
     }
     .app-header::before {
       content: "";
       position: absolute;
       inset: 0;
       pointer-events: none;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+      border-radius: inherit;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
       animation: header-glint 7s ease-in-out infinite;
       opacity: .55;
+    }
+    .app-header a,
+    .app-header button,
+    .app-header span {
+      color: #4a3670 !important;
     }
     .nav-pill {
       display: inline-flex;
       align-items: center;
       gap: .45rem;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: .7rem;
-      padding: .52rem .78rem;
-      color: rgb(219 234 254);
-      transition: background-color .18s ease, border-color .18s ease, transform .18s ease, color .18s ease;
+      border: 0;
+      border-radius: 999px;
+      padding: .52rem .9rem;
+      color: #4a3670;
+      background: rgba(255,255,255,.45);
+      box-shadow: 4px 6px 12px rgba(124,92,188,.12);
+      transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease;
     }
     .nav-pill::after {
       content: "";
@@ -144,9 +139,8 @@
     }
     .nav-pill:hover,
     .nav-details[open] > .nav-pill {
-      background: rgba(255,255,255,.13);
-      border-color: rgba(255,255,255,.22);
-      color: #fff;
+      background: rgba(255,255,255,.78);
+      color: #5b3f96;
       transform: translateY(-1px);
     }
     .nav-details[open] > .nav-pill::after {
@@ -154,10 +148,10 @@
     }
     .nav-panel {
       animation: menu-pop .18s ease-out both;
-      border-radius: .95rem;
-      border: 1px solid rgba(148,163,184,.35);
-      background: rgba(255,255,255,.98);
-      box-shadow: 0 24px 70px rgba(15,23,42,.22);
+      border-radius: 1.5rem;
+      border: 0;
+      background: #fff9ff;
+      box-shadow: 8px 16px 32px rgba(124,92,188,.16);
       overflow: hidden;
     }
     .nav-link {
@@ -181,13 +175,13 @@
       font-weight: 900;
       font-size: .78rem;
     }
-    .mark-blue { background:#dbeafe; color:#1d4ed8; }
-    .mark-emerald { background:#d1fae5; color:#047857; }
-    .mark-amber { background:#fef3c7; color:#b45309; }
-    .mark-sky { background:#e0f2fe; color:#0369a1; }
-    .mark-rose { background:#ffe4e6; color:#be123c; }
-    .mark-violet { background:#ede9fe; color:#6d28d9; }
-    .mark-slate { background:#e2e8f0; color:#334155; }
+    .mark-blue { background: linear-gradient(180deg,#e8f2ff,#b8d8ff); color:#355a8a; }
+    .mark-emerald { background: linear-gradient(180deg,#e8faf3,#bde9d8); color:#2f6f58; }
+    .mark-amber { background: linear-gradient(180deg,#fff0d8,#ffd6a8); color:#8a5a28; }
+    .mark-sky { background: linear-gradient(180deg,#e8f2ff,#b8d8ff); color:#355a8a; }
+    .mark-rose { background: linear-gradient(180deg,#ffe6f2,#f7b7d4); color:#8a3a62; }
+    .mark-violet { background: linear-gradient(180deg,#efe4ff,#c9b4f0); color:#5b3f96; }
+    .mark-slate { background: linear-gradient(180deg,#f4e9ff,#e4d4f8); color:#4a3670; }
     .mobile-menu-overlay {
       opacity: 0;
       pointer-events: none;
@@ -216,18 +210,19 @@
       grid-template-columns: 2.35rem 1fr;
       gap: .7rem;
       align-items: center;
-      border-radius: .8rem;
-      border: 1px solid #e2e8f0;
-      background: #fff;
+      border-radius: 1.2rem;
+      border: 0;
+      background: #fff9ff;
       padding: .72rem .8rem;
       font-size: .875rem;
       font-weight: 900;
-      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+      box-shadow: 6px 10px 18px rgba(124,92,188,.1);
+      transition: transform .18s ease, box-shadow .18s ease;
     }
     .mobile-link:active { transform: scale(.99); }
     .mobile-link:hover {
-      border-color: #bfdbfe;
-      box-shadow: 0 10px 22px rgba(15, 23, 42, .08);
+      border-color: transparent;
+      box-shadow: 8px 14px 22px rgba(124,92,188,.16);
     }
     .teacher-mobile-tabbar {
       display: none;
@@ -255,8 +250,8 @@
     }
     .teacher-mobile-tabbar a.is-active,
     .teacher-mobile-tabbar button.is-active {
-      background: #dbeafe;
-      color: #1d4ed8;
+      background: linear-gradient(180deg,#efe4ff,#c9b4f0);
+      color: #5b3f96;
     }
     .dashboard-mobile-switcher {
       display: none;
@@ -270,23 +265,22 @@
       transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
     }
     .dashboard-mobile-switcher button.is-active {
-      background: #0f2144;
+      background: linear-gradient(180deg,#c9b4f0,#8b6ad4);
       color: #fff;
-      box-shadow: 0 10px 24px rgba(15, 33, 68, .18);
+      box-shadow: 0 10px 24px rgba(139,106,212,.28);
     }
     .action-group {
       animation: soft-rise .34s ease both;
-      border: 1px solid rgba(226,232,240,.92);
-      border-radius: 1rem;
-      background: rgba(255,255,255,.82);
-      box-shadow: 0 18px 44px rgba(15,23,42,.09);
-      backdrop-filter: blur(18px);
+      border: 0;
+      border-radius: 1.6rem;
+      background: #fff9ff;
+      box-shadow: 8px 16px 28px rgba(124,92,188,.14);
+      backdrop-filter: none;
       transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
     }
     .action-group:hover {
-      transform: translateY(-2px);
-      border-color: rgba(147,197,253,.75);
-      box-shadow: 0 24px 52px rgba(15,23,42,.12);
+      transform: translateY(-3px);
+      box-shadow: 12px 22px 36px rgba(124,92,188,.18);
     }
     .action-row {
       display: grid;
@@ -309,9 +303,8 @@
       padding: .64rem;
     }
     .dashboard-sidebar {
-      background: rgba(248,250,252,.86);
-      backdrop-filter: blur(18px);
-      box-shadow: 12px 0 34px rgba(15,23,42,.08);
+      background: #fff9ff;
+      box-shadow: 10px 0 28px rgba(124,92,188,.1);
     }
     .class-link {
       transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease;
@@ -324,15 +317,13 @@
       background: transparent;
     }
     .teacher-toolbar {
-      background: rgba(255,255,255,.82);
-      border-bottom: 1px solid rgba(226,232,240,.86);
-      box-shadow: 0 12px 30px rgba(15,23,42,.06);
-      backdrop-filter: blur(18px);
+      background: #fff9ff;
+      border-bottom: 0;
+      box-shadow: 0 10px 24px rgba(124,92,188,.08);
     }
     .search-field {
-      background: rgba(255,255,255,.92);
-      box-shadow: inset 0 0 0 1px rgba(226,232,240,.6), 0 8px 18px rgba(15,23,42,.05);
-      transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+      background: #fff;
+      box-shadow: inset 4px 5px 10px rgba(124,92,188,.08), inset -4px -5px 10px rgba(255,255,255,.92);
     }
     .search-field:focus {
       transform: translateY(-1px);
@@ -340,30 +331,21 @@
     }
     .dashboard-hero {
       animation: card-lift .42s ease both;
-      border: 1px solid rgba(191,219,254,.9);
-      border-radius: 1.1rem;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,.94), rgba(239,246,255,.86) 42%, rgba(236,253,245,.88));
-      box-shadow: 0 24px 60px rgba(15,23,42,.1);
-      backdrop-filter: blur(18px);
+      border: 0;
+      border-radius: 2rem;
+      background: linear-gradient(135deg, #dcc9fb, #f3c6e0 52%, #ffe1c4);
+      box-shadow: 10px 18px 32px rgba(124,92,188,.18);
+      color: #4a3670;
     }
     .metric-card {
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(226,232,240,.86);
-      border-radius: .95rem;
-      background: rgba(255,255,255,.76);
-      box-shadow: 0 12px 28px rgba(15,23,42,.06);
-      transition: transform .18s ease, box-shadow .18s ease;
+      border: 0;
+      border-radius: 1.4rem;
+      background: linear-gradient(180deg, #fff9ff, #efe4ff);
+      box-shadow: 6px 10px 18px rgba(124,92,188,.12);
     }
-    .metric-card::after {
-      content: "";
-      position: absolute;
-      inset: auto 0 0;
-      height: 3px;
-      background: linear-gradient(90deg, #2563eb, #059669, #d97706, #be123c);
-      opacity: .75;
-    }
+    .metric-card::after { display: none; }
     .metric-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 18px 38px rgba(15,23,42,.1);
@@ -372,16 +354,13 @@
       animation: card-lift .44s ease both;
     }
     .ogrenci-kart {
-      background: rgba(255,255,255,.84) !important;
-      border-color: rgba(226,232,240,.9) !important;
-      box-shadow: 0 12px 28px rgba(15,23,42,.06);
-      backdrop-filter: blur(14px);
-      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+      background: #fff9ff !important;
+      border-color: transparent !important;
+      box-shadow: 6px 12px 22px rgba(124,92,188,.1);
     }
     .ogrenci-kart:hover {
-      transform: translateY(-2px);
-      border-color: rgba(147,197,253,.95) !important;
-      box-shadow: 0 20px 42px rgba(15,23,42,.11);
+      transform: translateY(-3px);
+      box-shadow: 10px 18px 28px rgba(124,92,188,.16);
     }
     .ogrenci-kart button,
     .ogrenci-kart a {
@@ -425,11 +404,10 @@
         height: var(--app-mobile-tabbar-height);
         box-sizing: border-box;
         padding: .42rem;
-        border: 1px solid rgba(148, 163, 184, .28);
-        border-radius: 1.05rem;
-        background: rgba(255, 255, 255, .94);
-        box-shadow: 0 18px 48px rgba(15, 23, 42, .18);
-        backdrop-filter: blur(18px);
+        border: 0;
+        border-radius: 1.6rem;
+        background: #fff9ff;
+        box-shadow: 8px 16px 32px rgba(124,92,188,.2);
       }
       .dashboard-mobile-switcher {
         display: grid;
@@ -437,11 +415,10 @@
         gap: .35rem;
         margin: .65rem .75rem 0;
         padding: .35rem;
-        border: 1px solid rgba(148, 163, 184, .24);
-        border-radius: 1rem;
-        background: rgba(255, 255, 255, .9);
-        box-shadow: 0 12px 30px rgba(15, 23, 42, .08);
-        backdrop-filter: blur(16px);
+        border: 0;
+        border-radius: 1.4rem;
+        background: #fff9ff;
+        box-shadow: 6px 12px 22px rgba(124,92,188,.12);
       }
       .dashboard-mobile-section {
         display: none !important;
@@ -490,7 +467,7 @@
   <div class="flex items-center justify-between gap-2 px-3 sm:px-4 py-3 max-w-screen-xl mx-auto">
     <div class="flex items-center gap-2 sm:gap-3 min-w-0">
       <button id="teacher-menu-button"
-              class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/10 hover:bg-white/15 transition"
+              class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/60 hover:bg-white transition"
               type="button"
               aria-label="Menüyü aç"
               aria-controls="teacher-menu"
@@ -506,58 +483,58 @@
           <span class="sm:hidden">🏫 ECO</span>
           <span class="hidden sm:inline">🏫 Erenler Cumhuriyet Ortaokulu</span>
         </div>
-        <div class="text-xs text-blue-300 hidden sm:block">Öğrenci takip · 2026-2027</div>
+        <div class="text-xs text-violet-800 hidden sm:block">Öğrenci takip · 2026-2027</div>
       </a>
     </div>
 
     <div class="flex items-center gap-2 sm:gap-3 min-w-0">
       <nav class="hidden lg:flex items-center gap-1.5 text-xs font-bold">
-        {% set nav_cls = 'inline-flex items-center rounded-lg border border-white/10 px-3 py-2 transition whitespace-nowrap' %}
+        {% set nav_cls = 'inline-flex items-center rounded-full px-3 py-2 transition whitespace-nowrap' %}
         <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'dashboard' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'dashboard' else 'text-violet-900/80 hover:bg-white/50' }}">
           Panel
         </a>
         <a href="{{ url_for('haftalik_takip', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('haftalik_takip') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'haftalik_takip' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'haftalik_takip' else 'text-violet-900/80 hover:bg-white/50' }}">
           Kitap / Ödev
         </a>
         <a href="{{ url_for('onay_kutusu') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'onay_kutusu' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'onay_kutusu' else 'text-violet-900/80 hover:bg-white/50' }}">
           Onay
         </a>
         <a href="{{ url_for('karne', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('karne') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['karne', 'karne_excel', 'karne_pdf'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint in ['karne', 'karne_excel', 'karne_pdf'] else 'text-violet-900/80 hover:bg-white/50' }}">
           Karne
         </a>
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['analiz_merkezi', 'kitap_odev_rapor'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint in ['analiz_merkezi', 'kitap_odev_rapor'] else 'text-violet-900/80 hover:bg-white/50' }}">
           Analiz
         </a>
         <a href="{{ url_for('lgs') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'lgs' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'lgs' else 'text-violet-900/80 hover:bg-white/50' }}">
           LGS
         </a>
         <a href="{{ url_for('deneme_analiz') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'deneme_analiz' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'deneme_analiz' else 'text-violet-900/80 hover:bg-white/50' }}">
           Deneme
         </a>
         {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
         <a href="{{ url_for('giris_raporu') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint in ['giris_raporu', 'giris_raporu_excel'] else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint in ['giris_raporu', 'giris_raporu_excel'] else 'text-violet-900/80 hover:bg-white/50' }}">
           Giriş raporu
         </a>
         <a href="{{ url_for('ogrenci_ara') }}"
-           class="{{ nav_cls }} {{ 'bg-white/15 text-white' if request.endpoint == 'ogrenci_ara' else 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'ogrenci_ara' else 'text-violet-900/80 hover:bg-white/50' }}">
           Ara
         </a>
         {% endif %}
       </nav>
 
-      <button id="ana-ekran" type="button" hidden class="rounded-lg bg-amber-400 px-3 py-2 text-xs font-black text-slate-900">Ana ekrana ekle</button>
-      <span class="hidden sm:block text-xs text-blue-200 truncate max-w-52">👤 {{ session.ogretmen_adi }}{% if session.ogretmen_adi == 'ADEM AKGÜL' %} · Müdür{% elif session.ogretmen_adi == 'METEHAN CÜCEN' %} · Müdür Yardımcısı{% endif %}</span>
+      <button id="ana-ekran" type="button" hidden class="rounded-full bg-amber-200 px-3 py-2 text-xs font-black text-amber-900">Ana ekrana ekle</button>
+      <span class="hidden sm:block text-xs text-violet-900 truncate max-w-52">👤 {{ session.ogretmen_adi }}{% if session.ogretmen_adi == 'ADEM AKGÜL' %} · Müdür{% elif session.ogretmen_adi == 'METEHAN CÜCEN' %} · Müdür Yardımcısı{% endif %}</span>
       <a href="{{ url_for('logout') }}"
-         class="hidden sm:inline-flex bg-slate-600 hover:bg-slate-500 text-white text-xs
-                px-3 py-2 rounded-lg transition whitespace-nowrap">
+         class="hidden sm:inline-flex bg-white/70 hover:bg-white text-violet-900 text-xs
+                px-3 py-2 rounded-full transition whitespace-nowrap">
         Çıkış
       </a>
     </div>
@@ -569,15 +546,15 @@
      onclick="closeTeacherMenu()"></div>
 
 <nav id="teacher-menu"
-     class="mobile-drawer fixed inset-y-0 left-0 z-50 w-[88vw] max-w-sm overflow-y-auto bg-slate-50 text-slate-900 shadow-2xl lg:hidden">
-  <div class="app-header text-white flex items-start justify-between gap-3 px-4 py-5">
+     class="mobile-drawer fixed inset-y-0 left-0 z-50 w-[88vw] max-w-sm overflow-y-auto bg-[#fff9ff] text-violet-900 shadow-2xl lg:hidden">
+  <div class="app-header text-violet-900 flex items-start justify-between gap-3 px-4 py-5">
     <div class="min-w-0">
       <div class="text-sm font-black leading-tight">Erenler Cumhuriyet Ortaokulu</div>
-      <div class="mt-1 text-xs text-blue-100 truncate">{{ session.ogretmen_adi }}</div>
+      <div class="mt-1 text-xs text-violet-700 truncate">{{ session.ogretmen_adi }}</div>
     </div>
     <button type="button"
             onclick="closeTeacherMenu()"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-xl leading-none text-white">
+            class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/70 text-xl leading-none text-violet-900">
       ×
     </button>
   </div>
@@ -600,7 +577,7 @@
       </div>
     </section>
 
-    <a href="{{ url_for('logout') }}" class="block rounded-lg bg-slate-800 px-4 py-3 text-center text-sm font-black text-white">Çıkış</a>
+    <a href="{{ url_for('logout') }}" class="block rounded-full bg-gradient-to-b from-violet-300 to-violet-500 px-4 py-3 text-center text-sm font-black text-white">Çıkış</a>
   </div>
 </nav>
 

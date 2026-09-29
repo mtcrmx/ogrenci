@@ -4,54 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0f2744">
+  <meta name="theme-color" content="#c9b4f0">
   <title>Veli paneli</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: "Segoe UI", sans-serif; background: #f1f5f9; color: #0f172a; }
-    header { background: #0f2744; color: #fff; }
-    .bar { max-width: 980px; margin: 0 auto; padding: 16px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+    body { margin: 0; font-family: "Segoe UI", sans-serif; }
+    header { max-width: 980px; margin: .7rem auto 0; padding: 0 16px; color: #4a3670; }
+    .bar { border-radius: 28px; padding: 16px 18px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;
+      background: linear-gradient(135deg, #dcc9fb, #f3c6e0 58%, #ffe1c4); box-shadow: 8px 14px 28px rgba(124,92,188,.18); }
     .brand { font-weight: 800; }
     .aksiyon { display: flex; gap: 8px; flex-wrap: wrap; }
     @media (max-width: 720px) {
       .bar { flex-direction: column; align-items: stretch; }
       .aksiyon { justify-content: flex-start; }
     }
-    a.cikis, a.rapor { color: #fff; text-decoration: none; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 800; }
-    a.rapor { background: #1d4ed8; }
-    a.cikis { background: #b91c1c; }
-    main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
-    .kart { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; }
-    h1 { margin: 4px 0 0; font-size: 26px; }
-    .soluk { color: #64748b; font-size: 13px; }
+    a.cikis, a.rapor { color: #5b3f96; text-decoration: none; border-radius: 999px; padding: 8px 12px; font-size: 13px; font-weight: 800; box-shadow: 6px 10px 18px rgba(124,92,188,.14); }
+    a.rapor { background: linear-gradient(180deg,#efe4ff,#c9b4f0); }
+    a.cikis { background: linear-gradient(180deg,#ffe6f2,#f7b7d4); color:#8a3a62; }
+    main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
+    .kart { background: #fff9ff; border: 0; border-radius: 28px; padding: 18px; box-shadow: 8px 16px 28px rgba(124,92,188,.14); animation: ui-rise .4s ease both; }
+    h1 { margin: 4px 0 0; font-size: 26px; color:#3d2a5c; }
+    .soluk { color: #7a6a96; font-size: 13px; }
     .uc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .kutu { background: #f8fafc; border-radius: 12px; padding: 12px; }
+    .kutu { background: linear-gradient(180deg,#fff,#efe4ff); border-radius: 20px; padding: 12px; box-shadow: inset 3px 4px 8px rgba(124,92,188,.06); }
     .kutu b { display: block; margin-top: 4px; font-size: 16px; }
-    .not { border-radius: 12px; padding: 12px; margin-top: 8px; }
-    .uyari { background: #fff1f2; border: 1px solid #fecdd3; }
-    .olumlu { background: #ecfdf5; border: 1px solid #a7f3d0; }
-    .diger { background: #f8fafc; border: 1px solid #e2e8f0; }
-    textarea, button { width: 100%; border-radius: 12px; font: inherit; }
-    textarea { border: 1px solid #cbd5e1; padding: 10px; }
-    button { margin-top: 8px; border: 0; background: #0f2744; color: #fff; font-weight: 800; padding: 10px; cursor: pointer; }
+    .not { border-radius: 18px; padding: 12px; margin-top: 8px; }
+    .uyari { background: linear-gradient(180deg,#ffe6f2,#f7b7d4); }
+    .olumlu { background: linear-gradient(180deg,#e8faf3,#bde9d8); }
+    .diger { background: linear-gradient(180deg,#e8f2ff,#b8d8ff); }
+    textarea, button { width: 100%; border-radius: 22px; font: inherit; }
+    textarea { border: 0; padding: 10px; box-shadow: inset 4px 5px 10px rgba(124,92,188,.08); }
+    button { margin-top: 8px; border: 0; background: linear-gradient(180deg,#c9b4f0,#8b6ad4); color: #fff; font-weight: 800; padding: 10px; cursor: pointer; box-shadow: 0 10px 18px rgba(139,106,212,.28); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { border-bottom: 1px solid #e2e8f0; padding: 8px 6px; text-align: left; vertical-align: top; }
+    th, td { border-bottom: 1px solid rgba(201,180,240,.35); padding: 8px 6px; text-align: left; vertical-align: top; }
     .iki { display: grid; gap: 12px; }
     @media (min-width: 800px) { .iki { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 640px) { .uc { grid-template-columns: 1fr; } }
-    .duyuru { position: fixed; inset: 0; z-index: 300; background: rgba(15,23,42,.72); display: flex; align-items: center; justify-content: center; padding: 12px; }
+    .duyuru { position: fixed; inset: 0; z-index: 300; background: rgba(61,42,92,.45); display: flex; align-items: center; justify-content: center; padding: 12px; }
     .duyuru[hidden] { display: none; }
     .duyuru-kutu { position: relative; width: min(520px, 100%); }
-    .duyuru-kutu img { display: block; width: 100%; height: auto; max-height: 88vh; object-fit: contain; border-radius: 16px; background: #fff; }
+    .duyuru-kutu img { display: block; width: 100%; height: auto; max-height: 88vh; object-fit: contain; border-radius: 24px; background: #fff; }
     #kutlama { animation: alkis 1s ease both; }
     @keyframes alkis { from { transform: scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
-    .duyuru-alt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; background: #fff; border-radius: 12px; padding: 10px 12px; }
+    .duyuru-alt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; background: #fff9ff; border-radius: 18px; padding: 10px 12px; box-shadow: 6px 10px 18px rgba(124,92,188,.12); }
     .duyuru-sec { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; }
     .duyuru-sec input { width: 18px; height: 18px; margin: 0; }
   </style>
 </head>
-<body>
+<body class="ui-theme">
 <header>
   <div class="bar">
     <div class="brand">Erenler Cumhuriyet Ortaokulu</div>
@@ -78,7 +80,7 @@
     <button type="button" id="ana-ekran" hidden style="width:auto;margin-top:10px">Ana ekrana ekle</button>
   </section>
 
-  <section class="kart" style="background:#fffbeb;border-color:#fcd34d">
+  <section class="kart" style="background:linear-gradient(180deg,#fff0d8,#ffd6a8)">
     <div class="soluk">Bu akşam</div>
     <p style="margin:8px 0 0;font-size:18px;font-weight:800">{{ aksam }}</p>
     {% if hafta.odev_foto %}
