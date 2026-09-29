@@ -390,6 +390,49 @@ body.ui-theme .lgs-page :is(input, select, textarea):focus {
   body.ui-theme .lgs-page .grid-cols-4 > input { padding-left: 6px; padding-right: 6px; }
 }
 
+.lgs-defter-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding: 4px 2px 12px;
+  margin: 0 -2px 4px;
+  scrollbar-width: thin;
+}
+.lgs-defter-day-btn {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  min-height: 52px;
+  min-width: 72px;
+  border: 1px solid rgba(255,255,255,.78);
+  border-radius: 18px;
+  padding: 8px 12px;
+  background: #fff8f5;
+  color: var(--lgs-ink, #342747);
+  box-shadow: var(--lgs-soft-shadow);
+  font: inherit;
+  font-weight: 900;
+  line-height: 1.15;
+  cursor: pointer;
+}
+.lgs-defter-day-btn > span {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--lgs-muted, #756982);
+}
+.lgs-defter-day-btn.is-on {
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--lgs-accent, #c8b1ed) 55%, #fff),
+    color-mix(in srgb, var(--lgs-accent, #c8b1ed) 82%, #fff));
+  box-shadow: var(--lgs-button-shadow);
+}
+.lgs-defter-panel { display: none; }
+.lgs-defter-panel.is-open { display: block; }
+
 @media (prefers-reduced-motion: reduce) {
   body.ui-theme .lgs-page :is(button, a) { transition-duration: .01ms !important; }
 }

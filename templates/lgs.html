@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}LGS{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=coach2026b">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1">{% endblock %}
 {% block body %}
 <main class="lgs-page mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
   {% if not ogrenci %}
@@ -338,12 +338,21 @@
     {% endif %}
   </section>
 
+  {% set defter_kisa = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] %}
   {% if veli %}
-  <form method="post" class="mt-3 space-y-3">
+  <form method="post" class="mt-3 space-y-3 lgs-defter-wrap">
     <input type="hidden" name="islem" value="defter">
     <input type="hidden" name="hafta" value="{{ hafta_sec }}">
+    <div class="lgs-defter-days" role="tablist" aria-label="Haftanın günleri">
+      {% for gun in range(7) %}
+      <button type="button" class="lgs-defter-day-btn {% if gunler[gun] == bugun_ad %}is-on{% endif %}"
+              role="tab" data-defter-gun="{{ gun }}"
+              aria-selected="{{ 'true' if gunler[gun] == bugun_ad else 'false' }}">{{ defter_kisa[gun] }}<span>{{ gunler[gun] }}</span></button>
+      {% endfor %}
+    </div>
     {% for gun in range(7) %}
-    <article class="rounded-2xl border p-3 {{ 'border-amber-300 bg-amber-50' if gunler[gun] == bugun_ad else 'border-slate-200 bg-white' }}">
+    <article class="lgs-defter-panel rounded-2xl border p-3 {{ 'is-open border-amber-300 bg-amber-50' if gunler[gun] == bugun_ad else 'border-slate-200 bg-white' }}"
+             data-defter-panel="{{ gun }}" role="tabpanel">
       <h3 class="font-black">{{ gunler[gun] }}</h3>
       <div class="mt-2 space-y-2">
         {% for kod, ad in defter_dersler %}
@@ -378,20 +387,33 @@
     <button class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Haftayı kaydet</button>
   </form>
   {% else %}
-  <div class="mt-3 space-y-3">
+  <div class="mt-3 lgs-defter-wrap">
+    <div class="lgs-defter-days" role="tablist" aria-label="Haftanın günleri">
+      {% for gun in range(7) %}
+      <button type="button" class="lgs-defter-day-btn {% if gunler[gun] == bugun_ad %}is-on{% endif %}"
+              role="tab" data-defter-gun="{{ gun }}"
+              aria-selected="{{ 'true' if gunler[gun] == bugun_ad else 'false' }}">{{ defter_kisa[gun] }}<span>{{ gunler[gun] }}</span></button>
+      {% endfor %}
+    </div>
     {% for gun in range(7) %}
-    <article class="rounded-2xl border border-slate-200 bg-white p-3">
+    <article class="lgs-defter-panel rounded-2xl border border-slate-200 bg-white p-3 {{ 'is-open' if gunler[gun] == bugun_ad else '' }}"
+             data-defter-panel="{{ gun }}" role="tabpanel">
       <h3 class="font-black">{{ gunler[gun] }}</h3>
+      {% set gun_yazisi = namespace(var=false) %}
       <ul class="mt-2 space-y-1 text-sm">
         {% for kod, ad in defter_dersler %}
         {% set h = defter.hucre[gun][kod] %}
         {% if h.cozulen or h.dogru or h.yanlis or h.bos %}
+        {% set gun_yazisi.var = true %}
         <li class="flex justify-between gap-2"><span class="font-bold">{{ ad }}</span><span>{{ h.cozulen }} soru · {{ h.dogru }}/{{ h.yanlis }}/{{ h.bos }}</span></li>
         {% endif %}
         {% endfor %}
       </ul>
       {% if defter.ruh[gun] %}
       <p class="mt-2 text-xs font-black {{ 'text-emerald-700' if defter.ruh[gun] == 'iyi' else 'text-rose-700' }}">{{ 'İyi geçti' if defter.ruh[gun] == 'iyi' else 'Zor geçti' }}</p>
+      {% endif %}
+      {% if not gun_yazisi.var and not defter.ruh[gun] %}
+      <p class="mt-2 text-sm text-slate-500">Bu gün için yazılmış soru yok.</p>
       {% endif %}
     </article>
     {% endfor %}
@@ -416,6 +438,30 @@
     </div>
   </form>
   {% endif %}
+  <script>
+  (function () {
+    const wrap = document.querySelector(".lgs-defter-wrap");
+    if (!wrap) return;
+    const ac = function (gun) {
+      wrap.querySelectorAll("[data-defter-gun]").forEach(function (b) {
+        const on = b.getAttribute("data-defter-gun") === gun;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      wrap.querySelectorAll("[data-defter-panel]").forEach(function (p) {
+        p.classList.toggle("is-open", p.getAttribute("data-defter-panel") === gun);
+      });
+      const onBtn = wrap.querySelector("[data-defter-gun].is-on");
+      if (onBtn) onBtn.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    };
+    wrap.addEventListener("click", function (e) {
+      const b = e.target.closest("[data-defter-gun]");
+      if (!b) return;
+      ac(b.getAttribute("data-defter-gun"));
+    });
+    if (!wrap.querySelector(".lgs-defter-panel.is-open")) ac("0");
+  })();
+  </script>
   {% elif bolum == 'deneme' and not veli %}
   <form method="post" class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
     <input type="hidden" name="ogrenci" value="{{ ogrenci.id }}">
