@@ -7,14 +7,14 @@
   <meta name="theme-color" content="#c9b4f0">
   <title>Veli paneli</title>
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=hamur">
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: "Segoe UI", sans-serif; }
     header { max-width: 980px; margin: .7rem auto 0; padding: 0 16px; color: var(--ui-ink); }
-    .bar { border-radius: 28px; padding: 16px 18px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;
-      background: var(--ui-hero); box-shadow: var(--ui-shadow-soft); }
+    .bar { border-radius: 32px; padding: 16px 18px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;
+      background: var(--ui-hero); box-shadow: var(--ui-shadow); }
     .brand { font-weight: 800; }
     .aksiyon { display: flex; gap: 8px; flex-wrap: wrap; }
     @media (max-width: 720px) {
@@ -25,11 +25,11 @@
     a.rapor, button.rapor { background: var(--ui-chip); }
     a.cikis { background: linear-gradient(180deg,#ffe6f2,#f7b7d4); color:#8a3a62; }
     main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
-    .kart { background: var(--ui-surface); border: 0; border-radius: 28px; padding: 18px; box-shadow: var(--ui-shadow-soft); animation: ui-rise .4s ease both; }
+    .kart { background: var(--ui-surface); border: 0; border-radius: 32px; padding: 18px; box-shadow: var(--ui-shadow-slab); }
     h1 { margin: 4px 0 0; font-size: 26px; color: var(--ui-ink); }
     .soluk { color: var(--ui-muted); font-size: 13px; }
-    .uc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .kutu { background: linear-gradient(180deg,#fff,#efe4ff); border-radius: 20px; padding: 12px; box-shadow: inset 3px 4px 8px rgba(124,92,188,.06); }
+    .uc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .kutu { background: var(--ui-chip); border-radius: 20px; padding: 12px; box-shadow: 0 5px 0 var(--clay-lip), 0 10px 14px var(--clay-ground); }
     .kutu b { display: block; margin-top: 4px; font-size: 16px; }
     .not { border-radius: 18px; padding: 12px; margin-top: 8px; }
     .uyari { background: linear-gradient(180deg,#ffe6f2,#f7b7d4); }
