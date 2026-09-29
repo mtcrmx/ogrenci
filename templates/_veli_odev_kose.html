@@ -2,7 +2,7 @@
 {% set h = odev_bildirimi.haftalik %}
 <aside id="veli-odev-kose">
   <div class="kose-ust">Ödev bildirimi</div>
-  {% if h.kitap_adi %}<p class="kose-kitap">Kitap: {{ h.kitap_adi }}</p>{% endif %}
+  {% if h.kitap_adi %}<p class="kose-kitap">Kitap: {{ h.kitap_adi }}{% if h.kitap_yazar %} · {{ h.kitap_yazar }}{% endif %}{% if h.kitap_yayinevi %} · {{ h.kitap_yayinevi }}{% endif %}{% if h.katalog_sayfa %} · {{ h.kitap_sayfa or 0 }}/{{ h.katalog_sayfa }} sayfa{% elif h.kitap_sayfa %} · {{ h.kitap_sayfa }} sayfa{% endif %}</p>{% endif %}
   {% if h.ders or h.aciklama %}
   <p class="kose-ders">Sınıf ödevi: {{ h.ders or "Ders" }}{% if h.durum %} · {{ h.durum }}{% endif %}</p>
   {% if h.aciklama %}<p class="kose-metin">{{ h.aciklama }}</p>{% endif %}

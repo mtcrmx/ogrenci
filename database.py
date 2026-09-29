@@ -1099,7 +1099,7 @@ def ogrenci_verilen_kitaplar(ogrenci_id: int) -> list[dict]:
     rows = [dict(r) for r in con.execute(
         """
         SELECT h.hafta_basi, h.kitap_adi, h.kitap_okuma, h.kitap_getirme,
-               k.yazar, k.sayfa
+               k.yazar, k.yayinevi, k.sayfa
         FROM haftalik_takip h
         JOIN ogrenciler o ON o.id = h.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id

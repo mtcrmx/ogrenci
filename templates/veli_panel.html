@@ -113,7 +113,7 @@
 
   <section class="kart">
     <div class="soluk">Bu hafta</div>
-    <p style="margin:8px 0 0;font-weight:800">Kitabı: {{ odev_ogr.kitap_adi or hafta.kitap_adi or 'Henüz kitap seçilmedi' }}{% if hafta.kitap_adi %} · {{ hafta.kitap_sayfa }}{% if hafta.katalog_sayfa %}/{{ hafta.katalog_sayfa }}{% endif %} sayfa{% endif %}</p>
+    <p style="margin:8px 0 0;font-weight:800">Kitabı: {{ odev_ogr.kitap_adi or hafta.kitap_adi or 'Henüz kitap seçilmedi' }}{% if hafta.kitap_adi %}{% if hafta.kitap_yazar %} · {{ hafta.kitap_yazar }}{% endif %}{% if hafta.kitap_yayinevi %} · {{ hafta.kitap_yayinevi }}{% endif %} · {{ hafta.kitap_sayfa }}{% if hafta.katalog_sayfa %}/{{ hafta.katalog_sayfa }}{% endif %} sayfa{% endif %}</p>
     <p class="soluk" style="margin-top:8px">Sınıf ödevi</p>
     <p style="margin:4px 0 0;font-weight:800">{{ odev.ders or 'Ders yazılmadı' }}</p>
     <p class="soluk" style="margin-top:4px">{{ odev.aciklama or 'Sınıfa genel ödev yazılmadı.' }}</p>
@@ -180,7 +180,7 @@
       {% for k in kitaplar %}
       <li>
         <b>{{ k.kitap_adi }}</b>
-        <span class="soluk">{{ k.hafta_basi }}{% if k.yazar %} · {{ k.yazar }}{% endif %}{% if k.sayfa %} · {{ k.sayfa }} sayfa{% endif %}</span>
+        <span class="soluk">{{ k.hafta_basi }}{% if k.yazar %} · {{ k.yazar }}{% endif %}{% if k.yayinevi %} · {{ k.yayinevi }}{% endif %}{% if k.sayfa %} · {{ k.sayfa }} sayfa{% endif %}</span>
         {% if k.kitap_okuma == 'okudu' %}
         <span class="soluk"> · Okudu</span>
         {% elif k.kitap_okuma == 'okumadi' %}
@@ -196,7 +196,7 @@
     <strong>Şimdiye kadar okudukları</strong>
     <ul style="margin:8px 0 0;padding-left:18px">
       {% for k in okunan %}
-      <li><b>{{ k.kitap_adi }}</b> <span class="soluk">{{ k.hafta_basi }}</span></li>
+      <li><b>{{ k.kitap_adi }}</b> <span class="soluk">{% if k.yazar %}{{ k.yazar }} · {% endif %}{% if k.yayinevi %}{{ k.yayinevi }} · {% endif %}{% if k.sayfa %}{{ k.sayfa }} sayfa · {% endif %}{{ k.hafta_basi }}</span></li>
       {% endfor %}
     </ul>
   </section>
@@ -205,6 +205,19 @@
   <section class="kart">
     <strong>Kitaplar</strong>
     <p class="soluk">Öğretmen henüz bu öğrenciye kitap vermedi.</p>
+  </section>
+  {% endif %}
+  {% if katalog %}
+  <section class="kart">
+    <strong>{{ ogrenci.sinif_adi }} okuma listesi ({{ katalog|length }})</strong>
+    <ul style="margin:8px 0 0;padding-left:18px;max-height:280px;overflow:auto">
+      {% for k in katalog %}
+      <li>
+        <b>{{ k.ad }}</b>
+        <span class="soluk">{% if k.yazar %}{{ k.yazar }}{% endif %}{% if k.yayinevi %} · {{ k.yayinevi }}{% endif %}{% if k.sayfa %} · {{ k.sayfa }} sayfa{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
   </section>
   {% endif %}
 

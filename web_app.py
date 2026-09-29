@@ -370,10 +370,25 @@ def _odev_bildirimi_verisi(hedef: str) -> dict | None:
             bilgi = haftalik_odev_bilgi_getir(int(ogr["sinif_id"]), hafta)
             kayit = haftalik_takip_sinif(int(ogr["sinif_id"]), hafta).get(int(ogrenci_id), {})
             etiket = {"tam": "Tam", "eksik": "Eksik", "yok": "Yok"}
+            kitap_adi = kayit.get("kitap_adi") or ""
+            kitap_sayfa = int(kayit.get("kitap_sayfa") or 0)
+            kitap_yazar = ""
+            kitap_yayinevi = ""
+            katalog_sayfa = 0
+            for k in sinif_okuma_kitaplari(ogr.get("sinif_adi") or ""):
+                if k.get("ad") == kitap_adi:
+                    kitap_yazar = k.get("yazar") or ""
+                    kitap_yayinevi = k.get("yayinevi") or ""
+                    katalog_sayfa = int(k.get("sayfa") or 0)
+                    break
             haftalik = {
                 "ders": bilgi.get("ders") or "",
                 "aciklama": bilgi.get("aciklama") or "",
-                "kitap_adi": kayit.get("kitap_adi") or "",
+                "kitap_adi": kitap_adi,
+                "kitap_yazar": kitap_yazar,
+                "kitap_yayinevi": kitap_yayinevi,
+                "kitap_sayfa": kitap_sayfa,
+                "katalog_sayfa": katalog_sayfa,
                 "durum": etiket.get(kayit.get("odev_durum") or "", ""),
                 "birey_ders": kayit.get("odev_ders") or "",
                 "birey_not": kayit.get("odev_not") or "",
@@ -2394,12 +2409,19 @@ def veli_panel():
         "kitap_adi": kayit.get("kitap_adi") or "",
         "kitap_sayfa": int(kayit.get("kitap_sayfa") or 0),
     }
-    katalog = 0
-    for k in sinif_okuma_kitaplari(o.get("sinif_adi") or ""):
+    katalog = sinif_okuma_kitaplari(o.get("sinif_adi") or "")
+    katalog_sayfa = 0
+    kitap_yazar = ""
+    kitap_yayinevi = ""
+    for k in katalog:
         if k.get("ad") == hafta["kitap_adi"]:
-            katalog = int(k.get("sayfa") or 0)
+            katalog_sayfa = int(k.get("sayfa") or 0)
+            kitap_yazar = k.get("yazar") or ""
+            kitap_yayinevi = k.get("yayinevi") or ""
             break
-    hafta["katalog_sayfa"] = katalog
+    hafta["katalog_sayfa"] = katalog_sayfa
+    hafta["kitap_yazar"] = kitap_yazar
+    hafta["kitap_yayinevi"] = kitap_yayinevi
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
     lgs_acik = (o.get("sinif_adi") or "") in {"8/A", "8/B"}
@@ -2466,6 +2488,7 @@ def veli_panel():
         odev_ogr=odev_ogr,
         notlar=notlar,
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
+        katalog=katalog,
         kocluk=kocluk,
         lgs_acik=lgs_acik,
         aksam=aksam,
@@ -4782,6 +4805,16 @@ def api_ogretmen_ogrenci_ozet(ogrenci_id: int):
         "getirdi": "Getirdi", "getirmedi": "Getirmedi",
         "tam": "Tam", "eksik": "Eksik", "yok": "Yok",
     }
+    kitap_adi = kayit.get("kitap_adi") or ""
+    kitap_yazar = ""
+    kitap_yayinevi = ""
+    katalog_sayfa = 0
+    for k in sinif_okuma_kitaplari(ogr.get("sinif_adi") or ""):
+        if k.get("ad") == kitap_adi:
+            kitap_yazar = k.get("yazar") or ""
+            kitap_yayinevi = k.get("yayinevi") or ""
+            katalog_sayfa = int(k.get("sayfa") or 0)
+            break
     return jsonify({
         "ok": True,
         "ogrenci": {
@@ -4797,7 +4830,11 @@ def api_ogretmen_ogrenci_ozet(ogrenci_id: int):
             "odev_durum": etiket.get(kayit.get("odev_durum") or "", "İşaretlenmedi"),
             "ders": bilgi.get("ders") or "",
             "aciklama": bilgi.get("aciklama") or "",
-            "kitap_adi": kayit.get("kitap_adi") or "",
+            "kitap_adi": kitap_adi,
+            "kitap_yazar": kitap_yazar,
+            "kitap_yayinevi": kitap_yayinevi,
+            "kitap_sayfa": int(kayit.get("kitap_sayfa") or 0),
+            "katalog_sayfa": katalog_sayfa,
             "birey_ders": kayit.get("odev_ders") or "",
             "birey_not": kayit.get("odev_not") or "",
         },

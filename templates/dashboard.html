@@ -445,7 +445,13 @@ async function ogrenciBilgiAc(id) {
   document.getElementById('bilgi-getirme').textContent = h.kitap_getirme || '—';
   document.getElementById('bilgi-odev').textContent = h.odev_durum || '—';
   const ders = h.ders ? h.ders : 'Ders yazılmadı';
-  const kitap = h.kitap_adi ? h.kitap_adi : 'Kitap seçilmedi';
+  let kitap = h.kitap_adi ? h.kitap_adi : 'Kitap seçilmedi';
+  if (h.kitap_adi) {
+    const parca = [h.kitap_yazar, h.kitap_yayinevi];
+    if (h.katalog_sayfa) parca.push((h.kitap_sayfa || 0) + '/' + h.katalog_sayfa + ' sayfa');
+    else if (h.kitap_sayfa) parca.push(h.kitap_sayfa + ' sayfa');
+    kitap += parca.filter(Boolean).length ? ' · ' + parca.filter(Boolean).join(' · ') : '';
+  }
   const acik = h.aciklama ? h.aciklama : '';
   const birey = (h.birey_ders || h.birey_not) ? ('Özel: ' + (h.birey_ders || '') + ' ' + (h.birey_not || '')) : '';
   document.getElementById('bilgi-odev-metin').textContent = [ders, kitap, acik, birey].filter(Boolean).join(' — ');
