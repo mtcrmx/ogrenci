@@ -11,15 +11,16 @@
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: "Segoe UI", sans-serif; }
+    body { margin: 0; font-family: "Segoe UI", sans-serif; overflow-x: hidden; }
     header { max-width: 980px; margin: .7rem auto 0; padding: 0 16px; color: var(--ui-ink); }
     .bar { border-radius: 32px; padding: 16px 18px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;
-      background: var(--ui-hero); box-shadow: var(--ui-shadow); }
-    .brand { font-weight: 800; }
-    .aksiyon { display: flex; gap: 8px; flex-wrap: wrap; }
+      background: var(--ui-hero); box-shadow: var(--ui-shadow); min-width: 0; }
+    .brand { font-weight: 800; min-width: 0; }
+    .aksiyon { display: flex; gap: 8px; flex-wrap: wrap; min-width: 0; }
     @media (max-width: 720px) {
       .bar { flex-direction: column; align-items: stretch; }
-      .aksiyon { justify-content: flex-start; }
+      .aksiyon { justify-content: flex-start; width: 100%; }
+      a.cikis, a.rapor, button.rapor { text-align: center; }
     }
     a.cikis, a.rapor, button.rapor { color: var(--ui-ink); text-decoration: none; border-radius: 999px; padding: 8px 12px; font-size: 13px; font-weight: 800; box-shadow: var(--ui-shadow-soft); border: 0; background: var(--ui-chip); cursor: pointer; }
     a.rapor, button.rapor { background: var(--ui-chip); }
@@ -75,7 +76,7 @@
     <p class="soluk" style="margin-top:8px">Anne ve baba aynı öğrenci numarasıyla girer. İkisi de aynı ödevi, kararı ve duyuruyu görür.</p>
   </section>
 
-  <section class="kart" id="sabah-ozet" data-sabah="{{ sabah }}">
+  <section class="kart" id="sabah-ozet" data-sabah="{{ sabah|e }}">
     <div class="soluk">Sabah özeti</div>
     <p style="margin:8px 0 0;font-weight:800">{{ sabah }}</p>
     <button type="button" id="haber-izin" style="width:auto;margin-top:10px">Telefonda haber ver</button>
@@ -207,19 +208,6 @@
     <p class="soluk">Öğretmen henüz bu öğrenciye kitap vermedi.</p>
   </section>
   {% endif %}
-  {% if katalog %}
-  <section class="kart">
-    <strong>{{ ogrenci.sinif_adi }} okuma listesi ({{ katalog|length }})</strong>
-    <ul style="margin:8px 0 0;padding-left:18px;max-height:280px;overflow:auto">
-      {% for k in katalog %}
-      <li>
-        <b>{{ k.ad }}</b>
-        <span class="soluk">{% if k.yazar %}{{ k.yazar }}{% endif %}{% if k.yayinevi %} · {{ k.yayinevi }}{% endif %}{% if k.sayfa %} · {{ k.sayfa }} sayfa{% endif %}</span>
-      </li>
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
 
   <div class="iki">
     <section class="kart">
@@ -244,7 +232,7 @@
     </section>
   </div>
 </main>
-{% if ogrenci.sinif_adi.startswith('5/') or ogrenci.sinif_adi.startswith('6/') or ogrenci.sinif_adi.startswith('7/') %}
+{% if (ogrenci.sinif_adi or '').startswith('5/') or (ogrenci.sinif_adi or '').startswith('6/') or (ogrenci.sinif_adi or '').startswith('7/') %}
 <div id="kulup-duyuru" class="duyuru" hidden>
   <div class="duyuru-kutu">
     <img src="{{ url_for('static', filename='cocuk-kulubu.jpg') }}" alt="Çocuk Kulübü açılıyor. 5, 6 ve 7. sınıflar başvurabilir.">

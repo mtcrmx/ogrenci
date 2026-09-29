@@ -2409,11 +2409,11 @@ def veli_panel():
         "kitap_adi": kayit.get("kitap_adi") or "",
         "kitap_sayfa": int(kayit.get("kitap_sayfa") or 0),
     }
-    katalog = sinif_okuma_kitaplari(o.get("sinif_adi") or "")
+    sinif_katalog = sinif_okuma_kitaplari(o.get("sinif_adi") or "")
     katalog_sayfa = 0
     kitap_yazar = ""
     kitap_yayinevi = ""
-    for k in katalog:
+    for k in sinif_katalog:
         if k.get("ad") == hafta["kitap_adi"]:
             katalog_sayfa = int(k.get("sayfa") or 0)
             kitap_yazar = k.get("yazar") or ""
@@ -2466,7 +2466,7 @@ def veli_panel():
         aksam = f"LGS {TEMPO_AD.get(tempo, tempo)}: {program_bugun}. " + aksam
     kitap_satir = hafta["kitap_adi"] or "kitap seçilmedi"
     if hafta["kitap_adi"]:
-        kitap_satir += f" {hafta['kitap_sayfa']}" + (f"/{katalog}" if katalog else "") + " sayfa"
+        kitap_satir += f" {hafta['kitap_sayfa']}" + (f"/{katalog_sayfa}" if katalog_sayfa else "") + " sayfa"
     sabah = f"Bugün {gunler_tr[bugun.weekday()]}. Kitap: {kitap_satir}. Ödev: {ders_adi or 'yazılmadı'}. {is_metni}".strip()
     duzen = veli_duzen(int(ogrenci_id))
     if duzen["fark"] > 0:
@@ -2488,7 +2488,6 @@ def veli_panel():
         odev_ogr=odev_ogr,
         notlar=notlar,
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
-        katalog=katalog,
         kocluk=kocluk,
         lgs_acik=lgs_acik,
         aksam=aksam,
