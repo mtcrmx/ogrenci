@@ -4,20 +4,24 @@
 {% block body %}
 <div class="dashboard-shell flex">
 
-  <!-- ══════════════════════════════════════════════════════════════
-       Sol Kenar Çubuğu – Sınıf Listesi
-  ══════════════════════════════════════════════════════════════ -->
   <aside id="sidebar"
-         class="dashboard-sidebar w-[82vw] max-w-xs lg:w-52 border-r border-slate-200 flex-shrink-0
-                overflow-y-auto
-                fixed lg:static inset-y-0 left-0 top-14 z-50
-                -translate-x-full lg:translate-x-0 transition-transform duration-200">
+         class="dashboard-sidebar w-[82vw] max-w-xs lg:w-56 border-r border-slate-200 flex-shrink-0
+                 overflow-y-auto
+                 fixed lg:static inset-y-0 left-0 top-14 z-50
+                 -translate-x-full lg:translate-x-0 transition-transform duration-200">
 
-    <div class="px-3 pt-4 pb-2">
+    <div class="sidebar-brand mx-3 mt-4 px-4 py-5">
+      <div class="sidebar-brand-icon" aria-hidden="true">📚</div>
+      <p class="mt-3 text-[10px] font-black uppercase tracking-widest">Öğretmen alanı</p>
+      <h2 class="mt-1 text-lg font-black leading-tight break-words">Merhaba! 👋</h2>
+      <p class="mt-1 text-xs font-semibold break-words">{{ session.ogretmen_adi }}</p>
+    </div>
+
+    <div class="dashboard-sidebar-nav px-3 pt-5 pb-2">
       <div class="mb-3 flex items-center justify-between gap-2 px-1">
         <div>
-          <p class="text-[10px] font-bold text-slate-400 tracking-widest">SINIFLARIM</p>
-          <p class="text-xs text-slate-500">Sınıf değiştir</p>
+          <p class="dashboard-sidebar-heading text-[10px] font-black uppercase tracking-widest">Sınıflarım</p>
+          <p class="text-xs text-slate-500">Bir sınıf seçin</p>
         </div>
         <button type="button"
                 onclick="closeSidebar()"
@@ -28,24 +32,26 @@
 
       {% for s in siniflar %}
       <a href="{{ url_for('dashboard', sinif=s.id) }}"
-         class="class-link block w-full font-bold text-sm px-3 py-2.5 mb-1.5 rounded-lg
+         class="class-link flex items-center gap-2.5 w-full font-bold text-sm px-3 py-2.5 mb-1.5 rounded-lg
                 border transition
                 {% if aktif and s.id == aktif.id %}
                   bg-violet-400 text-white border-transparent shadow
                 {% else %}
                   bg-white text-violet-900 border-transparent hover:bg-violet-50
                 {% endif %}"
+         {% if aktif and s.id == aktif.id %}aria-current="page"{% endif %}
          onclick="closeSidebar()">
-        {{ s.sinif_adi }}
+        <span class="class-link-icon" aria-hidden="true">✦</span>
+        <span class="min-w-0 break-words">{{ s.sinif_adi }}</span>
       </a>
       {% endfor %}
     </div>
 
     {% if aktif %}
-    <div class="px-3 pb-4 mt-2 border-t border-slate-200 pt-3">
+    <div class="dashboard-sidebar-footer px-3 pb-5 mt-3 pt-4">
       <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}"
-         class="block w-full text-center text-xs font-black py-2 rounded-full bg-emerald-300 text-emerald-950">
-        Kitap ve ödev
+         class="dashboard-sidebar-action flex items-center justify-center gap-2 w-full text-center text-xs font-black py-3 rounded-full bg-emerald-300 text-emerald-950">
+        <span aria-hidden="true">✏️</span> Kitap ve ödev <span aria-hidden="true">→</span>
       </a>
     </div>
     {% endif %}
@@ -82,28 +88,27 @@
     {% endif %}
 
     {% if aktif %}
-    <!-- Üst başlık + araçlar -->
     <div class="teacher-toolbar sticky top-0 z-10 px-3 sm:px-4 py-3
-                flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+                flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
       <button type="button"
               onclick="toggleSidebar()"
               class="lg:hidden inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700">
         ☰ Sınıflar
       </button>
       <div class="w-full sm:flex-1 min-w-0">
-        <h2 class="font-bold text-slate-800 text-sm sm:text-base break-words">
-          📚 {{ aktif.sinif_adi }} Şubesi —
-          <span class="font-normal text-slate-500">{{ ogrenciler|length }} öğrenci</span>
-        </h2>
-        <p class="text-xs text-slate-400" id="guncelleme-info">
-          Öğrenci listesi
-        </p>
+        <p class="dashboard-kicker text-[10px] font-black uppercase tracking-widest">Öğretmen paneli</p>
+        <h1 class="dashboard-page-title text-xl sm:text-2xl font-black break-words">Kontrol paneli</h1>
+        <p class="text-xs text-slate-500" id="guncelleme-info">{{ aktif.sinif_adi }} şubesi · {{ ogrenciler|length }} öğrenci</p>
       </div>
 
-      <input type="text" id="ara" placeholder="Ara..."
-             oninput="filtrele()"
-             class="search-field border border-slate-300 rounded-lg px-3 py-1.5 text-sm
-                    w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <label for="ara" class="sr-only">Öğrenci ara</label>
+      <div class="dashboard-search relative w-full sm:w-56">
+        <span class="dashboard-search-icon absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true">⌕</span>
+        <input type="search" id="ara" placeholder="Öğrenci ara..."
+               oninput="filtrele()"
+               class="search-field border border-slate-300 rounded-full pl-9 pr-3 py-2 text-sm
+                      w-full focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
 
       <div class="flex gap-1.5 sm:hidden w-full flex-wrap">
         <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}"
@@ -123,23 +128,62 @@
       <button type="button" data-dashboard-section-btn="liste">Öğrenciler</button>
     </div>
 
-    <section class="dashboard-hero dashboard-mobile-section mx-3 mt-3 p-4 sm:p-5" data-dashboard-section="ozet">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="min-w-0">
-          <p class="text-[11px] font-black uppercase tracking-widest text-violet-700">Sınıf</p>
-          <h2 class="mt-1 text-xl sm:text-2xl font-black text-violet-950">{{ aktif.sinif_adi }} Şubesi</h2>
+    <section class="dashboard-hero dashboard-mobile-section mx-3 mt-3 p-5 sm:p-6" data-dashboard-section="ozet">
+      <div class="dashboard-welcome flex items-center justify-between gap-5">
+        <div class="dashboard-welcome-copy min-w-0">
+          <p class="dashboard-kicker text-[11px] font-black uppercase tracking-widest">✨ Bugünün sınıfı</p>
+          <h2 class="dashboard-welcome-title mt-2 text-2xl sm:text-3xl font-black break-words">Merhaba, {{ session.ogretmen_adi }}! 👋</h2>
+          <p class="dashboard-welcome-subtitle mt-2 text-sm font-medium">{{ aktif.sinif_adi }} şubesinin kitap ve ödev takibini buradan kolayca sürdürebilirsiniz.</p>
+          <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}" class="dashboard-hero-action inline-flex items-center gap-2 mt-4 rounded-full px-5 py-2.5 text-sm font-black">
+            Takibi aç <span aria-hidden="true">→</span>
+          </a>
         </div>
-        <div class="metric-card px-4 py-3">
-          <span class="block text-[10px] font-black uppercase text-slate-500">Öğrenci</span>
-          <strong class="mt-1 block text-2xl font-black text-slate-950">{{ ogrenciler|length }}</strong>
+        <div class="dashboard-hero-art hidden sm:flex" aria-hidden="true">
+          <img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="240" height="200">
         </div>
       </div>
     </section>
 
-    <div class="dashboard-mobile-section px-3 pt-3" data-dashboard-section="islem">
-      <section class="grid gap-3 lg:grid-cols-2">
-        <div class="action-group p-3">
-          <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Günlük takip</h3>
+    <section class="dashboard-stats dashboard-mobile-section mx-3 mt-4" data-dashboard-section="ozet" aria-label="Sınıf özeti">
+      <div class="dashboard-stat-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="metric-card dashboard-stat dashboard-stat--lilac p-4">
+        <span class="dashboard-stat-icon" aria-hidden="true">👥</span>
+        <p class="dashboard-stat-label mt-3 text-xs font-bold">Öğrenciler</p>
+        <strong class="dashboard-stat-value block text-2xl font-black" id="ozet-ogrenci-sayisi">{{ ogrenciler|length }}</strong>
+        <span class="dashboard-stat-hint text-xs">{{ aktif.sinif_adi }} şubesinde</span>
+      </div>
+      <div class="metric-card dashboard-stat dashboard-stat--pink p-4">
+        <span class="dashboard-stat-icon" aria-hidden="true">🏫</span>
+        <p class="dashboard-stat-label mt-3 text-xs font-bold">Sınıflar</p>
+        <strong class="dashboard-stat-value block text-2xl font-black">{{ siniflar|length }}</strong>
+        <span class="dashboard-stat-hint text-xs">Panelinizde kayıtlı</span>
+      </div>
+      <div class="metric-card dashboard-stat dashboard-stat--peach p-4">
+        <span class="dashboard-stat-icon" aria-hidden="true">✉️</span>
+        <p class="dashboard-stat-label mt-3 text-xs font-bold">Bekleyen onay</p>
+        <strong class="dashboard-stat-value block text-2xl font-black">{{ onay_sayisi }}</strong>
+        <span class="dashboard-stat-hint text-xs">İncelenecek bildirim</span>
+      </div>
+      <div class="metric-card dashboard-stat dashboard-stat--sky p-4">
+        <span class="dashboard-stat-icon" aria-hidden="true">☀️</span>
+        <p class="dashboard-stat-label mt-3 text-xs font-bold">Bugün gelmeyecek</p>
+        <strong class="dashboard-stat-value block text-2xl font-black">{{ gelmeyen|length }}</strong>
+        <span class="dashboard-stat-hint text-xs">{{ aktif.sinif_adi }} şubesinde</span>
+      </div>
+      </div>
+    </section>
+
+    <div class="dashboard-mobile-section px-3 pt-6" data-dashboard-section="islem">
+      <div class="dashboard-section-heading mb-3">
+        <div>
+          <p class="dashboard-kicker text-[10px] font-black uppercase tracking-widest">Kısayollar</p>
+          <h2 class="text-lg font-black">Hızlı erişim</h2>
+        </div>
+        <span class="dashboard-heading-spark" aria-hidden="true">✦</span>
+      </div>
+      <section class="dashboard-actions grid gap-3 lg:grid-cols-2">
+        <div class="action-group dashboard-action-card dashboard-action-card--mint p-4">
+          <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Günlük takip</h3>
           <div class="mt-3 grid gap-1.5">
             <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}" class="action-row">
               <span class="nav-mark mark-emerald">KÖ</span>
@@ -150,8 +194,8 @@
             </a>
           </div>
         </div>
-        <div class="action-group p-3">
-          <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Rapor</h3>
+        <div class="action-group dashboard-action-card dashboard-action-card--cream p-4">
+          <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Raporlar</h3>
           <div class="mt-3 grid gap-1.5">
             <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}" class="action-row">
               <span class="nav-mark mark-rose">AN</span>
@@ -166,7 +210,15 @@
       </section>
     </div>
 
-    <!-- Öğrenci Listesi -->
+    <div class="dashboard-section-heading dashboard-mobile-section is-mobile-active mx-3 mt-6 mb-1" data-dashboard-section="liste">
+      <div class="dashboard-section-heading-inner flex items-center justify-between gap-3">
+        <div>
+          <p class="dashboard-kicker text-[10px] font-black uppercase tracking-widest">{{ aktif.sinif_adi }} şubesi</p>
+          <h2 class="text-lg font-black">Öğrenciler</h2>
+        </div>
+        <span class="dashboard-section-count text-xs font-black" id="ogrenci-sayisi">{{ ogrenciler|length }} öğrenci</span>
+      </div>
+    </div>
     <div id="ogrenci-listesi" class="student-list dashboard-mobile-section is-mobile-active p-3 space-y-2" data-dashboard-section="liste">
       {% for o in ogrenciler %}
       {{ ogrenci_karti(o, aktif.id) }}
@@ -179,28 +231,31 @@
     </div>
 
     {% else %}
-    <div class="flex items-center justify-center h-full text-slate-400 text-sm">
-      Sol menüden bir sınıf seçin.
+    <div class="dashboard-empty-state mx-3 mt-5 p-6 text-center">
+      <span class="block text-4xl" aria-hidden="true">📚</span>
+      <h1 class="mt-3 text-xl font-black">Henüz sınıf görünmüyor</h1>
+      <p class="mt-2 text-sm">Sınıfınızı görmek için soldaki menüyü kullanın.</p>
     </div>
     {% endif %}
   </main>
 </div>
 
-<div id="ogrenci-bilgi" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-  <div class="max-h-[calc(100svh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
-    <div class="flex items-start justify-between gap-3 bg-gradient-to-r from-violet-300 to-pink-200 px-5 py-4 text-violet-950">
+<div id="ogrenci-bilgi" class="student-info-overlay fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+  <div class="student-info-dialog max-h-[calc(100svh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl"
+       role="dialog" aria-modal="true" aria-labelledby="bilgi-ad">
+    <div class="student-info-header flex items-start justify-between gap-3 bg-gradient-to-r from-violet-300 to-pink-200 px-5 py-4 text-violet-950">
       <div>
         <p class="text-xs text-violet-800">Öğrenci</p>
         <h3 id="bilgi-ad" class="text-lg font-black">—</h3>
         <p id="bilgi-alt" class="text-xs text-violet-800"></p>
       </div>
-      <button type="button" id="bilgi-kapat" class="text-2xl leading-none text-violet-900/70">×</button>
+      <button type="button" id="bilgi-kapat" class="student-info-close text-2xl leading-none text-violet-900/70" aria-label="Pencereyi kapat">×</button>
     </div>
     <div class="space-y-4 p-4 text-sm text-slate-700">
       <div class="grid grid-cols-3 gap-2">
-        <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Kitap</div><div id="bilgi-okuma" class="mt-1 font-black text-slate-950">—</div></div>
-        <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Getirme</div><div id="bilgi-getirme" class="mt-1 font-black text-slate-950">—</div></div>
-        <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Ödev</div><div id="bilgi-odev" class="mt-1 font-black text-slate-950">—</div></div>
+        <div class="student-info-stat student-info-stat--lilac rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Kitap</div><div id="bilgi-okuma" class="mt-1 font-black text-slate-950">—</div></div>
+        <div class="student-info-stat student-info-stat--peach rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Getirme</div><div id="bilgi-getirme" class="mt-1 font-black text-slate-950">—</div></div>
+        <div class="student-info-stat student-info-stat--mint rounded-xl bg-slate-50 p-3"><div class="text-[10px] font-black uppercase text-slate-400">Ödev</div><div id="bilgi-odev" class="mt-1 font-black text-slate-950">—</div></div>
       </div>
       <div id="bilgi-odev-metin" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"></div>
       <div>
@@ -227,15 +282,17 @@
 
 {# ── Makro: Öğrenci Kartı ─────────────────────────────────────────────── #}
 {% macro ogrenci_karti(o, sinif_id) %}
-<div class="ogrenci-kart flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300"
+<div class="ogrenci-kart flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300"
      data-ad="{{ o.ad_soyad }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}"
      role="button" tabindex="0">
+  <span class="student-avatar flex-shrink-0" aria-hidden="true">{{ o.emoji }}</span>
   <div class="flex-1 min-w-0">
     <div class="font-bold text-slate-800 text-sm break-words">
-      <span class="mr-1">{{ o.emoji }}</span>{{ o.ad_soyad }}
+      {{ o.ad_soyad }}
     </div>
     <div class="text-xs text-slate-500">No: {{ o.ogr_no }}</div>
   </div>
+  <span class="student-card-arrow flex-shrink-0" aria-hidden="true">→</span>
 </div>
 {% endmacro %}
 
@@ -302,14 +359,21 @@ async function yenile() {
     if (ara) filtrele();
     const bar = document.getElementById('durum-bar');
     if (bar) bar.textContent = data.length + ' öğrenci';
+    const sayi = document.getElementById('ogrenci-sayisi');
+    if (sayi) sayi.textContent = data.length + ' öğrenci';
+    const ozetSayi = document.getElementById('ozet-ogrenci-sayisi');
+    if (ozetSayi) ozetSayi.textContent = data.length;
   } catch (e) {}
 }
 
 function kartHTML(o) {
   const ad = String(o.ad_soyad || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  return '<div class="ogrenci-kart flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300" data-ad="' + ad + '" data-id="' + o.id + '" role="button">' +
-    '<div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm break-words"><span class="mr-1">' + (o.emoji || '') + '</span>' + ad + '</div>' +
-    '<div class="text-xs text-slate-500">No: ' + (o.ogr_no || '') + '</div></div></div>';
+  const emoji = String(o.emoji || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  return '<div class="ogrenci-kart flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300" data-ad="' + ad + '" data-id="' + o.id + '" data-sinif="' + SINIF_ID + '" role="button" tabindex="0">' +
+    '<span class="student-avatar flex-shrink-0" aria-hidden="true">' + emoji + '</span>' +
+    '<div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm break-words">' + ad + '</div>' +
+    '<div class="text-xs text-slate-500">No: ' + (o.ogr_no || '') + '</div></div>' +
+    '<span class="student-card-arrow flex-shrink-0" aria-hidden="true">→</span></div>';
 }
 
 // İlk yükleme + periyodik güncelleme
@@ -317,6 +381,7 @@ setInterval(yenile, 10_000);
 
 const bilgi = document.getElementById('ogrenci-bilgi');
 let bilgiOgrenciId = 0;
+let bilgiOncekiOdak = null;
 
 function notSatiri(n) {
   const tur = n.tur === 'uyari' ? 'Uyarı' : (n.tur === 'olumlu' ? 'Olumlu' : (n.tur === 'duyuru' ? 'Duyuru' : 'Not'));
@@ -328,8 +393,10 @@ function notSatiri(n) {
 
 async function ogrenciBilgiAc(id) {
   bilgiOgrenciId = Number(id);
+  bilgiOncekiOdak = document.activeElement;
   bilgi.classList.remove('hidden');
   bilgi.classList.add('flex');
+  document.getElementById('bilgi-kapat').focus();
   document.getElementById('bilgi-ad').textContent = 'Yükleniyor...';
   document.getElementById('bilgi-notlar').innerHTML = '';
   document.getElementById('bilgi-sonuc').textContent = '';
@@ -361,13 +428,27 @@ async function ogrenciBilgiAc(id) {
 function bilgiKapat() {
   bilgi.classList.add('hidden');
   bilgi.classList.remove('flex');
+  if (bilgiOncekiOdak && bilgiOncekiOdak.isConnected) bilgiOncekiOdak.focus();
 }
 document.getElementById('bilgi-kapat').addEventListener('click', bilgiKapat);
 bilgi.addEventListener('click', (e) => { if (e.target === bilgi) bilgiKapat(); });
-document.getElementById('ogrenci-listesi').addEventListener('click', (e) => {
-  const kart = e.target.closest('.ogrenci-kart');
-  if (kart) ogrenciBilgiAc(kart.dataset.id);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !bilgi.classList.contains('hidden')) bilgiKapat();
 });
+const ogrenciListesi = document.getElementById('ogrenci-listesi');
+if (ogrenciListesi) {
+  ogrenciListesi.addEventListener('click', (e) => {
+    const kart = e.target.closest('.ogrenci-kart');
+    if (kart) ogrenciBilgiAc(kart.dataset.id);
+  });
+  ogrenciListesi.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const kart = e.target.closest('.ogrenci-kart');
+    if (!kart) return;
+    e.preventDefault();
+    ogrenciBilgiAc(kart.dataset.id);
+  });
+}
 document.getElementById('bilgi-form').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-tur]');
   if (!btn || !bilgiOgrenciId) return;
