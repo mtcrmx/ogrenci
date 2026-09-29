@@ -7,9 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
+  <link rel="stylesheet" href="{{ url_for('static', filename='login_motion.css') }}?v=20260929d">
+  <script defer src="{{ url_for('static', filename='login_motion.js') }}?v=20260929b"></script>
 </head>
 <body class="ui-theme min-h-screen overflow-x-hidden">
-  <main class="ui-shell flex min-h-screen items-center py-8">
+  {% include "_login_motion.html" %}
+  <main class="login-stage ui-shell flex min-h-screen items-center py-8">
     <section class="grid w-full gap-5 lg:grid-cols-[.95fr_1.05fr]">
       <div class="ui-hero p-6 sm:p-8">
         <div class="relative z-10 flex h-full min-h-[340px] flex-col justify-between">

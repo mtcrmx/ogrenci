@@ -1,0 +1,96 @@
+body.ui-theme:has(.login-stage),
+body.app-background:has(.login-stage) {
+  background: #e8d7f5 !important;
+}
+
+body.ui-theme:has(.login-stage)::before,
+body.ui-theme:has(.login-stage)::after,
+body.app-background:has(.login-stage)::before,
+body.app-background:has(.login-stage)::after {
+  display: none;
+}
+
+.login-motion-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #e8d7f5;
+}
+
+.login-motion-backdrop :is(img, video) {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.login-motion-video {
+  opacity: 0;
+  transition: opacity .9s ease;
+}
+
+.login-motion-backdrop.is-playing .login-motion-video { opacity: 1; }
+
+.login-motion-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(253,246,249,.13), rgba(245,237,255,.04) 55%, rgba(255,247,238,.14));
+}
+
+body.ui-theme main.login-stage.ui-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, calc(100% - 32px));
+  margin: clamp(16px, 4vh, 44px) auto;
+  border: 1px solid rgba(255,255,255,.82);
+  background: rgba(255,250,248,.28) !important;
+  box-shadow: inset 2px 3px 5px rgba(255,255,255,.76),
+    0 12px 26px -15px rgba(82,52,113,.32),
+    0 30px 60px -26px rgba(74,47,106,.26) !important;
+  -webkit-backdrop-filter: saturate(1.08);
+  backdrop-filter: saturate(1.08);
+}
+
+body.ui-theme .login-stage .ui-hero {
+  background: linear-gradient(145deg, rgba(250,238,255,.37), rgba(255,239,245,.30)) !important;
+}
+
+body.ui-theme .login-stage .ui-card {
+  background: rgba(255,251,249,.95) !important;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+body.ui-theme .login-stage input,
+body.ui-theme .login-stage select {
+  background-color: rgba(255,255,255,.92) !important;
+}
+
+@media (max-width: 640px) {
+  .login-motion-backdrop :is(img, video) { object-position: 15% center; }
+  body.ui-theme:has(.login-stage) .renk-ayari-fab {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    display: inline-flex;
+    margin: 0 0 16px 16px;
+  }
+  body.ui-theme main.login-stage.ui-shell {
+    width: calc(100% - 16px);
+    margin: 8px auto 20px;
+    padding: 12px;
+    border-radius: 28px;
+  }
+  body.ui-theme .login-stage .ui-hero,
+  body.ui-theme .login-stage .ui-card { border-radius: 24px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-motion-video { display: none; transition: none; }
+}
