@@ -12,7 +12,7 @@
   <title>Veli paneli · {{ ogrenci.ad_soyad }}</title>
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
-  <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930f">
+  <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930g">
   <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
 </head>
 <body class="ui-theme veli-ekran veli-clay-page">
@@ -165,7 +165,36 @@
       {% set okunan = kitaplar|selectattr('kitap_okuma', 'equalto', 'okudu')|list %}
       {% if okunan %}<details class="vp-read-books"><summary>Şimdiye kadar okudukları · {{ okunan|length }} kitap</summary><ul>{% for k in okunan %}<li><strong>{{ k.kitap_adi }}</strong><span class="vp-muted">{% if k.yazar %}{{ k.yazar }} · {% endif %}{% if k.yayinevi %}{{ k.yayinevi }} · {% endif %}{% if k.sayfa %}{{ k.sayfa }} sayfa · {% endif %}{{ k.hafta_basi }}</span></li>{% endfor %}</ul></details>{% endif %}
       {% else %}<p class="vp-muted">Öğretmen henüz bu öğrenciye kitap vermedi.</p>{% endif %}
+      {% if hafta_kitap_icerik %}
+      <div class="vp-book-preview">
+        <p class="vp-eyebrow">Bu haftanın kitabı ne anlatıyor?</p>
+        <h3>{{ hafta_kitap_icerik.ad }}</h3>
+        <p>{{ hafta_kitap_icerik.konu }}</p>
+        <p class="vp-muted">Okuyup bitirince <strong>{{ hafta_kitap_icerik.deger_emoji }} {{ hafta_kitap_icerik.deger }} rozeti</strong> kazanacak.</p>
+      </div>
+      {% endif %}
     </section>
+
+    {% if kitap_kazanimlari %}
+    <section class="vp-card vp-gains-card" id="kitap-kazanimlari" aria-labelledby="vp-gains-heading">
+      <div class="vp-section-head"><div><p class="vp-eyebrow">OKUDUKÇA BÜYÜYOR</p><h2 id="vp-gains-heading">Kitaplarla kazandıkları</h2></div><span class="vp-section-deco" aria-hidden="true">✦</span></div>
+      <div class="vp-gain-values">{% for d in kitap_kazanimlari|groupby('deger') %}<span class="vp-gain-chip">{{ d.list[0].deger_emoji }} {{ d.grouper }}{% if d.list|length > 1 %} ×{{ d.list|length }}{% endif %}</span>{% endfor %}</div>
+      {% for k in kitap_kazanimlari %}
+      <details class="vp-gain"{% if loop.first %} open{% endif %}>
+        <summary><span class="vp-gain-medal" aria-hidden="true">{{ k.deger_emoji }}</span><span><strong>{{ k.ad }}</strong><small>{{ k.yazar }} · {{ k.deger }} rozeti · {{ k.tarih }}</small></span></summary>
+        <div class="vp-gain-body">
+          <p><strong>Kitap ne anlatıyor?</strong> {{ k.konu }}</p>
+          <p><strong>Yazar ne demek istiyor?</strong> {{ k.mesaj }}</p>
+          <h4>Bu kitapla ulaştıkların</h4>
+          <ul>{% for m in k.ulastiklarin %}<li>{{ m }}</li>{% endfor %}</ul>
+          {% if k.bilgiler %}<h4>Öğrendiğin bilgiler</h4>
+          <ul>{% for m in k.bilgiler %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+          <p class="vp-gain-value"><span aria-hidden="true">{{ k.deger_emoji }}</span> <strong>{{ k.deger }} rozeti:</strong> {{ k.deger_neden }}</p>
+        </div>
+      </details>
+      {% endfor %}
+    </section>
+    {% endif %}
 
     <div class="vp-communication">
       <section class="vp-card" id="notlar" aria-labelledby="vp-notes-heading">

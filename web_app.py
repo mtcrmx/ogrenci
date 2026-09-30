@@ -11,6 +11,7 @@ from flask import (
     Flask, render_template, request, redirect, url_for,
     session, jsonify, send_file, make_response, flash, abort,
 )
+from kitap_icerikleri import KITAPLA_KAZANILAN_DEGERLER, deger_bilgisi, deger_kodu, kitap_icerigi
 from database import (
     ogrenci_ozellikleri_getir, ogrenci_ozellik_artir,
     initialize_db, KRITERLER, OLUMLU_KRITERLER,
@@ -77,7 +78,7 @@ from database import (
     devamsizlik_kaydet, devamsizlik_sinif, devamsizlik_ogrenci,
     odev_foto_kaydet, veli_duzen,
     sinif_okuma_kitaplari,
-    ogrenci_verilen_kitaplar,
+    ogrenci_verilen_kitaplar, ogrenci_kitap_kazanimlari,
     lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_bildir, lgs_gorev_onayla,
     lgs_gunluk_ekle, lgs_gunluk_liste, lgs_gunluk_onayla, lgs_deneme_ekle, lgs_deneme_onek_sil, lgs_denemeler,
     lgs_tempo_kaydet, lgs_tempo_sinifa, lgs_tempo_harita, lgs_ay_durum, lgs_ay_kaydet,
@@ -615,6 +616,25 @@ def _rozet_koleksiyonu(ogrenci_id: int) -> dict:
             kazanilan.append({"kod": kayit["rozet_kodu"], "emoji": kayit["emoji"],
                               "ad": kayit["rozet_adi"], "aciklama": "Kazanılmış özel rozet",
                               "tarih": kayit["tarih"]})
+    kitap_degerleri: dict[str, dict] = {}
+    for k in ogrenci_kitap_kazanimlari(ogrenci_id):
+        rozet = kitap_degerleri.setdefault(k["deger"], {
+            "kod": "deger_" + deger_kodu(k["deger"]), "emoji": k["deger_emoji"],
+            "ad": f"{k['deger']} Rozeti", "kitaplar": [], "tarih": k["tarih"],
+        })
+        rozet["kitaplar"].append(k["ad"])
+        rozet["tarih"] = min(rozet["tarih"], k["tarih"]) if rozet["tarih"] else k["tarih"]
+    for rozet in kitap_degerleri.values():
+        rozet["aciklama"] = "Kitapla kazanıldı: " + ", ".join(rozet.pop("kitaplar"))
+        kazanilan.append(rozet)
+    ogrenci = _ogrenci_bul(ogrenci_id)
+    if ogrenci and (ogrenci.get("sinif_adi") or "").startswith("5"):
+        for deger in KITAPLA_KAZANILAN_DEGERLER:
+            if deger not in kitap_degerleri:
+                emoji, aciklama = deger_bilgisi(deger)
+                kilitli.append({"kod": "deger_" + deger_kodu(deger), "emoji": emoji,
+                                "ad": f"{deger} Rozeti", "aciklama": f"Bu değeri işleyen bir kitabı oku. {aciklama}",
+                                "tarih": ""})
     kazanilan.sort(key=lambda r: r["tarih"], reverse=True)
     return {"kazanilan": kazanilan, "kilitli": kilitli,
             "toplam": len(kazanilan) + len(kilitli)}
@@ -2465,6 +2485,14 @@ def veli_panel():
     hafta["katalog_sayfa"] = katalog_sayfa
     hafta["kitap_yazar"] = kitap_yazar
     hafta["kitap_yayinevi"] = kitap_yayinevi
+    kitap_kazanimlari = ogrenci_kitap_kazanimlari(int(ogrenci_id))
+    okunan_adlar = {k["ad"] for k in kitap_kazanimlari}
+    hafta_kitap_icerik = None
+    if (o.get("sinif_adi") or "").startswith("5") and hafta["kitap_adi"]:
+        icerik = kitap_icerigi(hafta["kitap_adi"])
+        if icerik and icerik["ad"] not in okunan_adlar:
+            emoji, _ = deger_bilgisi(icerik["deger"])
+            hafta_kitap_icerik = {**icerik, "deger_emoji": emoji}
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
     lgs_acik = (o.get("sinif_adi") or "") in {"8/A", "8/B"}
@@ -2531,6 +2559,8 @@ def veli_panel():
         odev_ogr=odev_ogr,
         notlar=notlar,
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
+        kitap_kazanimlari=kitap_kazanimlari,
+        hafta_kitap_icerik=hafta_kitap_icerik,
         rozet_koleksiyonu=_rozet_koleksiyonu(int(ogrenci_id)),
         kocluk=kocluk,
         lgs_acik=lgs_acik,

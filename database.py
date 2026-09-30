@@ -1155,6 +1155,53 @@ def ogrenci_verilen_kitaplar(ogrenci_id: int) -> list[dict]:
     return rows
 
 
+def ogrenci_kitap_kazanimlari(ogrenci_id: int) -> list[dict]:
+    """5. sınıf öğrencisinin okuduğu kitaplardan kazandığı değerler ve kazanımlar."""
+    from kitap_icerikleri import kitap_icerigi, deger_bilgisi
+    con = _conn()
+    _haftalik_takip_init(con)
+    _kitap_okuma_init(con)
+    ogr = con.execute(
+        "SELECT s.sinif_adi FROM ogrenciler o JOIN siniflar s ON s.id = o.sinif_id WHERE o.id = ?",
+        (int(ogrenci_id),),
+    ).fetchone()
+    if not ogr or not (ogr["sinif_adi"] or "").startswith("5"):
+        con.close()
+        return []
+    okunan = [
+        (r["kitap_adi"], r["tarih"])
+        for r in con.execute(
+            "SELECT kitap_adi, hafta_basi AS tarih FROM haftalik_takip "
+            "WHERE ogrenci_id = ? AND kitap_okuma = 'okudu' AND kitap_adi != ''",
+            (int(ogrenci_id),),
+        ).fetchall()
+    ] + [
+        (r["kitap_adi"], (r["tarih"] or "")[:10])
+        for r in con.execute(
+            "SELECT kitap_adi, COALESCE(NULLIF(onay_tarihi, ''), veli_tarih) AS tarih "
+            "FROM kitap_okuma_kayitlari WHERE ogrenci_id = ? AND durum = 'onaylandi'",
+            (int(ogrenci_id),),
+        ).fetchall()
+    ]
+    con.close()
+    kitaplar: dict[str, dict] = {}
+    for ad, tarih in okunan:
+        icerik = kitap_icerigi(ad)
+        if not icerik:
+            continue
+        onceki = kitaplar.get(icerik["ad"])
+        if onceki and onceki["tarih"] <= (tarih or ""):
+            continue
+        emoji, deger_aciklama = deger_bilgisi(icerik["deger"])
+        kitaplar[icerik["ad"]] = {
+            **icerik,
+            "tarih": tarih or "",
+            "deger_emoji": emoji,
+            "deger_aciklama": deger_aciklama,
+        }
+    return sorted(kitaplar.values(), key=lambda k: k["tarih"], reverse=True)
+
+
     con.commit()
 
 
@@ -5780,6 +5827,28 @@ def ogretmen_giris_haftalari(ogretmen_id: int, haftalar: list[str]) -> list[dict
     return liste
 
 
+def _kitap_deger_rozeti_metni(con: sqlite3.Connection, ogrenci_id: int, kitap_adi: str = "") -> str:
+    from kitap_icerikleri import kitap_icerigi, deger_bilgisi
+    _haftalik_takip_init(con)
+    row = con.execute(
+        """
+        SELECT s.sinif_adi,
+               (SELECT h.kitap_adi FROM haftalik_takip h
+                WHERE h.ogrenci_id = o.id AND h.kitap_okuma = 'okudu' AND h.kitap_adi != ''
+                ORDER BY h.guncelleme DESC LIMIT 1) AS kitap_adi
+        FROM ogrenciler o JOIN siniflar s ON s.id = o.sinif_id WHERE o.id = ?
+        """,
+        (int(ogrenci_id),),
+    ).fetchone()
+    if not row or not (row["sinif_adi"] or "").startswith("5"):
+        return ""
+    icerik = kitap_icerigi(kitap_adi or row["kitap_adi"] or "")
+    if not icerik:
+        return ""
+    emoji, _ = deger_bilgisi(icerik["deger"])
+    return f"“{icerik['ad']}” kitabını okudu ve {emoji} {icerik['deger']} rozeti kazandı! Kitabın kazandırdıkları veli panelinde."
+
+
 def _veli_haber_yaz(con: sqlite3.Connection, ogrenci_id: int, alan: str, deger: str, now: str):
     ad = con.execute("SELECT ad_soyad FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
     ilk = ((ad["ad_soyad"] if ad else "Öğrenci").split() or ["Öğrenci"])[0]
@@ -5791,6 +5860,9 @@ def _veli_haber_yaz(con: sqlite3.Connection, ogrenci_id: int, alan: str, deger: 
     elif alan == "kitap_okuma" and deger == "okudu":
         metin = f"{ilk} kitabı okudu olarak işaretlendi."
         tur = "olumlu"
+        rozet = _kitap_deger_rozeti_metni(con, ogrenci_id)
+        if rozet:
+            metin = f"{ilk} {rozet}"
     elif alan == "kitap_okuma" and deger == "okumadi":
         metin = f"{ilk} kitabı okumadı olarak işaretlendi."
         tur = "uyari"
@@ -6709,8 +6781,11 @@ def kitap_okuma_onayla(kayit_id: int, ogretmen_id: int, onay: bool, ogretmen_not
         """,
         (int(ogretmen_id), (ogretmen_notu or "")[:500], now, xp, lig_puani, int(kayit_id)),
     )
+    rozet = _kitap_deger_rozeti_metni(con, int(row["ogrenci_id"]), row["kitap_adi"])
     con.commit()
     con.close()
+    if rozet:
+        veli_haber_ekle(int(row["ogrenci_id"]), f"Öğretmen onayladı: {rozet}", "olumlu")
     return {"ok": True, "durum": "onaylandi", "xp": xp, "lig_puani": lig_puani}
 
 
