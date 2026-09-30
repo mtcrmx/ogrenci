@@ -5543,6 +5543,10 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
             zaman TEXT NOT NULL
         )
     """)
+    # Older browser subscriptions have no active session association.
+    push_kolon = {r[1] for r in con.execute("PRAGMA table_info(veli_push)").fetchall()}
+    if "aktif" not in push_kolon:
+        con.execute("ALTER TABLE veli_push ADD COLUMN aktif INTEGER NOT NULL DEFAULT 0")
     con.execute("""
         CREATE TABLE IF NOT EXISTS devamsizlik_bildirim (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -6002,13 +6006,14 @@ def veli_push_kaydet(ogrenci_id: int, endpoint: str, p256dh: str, auth: str) -> 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     con.execute(
         """
-        INSERT INTO veli_push (ogrenci_id, endpoint, p256dh, auth, zaman)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO veli_push (ogrenci_id, endpoint, p256dh, auth, zaman, aktif)
+        VALUES (?, ?, ?, ?, ?, 1)
         ON CONFLICT(endpoint) DO UPDATE SET
             ogrenci_id = excluded.ogrenci_id,
             p256dh = excluded.p256dh,
             auth = excluded.auth,
-            zaman = excluded.zaman
+            zaman = excluded.zaman,
+            aktif = 1
         """,
         (int(ogrenci_id), (endpoint or "")[:800], (p256dh or "")[:200], (auth or "")[:200], now),
     )
@@ -6019,9 +6024,11 @@ def veli_push_kaydet(ogrenci_id: int, endpoint: str, p256dh: str, auth: str) -> 
 def veli_push_abonelikler(ogrenci_id: int) -> list[dict]:
     con = _conn()
     _haftalik_takip_init(con)
+    aktif_sinir = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d %H:%M")
     rows = [dict(r) for r in con.execute(
-        "SELECT endpoint, p256dh, auth FROM veli_push WHERE ogrenci_id = ?",
-        (int(ogrenci_id),),
+        "SELECT endpoint, p256dh, auth FROM veli_push "
+        "WHERE ogrenci_id = ? AND aktif = 1 AND zaman >= ?",
+        (int(ogrenci_id), aktif_sinir),
     ).fetchall()]
     con.close()
     return rows

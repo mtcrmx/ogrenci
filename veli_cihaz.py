@@ -1,7 +1,7 @@
 """Active parent-phone tokens used by the Android notification listener."""
 
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from database import _conn
 
@@ -33,9 +33,10 @@ def veli_cihaz_ogrenci(token: str) -> int | None:
         return None
     con = _conn()
     _hazirla(con)
+    aktif_sinir = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d %H:%M")
     row = con.execute(
-        "SELECT ogrenci_id FROM veli_cihaz WHERE token_hash = ?",
-        (hashlib.sha256(token.encode("utf-8")).hexdigest(),),
+        "SELECT ogrenci_id FROM veli_cihaz WHERE token_hash = ? AND zaman >= ?",
+        (hashlib.sha256(token.encode("utf-8")).hexdigest(), aktif_sinir),
     ).fetchone()
     con.close()
     return int(row["ogrenci_id"]) if row else None

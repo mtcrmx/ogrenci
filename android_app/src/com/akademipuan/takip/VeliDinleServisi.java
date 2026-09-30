@@ -175,8 +175,10 @@ public class VeliDinleServisi extends Service {
                     continue;
                 }
                 if (!veri.optBoolean("ok", false)) {
-                    Thread.sleep(15000);
-                    continue;
+                    getSharedPreferences(PREF, MODE_PRIVATE).edit()
+                        .putBoolean("aktif", false).remove("anahtar").putInt("son", -1).apply();
+                    stopSelf();
+                    return;
                 }
                 if (son < 0) {
                     getSharedPreferences(PREF, MODE_PRIVATE).edit().putInt("son", veri.optInt("son", 0)).apply();
