@@ -305,6 +305,56 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void veliBaglan(final String anahtar) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    VeliDinleServisi.anahtarKaydet(MainActivity.this, anahtar);
+                    bildirimIzniIste();
+                    VeliDinleServisi.baslat(MainActivity.this);
+                    pilKorumasiniAc();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public String durum() {
+            boolean izin = Build.VERSION.SDK_INT < 33
+                || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            boolean pil = true;
+            if (Build.VERSION.SDK_INT >= 23) {
+                PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+                pil = pm == null || pm.isIgnoringBatteryOptimizations(getPackageName());
+            }
+            String anahtar = getSharedPreferences(VeliDinleServisi.PREF, MODE_PRIVATE).getString("anahtar", "");
+            return "{\"izin\":" + izin + ",\"pil\":" + pil + ",\"bagli\":" + (anahtar != null && anahtar.length() > 0) + "}";
+        }
+
+        @JavascriptInterface
+        public void ayarlariAc() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (Build.VERSION.SDK_INT >= 23) {
+                            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+                            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                                intent.setData(Uri.parse("package:" + getPackageName()));
+                                startActivity(intent);
+                                return;
+                            }
+                        }
+                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void veliDinle() {
             runOnUiThread(new Runnable() {
                 @Override

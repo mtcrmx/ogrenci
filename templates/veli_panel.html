@@ -96,6 +96,7 @@
           </ol>
         </div>
         <p class="vp-muted" id="haber-durum" hidden></p>
+        <div class="vp-inline-actions"><button type="button" id="haber-ayar" hidden>Ayarları aç</button><button type="button" id="haber-deneme">Deneme bildirimi gönder</button></div>
       </section>
       <section class="vp-card vp-card--evening">
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">✦</span><div><p class="vp-eyebrow">Öncelikli iş</p><h2>Bu akşam</h2></div></div>
@@ -256,10 +257,49 @@
     durum.textContent = metin;
     durum.hidden = !metin;
   }
-  if (native && native.veliDinle) {
-    try { native.veliDinle(); } catch (e) {}
-    izinGizle();
+  const ayarDugme = document.getElementById("haber-ayar");
+  const denemeDugme = document.getElementById("haber-deneme");
+  function nativeDurum() {
+    if (!native || !native.durum) return;
+    let d = {};
+    try { d = JSON.parse(native.durum()); } catch (e) { return; }
+    if (!d.izin) {
+      durumYaz("Bildirim izni kapalı. Ayarlar > Bildirimler'den Akademi Puan'a izin verin.");
+      if (ayarDugme) ayarDugme.hidden = false;
+    } else if (!d.pil) {
+      durumYaz("Telefon uygulamayı uyutuyor, bildirim gecikebilir. Ayarlardan pil kısıtlamasını kaldırın.");
+      if (ayarDugme) ayarDugme.hidden = false;
+    } else if (d.bagli) {
+      durumYaz("Bildirimler açık. Uygulama kapalıyken de mesaj gelir ve alarm çalar.");
+      if (ayarDugme) ayarDugme.hidden = true;
+    }
   }
+  async function nativeBaglan() {
+    if (!native) return;
+    try {
+      const yanit = await fetch("/veli/cihaz-anahtar");
+      const veri = await yanit.json();
+      if (veri.t && native.veliBaglan) native.veliBaglan(veri.t);
+      else if (native.veliDinle) native.veliDinle();
+    } catch (e) {}
+    setTimeout(nativeDurum, 1500);
+  }
+  if (native) {
+    izinGizle();
+    nativeBaglan();
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") nativeDurum();
+    });
+  }
+  if (ayarDugme) ayarDugme.addEventListener("click", function () {
+    if (native && native.ayarlariAc) native.ayarlariAc();
+  });
+  if (denemeDugme) denemeDugme.addEventListener("click", async function () {
+    denemeDugme.disabled = true;
+    await fetch("/veli/haber/deneme", { method: "POST" });
+    durumYaz("Deneme 10 saniye sonra gelecek. Şimdi uygulamadan çıkıp telefonu kilitleyin.");
+    setTimeout(function () { denemeDugme.disabled = false; }, 15000);
+  });
   if (!native && ios && !kurulu) {
     izinGizle();
     if (iosRehber) iosRehber.hidden = false;
@@ -297,8 +337,8 @@
     if (kayitYanit.ok) durumYaz("Bildirimler açık. Uygulama kapalıyken de mesaj gelir.");
   }
   if (izin) izin.addEventListener("click", function () {
-    if (native && native.veliDinle) {
-      native.veliDinle();
+    if (native) {
+      nativeBaglan();
       izinGizle();
       return;
     }

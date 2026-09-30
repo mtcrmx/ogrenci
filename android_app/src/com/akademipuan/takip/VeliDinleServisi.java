@@ -20,8 +20,6 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
-import android.webkit.CookieManager;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -29,6 +27,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 
 public class VeliDinleServisi extends Service {
@@ -43,6 +42,13 @@ public class VeliDinleServisi extends Service {
     private Thread isci;
     private MediaPlayer calar;
     private PowerManager.WakeLock kilit;
+    private PowerManager.WakeLock dinleKilit;
+
+    public static void anahtarKaydet(Context ctx, String anahtar) {
+        android.content.SharedPreferences p = ctx.getSharedPreferences(PREF, MODE_PRIVATE);
+        if (anahtar == null || anahtar.equals(p.getString("anahtar", ""))) return;
+        p.edit().putString("anahtar", anahtar).putInt("son", -1).apply();
+    }
 
     public static void baslat(Context ctx) {
         ctx.getSharedPreferences(PREF, MODE_PRIVATE).edit().putBoolean("aktif", true).apply();
@@ -55,7 +61,8 @@ public class VeliDinleServisi extends Service {
     }
 
     public static void durdur(Context ctx) {
-        ctx.getSharedPreferences(PREF, MODE_PRIVATE).edit().putBoolean("aktif", false).apply();
+        ctx.getSharedPreferences(PREF, MODE_PRIVATE).edit()
+            .putBoolean("aktif", false).remove("anahtar").putInt("son", -1).apply();
         ctx.stopService(new Intent(ctx, VeliDinleServisi.class));
     }
 
@@ -67,12 +74,16 @@ public class VeliDinleServisi extends Service {
         if (pm != null) {
             kilit = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "akademipuan:veli");
             kilit.setReferenceCounted(false);
+            dinleKilit = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "akademipuan:dinle");
+            dinleKilit.setReferenceCounted(false);
         }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (Build.VERSION.SDK_INT >= 29) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            startForeground(DINLE_ID, dinlemeBildirimi(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else if (Build.VERSION.SDK_INT >= 29) {
             startForeground(DINLE_ID, dinlemeBildirimi(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
         } else {
             startForeground(DINLE_ID, dinlemeBildirimi());
@@ -81,6 +92,7 @@ public class VeliDinleServisi extends Service {
             alarmDurdur();
             return START_STICKY;
         }
+        if (dinleKilit != null && !dinleKilit.isHeld()) dinleKilit.acquire();
         if (!calisiyor) {
             calisiyor = true;
             isci = new Thread(new Runnable() {
@@ -97,8 +109,10 @@ public class VeliDinleServisi extends Service {
     @Override
     public void onDestroy() {
         calisiyor = false;
+        if (isci != null) isci.interrupt();
         alarmDurdur();
         if (kilit != null && kilit.isHeld()) kilit.release();
+        if (dinleKilit != null && dinleKilit.isHeld()) dinleKilit.release();
         super.onDestroy();
     }
 
@@ -149,19 +163,23 @@ public class VeliDinleServisi extends Service {
     private void dinle() {
         while (calisiyor) {
             try {
-                String cerez = CookieManager.getInstance().getCookie(HOME);
-                if (cerez == null || cerez.length() == 0) {
+                String anahtar = getSharedPreferences(PREF, MODE_PRIVATE).getString("anahtar", "");
+                if (anahtar == null || anahtar.length() == 0) {
                     Thread.sleep(4000);
                     continue;
                 }
-                int son = getSharedPreferences(PREF, MODE_PRIVATE).getInt("son", 0);
-                JSONObject veri = oku(HOME + "/veli/haber?son=" + son, cerez);
+                int son = getSharedPreferences(PREF, MODE_PRIVATE).getInt("son", -1);
+                JSONObject veri = oku(HOME + "/veli/haber/cihaz?t=" + URLEncoder.encode(anahtar, "UTF-8") + "&son=" + son);
                 if (veri == null) {
-                    Thread.sleep(2500);
+                    Thread.sleep(3000);
                     continue;
                 }
                 if (!veri.optBoolean("ok", false)) {
-                    Thread.sleep(8000);
+                    Thread.sleep(15000);
+                    continue;
+                }
+                if (son < 0) {
+                    getSharedPreferences(PREF, MODE_PRIVATE).edit().putInt("son", veri.optInt("son", 0)).apply();
                     continue;
                 }
                 JSONArray haber = veri.optJSONArray("haber");
@@ -182,20 +200,19 @@ public class VeliDinleServisi extends Service {
             } catch (Exception ignored) {
             }
             try {
-                Thread.sleep(1500);
+                Thread.sleep(4000);
             } catch (InterruptedException e) {
                 return;
             }
         }
     }
 
-    private JSONObject oku(String adres, String cerez) {
+    private JSONObject oku(String adres) {
         HttpURLConnection bag = null;
         try {
             bag = (HttpURLConnection) new URL(adres).openConnection();
             bag.setConnectTimeout(8000);
             bag.setReadTimeout(8000);
-            bag.setRequestProperty("Cookie", cerez);
             bag.setRequestProperty("Accept", "application/json");
             int kod = bag.getResponseCode();
             if (kod == 401 || kod == 403) return new JSONObject().put("ok", false);
@@ -237,8 +254,8 @@ public class VeliDinleServisi extends Service {
             .setSmallIcon(R.drawable.ic_launcher)
             .setContentIntent(pi)
             .setDeleteIntent(durPi)
-            .setAutoCancel(false)
-            .setOngoing(true)
+            .setAutoCancel(true)
+            .setOngoing(false)
             .setOnlyAlertOnce(false);
         if (Build.VERSION.SDK_INT >= 21) {
             b.setVisibility(Notification.VISIBILITY_PUBLIC);

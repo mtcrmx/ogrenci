@@ -117,6 +117,10 @@ app = Flask(__name__,
             template_folder=os.path.join(_BASE, "templates"),
             static_folder=os.path.join(_BASE, "static"))
 app.secret_key = os.environ.get("SECRET_KEY", "erenler-cumhuriyet-2025-gizli")
+app.permanent_session_lifetime = timedelta(days=365)
+
+from itsdangerous import URLSafeSerializer, BadSignature
+_veli_cihaz = URLSafeSerializer(app.secret_key, salt="veli-cihaz")
 
 SIFIR_PAROLA = "1234"
 ADMIN_SIFRE  = "ECadmin"
@@ -2390,6 +2394,7 @@ def veli_giris():
             if not ogrenci:
                 hata = "Bu numarayla ogrenci bulunamadi."
             else:
+                session.permanent = True
                 session["veli_ogrenci_id"] = ogrenci["id"]
                 return redirect(url_for("veli_panel"))
     return render_template("veli_login.html", hata=hata)
@@ -2422,6 +2427,7 @@ def veli_panel():
     if not o:
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
+    session.permanent = True
     bugun = date.today()
     hafta_basi = (bugun - timedelta(days=bugun.weekday())).isoformat()
     kayit = haftalik_takip_sinif(int(o["sinif_id"]), hafta_basi).get(int(ogrenci_id), {})
@@ -2547,6 +2553,41 @@ def veli_haber():
         return jsonify({"ok": False}), 401
     son = request.args.get("son", type=int) or 0
     return jsonify({"ok": True, "haber": veli_haber_yeni(int(oid), son)})
+
+
+@app.route("/veli/cihaz-anahtar")
+def veli_cihaz_anahtar():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return jsonify({"ok": False}), 401
+    session.permanent = True
+    return jsonify({"ok": True, "t": _veli_cihaz.dumps(int(oid))})
+
+
+@app.route("/veli/haber/cihaz")
+def veli_haber_cihaz():
+    try:
+        oid = int(_veli_cihaz.loads(request.args.get("t", "")))
+    except (BadSignature, ValueError, TypeError):
+        return jsonify({"ok": False}), 401
+    son = request.args.get("son", type=int)
+    if son is None or son < 0:
+        onceki = veli_haber_yeni(oid, 0)
+        return jsonify({"ok": True, "son": onceki[-1]["id"] if onceki else 0, "haber": []})
+    return jsonify({"ok": True, "haber": veli_haber_yeni(oid, son)})
+
+
+@app.route("/veli/haber/deneme", methods=["POST"])
+def veli_haber_deneme():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return jsonify({"ok": False}), 401
+    import threading
+    threading.Timer(
+        10, veli_haber_ekle,
+        (int(oid), "Deneme bildirimi: bunu görüyorsanız öğretmen mesajları telefona geliyor.", "duyuru"),
+    ).start()
+    return jsonify({"ok": True})
 
 
 @app.route("/veli/haber/goruldu", methods=["POST"])
