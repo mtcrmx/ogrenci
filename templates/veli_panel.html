@@ -8,7 +8,8 @@
   <title>Veli paneli · {{ ogrenci.ad_soyad }}</title>
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
-  <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260929a">
+  <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930c">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930b">
 </head>
 <body class="ui-theme veli-ekran veli-clay-page">
 <a class="vp-skip" href="#veli-icerik">İçeriğe geç</a>
@@ -26,6 +27,7 @@
       <a class="vp-nav-link is-current" href="#genel" aria-current="page"><span class="vp-nav-icon" aria-hidden="true">⌂</span><span>Ana sayfa</span></a>
       <a class="vp-nav-link" href="#hafta"><span class="vp-nav-icon" aria-hidden="true">▤</span><span>Ödev ve takip</span></a>
       <a class="vp-nav-link" href="#kitaplar"><span class="vp-nav-icon" aria-hidden="true">▣</span><span>Kitaplar</span></a>
+      <a class="vp-nav-link" href="#rozetler"><span class="vp-nav-icon" aria-hidden="true">🏅</span><span>Rozetler</span></a>
       <a class="vp-nav-link" href="#notlar"><span class="vp-nav-icon" aria-hidden="true">✎</span><span>Öğretmen notları</span></a>
       <a class="vp-nav-link" href="#gorusme"><span class="vp-nav-icon" aria-hidden="true">✉</span><span>Görüşme talebi</span></a>
 
@@ -72,11 +74,14 @@
       <article class="vp-status-card vp-status-card--peach"><span class="vp-status-icon" aria-hidden="true">✓</span><p>Ödev durumu</p><strong>{{ hafta.odev_durum }}</strong></article>
     </section>
 
+    {% include '_rozet_koleksiyonu.html' %}
+
     <div class="vp-overview">
       <section class="vp-card vp-card--morning" id="sabah-ozet" data-sabah="{{ sabah|e }}">
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">☀</span><div><p class="vp-eyebrow">Günlük bilgi</p><h2>Sabah özeti</h2></div></div>
         <p class="vp-card-lead">{{ sabah }}</p>
         <div class="vp-inline-actions"><button type="button" id="haber-izin">Telefonda haber ver</button><button type="button" id="ana-ekran" hidden>Ana ekrana ekle</button></div>
+        <p class="vp-muted" id="haber-izin-not">Ödev, duyuru ve uyarılar telefonuna düşsün diye bir kez izin ver.</p>
       </section>
       <section class="vp-card vp-card--evening">
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">✦</span><div><p class="vp-eyebrow">Öncelikli iş</p><h2>Bu akşam</h2></div></div>
@@ -161,6 +166,18 @@
   </main>
 </div>
 <script src="{{ url_for('static', filename='veli_panel_clay.js') }}?v=veli20260929a" defer></script>
+<script src="{{ url_for('static', filename='rozet_clay.js') }}?v=rozet20260930a" defer></script>
+
+<div id="veli-uyari" class="vp-alert"{% if not bekleyen_haber %} hidden{% endif %} role="alertdialog" aria-labelledby="veli-uyari-baslik" aria-modal="true">
+  <div class="vp-alert-card">
+    <p class="vp-eyebrow">Okunmamış uyarı</p>
+    <h2 id="veli-uyari-baslik">Öğretmenden yeni mesaj</h2>
+    <ul id="veli-uyari-liste">
+      {% for h in bekleyen_haber %}<li data-tur="{{ h.tur }}">{{ h.metin }}</li>{% endfor %}
+    </ul>
+    <button type="button" id="veli-uyari-gordum">Gördüm</button>
+  </div>
+</div>
 
 {% if (ogrenci.sinif_adi or '').startswith('5/') or (ogrenci.sinif_adi or '').startswith('6/') or (ogrenci.sinif_adi or '').startswith('7/') %}
 <div id="kulup-duyuru" class="duyuru" hidden>
@@ -187,6 +204,7 @@
 {% endif %}
 <script>
 (function () {
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
   const dugme = document.getElementById("ana-ekran");
   const kurulu = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
   if (kurulu) return;
@@ -202,16 +220,55 @@
     if (bekleyen) { bekleyen.prompt(); dugme.hidden = true; return; }
     alert("Paylaş menüsünden Ana Ekrana Ekle seçin.");
   });
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
 })();
 (function () {
   const izin = document.getElementById("haber-izin");
-  if (izin && "Notification" in window && Notification.permission === "granted") izin.hidden = true;
+  const izinNot = document.getElementById("haber-izin-not");
+  const uyari = document.getElementById("veli-uyari");
+  const liste = document.getElementById("veli-uyari-liste");
+  const gordum = document.getElementById("veli-uyari-gordum");
+  const basliklar = { uyari: "Uyarı", olumlu: "Olumlu not", odev: "Ödev", duyuru: "Duyuru" };
+  function izinGizle() {
+    if (izin) izin.hidden = true;
+    if (izinNot) izinNot.hidden = true;
+  }
+  if (izin && "Notification" in window && Notification.permission === "granted") izinGizle();
+  function urlBase64ToUint8Array(metin) {
+    const pad = "=".repeat((4 - metin.length % 4) % 4);
+    const raw = atob((metin + pad).replace(/-/g, "+").replace(/_/g, "/"));
+    const dizi = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) dizi[i] = raw.charCodeAt(i);
+    return dizi;
+  }
+  async function aboneOl() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const kayit = await navigator.serviceWorker.ready;
+    const anahtar = await fetch("/veli/push/anahtar").then(function (r) { return r.json(); });
+    if (!anahtar.publicKey) return;
+    let sub = await kayit.pushManager.getSubscription();
+    if (!sub) {
+      sub = await kayit.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(anahtar.publicKey)
+      });
+    }
+    await fetch("/veli/push/abone", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub.toJSON())
+    });
+  }
   if (izin) izin.addEventListener("click", function () {
-    if ("Notification" in window) Notification.requestPermission().then(function (sonuc) {
-      if (sonuc === "granted") izin.hidden = true;
+    if (!("Notification" in window)) return;
+    Notification.requestPermission().then(function (sonuc) {
+      if (sonuc === "granted") {
+        izinGizle();
+        aboneOl().catch(function () {});
+      }
     });
   });
+  aboneOl().catch(function () {});
   function cal() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -225,23 +282,41 @@
       osc.stop(ctx.currentTime + 0.18);
     } catch (e) {}
   }
-  function goster(metin) {
+  function goster(metin, tur) {
+    const baslik = basliklar[tur] || "Öğrenci takip";
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ tur: "haber", baslik: "Öğrenci takip", metin: metin });
+      navigator.serviceWorker.controller.postMessage({ tur: "haber", baslik: baslik, metin: metin, url: "/veli" });
     } else if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("Öğrenci takip", { body: metin });
+      new Notification(baslik, { body: metin, requireInteraction: true });
     }
     cal();
   }
+  function uyariEkle(haberler) {
+    if (!haberler.length || !uyari || !liste) return;
+    haberler.slice().reverse().forEach(function (h) {
+      const li = document.createElement("li");
+      li.textContent = h.metin;
+      li.setAttribute("data-tur", h.tur || "");
+      liste.insertBefore(li, liste.firstChild);
+    });
+    uyari.hidden = false;
+  }
+  if (gordum) gordum.addEventListener("click", async function () {
+    await fetch("/veli/haber/goruldu", { method: "POST" });
+    if (liste) liste.innerHTML = "";
+    if (uyari) uyari.hidden = true;
+  });
   let son = Number(localStorage.getItem("veli-haber-son") || "0");
   async function bak() {
     const yanit = await fetch("/veli/haber?son=" + son);
     if (!yanit.ok) return;
     const veri = await yanit.json();
-    (veri.haber || []).forEach(function (h) {
-      goster(h.metin);
+    const haber = veri.haber || [];
+    haber.forEach(function (h) {
+      if (document.visibilityState !== "visible") goster(h.metin, h.tur);
       son = Math.max(son, h.id);
     });
+    if (haber.length) uyariEkle(haber);
     localStorage.setItem("veli-haber-son", String(son));
   }
   bak();
@@ -253,7 +328,7 @@
       if (Notification.permission !== "granted") return;
       if (localStorage.getItem("sabah-ozet") === bugun) return;
       localStorage.setItem("sabah-ozet", bugun);
-      goster(sabah.dataset.sabah);
+      goster(sabah.dataset.sabah, "duyuru");
     }
     const simdi = new Date();
     const hedef = new Date();

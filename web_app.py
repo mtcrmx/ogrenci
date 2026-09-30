@@ -73,7 +73,8 @@ from database import (
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet, haftalik_odev_bildir,
     haftalik_odev_onceki_kopyala, sinif_hafta_durumu, onay_bekleyenler,
     ogrenci_adi_ara, donem_karne_satirlari,
-    veli_haber_yeni, veli_haber_ekle, devamsizlik_kaydet, devamsizlik_sinif, devamsizlik_ogrenci,
+    veli_haber_yeni, veli_haber_ekle, veli_haber_bekleyen, veli_haber_goruldu, veli_push_kaydet,
+    devamsizlik_kaydet, devamsizlik_sinif, devamsizlik_ogrenci,
     odev_foto_kaydet, veli_duzen,
     sinif_okuma_kitaplari,
     ogrenci_verilen_kitaplar,
@@ -579,6 +580,40 @@ def _ogrenci_rozetleri(ogrenci_id: int) -> list[dict]:
         rows.append(d)
     con.close()
     return rows
+
+
+def _rozet_koleksiyonu(ogrenci_id: int) -> dict:
+    """Öğrencinin kazanımları ile mevcut rozet hedeflerini bir araya getirir."""
+    kazanilan_kayitlar = _ogrenci_rozetleri(ogrenci_id)
+    kayit_haritasi = {r["rozet_kodu"]: r for r in kazanilan_kayitlar}
+    gosterim = {
+        "pozitif_yildiz": ("Pozitif Yıldız", "Öğretmenin onayladığı olumlu davranış"),
+        "temizlik_7": ("Tertemiz", "Yedi gün boyunca temiz takip"),
+        "sinif_yildizi": ("Sınıf Yıldızı", "Haftanın en yüksek olumlu puanı"),
+        "seri_yildiz": ("Seri Yıldız", "Üst üste üç maç galibiyeti"),
+        "donusum": ("Dönüşüm", "Kırmızı karttan sonra beş temiz gün"),
+        "mufettis_iyisi": ("Gizli Kahraman", "Günün gizli kahramanı seçilmek"),
+        "alkis_efsane": ("Alkış Efsanesi", "Beş alkış kuponu kazanmak"),
+        "streak_10": ("Alevli Seri", "On gün kesintisiz temiz takip"),
+        "sezon_zirvesi": ("Sezon Zirvesi", "Sezonu ilk sırada bitirmek"),
+    }
+    kazanilan = []
+    kilitli = []
+    for kod, (emoji, varsayilan_ad, varsayilan_aciklama) in ROZET_TANIMI.items():
+        ad, aciklama = gosterim.get(kod, (varsayilan_ad, varsayilan_aciklama))
+        kayit = kayit_haritasi.get(kod)
+        rozet = {"kod": kod, "emoji": emoji, "ad": ad,
+                 "aciklama": aciklama, "tarih": kayit["tarih"] if kayit else ""}
+        (kazanilan if kayit else kilitli).append(rozet)
+    # Eski veya mağaza kaynaklı rozetler de öğrencinin koleksiyonunda kalır.
+    for kayit in kazanilan_kayitlar:
+        if kayit["rozet_kodu"] not in ROZET_TANIMI:
+            kazanilan.append({"kod": kayit["rozet_kodu"], "emoji": kayit["emoji"],
+                              "ad": kayit["rozet_adi"], "aciklama": "Kazanılmış özel rozet",
+                              "tarih": kayit["tarih"]})
+    kazanilan.sort(key=lambda r: r["tarih"], reverse=True)
+    return {"kazanilan": kazanilan, "kilitli": kilitli,
+            "toplam": len(kazanilan) + len(kilitli)}
 
 
 def _avatar(ogrenci: dict) -> dict:
@@ -2490,6 +2525,7 @@ def veli_panel():
         odev_ogr=odev_ogr,
         notlar=notlar,
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
+        rozet_koleksiyonu=_rozet_koleksiyonu(int(ogrenci_id)),
         kocluk=kocluk,
         lgs_acik=lgs_acik,
         aksam=aksam,
@@ -2500,6 +2536,7 @@ def veli_panel():
         tempo_ad=TEMPO_AD.get(tempo, ""),
         program_bugun=program_bugun,
         ay_yazisi=ay_yazisi,
+        bekleyen_haber=veli_haber_bekleyen(int(ogrenci_id)),
     )
 
 
@@ -2510,6 +2547,41 @@ def veli_haber():
         return jsonify({"ok": False}), 401
     son = request.args.get("son", type=int) or 0
     return jsonify({"ok": True, "haber": veli_haber_yeni(int(oid), son)})
+
+
+@app.route("/veli/haber/goruldu", methods=["POST"])
+def veli_haber_goruldu_route():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return jsonify({"ok": False}), 401
+    veli_haber_goruldu(int(oid))
+    return jsonify({"ok": True})
+
+
+@app.route("/veli/push/anahtar")
+def veli_push_anahtar():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return jsonify({"ok": False}), 401
+    try:
+        from veli_push import vapid_public_key
+        return jsonify({"ok": True, "publicKey": vapid_public_key()})
+    except Exception:
+        return jsonify({"ok": True, "publicKey": ""})
+
+
+@app.route("/veli/push/abone", methods=["POST"])
+def veli_push_abone():
+    oid = session.get("veli_ogrenci_id")
+    if not oid:
+        return jsonify({"ok": False}), 401
+    veri = request.get_json(silent=True) or {}
+    keys = veri.get("keys") or {}
+    endpoint = str(veri.get("endpoint") or "")
+    if not endpoint or not keys.get("p256dh") or not keys.get("auth"):
+        return jsonify({"ok": False}), 400
+    veli_push_kaydet(int(oid), endpoint, str(keys.get("p256dh") or ""), str(keys.get("auth") or ""))
+    return jsonify({"ok": True})
 
 
 @app.route("/veli/yok", methods=["POST"])
@@ -4950,6 +5022,7 @@ def ogrenci_gorunum():
         avatar=_avatar(o),
         veli_modu=False,
         odevler=odevler,
+        rozet_koleksiyonu=_rozet_koleksiyonu(int(ogrenci_id)),
         pdf_ok=PDF_OK,
         gunler=DERS_GUNLERI,
         program_grid=ders_programi_grid(program),

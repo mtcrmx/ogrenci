@@ -1,0 +1,40 @@
+<section class="clay-badges" id="rozetler" data-student-id="{{ ogrenci.id }}" aria-labelledby="clay-badges-title">
+  <div class="clay-badges-head">
+    <div>
+      <p class="clay-badges-eyebrow">KÜÇÜK BAŞARILAR, BÜYÜK ADIMLAR</p>
+      <h2 id="clay-badges-title">Rozet koleksiyonu <span aria-hidden="true">✦</span></h2>
+      <p class="clay-badges-subtitle">Kazanılan rozetler burada birikir. Yeni rozetler öğretmen onayı ve etkinliklerle açılır.</p>
+    </div>
+    <div class="clay-badges-count" aria-label="{{ rozet_koleksiyonu.kazanilan|length }} kazanılmış rozet">
+      <strong>{{ rozet_koleksiyonu.kazanilan|length }}</strong><span>/ {{ rozet_koleksiyonu.toplam }}</span>
+    </div>
+  </div>
+
+  {% if rozet_koleksiyonu.kazanilan %}
+  <ul class="clay-badges-grid clay-badges-earned" aria-label="Kazanılan rozetler">
+    {% for rozet in rozet_koleksiyonu.kazanilan %}
+    <li class="clay-badge-item is-earned" data-rozet-kodu="{{ rozet.kod }}" style="--badge-i:{{ loop.index0 % 8 }}">
+      <div class="clay-badge-medal" aria-hidden="true"><span>{{ rozet.emoji }}</span></div>
+      <div class="clay-badge-text"><strong>{{ rozet.ad }}</strong><p>{{ rozet.aciklama }}</p><small>{{ rozet.tarih[:10] }} tarihinde kazanıldı</small></div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="clay-badges-empty"><span aria-hidden="true">🏅</span><p>İlk rozet için güzel adımlar birikiyor. Kazanıldığında burada görünecek.</p></div>
+  {% endif %}
+
+  {% if rozet_koleksiyonu.kilitli %}
+  <details class="clay-badges-locked">
+    <summary>Keşfedilecek rozetler <span>{{ rozet_koleksiyonu.kilitli|length }}</span><span class="clay-badges-chevron" aria-hidden="true">⌄</span></summary>
+    <ul class="clay-badges-grid" aria-label="Henüz kazanılmayan rozetler">
+      {% for rozet in rozet_koleksiyonu.kilitli %}
+      <li class="clay-badge-item is-locked" style="--badge-i:{{ loop.index0 % 8 }}">
+        <div class="clay-badge-medal" aria-hidden="true"><span>{{ rozet.emoji }}</span></div>
+        <div class="clay-badge-text"><strong>{{ rozet.ad }}</strong><p>{{ rozet.aciklama }}</p><small>Henüz kazanılmadı</small></div>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+  <div class="clay-badges-toast" role="status" aria-live="polite" hidden></div>
+</section>

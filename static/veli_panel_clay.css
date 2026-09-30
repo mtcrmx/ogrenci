@@ -195,6 +195,35 @@ body.veli-clay-page #gorusme button { width: 100%; margin-top: 11px; }
 .duyuru-sec input { width: 18px; height: 18px; margin: 0; }
 .duyuru-alt button { min-height: 35px; padding: 6px 12px; border: 0; border-radius: 12px; background: #d9c4ed; color: #4d3569; font-weight: 900; }
 
+.vp-alert { position: fixed; inset: 0; z-index: 3200; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(61,42,92,.52); }
+.vp-alert[hidden] { display: none; }
+.vp-alert-card {
+  width: min(440px, 100%);
+  padding: 22px 20px 18px;
+  border: 1px solid rgba(255,255,255,.86);
+  border-radius: 28px;
+  background: linear-gradient(160deg, #fffdfb, #f7e8ef);
+  box-shadow: inset 3px 4px 8px rgba(255,255,255,.92), 0 18px 32px -12px rgba(72,45,118,.38);
+}
+.vp-alert-card h2 { margin: 4px 0 12px; font-size: 22px; letter-spacing: -.04em; }
+.vp-alert-card ul { margin: 0 0 16px; padding: 0; list-style: none; max-height: 42svh; overflow: auto; display: grid; gap: 8px; }
+.vp-alert-card li {
+  padding: 11px 13px;
+  border-radius: 16px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  box-shadow: inset 0 0 0 1px rgba(201,180,232,.45);
+}
+.vp-alert-card li[data-tur="uyari"] { background: #fff1ee; box-shadow: inset 0 0 0 1px #f0b8ad; }
+.vp-alert-card li[data-tur="olumlu"] { background: #eefaf3; box-shadow: inset 0 0 0 1px #b5e0c8; }
+.vp-alert-card li[data-tur="odev"] { background: #eef4ff; box-shadow: inset 0 0 0 1px #b8ccec; }
+body.veli-clay-page .vp-alert-card button {
+  width: 100%; min-height: 46px; border: 0; border-radius: 16px;
+  background: linear-gradient(160deg, #d9c4ed, #c4aee6); color: #3f2a5c; font-weight: 900;
+}
+
 @media (max-width: 960px) {
   .vp-shell { grid-template-columns: 190px minmax(0, 1fr); }
   body.veli-clay-page main.vp-main { padding: 16px 14px 24px; }

@@ -4872,6 +4872,10 @@ def odev_ekle(sinif_id: int, ogretmen_id: int, baslik: str,
     con.commit()
     odev_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
     con.close()
+    metin = f"Yeni ödev: {baslik}"
+    if ders and ders != "Genel":
+        metin = f"Yeni ödev ({ders}): {baslik}"
+    veli_haber_sinifa(int(sinif_id), metin[:240], "odev")
     return {"ok": True, "odev_id": odev_id}
 
 
@@ -5471,6 +5475,23 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
             metin TEXT NOT NULL,
+            zaman TEXT NOT NULL,
+            tur TEXT NOT NULL DEFAULT 'duyuru',
+            goruldu INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    haber_kolon = {r[1] for r in con.execute("PRAGMA table_info(veli_haber)").fetchall()}
+    if "tur" not in haber_kolon:
+        con.execute("ALTER TABLE veli_haber ADD COLUMN tur TEXT NOT NULL DEFAULT 'duyuru'")
+    if "goruldu" not in haber_kolon:
+        con.execute("ALTER TABLE veli_haber ADD COLUMN goruldu INTEGER NOT NULL DEFAULT 0")
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS veli_push (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ogrenci_id INTEGER NOT NULL REFERENCES ogrenciler(id),
+            endpoint TEXT NOT NULL UNIQUE,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
             zaman TEXT NOT NULL
         )
     """)
@@ -5578,6 +5599,13 @@ def haftalik_odev_bilgi_kaydet(
     con = _conn()
     _haftalik_takip_init(con)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    eski = con.execute(
+        "SELECT ders, aciklama, kitap_adi FROM haftalik_odev_bilgi WHERE sinif_id = ? AND hafta_basi = ?",
+        (sinif_id, hafta_basi),
+    ).fetchone()
+    yeni_ders = (ders or "").strip()[:80]
+    yeni_aciklama = (aciklama or "").strip()[:500]
+    yeni_kitap = (kitap_adi or "").strip()[:160]
     con.execute(
         """
         INSERT INTO haftalik_odev_bilgi
@@ -5590,18 +5618,18 @@ def haftalik_odev_bilgi_kaydet(
             ogretmen_id = excluded.ogretmen_id,
             guncelleme = excluded.guncelleme
         """,
-        (
-            sinif_id,
-            hafta_basi,
-            (ders or "").strip()[:80],
-            (aciklama or "").strip()[:500],
-            (kitap_adi or "").strip()[:160],
-            ogretmen_id,
-            now,
-        ),
+        (sinif_id, hafta_basi, yeni_ders, yeni_aciklama, yeni_kitap, ogretmen_id, now),
     )
     con.commit()
     con.close()
+    degisti = (
+        ((eski["ders"] if eski else "") or "") != yeni_ders
+        or ((eski["aciklama"] if eski else "") or "") != yeni_aciklama
+        or ((eski["kitap_adi"] if eski else "") or "") != yeni_kitap
+    )
+    if degisti and (yeni_ders or yeni_aciklama or yeni_kitap):
+        parca = [p for p in (yeni_ders, yeni_kitap, yeni_aciklama) if p]
+        veli_haber_sinifa(int(sinif_id), ("Bu hafta ödev: " + " — ".join(parca))[:240], "odev")
     return {"ok": True}
 
 
@@ -5638,6 +5666,14 @@ def haftalik_takip_metin(
     )
     con.commit()
     con.close()
+    if alan == "kitap_adi" and deger:
+        veli_haber_ekle(int(ogrenci_id), f"Bu hafta kitap verildi: {deger}", "odev")
+    elif alan == "odev_ders" and deger:
+        veli_haber_ekle(int(ogrenci_id), f"Bu hafta ödev dersi: {deger}", "odev")
+    elif alan == "odev_not" and deger:
+        veli_haber_ekle(int(ogrenci_id), f"Ödev notu: {deger}", "odev")
+    elif alan == "odev_karar_not" and deger:
+        veli_haber_ekle(int(ogrenci_id), f"Öğretmen notu: {deger}", "duyuru")
     return {"ok": True, "alan": alan, "deger": deger}
 
 
@@ -5750,11 +5786,13 @@ def _veli_haber_yaz(con: sqlite3.Connection, ogrenci_id: int, alan: str, deger: 
     ilk = ((ad["ad_soyad"] if ad else "Öğrenci").split() or ["Öğrenci"])[0]
     if alan == "odev_durum":
         metin = f"{ilk} için bu haftaki ödev {deger} işaretlendi."
+        tur = "uyari" if deger in {"eksik", "yok"} else "odev"
     else:
         metin = f"{ilk} kitabı okudu olarak işaretlendi. Belgeyi açabilirsin."
+        tur = "olumlu"
     con.execute(
-        "INSERT INTO veli_haber (ogrenci_id, metin, zaman) VALUES (?, ?, ?)",
-        (ogrenci_id, metin, now),
+        "INSERT INTO veli_haber (ogrenci_id, metin, zaman, tur, goruldu) VALUES (?, ?, ?, ?, 0)",
+        (ogrenci_id, metin, now, tur),
     )
 
 
@@ -5798,13 +5836,63 @@ def haftalik_takip_isaretle(
     return {"ok": True, "alan": alan, "deger": deger}
 
 
-def veli_haber_ekle(ogrenci_id: int, metin: str) -> None:
+def veli_haber_ekle(ogrenci_id: int, metin: str, tur: str = "duyuru") -> None:
     con = _conn()
     _haftalik_takip_init(con)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    tur = tur if tur in {"uyari", "olumlu", "duyuru", "odev"} else "duyuru"
     con.execute(
-        "INSERT INTO veli_haber (ogrenci_id, metin, zaman) VALUES (?, ?, ?)",
-        (ogrenci_id, (metin or "")[:240], now),
+        "INSERT INTO veli_haber (ogrenci_id, metin, zaman, tur, goruldu) VALUES (?, ?, ?, ?, 0)",
+        (int(ogrenci_id), (metin or "")[:240], now, tur),
+    )
+    con.commit()
+    con.close()
+    _veli_push_sonra(int(ogrenci_id), (metin or "")[:240], tur)
+
+
+def veli_haber_sinifa(sinif_id: int, metin: str, tur: str = "odev") -> None:
+    con = _conn()
+    _haftalik_takip_init(con)
+    ids = [int(r["id"]) for r in con.execute(
+        "SELECT id FROM ogrenciler WHERE sinif_id = ?", (int(sinif_id),)
+    ).fetchall()]
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    tur = tur if tur in {"uyari", "olumlu", "duyuru", "odev"} else "duyuru"
+    metin = (metin or "")[:240]
+    for oid in ids:
+        con.execute(
+            "INSERT INTO veli_haber (ogrenci_id, metin, zaman, tur, goruldu) VALUES (?, ?, ?, ?, 0)",
+            (oid, metin, now, tur),
+        )
+    con.commit()
+    con.close()
+    for oid in ids:
+        _veli_push_sonra(oid, metin, tur)
+
+
+def veli_haber_bekleyen(ogrenci_id: int) -> list[dict]:
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT id, metin, zaman, tur
+        FROM veli_haber
+        WHERE ogrenci_id = ? AND goruldu = 0
+        ORDER BY id DESC
+        LIMIT 20
+        """,
+        (int(ogrenci_id),),
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def veli_haber_goruldu(ogrenci_id: int) -> None:
+    con = _conn()
+    _haftalik_takip_init(con)
+    con.execute(
+        "UPDATE veli_haber SET goruldu = 1 WHERE ogrenci_id = ? AND goruldu = 0",
+        (int(ogrenci_id),),
     )
     con.commit()
     con.close()
@@ -5814,11 +5902,58 @@ def veli_haber_yeni(ogrenci_id: int, son_id: int) -> list[dict]:
     con = _conn()
     _haftalik_takip_init(con)
     rows = [dict(r) for r in con.execute(
-        "SELECT id, metin, zaman FROM veli_haber WHERE ogrenci_id = ? AND id > ? ORDER BY id",
+        "SELECT id, metin, zaman, tur FROM veli_haber WHERE ogrenci_id = ? AND id > ? ORDER BY id",
         (ogrenci_id, max(0, int(son_id or 0))),
     ).fetchall()]
     con.close()
     return rows
+
+
+def veli_push_kaydet(ogrenci_id: int, endpoint: str, p256dh: str, auth: str) -> None:
+    con = _conn()
+    _haftalik_takip_init(con)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    con.execute(
+        """
+        INSERT INTO veli_push (ogrenci_id, endpoint, p256dh, auth, zaman)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(endpoint) DO UPDATE SET
+            ogrenci_id = excluded.ogrenci_id,
+            p256dh = excluded.p256dh,
+            auth = excluded.auth,
+            zaman = excluded.zaman
+        """,
+        (int(ogrenci_id), (endpoint or "")[:800], (p256dh or "")[:200], (auth or "")[:200], now),
+    )
+    con.commit()
+    con.close()
+
+
+def veli_push_abonelikler(ogrenci_id: int) -> list[dict]:
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = [dict(r) for r in con.execute(
+        "SELECT endpoint, p256dh, auth FROM veli_push WHERE ogrenci_id = ?",
+        (int(ogrenci_id),),
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def veli_push_sil(endpoint: str) -> None:
+    con = _conn()
+    _haftalik_takip_init(con)
+    con.execute("DELETE FROM veli_push WHERE endpoint = ?", ((endpoint or "")[:800],))
+    con.commit()
+    con.close()
+
+
+def _veli_push_sonra(ogrenci_id: int, metin: str, tur: str) -> None:
+    try:
+        from veli_push import veli_push_gonder
+        veli_push_gonder(int(ogrenci_id), metin, tur)
+    except Exception:
+        pass
 
 
 def devamsizlik_kaydet(ogrenci_id: int, tarih: str) -> None:
@@ -5884,12 +6019,9 @@ def odev_foto_kaydet(sinif_id: int, ogrenci_id: int, hafta_basi: str, yol: str, 
     )
     ad = con.execute("SELECT ad_soyad FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
     ilk = ((ad["ad_soyad"] if ad else "Öğrenci").split() or ["Öğrenci"])[0]
-    con.execute(
-        "INSERT INTO veli_haber (ogrenci_id, metin, zaman) VALUES (?, ?, ?)",
-        (ogrenci_id, f"{ilk} için ödev fotoğrafı eklendi.", now),
-    )
     con.commit()
     con.close()
+    veli_haber_ekle(int(ogrenci_id), f"{ilk} için ödev fotoğrafı eklendi.", "odev")
     return {"ok": True}
 
 
@@ -7099,6 +7231,10 @@ def ogretmen_notu_ekle(
     ))
     con.commit()
     con.close()
+    if veliye_acik:
+        etiket = {"uyari": "Uyarı", "olumlu": "Olumlu not", "duyuru": "Duyuru"}.get(tur, "Öğretmen notu")
+        haber_tur = tur if tur in {"uyari", "olumlu", "duyuru"} else "duyuru"
+        veli_haber_ekle(int(ogrenci_id), f"{etiket}: {not_metni}", haber_tur)
     return {"ok": True}
 
 
