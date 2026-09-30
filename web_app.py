@@ -2803,7 +2803,6 @@ def dashboard():
     hafta_bugun = (date.today() - timedelta(days=date.today().weekday())).isoformat()
     eksik_siniflar = sinif_hafta_durumu(hafta_bugun)
     kutu = onay_bekleyenler(hafta_bugun)
-    gelmeyen = devamsizlik_sinif(aktif["id"], date.today().isoformat()) if aktif else []
     ids_ogr = [o["id"] for o in ogrenciler]
     olumlu_h = ogrenci_olumlu_tik_sayilari(ids_ogr)
     roz_harita = ogrenci_rozetleri_yayin_map(ids_ogr, limit=6)
@@ -2827,8 +2826,7 @@ def dashboard():
                            toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id),
                            eksik_siniflar=eksik_siniflar,
                            onay_sayisi=len(kutu["odevler"]) + len(kutu["gorevler"]) + len(kutu["gunluk"]),
-                           onay_geciken=kutu["geciken"],
-                           gelmeyen=gelmeyen)
+                           onay_geciken=kutu["geciken"])
 
 
 @app.route("/profil/gorsel", methods=["POST"])

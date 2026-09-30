@@ -182,7 +182,7 @@
     {% endif %}
 
     <section class="dashboard-stats dashboard-mobile-section mx-3 mt-4" data-dashboard-section="ozet" aria-label="Sınıf özeti">
-      <div class="dashboard-stat-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="dashboard-stat-grid grid grid-cols-2 lg:grid-cols-3 gap-3">
       <div class="metric-card dashboard-stat dashboard-stat--lilac p-4">
         <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-students.webp') }}" alt="" width="62" height="62"></span>
         <p class="dashboard-stat-label mt-3 text-xs font-bold">Öğrenciler</p>
@@ -201,12 +201,6 @@
         <strong class="dashboard-stat-value block text-2xl font-black">{{ onay_sayisi }}</strong>
         <span class="dashboard-stat-hint text-xs">İncelenecek bildirim</span>
       </div>
-      <div class="metric-card dashboard-stat dashboard-stat--sky p-4">
-        <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-absent.webp') }}" alt="" width="62" height="62"></span>
-        <p class="dashboard-stat-label mt-3 text-xs font-bold">Bugün gelmeyecek</p>
-        <strong class="dashboard-stat-value block text-2xl font-black">{{ gelmeyen|length }}</strong>
-        <span class="dashboard-stat-hint text-xs">{{ aktif.sinif_adi }} şubesinde</span>
-      </div>
       </div>
     </section>
 
@@ -219,7 +213,7 @@
         </div>
         <span class="dashboard-heading-spark" aria-hidden="true">✦</span>
       </div>
-    {% if (eksik_siniflar is defined and (eksik_siniflar or onay_sayisi)) or (gelmeyen is defined and gelmeyen) %}
+    {% if eksik_siniflar is defined and (eksik_siniflar or onay_sayisi) %}
     <div class="dashboard-notices" aria-label="Güncel bildirimler">
       {% if onay_sayisi %}
       <a href="{{ url_for('onay_kutusu') }}" class="dashboard-notice dashboard-notice--peach">
@@ -232,12 +226,6 @@
         <span>{{ s.sinif_adi }} bu hafta {% if s.isaretli == 0 %}henüz işaretlenmedi{% else %}eksik: {{ s.isaretli }}/{{ s.toplam }}{% endif %}</span>
       </a>
       {% endfor %}{% endif %}
-      {% if gelmeyen is defined and gelmeyen %}
-      <div class="dashboard-notice dashboard-notice--pink">
-        <strong>Bugün gelmeyecek:</strong>
-        <span>{% for k in gelmeyen %}{{ k.ad_soyad }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
-      </div>
-      {% endif %}
     </div>
     {% endif %}
 
