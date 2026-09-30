@@ -131,7 +131,29 @@
         </div>
         <p class="vp-muted" id="haber-durum" hidden></p>
         <div class="vp-inline-actions"><button type="button" id="haber-ayar" hidden>Ayarları aç</button><button type="button" id="haber-deneme">Deneme bildirimi gönder</button></div>
-</details>{% if (ogrenci.sinif_adi or '').startswith(('5/','6/','7/')) %}<details class="app-card app-details"><summary>Çocuk Kulübü duyurusu</summary><img style="max-width:100%;max-height:600px;object-fit:contain" src="{{ url_for('static', filename='cocuk-kulubu.jpg') }}?v=20260930b" alt="Çocuk Kulübü açılıyor. 5, 6 ve 7. sınıflar başvurabilir."><button type="button" class="app-button" onclick="this.closest('details').open=false">Şimdi kapat</button></details>{% endif %}
+</details>{% if (ogrenci.sinif_adi or '').startswith(('5/','6/','7/')) %}
+<div id="kulup-duyuru" class="duyuru" role="dialog" aria-modal="true" aria-label="Çocuk Kulübü duyurusu" hidden>
+  <div class="duyuru-kutu">
+    <img src="{{ url_for('static', filename='cocuk-kulubu.jpg') }}?v=20260930b" alt="Çocuk Kulübü açılıyor. 5, 6 ve 7. sınıflar başvurabilir.">
+    <div class="duyuru-alt">
+      <label class="duyuru-sec"><input type="checkbox" id="kulup-bir-daha"> Bir daha gösterme</label>
+      <button type="button" id="kulup-kapat">Kapat</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  const duyuru = document.getElementById("kulup-duyuru");
+  const anahtar = "cocuk-kulubu-gizle-{{ ogrenci.id }}";
+  if (localStorage.getItem(anahtar)) return;
+  duyuru.hidden = false;
+  document.getElementById("kulup-kapat").addEventListener("click", function () {
+    if (document.getElementById("kulup-bir-daha").checked) localStorage.setItem(anahtar, "1");
+    duyuru.remove();
+  });
+})();
+</script>
+{% endif %}
 </div><div class="parent-section" data-parent-section="raporlar" id="raporlar" hidden>
 <section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2><div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a><a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a></div></section>
 <details class="app-card app-details"><summary>Rozet koleksiyonu</summary>{% include '_rozet_koleksiyonu.html' %}</details>
