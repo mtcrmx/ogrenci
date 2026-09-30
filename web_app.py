@@ -4,6 +4,7 @@ web_app.py  —  Erenler Cumhuriyet Ortaokulu Ogrenci Takip
 """
 
 import json
+import secrets
 import os, tempfile
 from datetime import datetime, timedelta, date
 from io import BytesIO
@@ -74,7 +75,7 @@ from database import (
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet, haftalik_odev_bildir,
     haftalik_odev_onceki_kopyala, sinif_hafta_durumu, onay_bekleyenler,
     ogrenci_adi_ara, donem_karne_satirlari,
-    veli_haber_yeni, veli_haber_ekle, veli_haber_bekleyen, veli_haber_goruldu, veli_push_kaydet,
+    veli_haber_yeni, veli_haber_ekle, veli_haber_bekleyen, veli_haber_goruldu, veli_push_kaydet, veli_push_sil,
     devamsizlik_kaydet, devamsizlik_sinif, devamsizlik_ogrenci,
     odev_foto_kaydet, veli_duzen,
     sinif_okuma_kitaplari,
@@ -101,6 +102,7 @@ from database import (
     DERS_GUNLERI, ders_programi_ogretmen, ders_programi_sinif,
     ders_programi_grid, aktif_sube_siniflari,
 )
+from veli_cihaz import veli_cihaz_kaydet, veli_cihaz_ogrenci, veli_cihaz_sil
 from export import excel_raporu_olustur, OPENPYXL_OK
 from lgs_konular import LGS_KONULAR
 from lgs_program import DEFTER_DERSLER, LGS_AYLAR, TEMPO_AD, blok_metin, gun_plani
@@ -119,9 +121,6 @@ app = Flask(__name__,
             static_folder=os.path.join(_BASE, "static"))
 app.secret_key = os.environ.get("SECRET_KEY", "erenler-cumhuriyet-2025-gizli")
 app.permanent_session_lifetime = timedelta(days=365)
-
-from itsdangerous import URLSafeSerializer, BadSignature
-_veli_cihaz = URLSafeSerializer(app.secret_key, salt="veli-cihaz")
 
 SIFIR_PAROLA = "1234"
 ADMIN_SIFRE  = "ECadmin"
@@ -770,6 +769,7 @@ def login():
             hata = "Hatali sifre! Sifreniz icin okul yonetimine basvurun."
         else:
             oid = ogretmen_id_bul(ad)
+            _veli_oturumu_kapat()
             session["ogretmen_id"] = oid
             session["ogretmen_adi"] = ad
             session["ogretmen_yetki"] = ogretmen_yetki_al(oid)
@@ -782,6 +782,7 @@ def login():
 
 @app.route("/logout")
 def logout():
+    _veli_oturumu_kapat()
     session.clear()
     return redirect(url_for("login"))
 
@@ -2399,6 +2400,16 @@ def gelisim_ligi_sayfa():
     return redirect(url_for("dashboard"))
 
 
+def _veli_oturumu_kapat():
+    token = session.pop("veli_cihaz_token", None)
+    endpoint = session.pop("veli_push_endpoint", None)
+    if token:
+        veli_cihaz_sil(token)
+    if endpoint:
+        veli_push_sil(endpoint)
+    session.pop("veli_ogrenci_id", None)
+
+
 @app.route("/veli/giris", methods=["GET", "POST"])
 def veli_giris():
     hata = None
@@ -2414,6 +2425,7 @@ def veli_giris():
             if not ogrenci:
                 hata = "Bu numarayla ogrenci bulunamadi."
             else:
+                _veli_oturumu_kapat()
                 session.permanent = True
                 session["veli_ogrenci_id"] = ogrenci["id"]
                 return redirect(url_for("veli_panel"))
@@ -2591,14 +2603,18 @@ def veli_cihaz_anahtar():
     if not oid:
         return jsonify({"ok": False}), 401
     session.permanent = True
-    return jsonify({"ok": True, "t": _veli_cihaz.dumps(int(oid))})
+    token = session.get("veli_cihaz_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["veli_cihaz_token"] = token
+    veli_cihaz_kaydet(int(oid), token)
+    return jsonify({"ok": True, "t": token})
 
 
 @app.route("/veli/haber/cihaz")
 def veli_haber_cihaz():
-    try:
-        oid = int(_veli_cihaz.loads(request.args.get("t", "")))
-    except (BadSignature, ValueError, TypeError):
+    oid = veli_cihaz_ogrenci(request.args.get("t", ""))
+    if oid is None:
         return jsonify({"ok": False}), 401
     son = request.args.get("son", type=int)
     if son is None or son < 0:
@@ -2651,7 +2667,11 @@ def veli_push_abone():
     endpoint = str(veri.get("endpoint") or "")
     if not endpoint or not keys.get("p256dh") or not keys.get("auth"):
         return jsonify({"ok": False}), 400
+    eski_endpoint = session.get("veli_push_endpoint")
+    if eski_endpoint and eski_endpoint != endpoint:
+        veli_push_sil(eski_endpoint)
     veli_push_kaydet(int(oid), endpoint, str(keys.get("p256dh") or ""), str(keys.get("auth") or ""))
+    session["veli_push_endpoint"] = endpoint
     return jsonify({"ok": True})
 
 
@@ -2729,7 +2749,7 @@ def haftalik_foto():
 
 @app.route("/veli/cikis")
 def veli_cikis():
-    session.pop("veli_ogrenci_id", None)
+    _veli_oturumu_kapat()
     return redirect(url_for("veli_giris"))
 
 
@@ -4833,6 +4853,7 @@ def tik_at(ogrenci_id):
         return redirect(url_for("dashboard", sinif=sinif_id))
 
     yeni  = tik_ekle(ogrenci_id, oid, kriter)
+    veli_haber_ekle(ogrenci_id, f"Öğretmen davranış kaydı ekledi: {kriter}.", "uyari")
     d     = _durum(yeni)
     uc_olumsuz_cezasi = onceki < OLUMSUZ_TIK_CEZA_ESIGI <= yeni
 
@@ -4963,6 +4984,7 @@ def olumlu_ekle(sinif_id):
         flash(sonuc.get("sebep") or "Olumlu tik eklenemedi.", "error")
         return redirect(url_for("dashboard", sinif=sinif_id))
 
+    veli_haber_ekle(ogrenci_id, f"Öğretmen olumlu davranış kaydı ekledi: {kriter}.", "olumlu")
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True, "limit": OLUMLU_TIK_LIMIT, **sonuc})
     return redirect(url_for("dashboard", sinif=sinif_id))

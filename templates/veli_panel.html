@@ -430,7 +430,7 @@
     const veri = await yanit.json();
     const haber = veri.haber || [];
     haber.forEach(function (h) {
-      if (document.visibilityState !== "visible") goster(h.metin, h.tur);
+      if (!native && document.visibilityState === "visible") cal();
       son = Math.max(son, h.id);
     });
     if (haber.length) uyariEkle(haber);

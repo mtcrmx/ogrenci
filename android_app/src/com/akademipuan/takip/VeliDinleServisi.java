@@ -193,7 +193,7 @@ public class VeliDinleServisi extends Service {
                         tur = h.optString("tur", tur);
                     }
                     getSharedPreferences(PREF, MODE_PRIVATE).edit().putInt("son", son).apply();
-                    if (!MainActivity.ekranda) mesajGoster(tur, metin);
+                    mesajGoster(tur, metin);
                 }
             } catch (InterruptedException e) {
                 return;
