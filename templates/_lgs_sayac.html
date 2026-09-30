@@ -1,0 +1,14 @@
+<section class="lgs-countdown" aria-labelledby="lgs-countdown-title" data-lgs-countdown data-confirmed="{{ '1' if lgs_sayac.kesin else '0' }}"{% if lgs_sayac.hedef %} data-target="{{ lgs_sayac.hedef }}" data-now="{{ lgs_sayac.simdi }}"{% endif %}>
+  <div class="lgs-countdown-copy">
+    <span class="lgs-countdown-year">LGS {{ lgs_sayac.yil }}</span>
+    <h2 id="lgs-countdown-title">LGS’ye kalan süre</h2>
+    {% if lgs_sayac.tarih %}<p>{{ lgs_sayac.tarih }}{% if not lgs_sayac.kesin %} · Tahmini hedef{% endif %}</p>{% endif %}
+    <small>{% if lgs_sayac.durum == 'bekleniyor' %}Sınav tarihi açıklandığında geri sayım başlayacak.{% elif not lgs_sayac.kesin %}Kesin sınav tarihi henüz doğrulanmadı. Sayaç bu hedef güne göredir.{% else %}Sınav gününe kadar kalan süre · Türkiye saati{% endif %}</small>
+  </div>
+  <div class="lgs-countdown-clock"{% if lgs_sayac.durum != 'sayiyor' %} hidden{% endif %} data-countdown-clock aria-label="Sınav gününe kalan süre">
+    <div class="lgs-countdown-unit lgs-countdown-unit--days"><strong data-countdown-days>{{ lgs_sayac.gun|default(0) }}</strong><span>GÜN</span></div>
+    <div class="lgs-countdown-unit"><strong data-countdown-hours>{{ '%02d'|format(lgs_sayac.saat|default(0)) }}</strong><span>SAAT</span></div>
+    <div class="lgs-countdown-unit"><strong data-countdown-minutes>{{ '%02d'|format(lgs_sayac.dakika|default(0)) }}</strong><span>DAKİKA</span></div>
+  </div>
+  <strong class="lgs-countdown-message" data-countdown-message{% if lgs_sayac.durum == 'sayiyor' %} hidden{% endif %}>{% if lgs_sayac.durum == 'bugun' %}Bugün {% if lgs_sayac.kesin %}LGS günü!{% else %}hedef gün!{% endif %}{% elif lgs_sayac.durum == 'gecti' %}{{ 'Sınav' if lgs_sayac.kesin else 'Hedef' }} tarihi geçti{% else %}Sınav tarihi bekleniyor{% endif %}</strong>
+</section>

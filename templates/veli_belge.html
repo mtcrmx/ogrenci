@@ -1,22 +1,16 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kitap belgesi</title>
-  <style>
-    body { margin: 0; font-family: "Segoe UI", sans-serif; background: linear-gradient(180deg,#f4e9ff,#efe4fb); color: #3d2a5c; }
-    main { max-width: 720px; margin: 24px auto; padding: 16px; }
+{% extends "base.html" %}
+{% block title %}Kitap belgesi{% endblock %}
+{% block head %}  <style>
+    .certificate-page { margin: 0; font-family: "Segoe UI", sans-serif; background: linear-gradient(180deg,#f4e9ff,#efe4fb); color: #3d2a5c; }
+    .certificate-page { max-width: 720px; margin: 24px auto; padding: 16px; }
     .belge { background: #fff9ff; border: 8px solid #c9b4f0; border-radius: 28px; padding: 32px; text-align: center; box-shadow: 10px 18px 34px rgba(124,92,188,.18); }
-    h1 { margin: 0; font-size: 18px; letter-spacing: .08em; text-transform: uppercase; color: #8b6ad4; }
-    h2 { margin: 16px 0 0; font-size: 32px; }
-    ul { text-align: left; display: inline-block; margin: 16px auto; }
-    a, button { display: inline-block; margin-top: 12px; background: linear-gradient(180deg,#c9b4f0,#8b6ad4); color: #fff; text-decoration: none; border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; box-shadow: 0 10px 18px rgba(139,106,212,.28); }
+    .certificate-page h1 { margin: 0; font-size: 18px; letter-spacing: .08em; text-transform: uppercase; color: #8b6ad4; }
+    .certificate-page h2 { margin: 16px 0 0; font-size: 32px; }
+    .certificate-page ul { text-align: left; display: inline-block; margin: 16px auto; }
+    .certificate-page a, .certificate-page button { display: inline-block; margin-top: 12px; background: linear-gradient(180deg,#c9b4f0,#8b6ad4); color: #fff; text-decoration: none; border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; box-shadow: 0 10px 18px rgba(139,106,212,.28); }
     @media print { a, button { display: none; } body { background: #fff; } }
-  </style>
-</head>
-<body>
-<main>
+  </style>{% endblock %}
+{% block body %}<main class="certificate-page">
   <article class="belge">
     <h1>Erenler Cumhuriyet Ortaokulu</h1>
     <p>Kitap okuma belgesi</p>
@@ -34,5 +28,4 @@
   <button type="button" onclick="window.print()">Yazdır veya paylaş</button>
   <a href="{{ url_for('veli_panel') }}">Veli paneli</a>
 </main>
-</body>
-</html>
+{% endblock %}

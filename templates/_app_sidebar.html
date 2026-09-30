@@ -1,0 +1,36 @@
+<aside class="app-sidebar" id="app-menu" aria-label="{{ 'Veli' if ui_role == 'veli' else 'Öğretmen' }} menüsü">
+  {% set rapor_only = session.get('ogretmen_yetki') == 'rapor' %}
+  <div class="app-brand"><span class="app-brand-mark" aria-hidden="true">A</span><div><strong>AkademiPuan</strong><small>{{ 'Veli paneli' if ui_role == 'veli' else 'Öğretmen paneli' }}</small></div><button type="button" class="app-menu-close" aria-label="Menüyü kapat" data-app-menu-close>×</button></div>
+  {% if ui_role == 'veli' %}
+  <p class="app-account">{{ nav_student.ad_soyad if nav_student else ogrenci.ad_soyad }}<small>{{ nav_student.sinif_adi if nav_student else ogrenci.sinif_adi }}</small></p>
+  <nav class="app-nav" aria-label="Ana menü">
+    {% for hash, label, icon in [('genel','Ana sayfa','⌂'), ('hafta','Ödev ve kitap','▤')] %}<a href="{{ url_for('veli_panel') }}#{{ hash }}" data-parent-nav="{{ hash }}"><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
+    {% if (nav_student and nav_student.sinif_adi.startswith('8/')) or lgs_acik|default(false) %}<a href="{{ url_for('veli_lgs') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' else '' }}"><span aria-hidden="true">✦</span>LGS</a>{% endif %}
+    <a href="{{ url_for('veli_panel') }}#mesajlar" data-parent-nav="mesajlar"><span aria-hidden="true">✉</span>Mesajlar</a>
+    <a href="{{ url_for('veli_panel') }}#raporlar" data-parent-nav="raporlar" class="{{ 'is-current' if request.endpoint in ['veli_karne','veli_kitap_odev_rapor','veli_deneme_analiz','veli_belge'] else '' }}"><span aria-hidden="true">◒</span>Raporlar</a>
+  </nav>
+  {% else %}
+  <p class="app-account">{{ session.ogretmen_adi }}</p>
+  <nav class="app-nav" aria-label="Ana menü">
+    {% if not rapor_only %}
+    <h2>Takip</h2>
+    {% for endpoint, label, icon in [('dashboard','Ana sayfa','⌂'), ('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦')] %}
+    <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint in ['dashboard','haftalik_takip'] else url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
+    {% endif %}
+    <h2>Raporlar</h2>
+    <a href="{{ url_for('analiz_merkezi', sinif_id=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'analiz_merkezi' else '' }}"><span aria-hidden="true">◒</span>Kitap/ödev analizi</a>
+    {% if not rapor_only %}
+    <a href="{{ url_for('deneme_analiz') }}" class="{{ 'is-current' if request.endpoint == 'deneme_analiz' else '' }}"><span aria-hidden="true">◈</span>Deneme analizi</a>
+    <a href="{{ url_for('karne', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'karne' else '' }}"><span aria-hidden="true">▣</span>Dönem karnesi</a>
+    <details class="app-nav-tools"{% if request.endpoint in ['ogretmen_kitap_okuma','ogretmen_randevular'] %} open{% endif %}><summary>Diğer araçlar</summary>
+      {% for endpoint,label in [('ogretmen_kitap_okuma','Okuma kayıtları ve onay'),('ogretmen_randevular','Veli görüşme talepleri')] %}<a href="{{ url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}">{{ label }}</a>{% endfor %}
+    </details>
+    {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}<a href="{{ url_for('giris_raporu') }}">Giriş raporu</a><a href="{{ url_for('ogrenci_ara') }}">Öğrenci ara</a>{% endif %}
+    {% else %}<a href="{{ url_for('ogretmen_kitap_okuma') }}" class="{{ 'is-current' if request.endpoint == 'ogretmen_kitap_okuma' else '' }}">Okuma raporları</a>{% endif %}
+  </nav>
+  {% endif %}
+  <div class="app-sidebar-footer"><h2>Hesap</h2><button type="button" data-renk-ac>Renk paleti</button>
+  {% if ui_role == 'ogretmen' %}<details><summary>Öğretmen görseli</summary>{% for tipi, ad in [('kadin','Kadın öğretmen'),('erkek','Erkek öğretmen')] %}<form method="post" action="{{ url_for('profil_gorsel') }}"><input type="hidden" name="gorsel_tipi" value="{{ tipi }}"><input type="hidden" name="sinif" value="{{ nav_sinif_id or '' }}"><button>{{ ad }}</button></form>{% endfor %}</details>{% endif %}
+  <a href="{{ url_for('veli_cikis' if ui_role == 'veli' else 'logout') }}">Çıkış yap</a></div>
+</aside>
+<button class="app-scrim" type="button" data-app-menu-close aria-label="Menüyü kapat" hidden></button>

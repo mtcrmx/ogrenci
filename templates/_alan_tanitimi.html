@@ -28,6 +28,7 @@
         Bir daha gösterme
       </button>
       <div class="flex gap-2">
+        <button type="button" data-tanitim-kapat class="rounded-full bg-white px-4 py-2 text-sm font-bold">Şimdi kapat</button>
         <button type="button"
                 data-tanitim-geri
                 class="rounded-full border-0 bg-white px-4 py-2 text-sm font-bold text-violet-800 hover:bg-violet-50">
@@ -149,12 +150,9 @@
     hide(true);
   });
 
+  panel.querySelector("[data-tanitim-kapat]").addEventListener("click", () => hide(true));
   opener.addEventListener("click", show);
 
-  if (localStorage.getItem(key)) {
-    opener.classList.add("aktif");
-  } else {
-    window.setTimeout(show, 650);
-  }
+  opener.classList.add("aktif");
 })();
 </script>

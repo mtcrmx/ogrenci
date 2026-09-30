@@ -10,102 +10,40 @@
   <meta name="apple-mobile-web-app-title" content="Veli">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
   <title>Veli paneli · {{ ogrenci.ad_soyad }}</title>
+  {% if lgs_sayac %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_sayac.css') }}?v=20261001a"><script src="{{ url_for('static', filename='lgs_sayac.js') }}?v=20261001a" defer></script>{% endif %}
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
   <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930g">
   <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
+<link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20260930a">
 </head>
-<body class="ui-theme veli-ekran veli-clay-page">
-<a class="vp-skip" href="#veli-icerik">İçeriğe geç</a>
-<div class="vp-shell">
-  <aside class="vp-sidebar" id="veli-menu" aria-label="Veli menüsü">
-    <div class="vp-sidebar-header">
-      <span class="vp-avatar" aria-hidden="true">{{ avatar.initials }}</span>
-      <p class="vp-sidebar-greeting">Merhaba!</p>
-      <p class="vp-sidebar-student">{{ ogrenci.ad_soyad }}</p>
-      <p class="vp-sidebar-school">Erenler Cumhuriyet Ortaokulu</p>
-    </div>
-
-    <nav class="vp-navigation" aria-label="Panel bölümleri">
-      <p class="vp-nav-caption">Veli paneli</p>
-      <a class="vp-nav-link is-current" href="#genel" aria-current="page"><span class="vp-nav-icon" aria-hidden="true">⌂</span><span>Ana sayfa</span></a>
-      <a class="vp-nav-link" href="#hafta"><span class="vp-nav-icon" aria-hidden="true">▤</span><span>Ödev ve takip</span></a>
-      <a class="vp-nav-link" href="#kitaplar"><span class="vp-nav-icon" aria-hidden="true">▣</span><span>Kitaplar</span></a>
-      <a class="vp-nav-link" href="#rozetler"><span class="vp-nav-icon" aria-hidden="true">🏅</span><span>Rozetler</span></a>
-      <a class="vp-nav-link" href="#notlar"><span class="vp-nav-icon" aria-hidden="true">✎</span><span>Öğretmen notları</span></a>
-      <a class="vp-nav-link" href="#gorusme"><span class="vp-nav-icon" aria-hidden="true">✉</span><span>Görüşme talebi</span></a>
-
-      <p class="vp-nav-caption vp-nav-caption--reports">Raporlar</p>
-      <a class="vp-nav-link" href="{{ url_for('veli_karne') }}"><span class="vp-nav-icon" aria-hidden="true">★</span><span>Karne</span></a>
-      <a class="vp-nav-link" href="{{ url_for('veli_kitap_odev_rapor') }}"><span class="vp-nav-icon" aria-hidden="true">◴</span><span>Okuma raporu</span></a>
-      {% if lgs_acik %}<a class="vp-nav-link" href="{{ url_for('veli_lgs') }}"><span class="vp-nav-icon" aria-hidden="true">✦</span><span>LGS takibi</span></a>{% endif %}
-    </nav>
-
-    <div class="vp-sidebar-footer">
-      <div class="vp-sidebar-charm" aria-hidden="true"><img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="104" height="104"></div>
-      <button type="button" class="vp-sidebar-color renk-ust-btn" data-renk-ac>Renk paleti</button>
-      <a class="vp-signout" href="{{ url_for('veli_cikis') }}">Çıkış yap <span aria-hidden="true">↗</span></a>
-    </div>
-  </aside>
-
-  <button type="button" class="vp-menu-scrim" id="veli-menu-scrim" aria-label="Menüyü kapat" hidden></button>
-
-  <main class="vp-main" id="veli-icerik">
-    <header class="vp-toolbar">
-      <button class="vp-menu-toggle" id="veli-menu-toggle" type="button" aria-label="Menüyü aç" aria-controls="veli-menu" aria-expanded="false"><span aria-hidden="true">☰</span></button>
-      <div class="vp-toolbar-title">
-        <p class="vp-eyebrow">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}</p>
-        <h1>Veli paneli</h1>
-      </div>
-      <button type="button" class="vp-toolbar-color renk-ust-btn" data-renk-ac>Renk</button>
-      <div class="vp-toolbar-profile" aria-label="{{ ogrenci.ad_soyad }}"><span aria-hidden="true">{{ avatar.initials }}</span><span class="vp-toolbar-profile-name">{{ ogrenci.ad_soyad }}</span></div>
-    </header>
-
-    <section class="vp-hero" id="genel" aria-labelledby="vp-hero-title">
-      <img class="vp-hero-art" src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="210" height="210" aria-hidden="true">
-      <div class="vp-hero-copy">
-        <p class="vp-eyebrow">GÜNÜN ÖZETİ</p>
-        <h2 id="vp-hero-title">{{ ogrenci.ad_soyad }} için güzel bir gün! <span aria-hidden="true">☀️</span></h2>
-        <p>{{ ogrenci.sinif_adi }} sınıfının ödev, kitap ve öğretmen notları burada.</p>
-        <a class="vp-primary-link" href="#hafta">Bu haftaya bak <span aria-hidden="true">→</span></a>
-      </div>
-      <img class="vp-hero-plant" src="{{ url_for('static', filename='clay-plant.webp') }}" alt="" width="122" height="163" aria-hidden="true">
-    </section>
-
+<body class="ui-theme veli-ekran veli-clay-page layout-page">
+<a class="app-skip" href="#app-content">İçeriğe geç</a><div class="app-shell">{% include '_app_sidebar.html' %}<div class="app-workspace" id="app-content">{% include '_app_toolbar.html' %}
+<main class="vp-main" id="veli-icerik"><header class="vp-toolbar"><div><h1 id="parent-page-title">Ana sayfa</h1><p class="app-muted">{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }}</p></div></header>
+{% with mesajlar = get_flashed_messages(with_categories=true) %}{% if mesajlar %}<div class="parent-feedback" role="status">{% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--error' if kategori in ['warning','error'] else 'app-notice--success' }}">{{ mesaj }}</p>{% endfor %}</div>{% endif %}{% endwith %}
+<div class="parent-section" data-parent-section="genel" id="genel">
+{% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
+<section class="app-card parent-today"><h2>Bugünkü işler</h2>
+{% if odev_ogr.odev_not or odev.aciklama %}<p><strong>{{ odev_ogr.odev_ders or odev.ders or 'Ödev' }}:</strong> {{ odev_ogr.odev_not or odev.aciklama }}</p>{% endif %}
+{% if bugun_odev and bugun_odev.odev %}<p><strong>{{ bugun_odev.odev.baslik }}</strong> · {{ bugun_odev.odev.ders }}</p><p>{{ bugun_odev.odev.aciklama }}</p><p class="app-muted">Son tarih: {{ bugun_odev.odev.son_tarih or 'Belirtilmedi' }}</p>{% endif %}
+{% if hafta.kitap_adi %}<p><strong>Kitap:</strong> {{ hafta.kitap_adi }}{% if hafta.kitap_sayfa %} · {{ hafta.kitap_sayfa }} sayfa{% endif %}</p>{% endif %}
+{% if program_bugun %}<p><strong>LGS programı:</strong> {{ program_bugun }}</p>{% endif %}
+{% if not (odev_ogr.odev_not or odev.aciklama or hafta.kitap_adi or program_bugun or bugun_odev) %}<p class="app-muted">Bugün için görev tanımlanmadı.</p>{% endif %}
+{% if hafta.odev_kod in ['eksik','yok'] %}<p class="app-notice"><strong>{{ hafta.odev_durum }}:</strong> {{ hafta.odev_karar_not or 'Öğretmen eksik bölüm veya son tarih belirtmedi. Ayrıntıyı Mesajlar bölümünden sorabilirsiniz.' }}</p>{% elif hafta.odev_bildirim == 'yaptim' and not hafta.odev_kod %}<p class="app-notice">Tamamlandı bildirimi alındı. Öğretmen onayı bekleniyor.</p>{% endif %}
+{% if hafta.odev_foto %}<details class="app-details"><summary>Ödev fotoğrafı</summary><img class="vp-homework-photo" src="{{ url_for('veli_odev_foto') }}" alt="Öğretmenin eklediği ödev fotoğrafı"></details>{% endif %}
+<div class="app-row" style="margin-top:12px">{% if not hafta.odev_kod and hafta.odev_bildirim != 'yaptim' and (odev_ogr.odev_not or odev.aciklama) %}<form method="post" action="{{ url_for('veli_odev_bildir') }}"><input type="hidden" name="yaptim" value="1"><button class="app-primary">Çocuğum tamamladı</button></form>{% endif %}<a class="app-button" href="#hafta">Ödev ve kitap ayrıntısı →</a></div>
+</section>
     <section class="vp-status" aria-label="Bu haftanın durumları">
       <article class="vp-status-card vp-status-card--lilac"><span class="vp-status-icon" aria-hidden="true">▣</span><p>Kitap okuma</p><strong>{{ hafta.kitap_okuma }}</strong></article>
       <article class="vp-status-card vp-status-card--pink"><span class="vp-status-icon" aria-hidden="true">▤</span><p>Kitabı getirme</p><strong>{{ hafta.kitap_getirme }}</strong></article>
       <article class="vp-status-card vp-status-card--peach"><span class="vp-status-icon" aria-hidden="true">✓</span><p>Ödev durumu</p><strong>{{ hafta.odev_durum }}</strong></article>
     </section>
 
-    {% include '_rozet_koleksiyonu.html' %}
-
-    <div class="vp-overview">
-      <section class="vp-card vp-card--morning" id="sabah-ozet" data-sabah="{{ sabah|e }}">
-        <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">☀</span><div><p class="vp-eyebrow">Günlük bilgi</p><h2>Sabah özeti</h2></div></div>
-        <p class="vp-card-lead">{{ sabah }}</p>
-        <div class="vp-inline-actions"><button type="button" id="haber-izin">Telefonda haber ver</button><button type="button" id="ana-ekran" hidden>Ana ekrana ekle</button></div>
-        <p class="vp-muted" id="haber-izin-not">Öğretmen yazınca telefonuna hemen yazı düşer ve alarm çalar. Bir kez izin ver.</p>
-        <div class="vp-ios-rehber" id="ios-rehber" hidden>
-          <p class="vp-eyebrow">iPhone için bir kez yapın</p>
-          <ol>
-            <li>Safari'de alttaki <strong>Paylaş</strong> düğmesine basın.</li>
-            <li><strong>Ana Ekrana Ekle</strong>'yi seçin.</li>
-            <li>Ana ekrandaki <strong>Veli</strong> simgesinden açıp giriş yapın.</li>
-            <li><strong>Telefonda haber ver</strong>'e basıp <strong>İzin Ver</strong> deyin.</li>
-          </ol>
-        </div>
-        <p class="vp-muted" id="haber-durum" hidden></p>
-        <div class="vp-inline-actions"><button type="button" id="haber-ayar" hidden>Ayarları aç</button><button type="button" id="haber-deneme">Deneme bildirimi gönder</button></div>
-      </section>
-      <section class="vp-card vp-card--evening">
-        <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">✦</span><div><p class="vp-eyebrow">Öncelikli iş</p><h2>Bu akşam</h2></div></div>
-        <p class="vp-card-lead">{{ aksam }}</p>
-        {% if hafta.odev_foto %}<img class="vp-homework-photo" src="{{ url_for('veli_odev_foto') }}" alt="Öğretmenin eklediği ödev fotoğrafı">{% endif %}
-      </section>
-    </div>
-
-    <div class="vp-overview vp-overview--secondary">
+<section class="app-card parent-latest" id="veli-uyari" aria-labelledby="veli-uyari-baslik">
+<h2 id="veli-uyari-baslik">Son öğretmen mesajı</h2>
+<ul id="veli-uyari-liste">{% if haberler %}{% set h=haberler[0] %}<li data-id="{{ h.id }}" data-key="{{ h.tur }}|{{ h.metin }}|{{ h.zaman[:16] }}"><time>{{ h.zaman }}</time><p>{{ h.metin }}</p></li>{% elif notlar %}<li><time>{{ notlar[0].tarih }} · {{ notlar[0].ogretmen }}</time><p>{{ notlar[0].not_metni }}</p></li>{% else %}<li class="app-muted">Henüz öğretmen mesajı yok.</li>{% endif %}</ul>
+<div class="app-row"><button type="button" class="app-button" id="veli-uyari-gordum"{% if not bekleyen_haber %} hidden{% endif %}>Gördüm</button><button type="button" class="app-button" id="veli-uyari-kapat">Şimdi kapat</button><a class="app-button" href="#mesajlar">Tüm mesajlar</a><span id="haber-okundu" class="app-muted" role="status"></span></div>
+</section>    <div class="vp-overview vp-overview--secondary">
       <section class="vp-card vp-card--mint">
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">★</span><div><p class="vp-eyebrow">Gelişim</p><h2>Kendi temposu</h2></div></div>
         <p class="vp-card-lead">{{ duzen_metin }}</p>
@@ -122,43 +60,32 @@
       {% endif %}
     </div>
 
-    <section class="vp-card vp-week-card" id="hafta" aria-labelledby="vp-week-heading">
+
+</div><div class="parent-section" data-parent-section="hafta" id="parent-homework" hidden>    <section class="vp-card vp-week-card" id="hafta" aria-labelledby="vp-week-heading">
       <div class="vp-section-head"><div><p class="vp-eyebrow">HAFTALIK TAKİP</p><h2 id="vp-week-heading">Ödev ve kitaplar</h2></div><span class="vp-section-deco" aria-hidden="true">✦</span></div>
+      <a class="app-button" style="margin-bottom:12px" href="{{ url_for('veli_kitap_okuma') }}">Okuma kaydı ekle / geçmişi gör</a>
       <div class="vp-week-grid">
         <div class="vp-inner-card"><p class="vp-eyebrow">Okuduğu kitap</p><h3>{{ odev_ogr.kitap_adi or hafta.kitap_adi or 'Henüz kitap seçilmedi' }}</h3>{% if hafta.kitap_adi %}<p class="vp-muted">{% if hafta.kitap_yazar %}{{ hafta.kitap_yazar }} · {% endif %}{% if hafta.kitap_yayinevi %}{{ hafta.kitap_yayinevi }} · {% endif %}{{ hafta.kitap_sayfa }}{% if hafta.katalog_sayfa %}/{{ hafta.katalog_sayfa }}{% endif %} sayfa</p>{% endif %}</div>
-        <div class="vp-inner-card"><p class="vp-eyebrow">Sınıf ödevi</p><h3>{{ odev.ders or 'Ders yazılmadı' }}</h3><p class="vp-muted">{{ odev.aciklama or 'Sınıfa genel ödev yazılmadı.' }}</p></div>
+        <div class="vp-inner-card"><p class="vp-eyebrow">Sınıf ödevi</p><h3>{{ odev.ders or 'Ders yazılmadı' }}</h3><p class="vp-muted">{{ odev.aciklama or 'Bu hafta için ödev tanımlanmadı.' }}</p></div>
         {% if odev_ogr.odev_ders or odev_ogr.odev_not %}<div class="vp-inner-card vp-inner-card--wide"><p class="vp-eyebrow">Bu öğrenciye özel</p><h3>{{ odev_ogr.odev_ders or 'Ders' }}</h3><p class="vp-muted">{{ odev_ogr.odev_not }}</p></div>{% endif %}
       </div>
       <div class="vp-decision">
         {% if hafta.odev_kod %}
         <p class="vp-decision-title">Öğretmen kararı: {{ hafta.odev_durum }}{% if hafta.ogretmen_adi %} · {{ hafta.ogretmen_adi }}{% endif %}</p>
         {% if hafta.odev_karar_not %}<p class="vp-muted">{{ hafta.odev_karar_not }}</p>{% endif %}
-        <p class="vp-muted">Bu karar kesin. Yaptım demek kaydı değiştirmez.</p>
+        <p class="vp-muted">Öğretmen değerlendirmesi kaydedildi. Tamamlandı bildirimi bu değerlendirmeyi değiştirmez.</p>
         {% elif hafta.odev_bildirim == 'yaptim' %}
-        <p class="vp-decision-title">Yaptım dediniz. Öğretmen onaylayınca kesinleşir.</p>
+        <p class="vp-decision-title">Çocuğunuzun tamamladığını bildirdiniz. Öğretmen onayı bekleniyor.</p>
         <form method="post" action="{{ url_for('veli_odev_bildir') }}"><input type="hidden" name="yaptim" value="0"><button type="submit">Bildirimi geri al</button></form>
         {% else %}
         <p class="vp-muted">Öğretmen onayıyla ödev durumu kesinleşir.</p>
-        <form method="post" action="{{ url_for('veli_odev_bildir') }}"><input type="hidden" name="yaptim" value="1"><button type="submit">Ödevi yaptım</button></form>
+        <form method="post" action="{{ url_for('veli_odev_bildir') }}"><input type="hidden" name="yaptim" value="1"><button type="submit">Çocuğum tamamladı</button></form>
         {% endif %}
       </div>
     </section>
 
-    {% if lgs_acik and kocluk %}
-    <section class="vp-card vp-lgs-card" id="lgs-hedefi" aria-labelledby="vp-lgs-heading">
-      <div class="vp-section-head"><div><p class="vp-eyebrow">8. SINIF</p><h2 id="vp-lgs-heading">LGS hedefi</h2></div><span class="vp-section-deco" aria-hidden="true">★</span></div>
-      <p class="vp-card-lead">{{ kocluk.hedef or 'Hedef henüz yazılmadı' }}{% if kocluk.hedef_net %} · {{ kocluk.hedef_net }} net{% if kocluk.son %}, kalan {{ kocluk.kalan }}{% endif %}{% endif %}</p>
-      {% if kocluk.son %}<p class="vp-muted">Son deneme {{ kocluk.son.net }} / {{ kocluk.tavan }} net</p>{% endif %}
-      <p>{{ kocluk.kisa }}</p>
-      {% if kocluk.rozetler %}<div class="vp-badges">{% for r in kocluk.rozetler %}<span>{{ r.ad }}</span>{% endfor %}</div>{% endif %}
-      {% if tempo_ad %}<p>Tempo {{ tempo_ad }}{% if program_bugun %}: {{ program_bugun }}{% endif %}</p>{% endif %}
-      {% if ay_yazisi %}<p class="vp-muted">Program uygulanan aylar: {{ ay_yazisi }}</p>{% endif %}
-      <div class="vp-inline-actions"><a class="vp-small-link" href="{{ url_for('veli_lgs', bolum='program') }}">Ders programı</a><a class="vp-small-link" href="{{ url_for('veli_lgs', bolum='defter') }}">Çalışma defteri</a><a class="vp-small-link" href="{{ url_for('veli_lgs', bolum='deneme') }}">Sonuç ve analiz</a></div>
-    </section>
-    {% endif %}
-
-    <section class="vp-card vp-books-card" id="kitaplar" aria-labelledby="vp-books-heading">
-      <div class="vp-section-head"><div><p class="vp-eyebrow">OKUMA TAKİBİ</p><h2 id="vp-books-heading">Kitaplar</h2></div><span class="vp-section-deco" aria-hidden="true">▣</span></div>
+    <details class="vp-card vp-books-card app-details" id="kitaplar" aria-labelledby="vp-books-heading">
+      <summary>Kitap geçmişi ve bu haftanın kitabı</summary>
       {% if kitaplar %}
       <h3>Öğretmenin verdiği kitaplar</h3>
       <ul class="vp-book-list">{% for k in kitaplar %}<li><span class="vp-book-mark" aria-hidden="true">▤</span><div><strong>{{ k.kitap_adi }}</strong><p class="vp-muted">{{ k.hafta_basi }}{% if k.yazar %} · {{ k.yazar }}{% endif %}{% if k.yayinevi %} · {{ k.yayinevi }}{% endif %}{% if k.sayfa %} · {{ k.sayfa }} sayfa{% endif %}</p></div>{% if k.kitap_okuma == 'okudu' %}<span class="vp-book-state is-read">Okudu</span>{% elif k.kitap_okuma == 'okumadi' %}<span class="vp-book-state">Okumadı</span>{% endif %}</li>{% endfor %}</ul>
@@ -173,14 +100,47 @@
         <p class="vp-muted">Okuyup bitirince <strong>{{ hafta_kitap_icerik.deger_emoji }} {{ hafta_kitap_icerik.deger }} rozeti</strong> kazanacak.</p>
       </div>
       {% endif %}
-    </section>
+    </details>
 
+
+</div><div class="parent-section" data-parent-section="mesajlar" id="mesajlar" hidden>
+<section class="app-card"><h2 style="font-weight:800;font-size:18px">Bildirim geçmişi</h2><ul class="parent-feed" id="parent-message-feed">{% for h in haberler %}<li data-id="{{ h.id }}" data-key="{{ h.tur }}|{{ h.metin }}|{{ h.zaman[:16] }}"><time>{{ h.zaman }} · {{ 'Okundu' if h.goruldu else 'Yeni' }}</time><p>{{ h.metin }}</p></li>{% else %}<li data-empty>Henüz bildirim yok.</li>{% endfor %}</ul></section>
+    <div class="vp-communication">
+      <section class="vp-card" id="notlar" aria-labelledby="vp-notes-heading">
+        <div class="vp-section-head"><div><p class="vp-eyebrow">İLETİŞİM</p><h2 id="vp-notes-heading">Öğretmen notları</h2></div></div>
+        {% for n in notlar %}<article class="vp-note {{ 'vp-note--warning' if n.tur == 'uyari' else ('vp-note--positive' if n.tur == 'olumlu' else 'vp-note--other') }}"><p class="vp-eyebrow">{{ 'Uyarı' if n.tur == 'uyari' else ('Olumlu davranış' if n.tur == 'olumlu' else 'Duyuru') }}</p><p>{{ n.not_metni }}</p><p class="vp-muted">{{ n.ogretmen }} · {{ (n.tarih or '')[:16] }}</p></article>{% else %}<p class="vp-muted">Henüz not yok.</p>{% endfor %}
+      </section>
+      <section class="vp-card" id="gorusme" aria-labelledby="vp-meeting-heading">
+        <div class="vp-section-head"><div><p class="vp-eyebrow">ÖĞRETMENLE GÖRÜŞ</p><h2 id="vp-meeting-heading">Görüşme talebi</h2></div></div>
+        <p class="vp-muted">Kısa bir not yazın, öğretmen ekranına düşer.</p>
+        <form method="post" action="{{ url_for('veli_randevu_kaydet') }}"><label class="vp-form-label" for="veli-gorusme-mesaji">Görüşme konusu</label><textarea id="veli-gorusme-mesaji" name="mesaj" rows="4" placeholder="Konuyu yazın" required></textarea><button type="submit">Talep gönder</button></form>
+        {% if gorusme_talepleri %}<details class="app-details" style="margin-top:16px" open><summary>Görüşme taleplerim</summary><ul class="parent-feed">{% for t in gorusme_talepleri %}<li><time>{{ t.talep_tarihi[:16] }} · {{ {'bekliyor':'Değerlendirme bekliyor','gorusuldu':'Görüşüldü','iptal':'İptal edildi'}.get(t.durum,t.durum) }}</time><p>{{ t.mesaj }}</p></li>{% endfor %}</ul></details>{% endif %}
+      </section>
+    </div>
+
+<details class="app-card app-details"><summary>Telefon bildirim ayarları</summary>        <div class="vp-inline-actions"><button type="button" id="haber-izin">Telefonda haber ver</button><button type="button" id="ana-ekran" hidden>Ana ekrana ekle</button></div>
+        <p class="vp-muted" id="haber-izin-not">Öğretmen yazınca telefonuna hemen yazı düşer ve alarm çalar. Bir kez izin ver.</p>
+        <div class="vp-ios-rehber" id="ios-rehber" hidden>
+          <p class="vp-eyebrow">iPhone için bir kez yapın</p>
+          <ol>
+            <li>Safari'de alttaki <strong>Paylaş</strong> düğmesine basın.</li>
+            <li><strong>Ana Ekrana Ekle</strong>'yi seçin.</li>
+            <li>Ana ekrandaki <strong>Veli</strong> simgesinden açıp giriş yapın.</li>
+            <li><strong>Telefonda haber ver</strong>'e basıp <strong>İzin Ver</strong> deyin.</li>
+          </ol>
+        </div>
+        <p class="vp-muted" id="haber-durum" hidden></p>
+        <div class="vp-inline-actions"><button type="button" id="haber-ayar" hidden>Ayarları aç</button><button type="button" id="haber-deneme">Deneme bildirimi gönder</button></div>
+</details>{% if (ogrenci.sinif_adi or '').startswith(('5/','6/','7/')) %}<details class="app-card app-details"><summary>Çocuk Kulübü duyurusu</summary><img style="max-width:100%;max-height:600px;object-fit:contain" src="{{ url_for('static', filename='cocuk-kulubu.jpg') }}?v=20260930b" alt="Çocuk Kulübü açılıyor. 5, 6 ve 7. sınıflar başvurabilir."><button type="button" class="app-button" onclick="this.closest('details').open=false">Şimdi kapat</button></details>{% endif %}
+</div><div class="parent-section" data-parent-section="raporlar" id="raporlar" hidden>
+<section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2><div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a><a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a></div></section>
+<details class="app-card app-details"><summary>Rozet koleksiyonu</summary>{% include '_rozet_koleksiyonu.html' %}</details>
     {% if kitap_kazanimlari %}
     <section class="vp-card vp-gains-card" id="kitap-kazanimlari" aria-labelledby="vp-gains-heading">
       <div class="vp-section-head"><div><p class="vp-eyebrow">OKUDUKÇA BÜYÜYOR</p><h2 id="vp-gains-heading">Kitaplarla kazandıkları</h2></div><span class="vp-section-deco" aria-hidden="true">✦</span></div>
       <div class="vp-gain-values">{% for d in kitap_kazanimlari|groupby('deger') %}<span class="vp-gain-chip">{{ d.list[0].deger_emoji }} {{ d.grouper }}{% if d.list|length > 1 %} ×{{ d.list|length }}{% endif %}</span>{% endfor %}</div>
       {% for k in kitap_kazanimlari %}
-      <details class="vp-gain"{% if loop.first %} open{% endif %}>
+      <details class="vp-gain">
         <summary><span class="vp-gain-medal" aria-hidden="true">{{ k.deger_emoji }}</span><span><strong>{{ k.ad }}</strong><small>{{ k.yazar }} · {{ k.deger }} rozeti · {{ k.tarih }}</small></span></summary>
         <div class="vp-gain-body">
           <p><strong>Kitap ne anlatıyor?</strong> {{ k.konu }}</p>
@@ -196,56 +156,9 @@
     </section>
     {% endif %}
 
-    <div class="vp-communication">
-      <section class="vp-card" id="notlar" aria-labelledby="vp-notes-heading">
-        <div class="vp-section-head"><div><p class="vp-eyebrow">İLETİŞİM</p><h2 id="vp-notes-heading">Öğretmen notları</h2></div></div>
-        {% for n in notlar %}<article class="vp-note {{ 'vp-note--warning' if n.tur == 'uyari' else ('vp-note--positive' if n.tur == 'olumlu' else 'vp-note--other') }}"><p class="vp-eyebrow">{{ 'Uyarı' if n.tur == 'uyari' else ('Olumlu davranış' if n.tur == 'olumlu' else 'Duyuru') }}</p><p>{{ n.not_metni }}</p><p class="vp-muted">{{ n.ogretmen }} · {{ (n.tarih or '')[:16] }}</p></article>{% else %}<p class="vp-muted">Henüz not yok.</p>{% endfor %}
-      </section>
-      <section class="vp-card" id="gorusme" aria-labelledby="vp-meeting-heading">
-        <div class="vp-section-head"><div><p class="vp-eyebrow">ÖĞRETMENLE GÖRÜŞ</p><h2 id="vp-meeting-heading">Görüşme talebi</h2></div></div>
-        <p class="vp-muted">Kısa bir not yazın, öğretmen ekranına düşer.</p>
-        <form method="post" action="{{ url_for('veli_randevu_kaydet') }}"><label class="vp-form-label" for="veli-gorusme-mesaji">Görüşme konusu</label><textarea id="veli-gorusme-mesaji" name="mesaj" rows="4" placeholder="Konuyu yazın" required></textarea><button type="submit">Talep gönder</button></form>
-      </section>
-    </div>
-  </main>
-</div>
-<script src="{{ url_for('static', filename='veli_panel_clay.js') }}?v=veli20260929a" defer></script>
+</div></main></div></div>
+<script src="{{ url_for('static', filename='app_layout.js') }}?v=20260930a" defer></script>
 <script src="{{ url_for('static', filename='rozet_clay.js') }}?v=rozet20260930c" defer></script>
-
-<div id="veli-uyari" class="vp-alert"{% if not bekleyen_haber %} hidden{% endif %} role="alertdialog" aria-labelledby="veli-uyari-baslik" aria-modal="true">
-  <div class="vp-alert-card">
-    <p class="vp-eyebrow">Okunmamış uyarı</p>
-    <h2 id="veli-uyari-baslik">Öğretmenden yeni mesaj</h2>
-    <ul id="veli-uyari-liste">
-      {% for h in bekleyen_haber %}<li data-tur="{{ h.tur }}">{{ h.metin }}</li>{% endfor %}
-    </ul>
-    <button type="button" id="veli-uyari-gordum">Gördüm</button>
-  </div>
-</div>
-
-{% if (ogrenci.sinif_adi or '').startswith('5/') or (ogrenci.sinif_adi or '').startswith('6/') or (ogrenci.sinif_adi or '').startswith('7/') %}
-<div id="kulup-duyuru" class="duyuru" hidden>
-  <div class="duyuru-kutu">
-    <img src="{{ url_for('static', filename='cocuk-kulubu.jpg') }}?v=20260930b" alt="Çocuk Kulübü açılıyor. 5, 6 ve 7. sınıflar başvurabilir.">
-    <div class="duyuru-alt">
-      <label class="duyuru-sec"><input type="checkbox" id="kulup-bir-daha"> Bir daha gösterme</label>
-      <button type="button" id="kulup-kapat">Kapat</button>
-    </div>
-  </div>
-</div>
-<script>
-(function () {
-  const duyuru = document.getElementById("kulup-duyuru");
-  const anahtar = "cocuk-kulubu-gizle-{{ ogrenci.id }}";
-  if (localStorage.getItem(anahtar)) return;
-  duyuru.hidden = false;
-  document.getElementById("kulup-kapat").addEventListener("click", function () {
-    if (document.getElementById("kulup-bir-daha").checked) localStorage.setItem(anahtar, "1");
-    duyuru.remove();
-  });
-})();
-</script>
-{% endif %}
 <script>
 (function () {
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
@@ -408,36 +321,56 @@
     }
     cal();
   }
-  function uyariEkle(haberler) {
-    if (!haberler.length || !uyari || !liste) return;
-    haberler.slice().reverse().forEach(function (h) {
-      const li = document.createElement("li");
-      li.textContent = h.metin;
-      li.setAttribute("data-tur", h.tur || "");
-      liste.insertBefore(li, liste.firstChild);
-    });
-    uyari.hidden = false;
+  const feed = document.getElementById("parent-message-feed");
+  const kapat = document.getElementById("veli-uyari-kapat");
+  const initial = {{ haberler|tojson }};
+  const seen = new Set(initial.map(h => [h.tur,h.metin,(h.zaman || '').slice(0,16)].join('|')));
+  const storageKey = "veli-haber-son-{{ ogrenci.id }}";
+  let son = initial.reduce((n,h) => Math.max(n, Number(h.id)), 0);
+  let unread = {{ (bekleyen_haber|length > 0)|tojson }};
+  function messageLi(h, read) {
+    const li = document.createElement('li'); li.dataset.id=h.id;
+    const time = document.createElement('time'); time.textContent=(h.zaman || '') + (read ? ' · Okundu' : ' · Yeni');
+    const p = document.createElement('p'); p.textContent=h.metin; li.append(time,p); return li;
   }
-  if (gordum) gordum.addEventListener("click", async function () {
-    await fetch("/veli/haber/goruldu", { method: "POST" });
-    if (liste) liste.innerHTML = "";
-    if (uyari) uyari.hidden = true;
+  function uyariEkle(haberler) {
+    let added=false;
+    haberler.forEach(h => {
+      const key=[h.tur,h.metin,(h.zaman || '').slice(0,16)].join('|');
+      if(seen.has(key))return;
+      seen.add(key);added=true; feed?.querySelector('[data-empty]')?.remove();
+      feed?.prepend(messageLi(h,false));liste.replaceChildren(messageLi(h,false));
+    });
+    if(added){uyari.hidden=false;gordum.hidden=false;unread=true;document.getElementById('haber-okundu').textContent='';}
+    return added;
+  }
+  kapat?.addEventListener('click',()=>{uyari.hidden=true;});
+  gordum?.addEventListener('click',async()=>{
+    gordum.disabled=true;
+    const acknowledged=son;
+    try {
+      const response=await fetch('/veli/haber/goruldu',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({son_id:acknowledged})});
+      if(!response.ok)throw new Error('read');
+      gordum.hidden=son<=acknowledged;unread=son>acknowledged;document.getElementById('haber-okundu').textContent=unread?'Yeni mesaj var':'Okundu';
+      [liste,feed].forEach(list=>list?.querySelectorAll('li[data-id]').forEach(li=>{if(Number(li.dataset.id)<=acknowledged){const time=li.querySelector('time');time.textContent=time.textContent.replace(' · Yeni',' · Okundu');}}));
+    }catch{document.getElementById('haber-okundu').textContent='Okundu bilgisi kaydedilemedi. Tekrar deneyin.';}
+    finally{gordum.disabled=false;}
   });
-  let son = Number(localStorage.getItem("veli-haber-son") || "0");
   async function bak() {
     const yanit = await fetch("/veli/haber?son=" + son);
     if (!yanit.ok) return;
     const veri = await yanit.json();
     const haber = veri.haber || [];
     haber.forEach(function (h) {
-      if (!native && document.visibilityState === "visible") cal();
       son = Math.max(son, h.id);
     });
-    if (haber.length) uyariEkle(haber);
-    localStorage.setItem("veli-haber-son", String(son));
+    if (haber.length && uyariEkle(haber) && !native && document.visibilityState === "visible") cal();
+    try { localStorage.setItem(storageKey, String(son)); } catch {}
   }
-  bak();
-  setInterval(bak, native ? 2500 : 4000);
+  let checking=false;
+  async function poll(){if(checking)return;checking=true;try{await bak();}catch{}finally{checking=false;}}
+  poll();
+  setInterval(poll, native ? 2500 : 4000);
 })();
 </script>
 {% include "_renk_ayari.html" %}

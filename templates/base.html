@@ -455,193 +455,30 @@
     }
   </style>
   {% block head %}{% endblock %}
+{% if lgs_sayac %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_sayac.css') }}?v=20261001a"><script src="{{ url_for('static', filename='lgs_sayac.js') }}?v=20261001a" defer></script>{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20260930a">
 </head>
-<body class="ui-theme app-background bg-slate-100 overflow-x-hidden {% if session.ogretmen_adi %}has-teacher-mobile-nav{% endif %} {% if request.endpoint == 'dashboard' %}dashboard-page{% endif %}">
-
-{% if session.ogretmen_adi %}
-{% set aktif_sinif_id = aktif.id if aktif is defined and aktif else None %}
-<!-- ── Üst Bar ─────────────────────────────────────────────────────────── -->
-<header class="app-header text-white sticky top-0 z-40">
-  <div class="flex items-center justify-between gap-2 px-3 sm:px-4 py-3 max-w-screen-xl mx-auto">
-    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
-      <button id="teacher-menu-button"
-              class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/60 hover:bg-white transition"
-              type="button"
-              aria-label="Menüyü aç"
-              aria-controls="teacher-menu"
-              aria-expanded="false"
-              onclick="toggleTeacherMenu()">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-      <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}" class="min-w-0">
-        <div class="font-bold text-sm sm:text-base leading-tight">
-          <span class="sm:hidden">🏫 ECO</span>
-          <span class="hidden sm:inline">🏫 Erenler Cumhuriyet Ortaokulu</span>
-        </div>
-        <div class="text-xs text-violet-800 hidden sm:block">Öğrenci takip · 2026-2027</div>
-      </a>
-    </div>
-
-    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
-      <nav class="hidden lg:flex items-center gap-1.5 text-xs font-bold">
-        {% set nav_cls = 'inline-flex items-center rounded-full px-3 py-2 transition whitespace-nowrap' %}
-        <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'dashboard' else 'text-violet-900/80 hover:bg-white/50' }}">
-          Panel
-        </a>
-        <a href="{{ url_for('haftalik_takip', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('haftalik_takip') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'haftalik_takip' else 'text-violet-900/80 hover:bg-white/50' }}">
-          Kitap / Ödev
-        </a>
-        <a href="{{ url_for('onay_kutusu') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'onay_kutusu' else 'text-violet-900/80 hover:bg-white/50' }}">
-          Onay
-        </a>
-        <a href="{{ url_for('karne', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('karne') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint in ['karne', 'karne_excel', 'karne_pdf'] else 'text-violet-900/80 hover:bg-white/50' }}">
-          Karne
-        </a>
-        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint in ['analiz_merkezi', 'kitap_odev_rapor'] else 'text-violet-900/80 hover:bg-white/50' }}">
-          Analiz
-        </a>
-        <a href="{{ url_for('lgs') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'lgs' else 'text-violet-900/80 hover:bg-white/50' }}">
-          LGS
-        </a>
-        <a href="{{ url_for('deneme_analiz') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'deneme_analiz' else 'text-violet-900/80 hover:bg-white/50' }}">
-          Deneme
-        </a>
-        {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
-        <a href="{{ url_for('giris_raporu') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint in ['giris_raporu', 'giris_raporu_excel'] else 'text-violet-900/80 hover:bg-white/50' }}">
-          Giriş raporu
-        </a>
-        <a href="{{ url_for('ogrenci_ara') }}"
-           class="{{ nav_cls }} {{ 'bg-white/80 text-violet-900 shadow' if request.endpoint == 'ogrenci_ara' else 'text-violet-900/80 hover:bg-white/50' }}">
-          Ara
-        </a>
-        {% endif %}
-      </nav>
-
-      <button id="ana-ekran" type="button" hidden class="rounded-full bg-amber-200 px-3 py-2 text-xs font-black text-amber-900">Ana ekrana ekle</button>
-      <button type="button" data-renk-ac class="renk-ust-btn">Renk</button>
-      <span class="hidden sm:block text-xs text-violet-900 truncate max-w-52">👤 {{ session.ogretmen_adi }}{% if session.ogretmen_adi == 'ADEM AKGÜL' %} · Müdür{% elif session.ogretmen_adi == 'METEHAN CÜCEN' %} · Müdür Yardımcısı{% endif %}</span>
-      <a href="{{ url_for('logout') }}"
-         class="hidden sm:inline-flex bg-white/70 hover:bg-white text-violet-900 text-xs
-                px-3 py-2 rounded-full transition whitespace-nowrap">
-        Çıkış
-      </a>
-    </div>
-  </div>
-</header>
-
-<div id="teacher-menu-overlay"
-     class="mobile-menu-overlay fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm lg:hidden"
-     onclick="closeTeacherMenu()"></div>
-
-<nav id="teacher-menu"
-     class="mobile-drawer fixed inset-y-0 left-0 z-50 w-[88vw] max-w-sm overflow-y-auto bg-[#fff9ff] text-violet-900 shadow-2xl lg:hidden">
-  <div class="app-header text-violet-900 flex items-start justify-between gap-3 px-4 py-5">
-    <div class="min-w-0">
-      <div class="text-sm font-black leading-tight">Erenler Cumhuriyet Ortaokulu</div>
-      <div class="mt-1 text-xs text-violet-700 truncate">{{ session.ogretmen_adi }}</div>
-    </div>
-    <button type="button"
-            onclick="closeTeacherMenu()"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/70 text-xl leading-none text-violet-900">
-      ×
-    </button>
-  </div>
-
-  <div class="space-y-5 px-4 py-5">
-    <section>
-      <h2 class="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Menü</h2>
-      <div class="grid gap-2">
-        <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}" class="mobile-link"><span class="nav-mark mark-blue">P</span><span>Panel — öğrenci listesi</span></a>
-        <a href="{{ url_for('haftalik_takip', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('haftalik_takip') }}" class="mobile-link"><span class="nav-mark mark-emerald">K</span><span>Kitap ve ödev — haftalık işaret</span></a>
-        <a href="{{ url_for('onay_kutusu') }}" class="mobile-link"><span class="nav-mark mark-amber">O</span><span>Onay kutusu — yaptım diyenler</span></a>
-        <a href="{{ url_for('karne', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('karne') }}" class="mobile-link"><span class="nav-mark mark-slate">N</span><span>Dönem karnesi — kitap, ödev, LGS</span></a>
-        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}" class="mobile-link"><span class="nav-mark mark-rose">A</span><span>Analiz — kitap ve ödev raporu</span></a>
-        <a href="{{ url_for('lgs') }}" class="mobile-link"><span class="nav-mark mark-amber">L</span><span>LGS — 8. sınıf deneme girişi</span></a>
-        <a href="{{ url_for('deneme_analiz') }}" class="mobile-link"><span class="nav-mark mark-rose">D</span><span>Deneme analizi — bireysel ve genel</span></a>
-        <button type="button" data-renk-ac class="mobile-link w-full text-left"><span class="nav-mark mark-violet">R</span><span>Renk — görünümü değiştir</span></button>
-        {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
-        <a href="{{ url_for('giris_raporu') }}" class="mobile-link"><span class="nav-mark mark-slate">G</span><span>Giriş raporu — kim veri girdi</span></a>
-        <a href="{{ url_for('ogrenci_ara') }}" class="mobile-link"><span class="nav-mark mark-blue">S</span><span>Öğrenci ara</span></a>
-        {% endif %}
-      </div>
-    </section>
-
-    <a href="{{ url_for('logout') }}" class="block rounded-full bg-gradient-to-b from-violet-300 to-violet-500 px-4 py-3 text-center text-sm font-black text-white">Çıkış</a>
-  </div>
-</nav>
-
-<nav class="teacher-mobile-tabbar lg:hidden" aria-label="Mobil hızlı menü">
-  <a href="{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}"
-     class="{{ 'is-active' if request.endpoint == 'dashboard' else '' }}">
-    <span class="tab-icon">⌂</span>
-    <span>Panel</span>
-  </a>
-  <a href="{{ url_for('haftalik_takip', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('haftalik_takip') }}"
-     class="{{ 'is-active' if request.endpoint in ['veri_girisi', 'odevler', 'yoklama', 'haftalik_takip', 'ogretmen_kitap_okuma', 'ogretmen_sinav_analiz', 'ders_programi'] else '' }}">
-    <span class="tab-icon">✎</span>
-    <span>Ödev</span>
-  </a>
-  <a href="{{ url_for('analiz_merkezi', sinif_id=aktif_sinif_id) if aktif_sinif_id else url_for('analiz_merkezi') }}"
-     class="{{ 'is-active' if request.endpoint == 'analiz_merkezi' else '' }}">
-    <span class="tab-icon">▣</span>
-    <span>Analiz</span>
-  </a>
-  <button type="button" onclick="openTeacherShortcut('menu')">
-    <span class="tab-icon">☷</span>
-    <span>Menü</span>
-  </button>
-</nav>
+<body class="ui-theme app-background bg-slate-100 layout-page {{ 'dashboard-page' if request.endpoint == 'dashboard' else '' }}">
+{% set aktif_sinif_id = nav_sinif_id %}
+{% if ui_role %}
+<a class="app-skip" href="#app-content">İçeriğe geç</a>
+<div class="app-shell">
+{% include "_app_sidebar.html" %}
+<div class="app-workspace" id="app-content">
+{% include "_app_toolbar.html" %}
 {% endif %}
-
 {% block body %}{% endblock %}
+{% if ui_role %}</div></div>{% endif %}
+<script src="{{ url_for('static', filename='app_layout.js') }}?v=20260930a" defer></script>
 
 {% block scripts %}{% endblock %}
 {% include "_renk_ayari.html" %}
 <script>
-function toggleTeacherMenu() {
-  const menu = document.getElementById('teacher-menu');
-  const overlay = document.getElementById('teacher-menu-overlay');
-  const button = document.getElementById('teacher-menu-button');
-  if (!menu || !overlay) return;
-  const open = menu.classList.contains('menu-open');
-  menu.classList.toggle('menu-open', !open);
-  overlay.classList.toggle('menu-open', !open);
-  document.body.classList.toggle('overflow-hidden', !open);
-  button?.setAttribute('aria-expanded', String(!open));
-}
-
-function closeTeacherMenu() {
-  document.getElementById('teacher-menu')?.classList.remove('menu-open');
-  document.getElementById('teacher-menu-overlay')?.classList.remove('menu-open');
-  document.getElementById('teacher-menu-button')?.setAttribute('aria-expanded', 'false');
-  document.body.classList.remove('overflow-hidden');
-}
-
+function toggleTeacherMenu() { window.appMenuToggle?.(); }
+function closeTeacherMenu() { window.appMenuClose?.(); }
 function openTeacherShortcut(action) {
-  if (action === 'menu') {
-    toggleTeacherMenu();
-    return;
-  }
-  if (action === 'classes') {
-    if (typeof window.toggleSidebar === 'function') window.toggleSidebar();
-    else window.location.href = "{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}";
-    return;
-  }
-  if (action === 'students') {
-    if (typeof window.setDashboardSection === 'function') window.setDashboardSection('liste');
-    else window.location.href = "{{ url_for('dashboard', sinif=aktif_sinif_id) if aktif_sinif_id else url_for('dashboard') }}#ogrenci-listesi";
-  }
+  if (action === 'menu' || action === 'classes') toggleTeacherMenu();
+  else window.location.href = "{{ url_for('dashboard', sinif=nav_sinif_id) }}#ogrenci-listesi";
 }
 
 document.addEventListener('click', function (event) {

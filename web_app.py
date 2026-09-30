@@ -75,7 +75,7 @@ from database import (
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet, haftalik_odev_bildir,
     haftalik_odev_onceki_kopyala, sinif_hafta_durumu, onay_bekleyenler,
     ogrenci_adi_ara, donem_karne_satirlari,
-    veli_haber_yeni, veli_haber_ekle, veli_haber_bekleyen, veli_haber_goruldu, veli_push_kaydet, veli_push_sil,
+    veli_haber_yeni, veli_haber_ekle, veli_haber_bekleyen, veli_haber_liste, veli_haber_goruldu, veli_push_kaydet, veli_push_sil,
     devamsizlik_kaydet, devamsizlik_sinif, devamsizlik_ogrenci,
     odev_foto_kaydet, veli_duzen,
     sinif_okuma_kitaplari,
@@ -92,7 +92,7 @@ from database import (
     kitap_odev_analiz,
     tik_kayitlari_siniflarda,
     ogretmen_yetki_al, ogretmen_yetki_guncelle,
-    randevu_talep_ekle, randevu_talep_by_id, randevu_listesi_siniflar, randevu_durum_guncelle,
+    randevu_talep_ekle, randevu_talep_by_id, randevu_listesi_siniflar, randevu_durum_guncelle, randevu_ogrenci_listesi,
     gunluk_yansima_ekle, gunluk_yansima_by_id, gunluk_yansima_bekleyen_siniflar,
     gunluk_yansima_degerlendir,
     gunluk_yansima_ogrenci_gecmis,
@@ -106,6 +106,7 @@ from veli_cihaz import veli_cihaz_kaydet, veli_cihaz_ogrenci, veli_cihaz_sil
 from export import excel_raporu_olustur, OPENPYXL_OK
 from lgs_konular import LGS_KONULAR
 from lgs_program import DEFTER_DERSLER, LGS_AYLAR, TEMPO_AD, blok_metin, gun_plani
+from lgs_sayac import lgs_sayac_verisi
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes, pdf_odev_raporu_bytes
 from rapor_analiz import (
     aylik_tik_sayilari,
@@ -410,6 +411,36 @@ def _odev_bildirimi_verisi(hedef: str) -> dict | None:
     }
 
 
+def _ui_sinif_sec(siniflar, aday=None):
+    ids = {int(s["id"]) for s in siniflar}
+    secili = aday if aday in ids else session.get("ui_sinif_id")
+    if secili not in ids:
+        secili = siniflar[0]["id"] if siniflar else None
+    if secili:
+        session["ui_sinif_id"] = int(secili)
+    return secili
+
+
+@app.context_processor
+def _ekran_duzeni_context():
+    endpoint = request.endpoint or ""
+    # Veli routes take precedence when both role sessions exist in this browser.
+    veli = endpoint.startswith("veli_") and bool(session.get("veli_ogrenci_id"))
+    rol = "veli" if veli else ("ogretmen" if session.get("ogretmen_id") else "")
+    siniflar = ogretmen_siniflari(session["ogretmen_id"]) if rol == "ogretmen" else []
+    if rol == "ogretmen" and endpoint in {"dashboard", "karne"}:
+        siniflar = aktif_sube_siniflari() or siniflar
+    if rol == "ogretmen" and not siniflar:
+        siniflar = aktif_sube_siniflari()
+    secili = _ui_sinif_sec(siniflar, request.args.get("sinif_id", type=int) or request.args.get("sinif", type=int)) if siniflar else None
+    ogrenci = _ogrenci_bul(int(session["veli_ogrenci_id"])) if veli else None
+    sayac_goster = endpoint in {"lgs", "veli_lgs"} or (
+        endpoint == "veli_panel" and ogrenci and (ogrenci.get("sinif_adi") or "").startswith("8/")
+    )
+    return {"ui_role": rol, "nav_siniflar": siniflar, "nav_sinif_id": secili, "nav_student": ogrenci,
+            "lgs_sayac": lgs_sayac_verisi() if sayac_goster else None}
+
+
 @app.context_processor
 def _bilgilendirme_context():
     return {
@@ -445,12 +476,7 @@ def _bilgilendirme_modal_ekle(response):
                 tanitim_hedef=hedef,
             ))
         odev_bildirimi = _odev_bildirimi_verisi(hedef)
-        if hedef == "veli" and odev_bildirimi:
-            parcaciklar.append(render_template(
-                "_veli_odev_kose.html",
-                odev_bildirimi=odev_bildirimi,
-            ))
-        elif odev_bildirimi:
+        if hedef != "veli" and odev_bildirimi:
             parcaciklar.append(render_template(
                 "_odev_bildirimi_modal.html",
                 odev_bildirimi=odev_bildirimi,
@@ -770,6 +796,7 @@ def login():
         else:
             oid = ogretmen_id_bul(ad)
             _veli_oturumu_kapat()
+            session.clear()
             session["ogretmen_id"] = oid
             session["ogretmen_adi"] = ad
             session["ogretmen_yetki"] = ogretmen_yetki_al(oid)
@@ -1545,7 +1572,18 @@ def veli_karne():
         return redirect(url_for("veli_giris"))
     donem = request.args.get("donem", type=int) or _bugunun_donemi()
     donem, _haftalar, satirlar = _karne_paketi(donem, ogrenci_id=int(oid))
-    return render_template("karne.html", siniflar=[], sinif_id=None, donem=donem, satirlar=satirlar, veli=True)
+    ogrenci = _ogrenci_bul(int(oid))
+    if not ogrenci:
+        return redirect(url_for("veli_giris"))
+    sonraki_is = haftalik_odev_bilgi_getir(ogrenci["sinif_id"], _lgs_hafta())
+    bireysel = haftalik_takip_sinif(ogrenci["sinif_id"], _lgs_hafta()).get(int(oid), {})
+    if bireysel.get("odev_not"):
+        sonraki_is = {"ders": bireysel.get("odev_ders") or sonraki_is.get("ders", ""), "aciklama": bireysel["odev_not"]}
+    return render_template(
+        "karne.html", siniflar=[], sinif_id=None, donem=donem, satirlar=satirlar,
+        veli=True, ogretmen_degerlendirme=ogretmen_notlari_veli_ozeti(int(oid), 1),
+        sonraki_is=sonraki_is, sonraki_hedef=lgs_profil(int(oid)).get("hedef", "") if ogrenci["sinif_adi"].startswith("8/") else "",
+    )
 
 
 @app.route("/veli/karne.xlsx")
@@ -2428,6 +2466,7 @@ def veli_giris():
                 hata = "Bu numarayla ogrenci bulunamadi."
             else:
                 _veli_oturumu_kapat()
+                session.clear()
                 session.permanent = True
                 session["veli_ogrenci_id"] = ogrenci["id"]
                 return redirect(url_for("veli_panel"))
@@ -2587,6 +2626,9 @@ def veli_panel():
         program_bugun=program_bugun,
         ay_yazisi=ay_yazisi,
         bekleyen_haber=veli_haber_bekleyen(int(ogrenci_id)),
+        haberler=veli_haber_liste(int(ogrenci_id)),
+        gorusme_talepleri=randevu_ogrenci_listesi(int(ogrenci_id)),
+        bugun_odev=_odev_bildirimi_verisi("veli"),
     )
 
 
@@ -2643,7 +2685,11 @@ def veli_haber_goruldu_route():
     oid = session.get("veli_ogrenci_id")
     if not oid:
         return jsonify({"ok": False}), 401
-    veli_haber_goruldu(int(oid))
+    payload = request.get_json(silent=True) or {}
+    son_id = payload.get("son_id")
+    if son_id is not None and (not isinstance(son_id, int) or son_id < 0):
+        return jsonify({"ok": False}), 400
+    veli_haber_goruldu(int(oid), son_id)
     return jsonify({"ok": True})
 
 
@@ -2935,7 +2981,7 @@ def dashboard():
                                toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id))
 
     try:
-        aktif_id = int(request.args.get("sinif", siniflar[0]["id"]))
+        aktif_id = _ui_sinif_sec(siniflar, request.args.get("sinif", type=int)) or 0
     except (TypeError, ValueError):
         aktif_id = siniflar[0]["id"]
 
@@ -2967,6 +3013,8 @@ def dashboard():
     olumlu_satirlari = sinif_olumlu_gecmis(aktif["id"])
     hafta_bugun = (date.today() - timedelta(days=date.today().weekday())).isoformat()
     eksik_siniflar = sinif_hafta_durumu(hafta_bugun)
+    haftalik_kayit = haftalik_takip_sinif(aktif["id"], hafta_bugun)
+    haftalik_dikkat = sum(1 for o in ogrenciler if haftalik_kayit.get(o["id"], {}).get("odev_durum") in {"eksik", "yok"})
     kutu = onay_bekleyenler(hafta_bugun)
     ids_ogr = [o["id"] for o in ogrenciler]
     olumlu_h = ogrenci_olumlu_tik_sayilari(ids_ogr)
@@ -2990,6 +3038,7 @@ def dashboard():
                            ogretmen_gorsel_tipi=ogretmen_gorsel_tipi,
                            toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id),
                            eksik_siniflar=eksik_siniflar,
+                           haftalik_dikkat=haftalik_dikkat,
                            onay_sayisi=len(kutu["odevler"]) + len(kutu["gorevler"]) + len(kutu["gunluk"]),
                            onay_geciken=kutu["geciken"])
 
@@ -3334,13 +3383,15 @@ def haftalik_takip():
     siniflar = ogretmen_siniflari(session["ogretmen_id"])
     if not siniflar:
         siniflar = aktif_sube_siniflari()
-    aktif_id = request.args.get("sinif", type=int) or (siniflar[0]["id"] if siniflar else 0)
+    aktif_id = _ui_sinif_sec(siniflar, request.args.get("sinif", type=int)) or 0
     aktif = next((s for s in siniflar if s["id"] == aktif_id), siniflar[0] if siniflar else None)
-    donem = request.args.get("donem", type=int)
+    donem = request.args.get("donem", type=int) or session.get("ui_takip_donem")
     if donem not in (1, 2):
         donem = _bugunun_donemi()
     haftalar = _donem_haftalari(donem)
-    hafta = _secili_hafta(haftalar, (request.args.get("hafta") or "").strip())
+    hafta = _secili_hafta(haftalar, (request.args.get("hafta") or session.get("ui_takip_hafta") or "").strip())
+    session["ui_takip_donem"] = donem
+    session["ui_takip_hafta"] = hafta
     ogrenciler = sinif_ogrencileri(aktif["id"]) if aktif else []
     kayit = haftalik_takip_sinif(aktif["id"], hafta) if aktif and hafta else {}
     for ogr in ogrenciler:
@@ -3378,6 +3429,7 @@ def haftalik_takip():
         ozet=ozet,
         odev=haftalik_odev_bilgi_getir(aktif["id"], hafta) if aktif and hafta else {"ders": "", "aciklama": "", "kitap_adi": ""},
         kitaplar=sinif_okuma_kitaplari(aktif["sinif_adi"]) if aktif else [],
+        dersler=["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü ve Ahlak Bilgisi", "Diğer"],
         yok_bugun=yok_bugun,
     )
 
@@ -3388,13 +3440,34 @@ def _haftalik_takip_yetki(sinif_id: int) -> bool:
     return _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id)
 
 
+def _haftalik_payload(ogrenci_gerekli=True):
+    payload = request.get_json(silent=True) if request.is_json else request.form
+    if not hasattr(payload, "get"):
+        raise ValueError("İstek alanları geçersiz.")
+    def kimlik(alan):
+        value = payload.get(alan)
+        if isinstance(value, bool) or not isinstance(value, (int, str)):
+            raise ValueError("Öğrenci veya sınıf seçimi geçersiz.")
+        result = int(value)
+        if result <= 0:
+            raise ValueError("Öğrenci veya sınıf seçimi geçersiz.")
+        return result
+    sinif_id = kimlik("sinif_id")
+    ogrenci_id = kimlik("ogrenci_id") if ogrenci_gerekli else None
+    hafta = str(payload.get("hafta") or "").strip()
+    gun = date.fromisoformat(hafta)
+    if gun.isoformat() != hafta or gun.weekday() != 0:
+        raise ValueError("Geçerli bir hafta seçin.")
+    return payload, sinif_id, ogrenci_id, hafta
+
+
 @app.route("/haftalik-takip/isaret", methods=["POST"])
 @giris_zorunlu
 def haftalik_takip_isaret():
-    payload = request.get_json(silent=True) or request.form
-    sinif_id = int(payload.get("sinif_id") or 0)
-    ogrenci_id = int(payload.get("ogrenci_id") or 0)
-    hafta = str(payload.get("hafta") or "").strip()
+    try:
+        payload, sinif_id, ogrenci_id, hafta = _haftalik_payload()
+    except (TypeError, ValueError):
+        return jsonify(ok=False, sebep="Geçerli öğrenci, sınıf ve hafta seçin."), 400
     alan = str(payload.get("alan") or "").strip()
     deger = str(payload.get("deger") or "").strip()
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
@@ -3409,10 +3482,10 @@ def haftalik_takip_isaret():
 @app.route("/haftalik-takip/metin", methods=["POST"])
 @giris_zorunlu
 def haftalik_takip_metin_route():
-    payload = request.get_json(silent=True) or request.form
-    sinif_id = int(payload.get("sinif_id") or 0)
-    ogrenci_id = int(payload.get("ogrenci_id") or 0)
-    hafta = str(payload.get("hafta") or "").strip()
+    try:
+        payload, sinif_id, ogrenci_id, hafta = _haftalik_payload()
+    except (TypeError, ValueError):
+        return jsonify(ok=False, sebep="Geçerli öğrenci, sınıf ve hafta seçin."), 400
     alan = str(payload.get("alan") or "").strip()
     deger = str(payload.get("deger") or "")
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
@@ -3435,9 +3508,10 @@ def haftalik_takip_metin_route():
 @app.route("/haftalik-takip/toplu", methods=["POST"])
 @giris_zorunlu
 def haftalik_takip_toplu_route():
-    payload = request.get_json(silent=True) or request.form
-    sinif_id = int(payload.get("sinif_id") or 0)
-    hafta = str(payload.get("hafta") or "").strip()
+    try:
+        payload, sinif_id, _ogrenci_id, hafta = _haftalik_payload(ogrenci_gerekli=False)
+    except (TypeError, ValueError):
+        return jsonify(ok=False, sebep="Geçerli sınıf ve hafta seçin."), 400
     alan = str(payload.get("alan") or "").strip()
     deger = str(payload.get("deger") or "").strip()
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
@@ -3465,6 +3539,7 @@ def haftalik_odev_bilgi_route():
         session["ogretmen_id"],
         request.form.get("kitap_adi", ""),
     )
+    flash("Sınıf ödevi kaydedildi.", "success")
     return redirect(url_for("haftalik_takip", sinif=sinif_id, hafta=hafta, donem=donem))
 
 
@@ -3585,7 +3660,7 @@ def _karne_excel(satirlar, donem: int):
 @giris_zorunlu
 def karne():
     siniflar = aktif_sube_siniflari()
-    sinif_id = request.args.get("sinif", type=int) or (siniflar[0]["id"] if siniflar else 0)
+    sinif_id = _ui_sinif_sec(siniflar, request.args.get("sinif", type=int)) or 0
     donem = request.args.get("donem", type=int) or _bugunun_donemi()
     donem, _haftalar, satirlar = _karne_paketi(donem, sinif_id=sinif_id)
     return render_template("karne.html", siniflar=siniflar, sinif_id=sinif_id, donem=donem, satirlar=satirlar, veli=False)
@@ -3737,7 +3812,7 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
             if bos > yanlis and bos > 0:
                 ipucu = "Boşlar yanlıştan fazla. Bildiğin soruyu boş bırakma."
             elif yanlis >= max(3, tavan // 4):
-                ipucu = "Yanlışlar fazla. Bu derste konu eksiği var."
+                ipucu = "Bu denemede yanlışlar fazla. Konu eksiği veya dikkat hatası olabilir; yanlış sorular öğretmenle birlikte incelenmeli."
             elif yuzde >= 80:
                 ipucu = "Bu ders sağlam. Zor sorularla pekiştir."
             else:
@@ -3765,7 +3840,7 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
     bekleyen = [g for g in bugun_gorev if not g.get("tamamlandi")]
     if bekleyen and bekleyen[0].get("bildirdi"):
         g = bekleyen[0]
-        adimlar.append(f"{g['ders']} için yaptım dedin. Öğretmen onaylamadan tamam sayılmaz.")
+        adimlar.append(f"{g['ders']} görevi için tamamlandı bildirimi alındı. Öğretmen onayı bekleniyor.")
     elif bekleyen:
         g = bekleyen[0]
         adimlar.append(f"Bugün {g['ders']} görevini bitir: {g.get('konu') or 'konu yazılmadı'}.")
@@ -3805,7 +3880,7 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
     elif fark is None:
         mesaj = (
             f"İlk denemen {son['net']} net. Bundan sonrası yükseliş. Önce {zayif['ders']} "
-            "dersine çalış; orası toplam neti en çok yükseltir."
+            "dersindeki yanlış ve boş soruları öğretmenle inceleyerek önceliğini belirle."
         )
         kisa = f"İlk deneme {son['net']} net. Sıradaki ders: {zayif['ders']}."
     elif fark > 0:
@@ -3816,8 +3891,8 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
         kisa = f"Son deneme +{fark} net. Sıradaki ders: {zayif['ders']}."
     elif fark < 0:
         mesaj = (
-            f"Bu deneme {abs(fark)} net geride kaldı. {zayif['ders']} tek başına bunu toparlar. "
-            "Bu hafta yalnızca o derse yüklen."
+            f"Bu deneme {abs(fark)} net geride kaldı. {zayif['ders']} bu denemede daha fazla destek gerektiriyor olabilir. "
+            "Bu hafta o dersteki yanlışları incele; diğer derslerin programını da sürdür."
         )
         kisa = f"Son deneme {abs(fark)} net geride. Toparlama dersi: {zayif['ders']}."
     else:
@@ -4319,6 +4394,7 @@ def _lgs_ekran(veli: bool):
                 request.form.get("ogrenci_not") or "",
                 request.form.get("veli_not") or "",
             )
+            flash("Çalışma defteri kaydedildi. Öğretmen onayı bekleniyor.", "success")
             bolum = "defter"
         elif not veli and islem == "defter_ogretmen":
             hafta_sec = _lgs_hafta_sec(request.form.get("hafta"))
@@ -4333,6 +4409,7 @@ def _lgs_ekran(veli: bool):
             bolum = "defter"
         elif not veli and islem == "hedef":
             lgs_profil_kaydet(oid, request.form.get("hedef", ""), request.form.get("hedef_net", type=int) or 0)
+            flash("LGS hedefi kaydedildi.", "success")
             bolum = "program" if request.form.get("donus") == "program" else "deneme"
         elif not veli and islem == "deneme":
             dersler = []
@@ -4355,6 +4432,7 @@ def _lgs_ekran(veli: bool):
             else:
                 deneme_adi = request.form.get("ad", "").strip() or "LGS denemesi"
                 veli_haber_ekle(oid, f"Öğretmen {deneme_adi} sonucunu kaydetti.", "duyuru")
+                flash("Deneme sonucu kaydedildi ve veliye bildirildi.", "success")
             bolum = "deneme"
         hedef_url = "veli_lgs" if veli else "lgs"
         parametre = {} if veli else {"ogrenci": oid}
@@ -5312,7 +5390,7 @@ def rapor_analiz_pdf():
 def analiz_merkezi():
     ogretmen_id = session["ogretmen_id"]
     siniflar = ogretmen_siniflari(ogretmen_id)
-    secili_sinif_id = request.args.get("sinif_id", type=int)
+    secili_sinif_id = _ui_sinif_sec(siniflar, request.args.get("sinif_id", type=int))
     if secili_sinif_id and secili_sinif_id not in {s["id"] for s in siniflar}:
         secili_sinif_id = None
     if not secili_sinif_id and siniflar:
@@ -5340,11 +5418,23 @@ def analiz_merkezi():
         for k in kriter_pairs
     ]
 
+    def tarih_arg(ad):
+        deger = request.args.get(ad, "")
+        try:
+            return date.fromisoformat(deger).isoformat()
+        except ValueError:
+            return ""
+    baslangic, bitis = tarih_arg("baslangic"), tarih_arg("bitis")
+    if baslangic and bitis and baslangic > bitis:
+        baslangic, bitis = bitis, baslangic
+    analiz = kitap_odev_analiz(secili_sinif_id, baslangic=baslangic, bitis=bitis) if secili_sinif_id else {"haftalar": [], "ogrenciler": [], "ozet": {}}
+    analiz["ogrenciler"].sort(key=lambda o: (-o["eksik"]-o["yok"]-o["okumadi"]-o["getirmedi"], o["ad_soyad"]))
     return render_template(
         "analiz_merkezi.html",
+        baslangic=baslangic, bitis=bitis,
         siniflar=siniflar,
         secili_sinif_id=secili_sinif_id,
-        analiz=kitap_odev_analiz(secili_sinif_id) if secili_sinif_id else {"haftalar": [], "ogrenciler": [], "ozet": {}},
+        analiz=analiz,
     )
 
 
@@ -6067,14 +6157,17 @@ def veli_randevu_kaydet():
     o = _ogrenci_bul(int(oid))
     if not o:
         return redirect(url_for("veli_giris"))
-    mesaj = request.form.get("mesaj", "")
+    mesaj = request.form.get("mesaj", "").strip()
+    if not mesaj:
+        flash("Görüşme konusunu yazın.", "warning")
+        return redirect(url_for("veli_panel", _anchor="mesajlar"))
     randevu_talep_ekle(int(oid), int(o["sinif_id"]), mesaj)
     flash("Görüşme talebiniz kaydedildi. Öğretmeniniz en kısa sürede değerlendirecek.", "success")
-    return redirect(url_for("veli_ozet_sayfa"))
+    return redirect(url_for("veli_panel", _anchor="mesajlar"))
 
 
 @app.route("/veli/kitap-okuma")
-def veli_kitap_okuma():
+def veli_kitap_okuma(form_data=None):
     oid = session.get("veli_ogrenci_id")
     if not oid:
         return redirect(url_for("veli_giris"))
@@ -6087,6 +6180,7 @@ def veli_kitap_okuma():
         ogrenci=ogrenci,
         avatar=_avatar(ogrenci),
         kayitlar=kitap_okuma_ogrenci_gecmis(int(oid), 80),
+        form_data=form_data or {},
     )
 
 
@@ -6111,6 +6205,8 @@ def veli_kitap_okuma_kaydet():
         "Okuma kaydı öğretmen onayına gönderildi." if sonuc.get("ok") else sonuc.get("sebep", "Kayıt alınamadı."),
         "success" if sonuc.get("ok") else "warning",
     )
+    if not sonuc.get("ok"):
+        return veli_kitap_okuma(form_data=request.form), 400
     return redirect(url_for("veli_kitap_okuma"))
 
 

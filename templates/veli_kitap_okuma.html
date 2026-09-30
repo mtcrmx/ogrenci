@@ -1,36 +1,12 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kitap okuma</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
-</head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
-  <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-    <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-      <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-black text-white" style="background:{{ avatar.renk }}">{{ avatar.initials }}</div>
-        <div>
-          <div class="text-sm font-black">Kitap okuma takibi</div>
-          <div class="text-xs font-semibold text-slate-500">{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}</div>
-        </div>
-      </div>
-      <nav class="flex gap-2 text-xs font-black">
-        <a class="rounded-lg bg-slate-900 px-3 py-2 text-white" href="{{ url_for('veli_ozet_sayfa') }}">Özet</a>
-        <a class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700" href="{{ url_for('veli_panel') }}">Tik geçmişi</a>
-        <a class="rounded-lg bg-rose-600 px-3 py-2 text-white" href="{{ url_for('veli_cikis') }}">Çıkış</a>
-      </nav>
-    </div>
-  </header>
-
+{% extends "base.html" %}
+{% block title %}Kitap okuma{% endblock %}
+{% block body %}
   <main class="mx-auto grid max-w-5xl gap-4 px-4 py-5 pb-16 lg:grid-cols-[360px_1fr]">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
       <div class="lg:col-span-2 space-y-2">
         {% for cat, msg in messages %}
-        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">{{ msg }}</div>
+        <div class="app-notice {{ 'app-notice--success' if cat == 'success' else 'app-notice--error' }}" role="status">{{ msg }}</div>
         {% endfor %}
       </div>
       {% endif %}
@@ -41,36 +17,36 @@
       <p class="mt-1 text-xs leading-5 text-slate-500">Kayıt öğretmen onayına düşer. Onaylanınca öğrencinin XP’sine ve sınıf puanına yansır.</p>
       <form class="mt-4 grid gap-3" method="post" action="{{ url_for('veli_kitap_okuma_kaydet') }}">
         <label class="text-xs font-black text-slate-600">Kitap adı
-          <input required name="kitap_adi" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+          <input required name="kitap_adi" maxlength="180" value="{{ form_data.get('kitap_adi','') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
         </label>
         <label class="text-xs font-black text-slate-600">Yazar
-          <input name="yazar" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+          <input name="yazar" maxlength="120" value="{{ form_data.get('yazar','') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
         </label>
         <div class="grid grid-cols-2 gap-2">
           <label class="text-xs font-black text-slate-600">Okuma türü
             <select name="okuma_turu" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
               <option value="sessiz">Sessiz</option>
-              <option value="sesli">Sesli</option>
+              <option value="sesli"{% if form_data.get('okuma_turu') == 'sesli' %} selected{% endif %}>Sesli</option>
             </select>
           </label>
           <label class="text-xs font-black text-slate-600">Sayfa
-            <input required type="number" min="1" name="sayfa_sayisi" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+            <input required type="number" min="1" name="sayfa_sayisi" value="{{ form_data.get('sayfa_sayisi','') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
           </label>
           <label class="text-xs font-black text-slate-600">Saat
-            <input type="number" min="0" step="0.25" name="saat" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+            <input type="number" min="0" step="0.25" name="saat" value="{{ form_data.get('saat','') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
           </label>
           <label class="text-xs font-black text-slate-600">Gün
-            <input type="number" min="0" name="gun" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+            <input type="number" min="0" name="gun" value="{{ form_data.get('gun','') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
           </label>
           <label class="text-xs font-black text-slate-600">Başlangıç
-            <input type="date" name="baslangic_tarihi" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+            <input type="date" name="baslangic_tarihi" value="{{ form_data.get('baslangic_tarihi','') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
           </label>
           <label class="text-xs font-black text-slate-600">Bitiş
-            <input type="date" name="bitis_tarihi" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+            <input type="date" name="bitis_tarihi" value="{{ form_data.get('bitis_tarihi','') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
           </label>
         </div>
         <label class="text-xs font-black text-slate-600">Veli notu
-          <textarea name="veli_notu" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"></textarea>
+          <textarea name="veli_notu" rows="3" maxlength="500" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">{{ form_data.get('veli_notu','') }}</textarea>
         </label>
         <button class="rounded-lg bg-sky-700 px-4 py-3 text-sm font-black text-white hover:bg-sky-800">Kaydet ve onaya gönder</button>
       </form>
@@ -109,5 +85,4 @@
       </div>
     </section>
   </main>
-</body>
-</html>
+{% endblock %}

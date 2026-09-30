@@ -3,15 +3,16 @@
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1">{% endblock %}
 {% block body %}
 <main class="lgs-page mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
+  {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
   {% if not ogrenci %}
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
     <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS koçluk</p>
     <h1 class="mt-1 text-2xl font-black">Öğrenci seç</h1>
         <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Tempo, çalışma defteri ve deneme buradan yürür.</p>
   </header>
-  {% with mesajlar = get_flashed_messages() %}
+  {% with mesajlar = get_flashed_messages(with_categories=true) %}
   {% if mesajlar %}
-  <p class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-900">{{ mesajlar[0] }}</p>
+  {% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--success' if kategori == 'success' else 'app-notice--error' }}" role="status">{{ mesaj }}</p>{% endfor %}
   {% endif %}
   {% endwith %}
   <form method="post" action="{{ url_for('lgs_kurum_pdf') }}" enctype="multipart/form-data" class="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4">
@@ -63,7 +64,7 @@
           <th scope="row" class="text-left"><a href="{{ url_for('lgs', ogrenci=o.id, bolum='program') }}">{{ o.ad_soyad }}</a></th>
           {% for kod, ad in aylar %}
           {% set isaretli = ay_harita.get(o.id, {}).get(kod) %}
-          <td>
+          <td data-label="{{ ad }}">
             <form method="post">
               <input type="hidden" name="islem" value="ay_tek">
               <input type="hidden" name="ogrenci" value="{{ o.id }}">
@@ -81,10 +82,10 @@
     </div>
   </section>
   {% else %}
-  <header class="rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-900 p-5 text-white shadow-sm">
+  {% if veli %}<header class="lgs-parent-heading"><div><h1>LGS takibi</h1><p class="app-muted">{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }}</p></div><small>{{ plan_tamam }}/{{ plan_toplam }} iş onaylı</small></header>{% else %}  <header class="rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-900 p-5 text-white shadow-sm">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{{ 'Öğrenci LGS' if veli else 'Öğretmen veri girişi' }}</p>
+        <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{{ 'Veli LGS' if veli else 'Öğretmen veri girişi' }}</p>
         <h1 class="mt-1 text-2xl font-black">{{ selam }}, {{ ogrenci.ad_soyad.split()[0] }}</h1>
         <p class="mt-1 text-sm text-indigo-100">{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% if tempo_ad %} · Hafta içi {{ tempo_ad }}{% if tempo_hafta_sonu_ad != tempo_ad %}, hafta sonu {{ tempo_hafta_sonu_ad }}{% endif %}{% endif %}{% if profil.hedef %} · {{ profil.hedef }}{% endif %}</p>
       </div>
@@ -103,7 +104,7 @@
       </div>
     </div>
     <p class="mt-3 text-sm">Bugün {{ bugun_ad }}{% if tempo_ad %}: {{ bugun_gorev|selectattr('tamamlandi')|list|length }}/{{ bugun_gorev|length }} iş onaylı{% elif veli %}. Öğretmen tempo seçince ders programın burada durur{% else %}. Program sekmesinden tempo seçilir{% endif %}.</p>
-  </header>
+  </header>{% endif %}
 
   <nav class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
     {% if veli %}
@@ -123,17 +124,18 @@
     {% endif %}
     {% endfor %}
   </nav>
-  {% with mesajlar = get_flashed_messages() %}
+  {% with mesajlar = get_flashed_messages(with_categories=true) %}
   {% if mesajlar %}
-  <p class="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-800">{{ mesajlar[0] }}</p>
+  {% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--success' if kategori == 'success' else 'app-notice--error' }}" role="status">{{ mesaj }}</p>{% endfor %}
   {% endif %}
   {% endwith %}
 
   {% if bolum == 'ozet' and veli %}
+  <section class="app-card" style="margin-top:16px"><h2 class="font-black">Son deneme sonucu</h2>{% if kocluk.son %}<p class="app-muted">{{ kocluk.son.ad }} · {{ kocluk.son.tarih }}</p><strong style="font-size:26px">{{ kocluk.son.net }} / {{ kocluk.tavan }} net</strong><p class="app-muted">{{ kocluk.kisa }}</p>{% if kocluk.onceki %}<p class="app-muted">Karşılaştırma: {{ kocluk.onceki.ad }} ({{ kocluk.onceki.tarih }}) → {{ kocluk.son.ad }} ({{ kocluk.son.tarih }})</p>{% endif %}{% else %}<p class="app-muted">Henüz deneme değerlendirmesi yok.</p>{% endif %}</section>
+
   <section class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-    <h2 class="font-black">Hedefe giden yol</h2>
-    <p class="mt-1 text-sm text-slate-700">{{ kocluk.mesaj }}</p>
-    {% if kocluk.rozetler %}
+    <h2 class="font-black">Bu haftanın çalışma önceliği</h2>
+    {% if kocluk.rozetler and not veli %}
     <div class="mt-3 flex flex-wrap gap-2">
       {% for r in kocluk.rozetler %}
       <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800" title="{{ r.aciklama }}">{{ r.ad }}</span>
@@ -268,7 +270,7 @@
             <input type="hidden" name="islem" value="program_bildir">
             <input type="hidden" name="tarih" value="{{ gun.tarih }}">
             <input type="hidden" name="sira" value="{{ b.sira }}">
-            <button class="min-h-11 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{{ 'Geri al' if b.bildirdi else 'Yaptım' }}</button>
+            <button class="min-h-11 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{{ 'Bildirimi geri al' if b.bildirdi else 'Çocuğum tamamladı' }}</button>
           </form>
           {% elif not veli %}
           <div class="mt-2 flex flex-wrap gap-2">
@@ -514,7 +516,7 @@
     <h2 class="font-black">{{ ogrenci.ad_soyad.split()[0] }}, hedefin duruyor</h2>
     <p class="mt-1 text-sm text-slate-700">{{ kocluk.hedef or 'Öğretmen henüz hedef yazmadı.' }}{% if kocluk.hedef_net %} · hedef {{ kocluk.hedef_net }} net{% if kocluk.son %}, kalan {{ kocluk.kalan }}{% endif %}{% endif %}</p>
     <p class="mt-2 text-sm text-slate-800">{{ kocluk.mesaj }}</p>
-    {% if kocluk.rozetler %}
+    {% if kocluk.rozetler and not veli %}
     <div class="mt-3 flex flex-wrap gap-2">
       {% for r in kocluk.rozetler %}
       <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800" title="{{ r.aciklama }}">{{ r.ad }}</span>
@@ -539,6 +541,7 @@
       <div class="lgs-dol h-full rounded-full bg-amber-400" style="width: {{ kocluk.yuzde }}%"></div>
     </div>
   </section>
+  <details class="app-card app-details" style="margin-top:14px"><summary>Ders sonuçları ve karşılaştırma</summary><p class="app-muted">{% if kocluk.onceki %}{{ kocluk.onceki.ad }} ({{ kocluk.onceki.tarih }}) ile {{ kocluk.son.ad }} ({{ kocluk.son.tarih }}) karşılaştırılır.{% else %}Karşılaştırma için ikinci deneme sonucu bekleniyor.{% endif %}</p>
   <section class="mt-3 space-y-2">
     {% for d in kocluk.dersler %}
     <article class="rounded-2xl border border-slate-200 bg-white p-4 text-sm" style="animation: lgs-belir .4s ease both; animation-delay: {{ loop.index0 * 60 }}ms">
@@ -562,6 +565,7 @@
     </article>
     {% endfor %}
   </section>
+  </details>
   {% endif %}
   <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
     <h2 class="font-black">Bu hafta yapılacaklar</h2>
@@ -581,7 +585,7 @@
     </ul>
     {% endif %}
   </section>
-  {% if denemeler %}
+  {% if denemeler %}<details class="app-card app-details" style="margin-top:14px"><summary>Geçmiş denemeler ve gelişim grafiği</summary>
   <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
     <h2 class="font-black">Netin nasıl değişti</h2>
     <canvas id="lgs-net" class="mt-3 max-h-64 w-full"></canvas>
@@ -613,6 +617,7 @@
     options: { animation: { duration: 900 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, suggestedMax: 90 } } }
   });
   </script>
+  </details>
   {% else %}
   <p class="mt-3 text-sm text-slate-500">Henüz deneme sonucu yok. Öğretmen girince ders ders analiz burada açılır.</p>
   {% endif %}

@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Veli randevuları{% endblock %}
 {% block body %}
-<main class="max-w-3xl mx-auto px-4 py-6">
+<main class="max-w-3xl mx-auto px-4 py-6 meeting-page">
   <h1 class="text-xl font-black text-slate-900 mb-4">Veli görüşme talepleri</h1>
+  {% with messages=get_flashed_messages() %}{% for message in messages %}<p class="app-notice app-notice--success" role="status">{{ message }}</p>{% endfor %}{% endwith %}
   {% if talepler %}
   <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
     <table class="w-full text-sm">
@@ -18,11 +19,13 @@
       <tbody class="divide-y divide-slate-100">
         {% for t in talepler %}
         <tr class="hover:bg-slate-50 align-top">
-          <td class="px-3 py-2 whitespace-nowrap">{{ t.talep_tarihi[:16] }}</td>
-          <td class="px-3 py-2">{{ t.sinif_adi }}</td>
-          <td class="px-3 py-2">{{ t.ogrenci_ad }} <span class="text-slate-400">({{ t.ogr_no }})</span></td>
-          <td class="px-3 py-2 max-w-[180px] break-words">{{ t.mesaj or '—' }}</td>
-          <td class="px-3 py-2">
+          <td class="px-3 py-2 whitespace-nowrap" data-label="Tarih">{{ t.talep_tarihi[:16] }}</td>
+          <td class="px-3 py-2" data-label="Sınıf">{{ t.sinif_adi }}</td>
+          <td class="px-3 py-2" data-label="Öğrenci">{{ t.ogrenci_ad }} <span class="text-slate-400">({{ t.ogr_no }})</span></td>
+          <td class="px-3 py-2 max-w-[180px] break-words" data-label="Mesaj">{{ t.mesaj or '—' }}</td>
+          <td class="px-3 py-2" data-label="Durum">
+            <p class="text-xs font-bold mb-2">{{ {'bekliyor':'Bekliyor','gorusuldu':'Görüşüldü','iptal':'İptal edildi'}.get(t.durum,t.durum) }}</p>
+            {% if t.durum == 'bekliyor' %}
             <form method="POST" action="{{ url_for('ogretmen_randevu_durum', talep_id=t.id) }}" class="flex flex-col gap-1">
               <input type="hidden" name="durum" value="gorusuldu">
               <button type="submit" class="text-xs font-bold bg-emerald-600 text-white px-2 py-1 rounded">Görüşüldü</button>
@@ -31,6 +34,7 @@
               <input type="hidden" name="durum" value="iptal">
               <button type="submit" class="text-xs text-slate-500 underline">İptal</button>
             </form>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

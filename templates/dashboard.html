@@ -8,109 +8,6 @@
 {% set teacher_hero = 'clay-teacher-' ~ teacher_visual ~ '-hero.png' if teacher_visual in ['kadin', 'erkek'] else 'hero-clay-books.png' %}
 <div class="dashboard-shell flex">
 
-  <aside id="sidebar"
-         class="dashboard-sidebar w-[82vw] max-w-xs lg:w-56 border-r border-slate-200 flex-shrink-0
-                 overflow-y-auto
-                 fixed lg:static inset-y-0 left-0 top-14 z-50
-                 -translate-x-full lg:translate-x-0 transition-transform duration-200">
-
-    <div class="sidebar-brand mx-3 mt-4 px-4 py-5">
-      <div class="sidebar-avatar-frame" aria-hidden="true">
-        <img src="{{ url_for('static', filename=teacher_avatar) }}" alt="" width="128" height="128">
-      </div>
-      <h2 class="sidebar-hello mt-4 text-lg font-black leading-tight break-words">Merhaba, {{ session.ogretmen_adi.split()[0]|title }}! 👋</h2>
-      <p class="sidebar-role mt-1 text-xs font-semibold">Öğretmen paneli</p>
-    </div>
-
-    <nav class="dashboard-side-menu px-3 pt-4" aria-label="Ana menü">
-      <a href="{{ url_for('dashboard', sinif=aktif.id) if aktif else url_for('dashboard') }}" class="dashboard-side-link is-current" aria-current="page"><img src="{{ url_for('static', filename='clay-icon-students.webp') }}" alt="" width="30" height="30"><span>Kontrol paneli</span></a>
-      <a href="{{ url_for('haftalik_takip', sinif=aktif.id) if aktif else url_for('haftalik_takip') }}" class="dashboard-side-link"><img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="30" height="30"><span>Kitap / Ödev</span></a>
-      <a href="{{ url_for('onay_kutusu') }}" class="dashboard-side-link"><img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="30" height="30"><span>Onay kutusu</span></a>
-      <a href="{{ url_for('karne', sinif=aktif.id) if aktif else url_for('karne') }}" class="dashboard-side-link"><span class="dashboard-side-symbol" aria-hidden="true">▣</span><span>Karne</span></a>
-      <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) if aktif else url_for('analiz_merkezi') }}" class="dashboard-side-link"><span class="dashboard-side-symbol" aria-hidden="true">◒</span><span>Analiz</span></a>
-      <a href="{{ url_for('lgs') }}" class="dashboard-side-link"><span class="dashboard-side-symbol" aria-hidden="true">✦</span><span>LGS</span></a>
-      <a href="{{ url_for('deneme_analiz') }}" class="dashboard-side-link"><span class="dashboard-side-symbol" aria-hidden="true">◈</span><span>Deneme</span></a>
-    </nav>
-
-    <div class="dashboard-sidebar-nav px-3 pt-5 pb-2">
-      <div class="mb-3 flex items-center justify-between gap-2 px-1">
-        <div>
-          <p class="dashboard-sidebar-heading text-[10px] font-black uppercase tracking-widest">Sınıflarım</p>
-          <p class="text-xs text-slate-500">Bir sınıf seçin</p>
-        </div>
-        <button type="button"
-                onclick="closeSidebar()"
-                class="lg:hidden inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500">
-          ×
-        </button>
-      </div>
-
-      <div class="dashboard-class-grid">
-      {% for s in siniflar %}
-      <a href="{{ url_for('dashboard', sinif=s.id) }}"
-         class="class-link flex items-center gap-2.5 w-full font-bold text-sm px-3 py-2.5 mb-1.5 rounded-lg
-                border transition
-                {% if aktif and s.id == aktif.id %}
-                  bg-violet-400 text-white border-transparent shadow
-                {% else %}
-                  bg-white text-violet-900 border-transparent hover:bg-violet-50
-                {% endif %}"
-         {% if aktif and s.id == aktif.id %}aria-current="page"{% endif %}
-         onclick="closeSidebar()">
-        <span class="class-link-icon" aria-hidden="true">✦</span>
-        <span class="min-w-0 break-words">{{ s.sinif_adi }}</span>
-      </a>
-      {% endfor %}
-      </div>
-    </div>
-
-    {% if aktif %}
-    <div class="dashboard-sidebar-footer px-3 pb-5 mt-3 pt-4">
-      <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}"
-         class="dashboard-sidebar-action flex flex-col items-start w-full text-left text-xs font-black rounded-3xl">
-        <img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="94" height="82" aria-hidden="true">
-        <strong>Bugün de birlikte öğrenelim</strong>
-        <span>Kitap ve ödev takibini aç</span>
-        <span class="dashboard-sidebar-action-cta">Takibi aç →</span>
-      </a>
-    </div>
-    {% endif %}
-    <div class="dashboard-utility-links" aria-label="Hesap bağlantıları">
-      {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}
-      <a href="{{ url_for('giris_raporu') }}">Giriş raporu</a>
-      <a href="{{ url_for('ogrenci_ara') }}">Öğrenci ara</a>
-      {% endif %}
-      <a href="{{ url_for('logout') }}">Çıkış</a>
-    </div>
-    <details class="dashboard-visual-settings">
-      <summary>Öğretmen görselim <span aria-hidden="true">▾</span></summary>
-      <div class="dashboard-visual-choices">
-        <form method="post" action="{{ url_for('profil_gorsel') }}">
-          <input type="hidden" name="gorsel_tipi" value="kadin">
-          {% if aktif %}<input type="hidden" name="sinif" value="{{ aktif.id }}">{% endif %}
-          <button type="submit" class="dashboard-visual-option {{ 'is-selected' if teacher_visual == 'kadin' else '' }}" {% if teacher_visual == 'kadin' %}aria-current="true"{% endif %}>
-            <img src="{{ url_for('static', filename='clay-teacher-kadin-avatar.png') }}" alt="" width="38" height="38"><span>Kadın öğretmen</span>
-          </button>
-        </form>
-        <form method="post" action="{{ url_for('profil_gorsel') }}">
-          <input type="hidden" name="gorsel_tipi" value="erkek">
-          {% if aktif %}<input type="hidden" name="sinif" value="{{ aktif.id }}">{% endif %}
-          <button type="submit" class="dashboard-visual-option {{ 'is-selected' if teacher_visual == 'erkek' else '' }}" {% if teacher_visual == 'erkek' %}aria-current="true"{% endif %}>
-            <img src="{{ url_for('static', filename='clay-teacher-erkek-avatar.png') }}" alt="" width="38" height="38"><span>Erkek öğretmen</span>
-          </button>
-        </form>
-      </div>
-    </details>
-  </aside>
-
-  <!-- Overlay mobilde sidebar açıkken -->
-  <div id="sidebar-overlay"
-       class="fixed inset-0 bg-black/30 z-40 hidden lg:hidden"
-       onclick="closeSidebar()"></div>
-
-  <!-- ══════════════════════════════════════════════════════════════
-       Sağ: Ana İçerik
-  ══════════════════════════════════════════════════════════════ -->
   <main class="main-canvas flex-1 min-w-0 lg:ml-0">
     {% if aktif %}
     <div class="dashboard-topbar teacher-toolbar">
@@ -119,11 +16,6 @@
         <p class="dashboard-kicker">{{ aktif.sinif_adi }} ŞUBESİ</p>
         <h1 class="dashboard-page-title">Kontrol paneli</h1>
         <p class="dashboard-title-meta" id="guncelleme-info">{{ ogrenciler|length }} öğrenci · öğretmen alanı</p>
-      </div>
-      <label for="ara" class="sr-only">Öğrenci ara</label>
-      <div class="dashboard-search relative">
-        <span class="dashboard-search-icon absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true">⌕</span>
-        <input type="search" id="ara" placeholder="Öğrenci ara..." oninput="filtrele()" class="search-field w-full">
       </div>
       <div class="dashboard-top-actions">
         <a href="{{ url_for('onay_kutusu') }}" class="dashboard-notification" aria-label="{{ onay_sayisi }} onay bekliyor">
@@ -137,48 +29,19 @@
       </div>
     </div>
 
-    <div class="dashboard-mobile-switcher" aria-label="Panel bölümleri">
-      <button type="button" data-dashboard-section-btn="ozet">Özet</button>
-      <button type="button" data-dashboard-section-btn="islem">İşlemler</button>
-      <button type="button" data-dashboard-section-btn="liste">Öğrenciler</button>
+    <section class="dashboard-greeting"><img src="{{ url_for('static', filename=teacher_avatar) }}" alt="" width="48" height="48"><div><h2>Merhaba, {{ session.ogretmen_adi.split()[0]|title }}</h2><p>Bugünkü takip ve bekleyen kayıtlar.</p></div><a class="app-primary" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}">Takibi aç</a></section>
+    {% if eksik_siniflar is defined and (eksik_siniflar or onay_sayisi or haftalik_dikkat) %}
+    <div class="dashboard-notices" aria-label="Güncel bildirimler">
+      {% if onay_sayisi %}
+      <a href="{{ url_for('onay_kutusu') }}" class="dashboard-notice dashboard-notice--peach">
+        <img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="28" height="28">
+        <span>{{ onay_sayisi }} onay bekliyor{% if onay_geciken %} · {{ onay_geciken }} tanesi 3 günü geçti{% endif %}</span>
+      </a>
+      {% endif %}
+      {% for s in eksik_siniflar if s.id == aktif.id %}<a href="{{ url_for('haftalik_takip', sinif=s.id) }}" class="dashboard-notice dashboard-notice--blue">{{ s.sinif_adi }} · İşaretlenmeyen durumlar var ({{ s.isaretli }}/{{ s.toplam }} tamam)</a>{% endfor %}
+      {% if haftalik_dikkat %}<a href="{{ url_for('haftalik_takip',sinif=aktif.id) }}" class="dashboard-notice">{{ haftalik_dikkat }} öğrencide eksik / yapılmamış ödev</a>{% endif %}
+      <details class="app-details"><summary class="app-muted">Diğer sınıfların durumu</summary><div class="app-row">{% for s in eksik_siniflar if s.id != aktif.id %}<a class="app-button" href="{{ url_for('haftalik_takip',sinif=s.id) }}">{{ s.sinif_adi }} · {{ s.isaretli }}/{{ s.toplam }} tamam</a>{% endfor %}</div></details>
     </div>
-
-    <section class="dashboard-hero dashboard-mobile-section mx-3 mt-3 p-5 sm:p-6" data-dashboard-section="ozet">
-      <div class="dashboard-welcome">
-        <div class="dashboard-hero-art" aria-hidden="true">
-          <img src="{{ url_for('static', filename=teacher_hero) }}" alt="" width="272" height="266">
-        </div>
-        <div class="dashboard-welcome-copy min-w-0">
-          <p class="dashboard-kicker">BUGÜNÜN SINIFI</p>
-          <h2 class="dashboard-welcome-title">Günaydın, {{ session.ogretmen_adi.split()[0]|title }}! <span class="dashboard-sun" aria-hidden="true">☀️</span></h2>
-          <p class="dashboard-welcome-subtitle">{{ aktif.sinif_adi }} şubesinde güzel bir öğrenme günü sizi bekliyor.</p>
-          <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}" class="dashboard-hero-action">
-            <span aria-hidden="true">▶</span> Takibi aç
-          </a>
-        </div>
-        <img class="dashboard-hero-plant" src="{{ url_for('static', filename='clay-plant.webp') }}" alt="" width="138" height="185" aria-hidden="true">
-      </div>
-    </section>
-
-    {% if not teacher_visual %}
-    <section class="dashboard-visual-setup dashboard-mobile-section" data-dashboard-section="ozet" aria-label="Öğretmen görseli seçimi">
-      <div>
-        <strong>Öğretmen görselinizi seçin</strong>
-        <p>Seçiminiz hesabınıza kaydedilir ve sonraki girişlerde otomatik gösterilir.</p>
-      </div>
-      <div class="dashboard-visual-choices">
-        <form method="post" action="{{ url_for('profil_gorsel') }}">
-          <input type="hidden" name="gorsel_tipi" value="kadin">
-          {% if aktif %}<input type="hidden" name="sinif" value="{{ aktif.id }}">{% endif %}
-          <button type="submit" class="dashboard-visual-option"><img src="{{ url_for('static', filename='clay-teacher-kadin-avatar.png') }}" alt="" width="42" height="42"><span>Kadın öğretmen</span></button>
-        </form>
-        <form method="post" action="{{ url_for('profil_gorsel') }}">
-          <input type="hidden" name="gorsel_tipi" value="erkek">
-          {% if aktif %}<input type="hidden" name="sinif" value="{{ aktif.id }}">{% endif %}
-          <button type="submit" class="dashboard-visual-option"><img src="{{ url_for('static', filename='clay-teacher-erkek-avatar.png') }}" alt="" width="42" height="42"><span>Erkek öğretmen</span></button>
-        </form>
-      </div>
-    </section>
     {% endif %}
 
     <section class="dashboard-stats dashboard-mobile-section mx-3 mt-4" data-dashboard-section="ozet" aria-label="Sınıf özeti">
@@ -209,26 +72,10 @@
       <div class="dashboard-section-heading mb-3">
         <div>
           <p class="dashboard-kicker text-[10px] font-black uppercase tracking-widest">Kısayollar</p>
-          <h2 class="text-lg font-black">Hızlı erişim</h2>
+          <h2 class="text-lg font-black">Diğer işlemler</h2>
         </div>
         <span class="dashboard-heading-spark" aria-hidden="true">✦</span>
       </div>
-    {% if eksik_siniflar is defined and (eksik_siniflar or onay_sayisi) %}
-    <div class="dashboard-notices" aria-label="Güncel bildirimler">
-      {% if onay_sayisi %}
-      <a href="{{ url_for('onay_kutusu') }}" class="dashboard-notice dashboard-notice--peach">
-        <img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="28" height="28">
-        <span>{{ onay_sayisi }} onay bekliyor{% if onay_geciken %} · {{ onay_geciken }} tanesi 3 günü geçti{% endif %}</span>
-      </a>
-      {% endif %}
-      {% if eksik_siniflar is defined %}{% for s in eksik_siniflar %}
-      <a href="{{ url_for('haftalik_takip', sinif=s.id) }}" class="dashboard-notice dashboard-notice--blue">
-        <span>{{ s.sinif_adi }} bu hafta {% if s.isaretli == 0 %}henüz işaretlenmedi{% else %}eksik: {{ s.isaretli }}/{{ s.toplam }}{% endif %}</span>
-      </a>
-      {% endfor %}{% endif %}
-    </div>
-    {% endif %}
-
       <section class="dashboard-actions grid gap-3 lg:grid-cols-2">
         <div class="action-group dashboard-action-card dashboard-action-card--mint p-4">
           <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Günlük takip</h3>
@@ -281,12 +128,6 @@
     </section>
     </div>
 
-    <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}" class="dashboard-bottom-banner dashboard-mobile-section" data-dashboard-section="ozet">
-      <img src="{{ url_for('static', filename='hero-clay-books.png') }}" alt="" width="118" height="100" aria-hidden="true">
-      <span class="dashboard-bottom-copy"><strong>Öğrenmeye devam et</strong><small>{{ aktif.sinif_adi }} sınıfının kitap ve ödev yolculuğu burada.</small></span>
-      <span class="dashboard-bottom-cta">Takibi aç</span>
-    </a>
-
     {% else %}
     <div class="dashboard-empty-state mx-3 mt-5 p-6 text-center">
       <span class="block text-4xl" aria-hidden="true">📚</span>
@@ -328,8 +169,8 @@
           <button type="button" data-tur="olumlu" class="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-black text-white">Olumlu</button>
           <button type="button" data-tur="duyuru" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-900">Duyuru</button>
         </div>
-        <a id="bilgi-rapor" class="inline-flex text-xs font-black text-sky-700" href="#">Bireysel rapor</a>
-        <p id="bilgi-sonuc" class="text-xs font-bold text-emerald-700"></p>
+        <a id="bilgi-rapor" class="inline-flex text-xs font-black text-sky-700" href="#" hidden>Bireysel rapor</a>
+        <p id="bilgi-sonuc" class="text-xs font-bold text-emerald-700" role="status"></p>
       </form>
     </div>
   </div>
@@ -385,28 +226,14 @@ try { savedDashboardSection = localStorage.getItem('eco_dashboard_mobile_section
 {% endif %}
 setDashboardSection(savedDashboardSection, false);
 
-function toggleSidebar() {
-  const sb  = document.getElementById('sidebar');
-  const ov  = document.getElementById('sidebar-overlay');
-  const vis = !sb.classList.contains('-translate-x-full');
-  if (vis && performance.now() - sidebarOpenedAt < 800) return;
-  if (!vis) sidebarOpenedAt = performance.now();
-  sb.classList.toggle('-translate-x-full', vis);
-  ov.classList.toggle('hidden', vis);
-  document.body.classList.toggle('overflow-hidden', !vis);
-}
-function closeSidebar() {
-  if (performance.now() - sidebarOpenedAt < 800) return;
-  document.getElementById('sidebar').classList.add('-translate-x-full');
-  document.getElementById('sidebar-overlay').classList.add('hidden');
-  document.body.classList.remove('overflow-hidden');
-}
+function toggleSidebar() { window.appMenuToggle?.(); }
+function closeSidebar() { window.appMenuClose?.(); }
 
 // ── Arama Filtresi ───────────────────────────────────────────────────────
 function filtrele() {
-  const q = document.getElementById('ara').value.toLowerCase();
+  const q = document.getElementById('ara').value.toLocaleLowerCase('tr');
   document.querySelectorAll('.ogrenci-kart').forEach(k => {
-    k.style.display = k.dataset.ad.toLowerCase().includes(q) ? '' : 'none';
+    k.style.display = k.dataset.ad.toLocaleLowerCase('tr').includes(q) ? '' : 'none';
   });
 }
 
@@ -447,6 +274,25 @@ setInterval(yenile, 10_000);
 const bilgi = document.getElementById('ogrenci-bilgi');
 let bilgiOgrenciId = 0;
 let bilgiOncekiOdak = null;
+let bilgiYukleme = 0;
+let bilgiNotKaydi = false;
+
+async function bilgiIstek(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(url, {...options, signal:controller.signal});
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error('request');
+    return result;
+  } finally { clearTimeout(timer); }
+}
+
+function bilgiHata(metin) {
+  const status = document.getElementById('bilgi-sonuc');
+  status.className = 'text-xs font-bold text-rose-700';
+  status.textContent = metin;
+}
 
 function notSatiri(n) {
   const tur = n.tur === 'uyari' ? 'Uyarı' : (n.tur === 'olumlu' ? 'Olumlu' : (n.tur === 'duyuru' ? 'Duyuru' : 'Not'));
@@ -456,25 +302,35 @@ function notSatiri(n) {
     String(n.ogretmen || '') + ' · ' + String(n.tarih || '').slice(0, 16) + '</div></div>';
 }
 
-async function ogrenciBilgiAc(id) {
+async function ogrenciBilgiAc(id, refresh = false) {
+  const sequence = ++bilgiYukleme;
   bilgiOgrenciId = Number(id);
-  bilgiOncekiOdak = document.activeElement;
+  if (!refresh) bilgiOncekiOdak = document.activeElement;
   bilgi.classList.remove('hidden');
   bilgi.classList.add('flex');
-  document.getElementById('bilgi-kapat').focus();
+  if (!refresh) document.getElementById('bilgi-kapat').focus();
   document.getElementById('bilgi-ad').textContent = 'Yükleniyor...';
   document.getElementById('bilgi-notlar').innerHTML = '';
-  document.getElementById('bilgi-sonuc').textContent = '';
-  const res = await fetch('/api/ogretmen/ogrenci/' + id);
-  const j = await res.json();
-  if (!j.ok) {
-    document.getElementById('bilgi-ad').textContent = 'Açılamadı';
+  if (!refresh) document.getElementById('bilgi-sonuc').textContent = '';
+  document.getElementById('bilgi-rapor').hidden = true;
+  if (!refresh) {
+    document.getElementById('bilgi-metin').value = '';
+    ['bilgi-alt','bilgi-okuma','bilgi-getirme','bilgi-odev','bilgi-odev-metin'].forEach(key=>document.getElementById(key).textContent='—');
+  }
+  let j;
+  try { j = await bilgiIstek('/api/ogretmen/ogrenci/' + id); }
+  catch {
+    if (sequence !== bilgiYukleme) return;
+    document.getElementById('bilgi-ad').textContent = 'Bilgiler yüklenemedi';
+    bilgiHata('Bağlantıyı kontrol edip pencereyi yeniden açın.');
     return;
   }
+  if (sequence !== bilgiYukleme) return;
   const o = j.ogrenci || {};
   const h = j.hafta || {};
   document.getElementById('bilgi-ad').textContent = o.ad_soyad || '';
   document.getElementById('bilgi-rapor').href = '/rapor/kitap-odev?ogrenci=' + o.id;
+  document.getElementById('bilgi-rapor').hidden = false;
   document.getElementById('bilgi-alt').textContent = (o.sinif_adi || '') + ' · No ' + (o.ogr_no || '');
   document.getElementById('bilgi-okuma').textContent = h.kitap_okuma || '—';
   document.getElementById('bilgi-getirme').textContent = h.kitap_getirme || '—';
@@ -497,6 +353,7 @@ async function ogrenciBilgiAc(id) {
 }
 
 function bilgiKapat() {
+  bilgiYukleme++;
   bilgi.classList.add('hidden');
   bilgi.classList.remove('flex');
   if (bilgiOncekiOdak && bilgiOncekiOdak.isConnected) bilgiOncekiOdak.focus();
@@ -505,6 +362,11 @@ document.getElementById('bilgi-kapat').addEventListener('click', bilgiKapat);
 bilgi.addEventListener('click', (e) => { if (e.target === bilgi) bilgiKapat(); });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !bilgi.classList.contains('hidden')) bilgiKapat();
+  if (e.key === 'Tab' && !bilgi.classList.contains('hidden')) {
+    const items = [...bilgi.querySelectorAll('button,a,textarea')].filter(el=>!el.disabled && el.getClientRects().length);
+    if (e.shiftKey && document.activeElement === items[0]) { e.preventDefault();items.at(-1)?.focus(); }
+    else if (!e.shiftKey && document.activeElement === items.at(-1)) { e.preventDefault();items[0]?.focus(); }
+  }
 });
 const ogrenciListesi = document.getElementById('ogrenci-listesi');
 if (ogrenciListesi) {
@@ -522,27 +384,37 @@ if (ogrenciListesi) {
 }
 document.getElementById('bilgi-form').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-tur]');
-  if (!btn || !bilgiOgrenciId) return;
+  if (!btn || !bilgiOgrenciId || bilgiNotKaydi) return;
   const metin = document.getElementById('bilgi-metin').value.trim();
   if (!metin) {
     document.getElementById('bilgi-sonuc').textContent = 'Not yazın.';
     document.getElementById('bilgi-sonuc').className = 'text-xs font-bold text-rose-700';
     return;
   }
-  const res = await fetch('/api/ogretmen/ogrenci/' + bilgiOgrenciId + '/veli-not', {
+  const targetId = bilgiOgrenciId;
+  const buttons = [...document.querySelectorAll('#bilgi-form [data-tur]')];
+  bilgiNotKaydi = true;
+  buttons.forEach(button=>button.disabled=true);
+  document.getElementById('bilgi-metin').readOnly = true;
+  document.getElementById('bilgi-sonuc').textContent = 'Kaydediliyor…';
+  try {
+  await bilgiIstek('/api/ogretmen/ogrenci/' + targetId + '/veli-not', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ metin: metin, tur: btn.dataset.tur })
   });
-  const j = await res.json();
-  if (!j.ok) {
-    document.getElementById('bilgi-sonuc').textContent = 'Kaydedilemedi.';
-    return;
-  }
+  if (targetId !== bilgiOgrenciId || bilgi.classList.contains('hidden')) return;
   document.getElementById('bilgi-metin').value = '';
   document.getElementById('bilgi-sonuc').className = 'text-xs font-bold text-emerald-700';
   document.getElementById('bilgi-sonuc').textContent = 'Veli ekranına iletildi.';
-  ogrenciBilgiAc(bilgiOgrenciId);
+  await ogrenciBilgiAc(targetId, true);
+  } catch {
+    if (targetId === bilgiOgrenciId && !bilgi.classList.contains('hidden')) bilgiHata('Not kaydedilemedi. Metniniz korundu; tekrar deneyin.');
+  } finally {
+    bilgiNotKaydi = false;
+    buttons.forEach(button=>button.disabled=false);
+    document.getElementById('bilgi-metin').readOnly = false;
+  }
 });
 </script>
 {% endblock %}

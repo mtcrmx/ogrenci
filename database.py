@@ -5978,12 +5978,30 @@ def veli_haber_bekleyen(ogrenci_id: int) -> list[dict]:
     return rows
 
 
-def veli_haber_goruldu(ogrenci_id: int) -> None:
+def veli_haber_liste(ogrenci_id: int) -> list[dict]:
+    con = _conn()
+    _haftalik_takip_init(con)
+    rows = [dict(r) for r in con.execute(
+        "SELECT id, metin, zaman, tur, goruldu FROM veli_haber WHERE ogrenci_id = ? ORDER BY id DESC LIMIT 50",
+        (int(ogrenci_id),),
+    ).fetchall()]
+    con.close()
+    # Multiple identical notifications in the same minute form one visible event.
+    gorulen, sonuc = set(), []
+    for row in rows:
+        anahtar = (row["tur"], row["metin"], row["zaman"][:16])
+        if anahtar not in gorulen:
+            sonuc.append(row)
+            gorulen.add(anahtar)
+    return sonuc
+
+
+def veli_haber_goruldu(ogrenci_id: int, son_id: int | None = None) -> None:
     con = _conn()
     _haftalik_takip_init(con)
     con.execute(
-        "UPDATE veli_haber SET goruldu = 1 WHERE ogrenci_id = ? AND goruldu = 0",
-        (int(ogrenci_id),),
+        "UPDATE veli_haber SET goruldu = 1 WHERE ogrenci_id = ? AND goruldu = 0 AND (? IS NULL OR id <= ?)",
+        (int(ogrenci_id), son_id, son_id),
     )
     con.commit()
     con.close()
@@ -6206,7 +6224,7 @@ def _uc_gun_gecti(metin: str) -> bool:
 
 
 def sinif_hafta_durumu(hafta_basi: str) -> list[dict]:
-    """Bu hafta hiç işaretlenmemiş veya eksik kalan aktif sınıflar."""
+    """Üç takip alanı birlikte değerlendirilmemiş aktif sınıflar."""
     con = _conn()
     _haftalik_takip_init(con)
     yer = ",".join("?" * len(_AKTIF_SUBELER))
@@ -6215,8 +6233,9 @@ def sinif_hafta_durumu(hafta_basi: str) -> list[dict]:
         SELECT s.id, s.sinif_adi,
                (SELECT COUNT(*) FROM ogrenciler o WHERE o.sinif_id = s.id) AS toplam,
                (SELECT COUNT(*) FROM haftalik_takip h
+                 JOIN ogrenciler o ON o.id = h.ogrenci_id AND o.sinif_id = s.id
                  WHERE h.sinif_id = s.id AND h.hafta_basi = ?
-                   AND (h.kitap_okuma != '' OR h.kitap_getirme != '' OR h.odev_durum != '')) AS isaretli
+                   AND h.kitap_okuma != '' AND h.kitap_getirme != '' AND h.odev_durum != '') AS isaretli
         FROM siniflar s
         WHERE s.sinif_adi IN ({yer})
         ORDER BY s.sinif_adi
@@ -6542,7 +6561,7 @@ def haftalik_takip_toplu(
     return {"ok": True, "adet": len(ogrenciler), "alan": alan, "deger": deger}
 
 
-def kitap_odev_analiz(sinif_id: int | None = None, ogrenci_id: int | None = None) -> dict:
+def kitap_odev_analiz(sinif_id: int | None = None, ogrenci_id: int | None = None, baslangic: str = "", bitis: str = "") -> dict:
     """Haftalık kitap ve ödev işaretlerinden sınıf veya tek öğrenci özeti."""
     con = _conn()
     _haftalik_takip_init(con)
@@ -6582,6 +6601,7 @@ def kitap_odev_analiz(sinif_id: int | None = None, ogrenci_id: int | None = None
             (sinif_id,),
         ).fetchall()]
     con.close()
+    kayitlar = [r for r in kayitlar if (not baslangic or r["hafta_basi"] >= baslangic) and (not bitis or r["hafta_basi"] <= bitis)]
     haftalar = sorted({r["hafta_basi"] for r in kayitlar})
     harita: dict[tuple[int, str], dict] = {
         (int(r["ogrenci_id"]), r["hafta_basi"]): r for r in kayitlar
@@ -6661,6 +6681,17 @@ def kitap_okuma_veli_kaydet(
     kitap_adi = (kitap_adi or "").strip()
     if not kitap_adi:
         return {"ok": False, "sebep": "Kitap adı zorunlu."}
+    from math import isfinite
+    try:
+        sayfa_sayisi, saat, gun = int(sayfa_sayisi), float(saat), int(gun)
+        if sayfa_sayisi < 1 or gun < 0 or not isfinite(saat) or saat < 0:
+            return {"ok": False, "sebep": "En az 1 sayfa girin; saat ve gün negatif olamaz."}
+        bas = datetime.strptime(baslangic_tarihi, "%Y-%m-%d").date() if baslangic_tarihi else None
+        bit = datetime.strptime(bitis_tarihi, "%Y-%m-%d").date() if bitis_tarihi else None
+        if bas and bit and bit < bas:
+            return {"ok": False, "sebep": "Bitiş tarihi başlangıçtan önce olamaz."}
+    except (TypeError, ValueError, OverflowError):
+        return {"ok": False, "sebep": "Sayfa, süre ve tarih alanlarını kontrol edin."}
     okuma_turu = (okuma_turu or "sessiz").strip().lower()
     if okuma_turu not in {"sesli", "sessiz"}:
         okuma_turu = "sessiz"
@@ -7894,6 +7925,17 @@ def randevu_listesi_siniflar(sinif_ids: list[int]) -> list[dict]:
         WHERE r.sinif_id IN ({q})
         ORDER BY r.id DESC
     """, sinif_ids).fetchall()]
+    con.close()
+    return rows
+
+
+def randevu_ogrenci_listesi(ogrenci_id: int) -> list[dict]:
+    con = _conn()
+    _yardimci_tablolar_init(con)
+    rows = [dict(r) for r in con.execute(
+        "SELECT id, mesaj, talep_tarihi, durum FROM randevu_talebi WHERE ogrenci_id=? ORDER BY id DESC LIMIT 20",
+        (int(ogrenci_id),),
+    ).fetchall()]
     con.close()
     return rows
 
