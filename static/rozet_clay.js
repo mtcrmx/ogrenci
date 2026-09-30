@@ -2,6 +2,16 @@
   const gallery = document.querySelector('.clay-badges');
   if (!gallery) return;
 
+  const locked = gallery.querySelector('.clay-badges-locked');
+  if (locked) {
+    const toggle = locked.querySelector('.clay-badges-toggle');
+    const grid = locked.querySelector('.clay-badges-grid');
+    toggle.addEventListener('click', () => {
+      grid.hidden = !grid.hidden;
+      toggle.setAttribute('aria-expanded', String(!grid.hidden));
+    });
+  }
+
   const earned = [...gallery.querySelectorAll('.clay-badge-item.is-earned[data-rozet-kodu]')];
   const codes = earned.map(card => card.dataset.rozetKodu);
   const key = `ogrenci-rozetleri-goruldu-${gallery.dataset.studentId}`;

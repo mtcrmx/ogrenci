@@ -24,9 +24,9 @@
   {% endif %}
 
   {% if rozet_koleksiyonu.kilitli %}
-  <details class="clay-badges-locked">
-    <summary>Keşfedilecek rozetler <span>{{ rozet_koleksiyonu.kilitli|length }}</span><span class="clay-badges-chevron" aria-hidden="true">⌄</span></summary>
-    <ul class="clay-badges-grid" aria-label="Henüz kazanılmayan rozetler">
+  <div class="clay-badges-locked">
+    <button type="button" class="clay-badges-toggle" aria-expanded="false" aria-controls="clay-locked-grid">Keşfedilecek rozetler <span>{{ rozet_koleksiyonu.kilitli|length }}</span><span class="clay-badges-chevron" aria-hidden="true">⌄</span></button>
+    <ul class="clay-badges-grid" id="clay-locked-grid" aria-label="Henüz kazanılmayan rozetler" hidden>
       {% for rozet in rozet_koleksiyonu.kilitli %}
       <li class="clay-badge-item is-locked" style="--badge-i:{{ loop.index0 % 8 }}">
         <div class="clay-badge-medal" aria-hidden="true"><span>{{ rozet.emoji }}</span></div>
@@ -34,7 +34,7 @@
       </li>
       {% endfor %}
     </ul>
-  </details>
+  </div>
   {% endif %}
   <div class="clay-badges-toast" role="status" aria-live="polite" hidden></div>
 </section>

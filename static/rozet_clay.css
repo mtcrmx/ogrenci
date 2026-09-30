@@ -43,17 +43,17 @@
 .clay-badges-empty span { font-size: 30px; }
 .clay-badges-empty p { margin: 0; color: #634c73; font-size: 12px; line-height: 1.5; }
 .clay-badges-locked { margin-top: 15px; }
-.clay-badges-locked summary { display: flex; align-items: center; gap: 7px; width: fit-content; padding: 8px 12px; border: 1px solid rgba(164,120,180,.26); border-radius: 14px; background: #f9f0f7; color: #6a4a80; font-size: 12px; font-weight: 900; cursor: pointer; list-style: none; transition: transform .25s ease, background-color .25s ease; }
-.clay-badges-locked summary::-webkit-details-marker { display: none; }
-.clay-badges-locked summary:hover { transform: translateY(-2px); background: #f2e4f4; }
-.clay-badges-locked summary:focus-visible { outline: 3px solid #8b65be; outline-offset: 3px; }
+.clay-badges .clay-badges-toggle { display: flex; align-items: center; gap: 7px; width: fit-content; min-height: 35px; padding: 8px 12px; border: 1px solid rgba(164,120,180,.26); border-radius: 14px; background: #f9f0f7; color: #6a4a80; box-shadow: none; font: inherit; font-size: 12px; font-weight: 900; cursor: pointer; transition: background-color .25s ease; }
+.clay-badges .clay-badges-toggle:hover { background: #f2e4f4; }
+.clay-badges .clay-badges-toggle:focus-visible { outline: 3px solid #8b65be; outline-offset: 3px; }
 .clay-badges-chevron { margin-left: 4px; transition: transform .28s ease; }
-.clay-badges-locked[open] .clay-badges-chevron { transform: rotate(180deg); }
+.clay-badges-toggle[aria-expanded="true"] .clay-badges-chevron { transform: rotate(180deg); }
+.clay-badges-locked [hidden] { display: none; }
 .clay-badge-item.is-locked { background: linear-gradient(155deg, #f6f0f5, #eee8ef); }
 .clay-badge-item.is-locked .clay-badge-medal { background: linear-gradient(155deg, #d6cbdc, #b9a9c3); filter: saturate(.45); }
 .clay-badge-item.is-locked .clay-badge-medal span { animation: none; }
 .clay-badge-item.is-locked .clay-badge-text small { color: #786c80; }
-.clay-badges.is-visible .clay-badges-earned .clay-badge-item, .clay-badges-locked[open] .clay-badge-item { animation: clay-badge-rise .58s both cubic-bezier(.2,.8,.2,1); animation-delay: calc(var(--badge-i) * 55ms); }
+.clay-badges.is-visible .clay-badges-earned .clay-badge-item, .clay-badges-toggle[aria-expanded="true"] + .clay-badges-grid .clay-badge-item { animation: clay-badge-rise .58s both cubic-bezier(.2,.8,.2,1); animation-delay: calc(var(--badge-i) * 55ms); }
 .clay-badge-item.is-new .clay-badge-medal { animation: clay-badge-pop .85s both cubic-bezier(.18,.8,.3,1); }
 .clay-badge-item.is-new .clay-badge-medal::after { content: '✦'; position: absolute; top: -13px; right: -9px; color: #f4b849; font-size: 26px; text-shadow: 0 2px 2px rgba(106,65,124,.19); animation: clay-badge-spark 1.15s both ease-out; }
 .clay-badges-toast:not([hidden]) { position: fixed; z-index: 1200; right: 20px; bottom: 20px; max-width: min(310px, calc(100vw - 32px)); padding: 14px 18px; border: 2px solid #fff; border-radius: 20px; background: #f5e0fa; color: #52336c; font-size: 13px; font-weight: 900; box-shadow: inset 2px 3px 5px #fff, 0 12px 24px rgba(70,40,104,.2); animation: clay-badge-toast .42s both cubic-bezier(.2,.8,.2,1); }

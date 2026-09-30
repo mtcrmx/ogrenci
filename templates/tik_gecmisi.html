@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% if veli_modu %}Veli · {% endif %}{{ ogrenci.ad_soyad }} — Tik geçmişi</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
   <style>
     :root {
       color-scheme: light;
@@ -650,6 +651,7 @@
     <nav class="nav-scroll" aria-label="Sayfa bağlantıları">
       {% if not veli_modu %}
       <a href="{{ url_for('paylasim_tema_odevler_sayfa') }}" target="_blank" rel="noopener" class="nav-action primary">Ödevler</a>
+      <a href="#rozetler" class="nav-action">Rozetler</a>
       <a href="{{ url_for('ogrenci_cikis') }}" class="nav-action danger">Çıkış</a>
       {% else %}
       <a href="{{ url_for('veli_ozet_sayfa') }}" class="nav-action primary">30 günlük özet</a>
@@ -686,6 +688,8 @@
       </div>
     </div>
   </section>
+
+  {% include '_rozet_koleksiyonu.html' %}
 
   <div class="dashboard-grid">
     <div class="space-y-4">
@@ -836,6 +840,8 @@
     </div>
   </section>
 </main>
+
+<script src="{{ url_for('static', filename='rozet_clay.js') }}?v=rozet20260930c" defer></script>
 
 <footer class="live-strip" aria-live="polite">
   <span class="inline-flex items-center gap-2"><span class="live-dot"></span><span id="countdown-bilgi">30 sn sonra yenilenecek</span></span>
