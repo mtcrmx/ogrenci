@@ -4703,6 +4703,26 @@ def manifest():
     return app.send_static_file("manifest.json")
 
 
+@app.route("/manifest-veli.json")
+def manifest_veli():
+    resp = jsonify({
+        "id": "/veli",
+        "name": "Akademi Puan Veli",
+        "short_name": "Veli",
+        "start_url": "/veli",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#f4e9ff",
+        "theme_color": "#c9b4f0",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"},
+        ],
+    })
+    resp.headers["Content-Type"] = "application/manifest+json"
+    return resp
+
+
 @app.route("/sw.js")
 def service_worker():
     resp = make_response(app.send_static_file("sw.js"))

@@ -195,6 +195,11 @@ body.veli-clay-page #gorusme button { width: 100%; margin-top: 11px; }
 .duyuru-sec input { width: 18px; height: 18px; margin: 0; }
 .duyuru-alt button { min-height: 35px; padding: 6px 12px; border: 0; border-radius: 12px; background: #d9c4ed; color: #4d3569; font-weight: 900; }
 
+.vp-ios-rehber { margin-top: 12px; padding: 13px 15px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px rgba(201,180,232,.55); }
+.vp-ios-rehber[hidden] { display: none; }
+.vp-ios-rehber ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 5px; font-size: 13px; line-height: 1.45; }
+#haber-durum { margin-top: 8px; font-weight: 800; }
+
 .vp-alert { position: fixed; inset: 0; z-index: 3200; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(61,42,92,.52); }
 .vp-alert[hidden] { display: none; }
 .vp-alert-card {

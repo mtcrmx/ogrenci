@@ -4,11 +4,28 @@ from __future__ import annotations
 import json
 
 
+def _pem_ise_der_yap(priv: str) -> str:
+    if "BEGIN" not in priv:
+        return priv
+    import base64
+    from cryptography.hazmat.primitives import serialization
+
+    anahtar = serialization.load_pem_private_key(priv.encode(), password=None)
+    return base64.urlsafe_b64encode(anahtar.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )).decode().rstrip("=")
+
+
 def vapid_public_key() -> str:
     from database import admin_meta_get, admin_meta_set
 
     pub = admin_meta_get("vapid_public", "")
     if pub:
+        priv = admin_meta_get("vapid_private", "")
+        if "BEGIN" in priv:
+            admin_meta_set("vapid_private", _pem_ise_der_yap(priv))
         return pub
     priv, pub = _vapid_uret()
     if not pub:
@@ -28,11 +45,11 @@ def _vapid_uret() -> tuple[str, str]:
     except ImportError:
         return "", ""
     anahtar = ec.generate_private_key(ec.SECP256R1())
-    priv = anahtar.private_bytes(
-        encoding=serialization.Encoding.PEM,
+    priv = base64.urlsafe_b64encode(anahtar.private_bytes(
+        encoding=serialization.Encoding.DER,
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
-    ).decode()
+    )).decode().rstrip("=")
     pub_ham = anahtar.public_key().public_bytes(
         encoding=serialization.Encoding.X962,
         format=serialization.PublicFormat.UncompressedPoint,
@@ -54,6 +71,10 @@ def veli_push_gonder(ogrenci_id: int, metin: str, tur: str) -> None:
         priv = admin_meta_get("vapid_private", "")
     if not priv:
         return
+    if "BEGIN" in priv:
+        from database import admin_meta_set
+        priv = _pem_ise_der_yap(priv)
+        admin_meta_set("vapid_private", priv)
     baslik = {
         "uyari": "Uyarı",
         "olumlu": "Olumlu not",

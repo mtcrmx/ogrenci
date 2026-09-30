@@ -3,12 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/manifest-veli.json">
   <meta name="theme-color" content="#c9b4f0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Veli">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
   <title>Veli paneli · {{ ogrenci.ad_soyad }}</title>
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
-  <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930e">
+  <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930f">
   <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
 </head>
 <body class="ui-theme veli-ekran veli-clay-page">
@@ -82,6 +86,16 @@
         <p class="vp-card-lead">{{ sabah }}</p>
         <div class="vp-inline-actions"><button type="button" id="haber-izin">Telefonda haber ver</button><button type="button" id="ana-ekran" hidden>Ana ekrana ekle</button></div>
         <p class="vp-muted" id="haber-izin-not">Öğretmen yazınca telefonuna hemen yazı düşer ve alarm çalar. Bir kez izin ver.</p>
+        <div class="vp-ios-rehber" id="ios-rehber" hidden>
+          <p class="vp-eyebrow">iPhone için bir kez yapın</p>
+          <ol>
+            <li>Safari'de alttaki <strong>Paylaş</strong> düğmesine basın.</li>
+            <li><strong>Ana Ekrana Ekle</strong>'yi seçin.</li>
+            <li>Ana ekrandaki <strong>Veli</strong> simgesinden açıp giriş yapın.</li>
+            <li><strong>Telefonda haber ver</strong>'e basıp <strong>İzin Ver</strong> deyin.</li>
+          </ol>
+        </div>
+        <p class="vp-muted" id="haber-durum" hidden></p>
       </section>
       <section class="vp-card vp-card--evening">
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">✦</span><div><p class="vp-eyebrow">Öncelikli iş</p><h2>Bu akşam</h2></div></div>
@@ -233,11 +247,27 @@
     if (izin) izin.hidden = true;
     if (izinNot) izinNot.hidden = true;
   }
+  const durum = document.getElementById("haber-durum");
+  const iosRehber = document.getElementById("ios-rehber");
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const kurulu = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  function durumYaz(metin) {
+    if (!durum) return;
+    durum.textContent = metin;
+    durum.hidden = !metin;
+  }
   if (native && native.veliDinle) {
     try { native.veliDinle(); } catch (e) {}
     izinGizle();
   }
+  if (!native && ios && !kurulu) {
+    izinGizle();
+    if (iosRehber) iosRehber.hidden = false;
+  }
   if (izin && "Notification" in window && Notification.permission === "granted") izinGizle();
+  if (!native && "Notification" in window && Notification.permission === "denied") {
+    durumYaz("Bildirim kapalı. Ayarlar > Bildirimler > Veli bölümünden açın.");
+  }
   function urlBase64ToUint8Array(metin) {
     const pad = "=".repeat((4 - metin.length % 4) % 4);
     const raw = atob((metin + pad).replace(/-/g, "+").replace(/_/g, "/"));
@@ -259,11 +289,12 @@
         applicationServerKey: urlBase64ToUint8Array(anahtar.publicKey)
       });
     }
-    await fetch("/veli/push/abone", {
+    const kayitYanit = await fetch("/veli/push/abone", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sub.toJSON())
     });
+    if (kayitYanit.ok) durumYaz("Bildirimler açık. Uygulama kapalıyken de mesaj gelir.");
   }
   if (izin) izin.addEventListener("click", function () {
     if (native && native.veliDinle) {
@@ -271,11 +302,16 @@
       izinGizle();
       return;
     }
-    if (!("Notification" in window)) return;
+    if (!("Notification" in window)) {
+      if (ios && iosRehber) iosRehber.hidden = false;
+      return;
+    }
     Notification.requestPermission().then(function (sonuc) {
       if (sonuc === "granted") {
         izinGizle();
-        aboneOl().catch(function () {});
+        aboneOl().catch(function () { durumYaz("Bildirim kaydı yapılamadı, sayfayı yenileyip tekrar deneyin."); });
+      } else if (sonuc === "denied") {
+        durumYaz("Bildirim kapalı. Ayarlar > Bildirimler > Veli bölümünden açın.");
       }
     });
   });
