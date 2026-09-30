@@ -6769,6 +6769,8 @@ def kitap_okuma_onayla(kayit_id: int, ogretmen_id: int, onay: bool, ogretmen_not
         )
         con.commit()
         con.close()
+        veli_haber_ekle(int(row["ogrenci_id"]),
+                        f"Öğretmen {row['kitap_adi']} okuma kaydını geri çevirdi.", "uyari")
         return {"ok": True, "durum": "reddedildi", "xp": 0, "lig_puani": 0}
     xp, lig_puani = _kitap_okuma_puan(row["sayfa_sayisi"], row["saat"], row["gun"])
     _gelisim_puan_ekle(con, int(row["ogrenci_id"]), xp)
@@ -6786,6 +6788,9 @@ def kitap_okuma_onayla(kayit_id: int, ogretmen_id: int, onay: bool, ogretmen_not
     con.close()
     if rozet:
         veli_haber_ekle(int(row["ogrenci_id"]), f"Öğretmen onayladı: {rozet}", "olumlu")
+    else:
+        veli_haber_ekle(int(row["ogrenci_id"]),
+                        f"Öğretmen {row['kitap_adi']} okuma kaydını onayladı.", "olumlu")
     return {"ok": True, "durum": "onaylandi", "xp": xp, "lig_puani": lig_puani}
 
 

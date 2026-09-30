@@ -2114,6 +2114,8 @@ def _sinav_state_not_puanlarini_isle(analiz_id: int, state: dict, ogretmen_id: i
             meta.get("sinavAdi") or "Sınav analizi",
         )
         if sonuc.get("ok") and not sonuc.get("zaten_islenmis"):
+            sinav_adi = meta.get("sinavAdi") or "sınav"
+            veli_haber_ekle(ogrenci_id, f"Öğretmen {sinav_adi} puanını kaydetti.", "duyuru")
             ozet["islenen"] += 1
             ozet["xp"] += int(sonuc.get("xp") or 0)
             ozet["lig_puani"] += int(sonuc.get("lig_puani") or 0)
@@ -4350,6 +4352,9 @@ def _lgs_ekran(veli: bool):
             )
             if not sonuc.get("ok"):
                 flash(sonuc.get("hata") or "Deneme kaydedilemedi.", "warning")
+            else:
+                deneme_adi = request.form.get("ad", "").strip() or "LGS denemesi"
+                veli_haber_ekle(oid, f"Öğretmen {deneme_adi} sonucunu kaydetti.", "duyuru")
             bolum = "deneme"
         hedef_url = "veli_lgs" if veli else "lgs"
         parametre = {} if veli else {"ogrenci": oid}
@@ -6592,6 +6597,8 @@ def api_pozitif_rozet(ogrenci_id: int):
             100,
             "Pozitif yıldız öğretmen onayı",
         )
+    if yeni:
+        veli_haber_ekle(ogrenci_id, "Öğretmen pozitif yıldız rozeti verdi.", "olumlu")
     return jsonify({"ok": True, "yeni": bool(yeni), "puan": puan})
 
 
