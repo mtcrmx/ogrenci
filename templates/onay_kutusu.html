@@ -10,6 +10,7 @@
     <p class="mt-3 rounded-xl bg-rose-500/20 px-3 py-2 text-sm font-bold">{{ geciken }} kayıt 3 gündür onay bekliyor.</p>
     {% endif %}
   </header>
+  {% with messages=get_flashed_messages(with_categories=true) %}{% for cat,message in messages %}<p class="app-notice {{ 'app-notice--success' if cat == 'success' else 'app-notice--error' }}" role="status">{{ message }}</p>{% endfor %}{% endwith %}
 
   <section class="mt-4 space-y-2">
     <h2 class="font-black">Ödev · {{ odevler|length }}</h2>

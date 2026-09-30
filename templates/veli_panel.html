@@ -104,7 +104,7 @@
 
 
 </div><div class="parent-section" data-parent-section="mesajlar" id="mesajlar" hidden>
-<section class="app-card"><h2 style="font-weight:800;font-size:18px">Bildirim geçmişi</h2><ul class="parent-feed" id="parent-message-feed">{% for h in haberler %}<li data-id="{{ h.id }}" data-key="{{ h.tur }}|{{ h.metin }}|{{ h.zaman[:16] }}"><time>{{ h.zaman }} · {{ 'Okundu' if h.goruldu else 'Yeni' }}</time><p>{{ h.metin }}</p></li>{% else %}<li data-empty>Henüz bildirim yok.</li>{% endfor %}</ul></section>
+<details class="app-card app-details"><summary>Bildirim geçmişi</summary><ul class="parent-feed" id="parent-message-feed">{% for h in haberler %}<li data-id="{{ h.id }}" data-key="{{ h.tur }}|{{ h.metin }}|{{ h.zaman[:16] }}"><time>{{ h.zaman }} · {{ 'Okundu' if h.goruldu else 'Yeni' }}</time><p>{{ h.metin }}</p></li>{% else %}<li data-empty>Henüz bildirim yok.</li>{% endfor %}</ul></details>
     <div class="vp-communication">
       <section class="vp-card" id="notlar" aria-labelledby="vp-notes-heading">
         <div class="vp-section-head"><div><p class="vp-eyebrow">İLETİŞİM</p><h2 id="vp-notes-heading">Öğretmen notları</h2></div></div>

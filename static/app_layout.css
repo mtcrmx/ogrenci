@@ -54,6 +54,7 @@ body.ui-theme.layout-page .page-content { max-width:1200px; margin:auto; padding
 .app-nav-tools { margin-top:12px; }
 .app-nav-tools>summary { font-size:12px;font-weight:800;padding:10px;cursor:pointer; }
 .app-nav-tools a { font-size:12px;padding-left:12px; }
+.detail-grid .birey { width:100%; }
 @media(max-width:640px) {
  .parent-feedback { padding:0 12px; }
  .meeting-page table,.meeting-page tbody { display:block;width:100%; }

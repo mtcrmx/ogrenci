@@ -117,6 +117,7 @@ from rapor_analiz import (
 )
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
+_ODEV_FOTO_KLASORU = os.path.join(_BASE, "yuklemeler", "odev")
 app = Flask(__name__,
             template_folder=os.path.join(_BASE, "templates"),
             static_folder=os.path.join(_BASE, "static"))
@@ -2758,7 +2759,7 @@ def veli_odev_foto():
     ad = kayit.get("odev_foto") or ""
     if not ad.startswith(f"{int(oid)}_"):
         abort(404)
-    klasor = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yuklemeler", "odev")
+    klasor = _ODEV_FOTO_KLASORU
     yol = os.path.join(klasor, os.path.basename(ad))
     if not os.path.isfile(yol):
         abort(404)
@@ -2774,9 +2775,19 @@ def haftalik_foto():
     donem = request.form.get("donem", type=int) or 1
     if not _haftalik_takip_yetki(sinif_id) or not hafta or not ogrenci_id:
         abort(403)
+    ogrenci = _ogrenci_bul(ogrenci_id)
+    if not ogrenci or int(ogrenci["sinif_id"]) != sinif_id:
+        abort(403)
+    try:
+        gun = date.fromisoformat(hafta)
+        if gun.isoformat() != hafta or gun.weekday() != 0:
+            abort(400)
+    except ValueError:
+        abort(400)
     dosya = request.files.get("foto")
     hedef = url_for("haftalik_takip", sinif=sinif_id, hafta=hafta, donem=donem)
     if not dosya or not dosya.filename:
+        flash("Kaydetmek için bir fotoğraf seçin.", "warning")
         return redirect(hedef)
     uzanti = os.path.splitext(dosya.filename)[1].lower()
     if uzanti not in {".jpg", ".jpeg", ".png", ".webp"}:
@@ -2786,12 +2797,19 @@ def haftalik_foto():
     if len(veri) > 4_000_000:
         flash("Fotoğraf 4 MB'dan küçük olmalı.", "warning")
         return redirect(hedef)
-    klasor = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yuklemeler", "odev")
+    gecerli = ((uzanti in {".jpg", ".jpeg"} and veri.startswith(b"\xff\xd8\xff"))
+               or (uzanti == ".png" and veri.startswith(b"\x89PNG\r\n\x1a\n"))
+               or (uzanti == ".webp" and veri[:4] == b"RIFF" and veri[8:12] == b"WEBP"))
+    if not gecerli:
+        flash("Dosya geçerli bir jpg, png veya webp fotoğrafı değil.", "warning")
+        return redirect(hedef)
+    klasor = _ODEV_FOTO_KLASORU
     os.makedirs(klasor, exist_ok=True)
     ad = f"{ogrenci_id}_{hafta}{uzanti}"
     with open(os.path.join(klasor, ad), "wb") as cikti:
         cikti.write(veri)
     odev_foto_kaydet(sinif_id, ogrenci_id, hafta, ad, session["ogretmen_id"])
+    flash("Ödev fotoğrafı kaydedildi.", "success")
     return redirect(hedef)
 
 
@@ -3843,7 +3861,9 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
         adimlar.append(f"{g['ders']} görevi için tamamlandı bildirimi alındı. Öğretmen onayı bekleniyor.")
     elif bekleyen:
         g = bekleyen[0]
-        adimlar.append(f"Bugün {g['ders']} görevini bitir: {g.get('konu') or 'konu yazılmadı'}.")
+        konu = (g.get('konu') or 'konu yazılmadı').rstrip('. ')
+        gorev_adi = "kişisel görevini" if g['ders'] == 'Kişisel görev' else f"{g['ders']} görevini"
+        adimlar.append(f"Bugün {gorev_adi} bitir: {konu}.")
     elif gorev_sayisi and oran == 100:
         adimlar.append("Bu haftanın görevleri bitti. Aynı düzeni gelecek hafta da koru.")
     else:

@@ -2054,6 +2054,16 @@ def _lgs_net(dogru: int, yanlis: int) -> float:
     return round(max(0, int(dogru)) - max(0, int(yanlis)) / 3, 2)
 
 
+def _lgs_toplam_net(satirlar: list[dict]) -> float:
+    toplam = 0.0
+    for s in satirlar:
+        kayitli = float(s["net"] or 0)
+        hesaplanan = max(0, int(s["dogru"] or 0)) - max(0, int(s["yanlis"] or 0)) / 3
+        # Preserve explicitly imported net values; undo rounding only for calculated rows.
+        toplam += hesaplanan if abs(kayitli - round(hesaplanan, 2)) < 0.00001 else kayitli
+    return round(toplam, 2)
+
+
 def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], puan: float | None = None, siki: bool = True) -> dict:
     ad = (ad or "").strip()
     if not ad:
@@ -2130,7 +2140,7 @@ def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
             (d["id"],),
         ).fetchall()]
         d["dersler"] = satirlar
-        d["net"] = round(sum(float(s["net"] or 0) for s in satirlar), 2)
+        d["net"] = _lgs_toplam_net(satirlar)
     con.close()
     return denemeler
 
@@ -2170,7 +2180,7 @@ def deneme_sinav_ogrencileri(ad: str, tarih: str) -> list[dict]:
             (d["id"],),
         ).fetchall()]
         d["dersler"] = satirlar
-        d["net"] = round(sum(float(s["net"] or 0) for s in satirlar), 2)
+        d["net"] = _lgs_toplam_net(satirlar)
         d["puan"] = round(float(d["puan"]), 3) if d["puan"] is not None else None
     con.close()
     return denemeler
@@ -6395,7 +6405,9 @@ def ogrenci_adi_ara(sorgu: str, hafta_basi: str) -> list[dict]:
         o["kitap_adi"] = (kayit["kitap_adi"] if kayit else "") or ""
         deneme = con.execute(
             """
-            SELECT d.ad, d.tarih, COALESCE(SUM(s.net), 0) AS net
+            SELECT d.ad, d.tarih, COALESCE(SUM(CASE
+                WHEN ABS(s.net - ROUND(MAX(0,s.dogru) - MAX(0,s.yanlis)/3.0,2)) < 0.00001
+                THEN MAX(0,s.dogru) - MAX(0,s.yanlis)/3.0 ELSE s.net END), 0) AS net
             FROM lgs_deneme d LEFT JOIN lgs_deneme_ders s ON s.deneme_id = d.id
             WHERE d.ogrenci_id = ?
             GROUP BY d.id
@@ -6461,7 +6473,9 @@ def donem_karne_satirlari(haftalar: list[str], sinif_id: int | None = None, ogre
     deneme = {}
     for r in con.execute(
         f"""
-        SELECT d.ogrenci_id, d.ad, d.tarih, ROUND(COALESCE(SUM(s.net), 0), 2) AS net
+        SELECT d.ogrenci_id, d.ad, d.tarih, ROUND(COALESCE(SUM(CASE
+            WHEN ABS(s.net - ROUND(MAX(0,s.dogru) - MAX(0,s.yanlis)/3.0,2)) < 0.00001
+            THEN MAX(0,s.dogru) - MAX(0,s.yanlis)/3.0 ELSE s.net END), 0), 2) AS net
         FROM lgs_deneme d LEFT JOIN lgs_deneme_ders s ON s.deneme_id = d.id
         WHERE d.ogrenci_id IN ({yer_o}) AND d.tarih >= ? AND d.tarih <= ?
         GROUP BY d.id

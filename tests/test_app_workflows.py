@@ -3,6 +3,8 @@ import os
 import sys
 import tempfile
 import unittest
+import base64
+from io import BytesIO
 from pathlib import Path
 from datetime import date
 
@@ -14,6 +16,7 @@ import database as d
 
 w.app.config.update(TESTING=True)
 d._veli_push_sonra = lambda *_: None
+w._ODEV_FOTO_KLASORU = str(Path(_database.name) / 'photos')
 
 
 class Workflows(unittest.TestCase):
@@ -54,6 +57,14 @@ class Workflows(unittest.TestCase):
 
     def test_parent_menu_has_reading_entry(self):
         self.assertTrue('/veli/kitap-okuma' in self.parent.get('/veli').get_data(as_text=True))
+
+    def test_exam_total_rounds_after_adding_courses(self):
+        dersler = [dict(ders=ders,dogru=14 if tavan == 20 else 7,yanlis=2,bos=4 if tavan == 20 else 1)
+                   for ders,tavan in [('Türkçe',20),('Matematik',20),('Fen Bilimleri',20),
+                                     ('T.C. İnkılap Tarihi',10),('Din Kültürü',10),('İngilizce',10)]]
+        self.assertTrue(d.lgs_deneme_ekle(self.oid,'Yuvarlama testi','2026-10-01',dersler)['ok'])
+        self.assertEqual(d.lgs_denemeler(self.oid)[0]['net'],59)
+        self.assertEqual(d._lgs_toplam_net([dict(dogru=0,yanlis=0,net=12.5)]),12.5)
 
     def test_meeting_confirmation_and_empty_message(self):
         r=self.parent.post('/veli/randevu',data={'mesaj':'Haftalık planı görüşmek istiyorum.'},follow_redirects=True)
@@ -115,6 +126,34 @@ class Workflows(unittest.TestCase):
         with self.teacher_client.session_transaction() as s:
             self.assertEqual(s['ogretmen_id'],self.teacher['id'])
             self.assertNotIn('veli_ogrenci_id',s)
+
+    def test_meeting_history_and_status(self):
+        self.parent.post('/veli/randevu',data={'mesaj':'Örnek görüşme talebi'})
+        talep=d.randevu_ogrenci_listesi(self.oid)[0]
+        r=self.teacher_client.post('/ogretmen/randevu/'+str(talep['id'])+'/durum',data={'durum':'gorusuldu'},follow_redirects=True)
+        self.assertTrue('Randevu durumu güncellendi' in r.get_data(as_text=True))
+        html=self.parent.get('/veli').get_data(as_text=True)
+        self.assertTrue('Örnek görüşme talebi' in html and 'Görüşüldü' in html)
+
+    def test_report_role_menu(self):
+        with self.teacher_client.session_transaction() as s:s['ogretmen_yetki']='rapor'
+        html=self.teacher_client.get('/analiz').get_data(as_text=True)
+        self.assertFalse('href="/haftalik-takip' in html)
+        self.assertFalse('href="/rapor/kitap-odev' in html)
+        self.assertTrue('action="/analiz"' in html)
+
+    def test_photo_upload_and_parent_access(self):
+        png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lN8AAAAASUVORK5CYII=')
+        payload={'sinif_id':self.sid,'ogrenci_id':self.oid,'hafta':self.week}
+        r=self.teacher_client.post('/haftalik-takip/foto',data={**payload,'foto':(BytesIO(png),'test.png')},follow_redirects=True)
+        self.assertTrue('Ödev fotoğrafı kaydedildi' in r.get_data(as_text=True))
+        r=self.parent.get('/veli/odev-foto')
+        self.assertEqual(r.status_code,200)
+        self.assertEqual(r.data,png)
+        r.close()
+        r=self.teacher_client.post('/haftalik-takip/foto',data={**payload,'foto':(BytesIO(b'not an image'),'test.png')},follow_redirects=True)
+        self.assertTrue('Dosya geçerli bir' in r.get_data(as_text=True))
+        self.assertEqual(self.teacher_client.post('/haftalik-takip/foto',data={**payload,'hafta':'../invalid'}).status_code,400)
 
 
 if __name__=='__main__':unittest.main()

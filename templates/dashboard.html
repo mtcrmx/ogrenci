@@ -120,6 +120,7 @@
       {{ ogrenci_karti(o, aktif.id) }}
       {% endfor %}
     </div>
+    <p id="student-search-empty" class="app-notice mx-3" role="status" hidden>Aramanıza uygun öğrenci yok.</p>
 
     <!-- Durum çubuğu -->
     <div class="dashboard-mobile-section is-mobile-active text-center text-xs text-slate-400 py-3" id="durum-bar" data-dashboard-section="liste">
@@ -231,10 +232,18 @@ function closeSidebar() { window.appMenuClose?.(); }
 
 // ── Arama Filtresi ───────────────────────────────────────────────────────
 function filtrele() {
-  const q = document.getElementById('ara').value.toLocaleLowerCase('tr');
-  document.querySelectorAll('.ogrenci-kart').forEach(k => {
-    k.style.display = k.dataset.ad.toLocaleLowerCase('tr').includes(q) ? '' : 'none';
+  const q = document.getElementById('ara').value.trim().toLocaleLowerCase('tr');
+  const cards = [...document.querySelectorAll('.ogrenci-kart')];
+  let visible = 0;
+  cards.forEach(k => {
+    const match = k.dataset.ad.toLocaleLowerCase('tr').includes(q);
+    k.style.display = match ? '' : 'none';
+    if (match) visible++;
   });
+  document.getElementById('ogrenci-sayisi').textContent = q ? visible + ' / ' + cards.length + ' öğrenci' : cards.length + ' öğrenci';
+  const empty = document.getElementById('student-search-empty');
+  empty.hidden = visible > 0;
+  empty.textContent = q ? 'Aramanıza uygun öğrenci yok. Adı kontrol edin veya aramayı temizleyin.' : 'Bu sınıfta öğrenci kaydı yok.';
 }
 
 const SINIF_ID = {{ aktif.id if aktif else 'null' }};
@@ -248,13 +257,13 @@ async function yenile() {
     const kont = document.getElementById('ogrenci-listesi');
     const ara = (document.getElementById('ara').value || '').toLowerCase();
     kont.innerHTML = data.map(kartHTML).join('');
-    if (ara) filtrele();
     const bar = document.getElementById('durum-bar');
     if (bar) bar.textContent = data.length + ' öğrenci';
     const sayi = document.getElementById('ogrenci-sayisi');
     if (sayi) sayi.textContent = data.length + ' öğrenci';
     const ozetSayi = document.getElementById('ozet-ogrenci-sayisi');
     if (ozetSayi) ozetSayi.textContent = data.length;
+    filtrele();
   } catch (e) {}
 }
 

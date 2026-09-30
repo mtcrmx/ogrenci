@@ -3,6 +3,7 @@
 {% block body %}
 <main class="page-content" id="tracking" data-class="{{ aktif.id if aktif else 0 }}" data-week="{{ hafta }}" data-mark-url="{{ url_for('haftalik_takip_isaret') }}" data-text-url="{{ url_for('haftalik_takip_metin_route') }}" data-bulk-url="{{ url_for('haftalik_takip_toplu_route') }}">
 <header class="page-heading"><div><h1>Kitap ve ödev</h1><p>Durumlar seçim yaptığınızda otomatik kaydedilir. Ayrıntılar öğrenci satırından açılır.</p></div></header>
+{% with messages=get_flashed_messages(with_categories=true) %}{% for cat,message in messages %}<p class="app-notice {{ 'app-notice--success' if cat == 'success' else 'app-notice--error' }}" role="status">{{ message }}</p>{% endfor %}{% endwith %}
 {% with mesajlar=get_flashed_messages() %}{% for mesaj in mesajlar %}<p class="app-notice" role="status">{{ mesaj }}</p>{% endfor %}{% endwith %}
 <section class="app-card">
   <form method="get" class="app-filter"><input type="hidden" name="sinif" value="{{ aktif.id if aktif else '' }}"><label>Dönem<select name="donem" onchange="this.form.submit()">{% for d in [1,2] %}<option value="{{ d }}" {{ 'selected' if donem == d else '' }}>{{ d }}. dönem</option>{% endfor %}</select></label>
