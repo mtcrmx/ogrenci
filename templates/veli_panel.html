@@ -226,7 +226,7 @@
 {% if (ogrenci.sinif_adi or '').startswith('5/') or (ogrenci.sinif_adi or '').startswith('6/') or (ogrenci.sinif_adi or '').startswith('7/') %}
 <div id="kulup-duyuru" class="duyuru" hidden>
   <div class="duyuru-kutu">
-    <img src="{{ url_for('static', filename='cocuk-kulubu.jpg') }}" alt="Çocuk Kulübü açılıyor. 5, 6 ve 7. sınıflar başvurabilir.">
+    <img src="{{ url_for('static', filename='cocuk-kulubu.jpg') }}?v=20260930b" alt="Çocuk Kulübü açılıyor. 5, 6 ve 7. sınıflar başvurabilir.">
     <div class="duyuru-alt">
       <label class="duyuru-sec"><input type="checkbox" id="kulup-bir-daha"> Bir daha gösterme</label>
       <button type="button" id="kulup-kapat">Kapat</button>
