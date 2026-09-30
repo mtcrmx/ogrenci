@@ -82,6 +82,7 @@ def veli_push_gonder(ogrenci_id: int, metin: str, tur: str) -> None:
                 vapid_claims=claims,
                 ttl=86400,
                 timeout=8,
+                headers={"Urgency": "high", "Topic": "veli-haber"},
             )
         except WebPushException as exc:
             kod = getattr(getattr(exc, "response", None), "status_code", 0)

@@ -11,6 +11,7 @@ import uuid
 import json
 import re
 import shutil
+import threading
 from datetime import datetime, timedelta
 
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -5779,21 +5780,33 @@ def ogretmen_giris_haftalari(ogretmen_id: int, haftalar: list[str]) -> list[dict
     return liste
 
 
-def _veli_haber_yaz(con: sqlite3.Connection, ogrenci_id: int, alan: str, deger: str, now: str) -> None:
-    if not ((alan == "odev_durum" and deger in {"tam", "eksik", "yok"}) or (alan == "kitap_okuma" and deger == "okudu")):
-        return
+def _veli_haber_yaz(con: sqlite3.Connection, ogrenci_id: int, alan: str, deger: str, now: str):
     ad = con.execute("SELECT ad_soyad FROM ogrenciler WHERE id = ?", (ogrenci_id,)).fetchone()
     ilk = ((ad["ad_soyad"] if ad else "Öğrenci").split() or ["Öğrenci"])[0]
-    if alan == "odev_durum":
+    metin = ""
+    tur = "duyuru"
+    if alan == "odev_durum" and deger in {"tam", "eksik", "yok"}:
         metin = f"{ilk} için bu haftaki ödev {deger} işaretlendi."
         tur = "uyari" if deger in {"eksik", "yok"} else "odev"
-    else:
-        metin = f"{ilk} kitabı okudu olarak işaretlendi. Belgeyi açabilirsin."
+    elif alan == "kitap_okuma" and deger == "okudu":
+        metin = f"{ilk} kitabı okudu olarak işaretlendi."
         tur = "olumlu"
+    elif alan == "kitap_okuma" and deger == "okumadi":
+        metin = f"{ilk} kitabı okumadı olarak işaretlendi."
+        tur = "uyari"
+    elif alan == "kitap_getirme" and deger == "getirdi":
+        metin = f"{ilk} kitabı getirdi."
+        tur = "olumlu"
+    elif alan == "kitap_getirme" and deger == "getirmedi":
+        metin = f"{ilk} kitabı getirmedi."
+        tur = "uyari"
+    if not metin:
+        return None
     con.execute(
         "INSERT INTO veli_haber (ogrenci_id, metin, zaman, tur, goruldu) VALUES (?, ?, ?, ?, 0)",
         (ogrenci_id, metin, now, tur),
     )
+    return (int(ogrenci_id), metin, tur)
 
 
 def haftalik_takip_isaretle(
@@ -5830,9 +5843,11 @@ def haftalik_takip_isaretle(
         """,
         (ogrenci_id, sinif_id, hafta_basi, deger, ogretmen_id, now),
     )
-    _veli_haber_yaz(con, ogrenci_id, alan, deger, now)
+    haber = _veli_haber_yaz(con, ogrenci_id, alan, deger, now)
     con.commit()
     con.close()
+    if haber:
+        _veli_push_sonra(*haber)
     return {"ok": True, "alan": alan, "deger": deger}
 
 
@@ -5949,11 +5964,13 @@ def veli_push_sil(endpoint: str) -> None:
 
 
 def _veli_push_sonra(ogrenci_id: int, metin: str, tur: str) -> None:
-    try:
-        from veli_push import veli_push_gonder
-        veli_push_gonder(int(ogrenci_id), metin, tur)
-    except Exception:
-        pass
+    def _gonder() -> None:
+        try:
+            from veli_push import veli_push_gonder
+            veli_push_gonder(int(ogrenci_id), metin, tur)
+        except Exception:
+            pass
+    threading.Thread(target=_gonder, daemon=True).start()
 
 
 def devamsizlik_kaydet(ogrenci_id: int, tarih: str) -> None:
@@ -6421,6 +6438,7 @@ def haftalik_takip_toplu(
         "SELECT id FROM ogrenciler WHERE sinif_id = ?", (sinif_id,)
     ).fetchall()
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    gidecek = []
     for row in ogrenciler:
         con.execute(
             f"""
@@ -6435,9 +6453,13 @@ def haftalik_takip_toplu(
             """,
             (int(row["id"]), sinif_id, hafta_basi, deger, ogretmen_id, now),
         )
-        _veli_haber_yaz(con, int(row["id"]), alan, deger, now)
+        haber = _veli_haber_yaz(con, int(row["id"]), alan, deger, now)
+        if haber:
+            gidecek.append(haber)
     con.commit()
     con.close()
+    for haber in gidecek:
+        _veli_push_sonra(*haber)
     return {"ok": True, "adet": len(ogrenciler), "alan": alan, "deger": deger}
 
 

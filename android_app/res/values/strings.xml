@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Akademi Puan</string>
+    <string name="file_chooser_title">Dosya sec</string>
+    <string name="download_started">Indirme baslatildi</string>
+    <string name="notify_permission">Bildirim izni gerekli</string>
+</resources>

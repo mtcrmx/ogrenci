@@ -8,8 +8,8 @@
   <title>Veli paneli · {{ ogrenci.ad_soyad }}</title>
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
-  <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930c">
-  <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930b">
+  <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930e">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
 </head>
 <body class="ui-theme veli-ekran veli-clay-page">
 <a class="vp-skip" href="#veli-icerik">İçeriğe geç</a>
@@ -81,7 +81,7 @@
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">☀</span><div><p class="vp-eyebrow">Günlük bilgi</p><h2>Sabah özeti</h2></div></div>
         <p class="vp-card-lead">{{ sabah }}</p>
         <div class="vp-inline-actions"><button type="button" id="haber-izin">Telefonda haber ver</button><button type="button" id="ana-ekran" hidden>Ana ekrana ekle</button></div>
-        <p class="vp-muted" id="haber-izin-not">Ödev, duyuru ve uyarılar telefonuna düşsün diye bir kez izin ver.</p>
+        <p class="vp-muted" id="haber-izin-not">Öğretmen yazınca telefonuna hemen yazı düşer ve alarm çalar. Bir kez izin ver.</p>
       </section>
       <section class="vp-card vp-card--evening">
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">✦</span><div><p class="vp-eyebrow">Öncelikli iş</p><h2>Bu akşam</h2></div></div>
@@ -166,7 +166,7 @@
   </main>
 </div>
 <script src="{{ url_for('static', filename='veli_panel_clay.js') }}?v=veli20260929a" defer></script>
-<script src="{{ url_for('static', filename='rozet_clay.js') }}?v=rozet20260930a" defer></script>
+<script src="{{ url_for('static', filename='rozet_clay.js') }}?v=rozet20260930c" defer></script>
 
 <div id="veli-uyari" class="vp-alert"{% if not bekleyen_haber %} hidden{% endif %} role="alertdialog" aria-labelledby="veli-uyari-baslik" aria-modal="true">
   <div class="vp-alert-card">
@@ -222,6 +222,7 @@
   });
 })();
 (function () {
+  const native = window.AndroidApp;
   const izin = document.getElementById("haber-izin");
   const izinNot = document.getElementById("haber-izin-not");
   const uyari = document.getElementById("veli-uyari");
@@ -232,6 +233,10 @@
     if (izin) izin.hidden = true;
     if (izinNot) izinNot.hidden = true;
   }
+  if (native && native.veliDinle) {
+    try { native.veliDinle(); } catch (e) {}
+    izinGizle();
+  }
   if (izin && "Notification" in window && Notification.permission === "granted") izinGizle();
   function urlBase64ToUint8Array(metin) {
     const pad = "=".repeat((4 - metin.length % 4) % 4);
@@ -241,6 +246,7 @@
     return dizi;
   }
   async function aboneOl() {
+    if (native) return;
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
     if (!("Notification" in window) || Notification.permission !== "granted") return;
     const kayit = await navigator.serviceWorker.ready;
@@ -260,6 +266,11 @@
     });
   }
   if (izin) izin.addEventListener("click", function () {
+    if (native && native.veliDinle) {
+      native.veliDinle();
+      izinGizle();
+      return;
+    }
     if (!("Notification" in window)) return;
     Notification.requestPermission().then(function (sonuc) {
       if (sonuc === "granted") {
@@ -274,20 +285,21 @@
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const kazanc = ctx.createGain();
-      osc.frequency.value = 880;
-      kazanc.gain.value = 0.05;
+      osc.frequency.value = 980;
+      kazanc.gain.value = 0.12;
       osc.connect(kazanc);
       kazanc.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.18);
+      osc.stop(ctx.currentTime + 0.55);
     } catch (e) {}
   }
   function goster(metin, tur) {
+    if (native) { cal(); return; }
     const baslik = basliklar[tur] || "Öğrenci takip";
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({ tur: "haber", baslik: baslik, metin: metin, url: "/veli" });
     } else if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(baslik, { body: metin, requireInteraction: true });
+      new Notification(baslik, { body: metin, requireInteraction: true, silent: false, vibrate: [400, 200, 800] });
     }
     cal();
   }
@@ -320,22 +332,7 @@
     localStorage.setItem("veli-haber-son", String(son));
   }
   bak();
-  setInterval(bak, 25000);
-  const sabah = document.getElementById("sabah-ozet");
-  if (sabah && "Notification" in window) {
-    const bugun = new Date().toISOString().slice(0, 10);
-    function sabahHaber() {
-      if (Notification.permission !== "granted") return;
-      if (localStorage.getItem("sabah-ozet") === bugun) return;
-      localStorage.setItem("sabah-ozet", bugun);
-      goster(sabah.dataset.sabah, "duyuru");
-    }
-    const simdi = new Date();
-    const hedef = new Date();
-    hedef.setHours(7, 30, 0, 0);
-    if (simdi >= hedef) sabahHaber();
-    else setTimeout(sabahHaber, hedef - simdi);
-  }
+  setInterval(bak, native ? 2500 : 4000);
 })();
 </script>
 {% include "_renk_ayari.html" %}

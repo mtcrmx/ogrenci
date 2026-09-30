@@ -13,8 +13,10 @@ function haberGoster(veri) {
     body: (veri && veri.metin) || "Yeni bir mesaj var.",
     icon: "/static/icon-192.png",
     badge: "/static/icon-192.png",
-    tag: "veli-haber",
+    tag: "veli-haber-" + Date.now(),
     renotify: true,
+    silent: false,
+    vibrate: [400, 200, 400, 200, 800],
     requireInteraction: true,
     data: { url: (veri && veri.url) || "/veli" },
   });
