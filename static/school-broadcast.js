@@ -1,5 +1,5 @@
 import {lessonState} from './school-broadcast-clock.mjs';
-import {mountPresentation} from './school-broadcast-presentations.js?v=20261001-server-pptx';
+import {mountPresentation} from './school-broadcast-presentations.js?v=20261001-pptx-fallback';
 /* No student or parent data enters this screen. Times use Europe/Istanbul. */
 (() => {
   'use strict';
