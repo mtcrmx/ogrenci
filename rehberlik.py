@@ -35,7 +35,8 @@ OOXML_PARTS = {'pptx': 'ppt/presentation.xml', 'docx': 'word/document.xml', 'xls
 FILE_DIR = Path(os.environ.get('REHBERLIK_DOSYA_KLASORU') or Path(db.DB_PATH).parent / 'rehberlik-dosyalar')
 READ_REPORTS = {'api_ogrenci_ara', 'analiz_merkezi', 'rapor_ozet', 'rapor_ozet_csv', 'rapor_excel', 'rapor_excel_detayli',
                 'rapor_analiz_pdf', 'rapor_haftalik', 'rapor_karsilastir', 'rapor_anonim_sinif',
-                'ogretmen_kitap_okuma', 'ogretmen_kitap_okuma_excel', 'ders_programi', 'kitap_odev_rapor'}
+                'ogretmen_kitap_okuma', 'ogretmen_kitap_okuma_excel', 'ders_programi', 'kitap_odev_rapor',
+                'yayin', 'api_yayin_okul', 'yayin_medya'}
 
 
 def init_schema():
@@ -257,7 +258,7 @@ def register_rehberlik(app):
         if session.get('ogretmen_id') and not request.path.startswith('/veli') and counselor():
             session['ogretmen_yetki'] = 'rehber'
             ep = request.endpoint or ''
-            if ep.startswith('rehberlik_') or ep in {'static', 'login', 'logout', 'manifest', 'manifest_veli', 'service_worker'}:
+            if ep.startswith('rehberlik_') or ep in {'static', 'login', 'logout', 'manifest', 'manifest_veli', 'service_worker', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_yonetim'}:
                 return None
             if request.method == 'GET' and ep in READ_REPORTS:
                 return None

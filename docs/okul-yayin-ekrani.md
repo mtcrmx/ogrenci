@@ -1,0 +1,19 @@
+# Okul yayın ekranı
+
+- Öğretmen menüsü → **Okul yayın ekranı** (`/yayin`): ayrı, tam ekran TV arayüzü.
+- Öğretmenler ve rehber öğretmen → **Yayına içerik ekle** (`/yayin/yonetim`): tarihli duyuru, sunum, görsel ve sessiz video; taslak, kendi içeriklerini düzenleme ve kaldırma. Rapor yetkili hesaplar içerik ekleyemez. Adem Akgül / Metehan Cücen tüm yayınları ve okul ayarlarını yönetebilir.
+- Orta alan öğretmenlerin yüklediği sunum, video ve görselleri sırayla gösterir. Dosyasız duyurular alttaki ayrı panelde sürekli görünür ve kendi sıralarında döner. İçerik yokken ders programı gösterilir; program düğmesiyle program ve içerik arasında geçiş yapılabilir.
+- Yönetimdeki özel TV bağlantısı öğretmen hesabına erişim sağlamaz. Yalnızca okulun yayın bilgilerini açar. **Bağlantıyı yenile** eski ekran bağlantısını iptal eder. TV’de yeni bağlantı açılır.
+- Saat ve gün seçimi Türkiye saatine göre yapılır. Sayaç ders, teneffüs, öğle arası, gün sonu ve tatil durumlarını gösterir. Cuma saatleri ayrı yönetilir; başlangıçta sitenin mevcut saatleri kullanılır.
+- Sınıf/öğretmen programı gönderilen haftalık çizelge görselinden aktarılmıştır: 8 sınıf × 5 gün × 7 ders = 280 kayıt, çakışma veya boşluk yok. Birleştirilmiş hücreler kapsadığı ders saatlerine açılır. Görselde ders adları olmadığı için ders adı tahmin edilmez. Kaynak program `broadcast_timetable.py` içinde tutulur. Yönetimde haftanın günü seçilerek yayın programı düzenlenebilir; aynı öğretmenin aynı saatte iki sınıfta bulunması engellenir. Sitedeki mevcut takip programından bağımsızdır.
+- Nöbet kaynağı: **Tam Gün Nöbet Çizelgesi (v11) _ evrakburada.pdf**, sayfa 1–5, 14.09.2026–22.01.2027. 88 okul gününün üç nöbet bölgesi, ayrıca PDF’deki 29 Ekim, yılbaşı ve 16–20 Kasım ara tatili aktarıldı. Aralık dışındaki nöbetler boş gösterilir. Tarih seçerek değişiklik girilebilir; özel ayar kaldırılınca kaynak çizelgeye dönülür.
+- Bu modül öğrenci adı, notu, davranış kaydı veya veli/rehberlik içeriklerini yayın verisine dahil etmez. İçerik paylaşımı ayrı ve açıkça okul yayını içindir.
+- Yatay 16:9 TV önerilir. Tarayıcıda tam ekran düğmesi veya F11. Ekranın kapanmasını engelleme özelliği destekleyen tarayıcıda tam ekranda denenir; cihazın uyku ayarı ayrıca kapatılmalıdır.
+- PDF / PPTX sunumları kabul edilir (20 MB, en fazla 100 sayfa/slayt). Her sayfa seçilen süre kadar gösterilir; son sayfadan sonra sıradaki dosyaya geçilir. Önceki/sonraki sayfa düğmeleri de vardır. Görüntüleme okul sunucusundaki yerel kitaplıklarla yapılır; dosyalar dış bir dönüştürme servisine gönderilmez. PPTX temel slayt görünümüdür; PowerPoint animasyonları ve bazı karmaşık biçimler birebir oynatılmaz. Görünümü korumak için PDF, animasyonlu sunum için MP4 kullanın.
+- 1920×1080 PNG/JPG/WEBP ve H.264 MP4 önerilir. WEBM de kabul edilir. Video sessiz olarak sonuna kadar oynar, bitince sıradaki içeriğe geçer. Dosya kalite kaybıyla yeniden kodlanmaz. MP4/WEBM kapsayıcısı kabul edilir; oynatılabilir codec TV tarayıcısına bağlıdır. Video 100 MB, görsel 20 MB ile sınırlıdır.
+- İçerikler 30 saniyede bir yenilenir. İnternet kesilirse açık ekran son alınan bilgileri gösterir; gün değişince eski nöbet/ders bilgisi gösterilmez. Sayfa tamamen kapalıyken çevrimdışı açılış sağlanmaz.
+- Medyalar `YAYIN_DOSYA_KLASORU` ortam değişkeniyle seçilebilir; varsayılan veritabanı yanındaki `yayin-dosyalar` klasörüdür. Canlı sunucuda veritabanıyla birlikte kalıcı diskte tutulmalı ve yedeklenmelidir. Kaynak logo `static/school-broadcast-logo.png`.
+
+## Sonraki içerik önerileri
+
+Okul etkinliklerinden kısa videolar, haftanın kitap önerisi, rehberlikten kısa öneriler, yaklaşan etkinlik/yarışma duyuruları ve özel gün afişleri. Duyurular bir TV’den uzaktan okunabilecek kadar kısa olmalı. İsim/fotoğraf içeren başarı veya öğrenci etkinliği içerikleri, okulun uygun bulduğu yayın dosyası üzerinden eklenebilir.

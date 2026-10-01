@@ -28,6 +28,9 @@
     {% for endpoint, label, icon in [('dashboard','Ana sayfa','⌂'), ('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦')] %}
     <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint in ['dashboard','haftalik_takip'] else url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
     {% endif %}
+    <h2>Okul</h2>
+    <a href="{{ url_for('yayin') }}" target="_blank" rel="noopener"><span aria-hidden="true">▣</span>Okul yayın ekranı</a>
+    {% if yayin_icerik_ekleyebilir() %}<a href="{{ url_for('yayin_yonetim') }}" class="{{ 'is-current' if request.endpoint == 'yayin_yonetim' else '' }}"><span aria-hidden="true">☷</span>{{ 'Yayın yönetimi' if yayin_yonetebilir() else 'Yayına içerik ekle' }}</a>{% endif %}
     <h2>Raporlar</h2>
     <a href="{{ url_for('analiz_merkezi', sinif_id=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'analiz_merkezi' else '' }}"><span aria-hidden="true">◒</span>Kitap/ödev analizi</a>
     {% if not rapor_only %}

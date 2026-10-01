@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>Erenler Cumhuriyet • Okul ekranı</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='school-broadcast.css') }}">
+<script type="module" src="{{ url_for('static', filename='school-broadcast.js') }}"></script></head>
+<body class="school-screen">
+<div class="screen-shell">
+  <header class="screen-header">
+    <div class="school-brand"><img src="{{ url_for('static', filename='school-broadcast-logo.png') }}" alt="Erenler Cumhuriyet Ortaokulu logosu"><div><p>ÇORUM · İSKİLİP</p><h1>Erenler Cumhuriyet<br>Ortaokulu</h1></div></div>
+    <div class="header-center"><span class="live-label"><i></i> OKUL EKRANI</span><span id="school-date"></span></div>
+    <div class="header-clock"><strong id="clock">--:--</strong><span id="seconds">--</span></div>
+  </header>
+  <main class="screen-main">
+    <aside class="status-column">
+      <section class="lesson-card clay"><div class="eyebrow">ŞU ANDA</div><h2 id="lesson-state">Ders durumu</h2><p id="lesson-hours"></p><div class="countdown" id="countdown">--:--</div><p id="countdown-label">Ders saatleri hazırlanıyor</p><div class="lesson-progress"><span id="lesson-progress"></span></div><div class="next-lesson" id="next-lesson"></div><span class="clay-orb orb-one" aria-hidden="true"></span><span class="clay-orb orb-two" aria-hidden="true"></span></section>
+      <section class="day-plan clay"><div class="eyebrow">GÜNÜN AKIŞI</div><div id="periods"></div></section>
+      <section class="lgs-mini clay"><span class="lgs-icon" aria-hidden="true">✦</span><div><strong id="lgs-days">Birlikte başaracağız</strong><small id="lgs-caption">Her gün bir adım ileri.</small></div></section>
+    </aside>
+    <div class="broadcast-right">
+      <section class="content-card clay" aria-label="Sunum ve video yayını"><div class="content-heading"><div><p class="eyebrow" id="slide-kicker">BUGÜN OKULDA</p><h2 id="slide-title">Sunum ve video alanı</h2></div><span class="slide-count" id="slide-count">01 / 03</span></div><div id="slide-body" class="slide-body"></div><div class="slide-nav"><button type="button" id="previous" aria-label="Önceki yayın">‹</button><div id="slide-dots"></div><button type="button" id="next" aria-label="Sonraki yayın">›</button><button type="button" id="pause" aria-label="Yayını duraklat">Ⅱ</button><button type="button" id="program-toggle" aria-label="Ders programını göster">▤</button><span id="presentation-controls" hidden><button type="button" id="presentation-prev" aria-label="Önceki sunum sayfası">‹</button><span id="presentation-page"></span><button type="button" id="presentation-next" aria-label="Sonraki sunum sayfası">›</button></span></div></section>
+      <section class="announcement-card clay" aria-label="Duyurular"><div class="announcement-label"><span aria-hidden="true">✉</span><h2>Duyurular</h2><small id="announcement-count"></small></div><div class="announcement-text"><h3 id="announcement-title">Okul duyuruları</h3><p id="announcement-message">Öğretmenlerimizin paylaştığı duyurular burada gösterilir.</p></div></section>
+    </div>
+  </main>
+  <section class="duty-section" aria-label="Bugünün nöbetçi öğretmenleri"><div class="duty-title"><span aria-hidden="true">✧</span><h2>Bugünün<br>nöbetçileri</h2></div><div class="duty-card clay"><span class="floor-icon">1</span><div><small>1. KAT</small><strong id="duty-0">—</strong></div></div><div class="duty-card clay"><span class="floor-icon">2</span><div><small>2. KAT</small><strong id="duty-1">—</strong></div></div><div class="duty-card clay garden"><span class="floor-icon">❋</span><div><small>BAHÇE</small><strong id="duty-2">—</strong></div></div></section>
+  <footer class="screen-footer"><span class="footer-brand">AkademiPuan <b>•</b> Öğrenmek birlikte güzel.</span><span id="connection" role="status">Yayın hazırlanıyor</span><div class="screen-tools">{% if not tv %}<a href="{{ url_for('dashboard') }}">Panele dön</a>{% if yayin_icerik_ekleyebilir() %}<a href="{{ url_for('yayin_yonetim') }}">Yayına içerik ekle</a>{% endif %}{% endif %}<button id="fullscreen" type="button">⛶ Tam ekran</button></div></footer>
+</div>
+<script id="broadcast-data" type="application/json">{{ data|tojson }}</script><script id="broadcast-url" type="application/json">{{ veri_url|tojson }}</script>
+</body></html>

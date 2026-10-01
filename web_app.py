@@ -248,7 +248,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "api_curriculum_temel_egitim", "api_curriculum_drive_kazanimlari",
     "ogretmen_kitap_okuma", "ogretmen_kitap_okuma_excel",
     "ogretmen_evrak_takip", "ogretmen_evrak_takip_excel", "evrak_gorev_guncelle",
-    "ders_programi",
+    "ders_programi", "yayin", "api_yayin_okul", "yayin_medya",
 })
 
 
@@ -5230,19 +5230,8 @@ def api_olumlu_gecmis(sinif_id):
 @app.route("/yayin/<int:sinif_id>")
 @giris_zorunlu
 def yayin(sinif_id=None):
-    return _kapatilan_sayfa()
-    siniflar = _tum_siniflar()
-    yayin_veri = _yayin_verisi_hazirla()
-    gl = gelisim_ligi()
-    ticker_lider = [{"sinif_adi": x["sinif_adi"], "puan": x.get("xp", 0)} for x in gl[:8]]
-    return render_template(
-        "yayin.html",
-        sinif_sayisi=len(siniflar),
-        yayin_veri=yayin_veri,
-        liderler=ticker_lider,
-        rozetler=son_rozetler(8),
-        sezon=sezon_siralama()[:5],
-    )
+    from school_broadcast import payload
+    return render_template('school_broadcast.html', data=payload(), veri_url=url_for('api_yayin_okul'), tv=False)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -6915,6 +6904,8 @@ from change_history import register_history
 register_history(app, giris_zorunlu)
 from sayfa_sifirlama import register_sayfa_sifirlama
 register_sayfa_sifirlama(app, giris_zorunlu)
+from school_broadcast import register_broadcast
+register_broadcast(app, giris_zorunlu)
 
 if __name__ == "__main__":
     import socket
