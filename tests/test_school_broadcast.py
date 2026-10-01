@@ -7,6 +7,7 @@ from test_app_workflows import w, d
 import school_broadcast as tv
 from broadcast_seed import duty_seed
 from broadcast_timetable import timetable
+from broadcast_calendar import calendar_seed
 
 
 class SchoolBroadcast(unittest.TestCase):
@@ -16,7 +17,7 @@ class SchoolBroadcast(unittest.TestCase):
         con = d._conn()
         teacher = con.execute("SELECT id,ad_soyad FROM ogretmenler WHERE ad_soyad='ADEM AKGÜL'").fetchone()
         self.other = con.execute("SELECT id,ad_soyad FROM ogretmenler WHERE ad_soyad='FUNDA KİRAZ'").fetchone()
-        for table in ('okul_yayin_icerik', 'okul_yayin_gun', 'okul_yayin_program'):
+        for table in ('okul_yayin_icerik', 'okul_yayin_gun', 'okul_yayin_program', 'okul_yayin_takvim'):
             con.execute('DELETE FROM '+table)
         con.execute("DELETE FROM okul_yayin_ayar WHERE anahtar<>'token'")
         con.commit(); con.close()
@@ -29,6 +30,48 @@ class SchoolBroadcast(unittest.TestCase):
 
     def post(self, **fields):
         return self.admin.post('/yayin/yonetim', data=dict(csrf=self.csrf, **fields))
+
+    def test_calendar_recurring_days_cross_month_and_year(self):
+        for year, mothers, dyslexia in ((2026, '2026-05-10', '2026-10-01'), (2027, '2027-05-09', '2027-10-07')):
+            items={i['id']:i for i in calendar_seed(year)}
+            self.assertEqual(items[f'takvim-{year}-anneler']['baslangic'], mothers)
+            self.assertEqual(items[f'takvim-{year}-disleksi-gunu']['baslangic'], dyslexia)
+        on_last=tv.calendar_display('2026-11-04')['bugun']
+        after=tv.calendar_display('2026-11-05')['bugun']
+        self.assertIn('Kızılay Haftası',[i['baslik'] for i in on_last])
+        self.assertNotIn('Kızılay Haftası',[i['baslik'] for i in after])
+        self.assertTrue(all(i['baslangic'].startswith('2027') for i in tv.calendar_display('2026-12-31')['yaklasan']))
+        leap=calendar_seed(2024)
+        self.assertTrue(all(i['baslangic']<=i['bitis'] for i in leap))
+
+    def test_calendar_override_hide_reset_custom_and_no_school_closure(self):
+        fields=dict(islem='takvim',takvim_yil='2026',takvim_id='takvim-2026-cumhuriyet',
+                    takvim_baslik='Cumhuriyet etkinliği',takvim_baslangic='2026-10-28',takvim_bitis='2026-10-29',takvim_aktif='on')
+        self.assertEqual(self.post(**fields).status_code,302)
+        self.assertIn('Cumhuriyet etkinliği',[i['baslik'] for i in tv.calendar_display('2026-10-28')['bugun']])
+        self.assertFalse(tv.day_info('2026-10-28')['kapali'])
+        hidden={k:v for k,v in fields.items() if k!='takvim_aktif'}
+        self.post(**hidden)
+        self.assertNotIn('Cumhuriyet etkinliği',[i['baslik'] for i in tv.calendar_display('2026-10-29')['bugun']])
+        self.post(islem='takvim_sifirla',takvim_yil='2026',takvim_id=fields['takvim_id'])
+        self.assertIn('Cumhuriyet Bayramı',[i['baslik'] for i in tv.calendar_display('2026-10-29')['bugun']])
+        today=datetime.now(tv.ISTANBUL).date().isoformat()
+        self.assertEqual(self.post(**{**fields,'takvim_yil':today[:4],'takvim_id':'','takvim_baslik':'Okul kitap şenliği',
+            'takvim_baslangic':today,'takvim_bitis':today}).status_code,302)
+        payload=self.guest.get('/ekran/'+self.token+'/veri').json
+        self.assertIn('Okul kitap şenliği',[i['baslik'] for i in payload['takvim']['bugun']])
+        before=tv.calendar_items(2026)
+        self.assertEqual(self.post(**{**fields,'takvim_baslangic':'2026-10-30'}).status_code,200)
+        self.assertEqual(before,tv.calendar_items(2026))
+
+    def test_calendar_settings_restricted_to_school_managers(self):
+        client=w.app.test_client()
+        with client.session_transaction() as s:s.update(ogretmen_id=self.other['id'],ogretmen_adi=self.other['ad_soyad'],ogretmen_yetki='tam')
+        page=client.get('/yayin/yonetim').get_data(as_text=True)
+        self.assertNotIn('Okula özel etkinlik ekle',page)
+        with client.session_transaction() as s:token=s['yayin_csrf']
+        for action in ('takvim','takvim_sifirla'):
+            self.assertEqual(client.post('/yayin/yonetim',data={'csrf':token,'islem':action}).status_code,403)
 
     def test_dated_pdf_duties_and_holidays(self):
         self.assertEqual(len(duty_seed()), 88)

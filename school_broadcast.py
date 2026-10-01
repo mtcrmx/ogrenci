@@ -11,6 +11,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 import database as db
 from broadcast_seed import duty_seed, CLOSED
 from broadcast_timetable import timetable
+from broadcast_calendar import calendar_seed
 from lgs_sayac import ISTANBUL, lgs_sayac_verisi
 from student_results import institution_allowed
 
@@ -40,6 +41,9 @@ def init_schema():
         CREATE TABLE IF NOT EXISTS okul_yayin_program (
             gun INTEGER NOT NULL, ders_no INTEGER NOT NULL, sinif_adi TEXT NOT NULL,
             ogretmen_adi TEXT NOT NULL, PRIMARY KEY(gun,ders_no,sinif_adi));
+        CREATE TABLE IF NOT EXISTS okul_yayin_takvim (
+            id TEXT PRIMARY KEY, baslik TEXT NOT NULL, baslangic TEXT NOT NULL,
+            bitis TEXT NOT NULL, aktif INTEGER NOT NULL DEFAULT 1);
     ''')
     con.execute('INSERT OR IGNORE INTO okul_yayin_ayar VALUES (?,?)', ('token', secrets.token_urlsafe(32)))
     con.commit()
@@ -116,6 +120,27 @@ def program_for(day):
     return [r for r in timetable() if r['gun'] == day]
 
 
+def calendar_items(year):
+    items = {i['id']: i for i in calendar_seed(year)}
+    con = db._conn()
+    rows = [dict(r) for r in con.execute('SELECT * FROM okul_yayin_takvim')]
+    con.close()
+    for row in rows:
+        if row['id'] in items:
+            items[row['id']].update(row, planlama=False, ozel=True)
+        elif row['id'].startswith('ozel-') and row['baslangic'][:4] <= str(year) <= row['bitis'][:4]:
+            items[row['id']] = dict(row, planlama=False, ozel=True)
+    return sorted(items.values(), key=lambda i: (i['baslangic'], i['baslik']))
+
+
+def calendar_display(stamp):
+    year = date.fromisoformat(stamp).year
+    items = {i['id']: i for y in (year-1, year, year+1) for i in calendar_items(y) if i['aktif']}
+    ordered = sorted(items.values(), key=lambda i: (i['baslangic'], i['baslik']))
+    return dict(bugun=[i for i in ordered if i['baslangic'] <= stamp <= i['bitis']],
+                yaklasan=[i for i in ordered if i['baslangic'] > stamp][:3])
+
+
 def payload(token=None, now=None):
     now = (now or datetime.now(ISTANBUL)).astimezone(ISTANBUL)
     stamp = now.date().isoformat()
@@ -132,7 +157,7 @@ def payload(token=None, now=None):
     program = program_for(now.weekday())
     return dict(simdi=now.isoformat(), tarih=stamp, gun=now.weekday(), **info,
                 saatler=periods, program=program, siniflar=sorted({r['sinif_adi'] for r in timetable()}),
-                icerikler=items, lgs=lgs_sayac_verisi(now))
+                icerikler=items, takvim=calendar_display(stamp), lgs=lgs_sayac_verisi(now))
 
 
 def valid_media(upload):
@@ -279,6 +304,28 @@ def register_broadcast(app, login_required):
                 elif action == 'gun_sifirla':
                     stamp = date.fromisoformat(request.form['tarih']).isoformat()
                     con.execute('DELETE FROM okul_yayin_gun WHERE tarih=?', (stamp,))
+                elif action in ('takvim', 'takvim_sifirla'):
+                    year = int(request.form.get('takvim_yil', today[:4]))
+                    if not 2020 <= year <= 2100:
+                        raise ValueError('Takvim yılı 2020–2100 arasında olmalı.')
+                    cid = request.form.get('takvim_id', '').strip()
+                    existing = con.execute('SELECT id FROM okul_yayin_takvim WHERE id=?', (cid,)).fetchone()
+                    if cid and not existing and cid not in {i['id'] for i in calendar_seed(year)}:
+                        abort(404)
+                    if action == 'takvim_sifirla':
+                        con.execute('DELETE FROM okul_yayin_takvim WHERE id=?', (cid,))
+                    else:
+                        title = request.form.get('takvim_baslik', '').strip()
+                        start, end = (date.fromisoformat(request.form[k]) for k in ('takvim_baslangic', 'takvim_bitis'))
+                        if not title or len(title) > 100 or start > end or (end-start).days > 366:
+                            raise ValueError('Etkinlik başlığı 1–100 karakter, tarih aralığı en fazla bir yıl olmalı.')
+                        if not start.year <= year <= end.year:
+                            raise ValueError('Etkinlik tarihleri seçilen takvim yılını kapsamalı.')
+                        cid = cid or 'ozel-' + secrets.token_hex(12)
+                        con.execute('''INSERT INTO okul_yayin_takvim VALUES (?,?,?,?,?)
+                            ON CONFLICT(id) DO UPDATE SET baslik=excluded.baslik,baslangic=excluded.baslangic,
+                            bitis=excluded.bitis,aktif=excluded.aktif''',
+                            (cid, title, start.isoformat(), end.isoformat(), int('takvim_aktif' in request.form)))
                 elif action == 'saat':
                     for key in ('haftaici', 'cuma'):
                         hours = [[request.form.get(f'{key}_{n}_{edge}', '') for edge in ('bas', 'bit')] for n in range(1, 8)]
@@ -342,7 +389,8 @@ def register_broadcast(app, login_required):
                 if old_file:
                     (media_dir() / old_file).unlink(missing_ok=True)
                 flash('Yayın ayarları kaydedildi. Ekran en geç 30 saniye içinde yenilenir.', 'success')
-                return redirect(url_for('yayin_yonetim', tarih=request.form.get('tarih', today)))
+                return redirect(url_for('yayin_yonetim', tarih=request.form.get('tarih', today),
+                    takvim_yil=request.form.get('takvim_yil', today[:4])))
         except (ValueError, KeyError, RequestEntityTooLarge) as exc:
             con.rollback()
             flash(str(exc) if isinstance(exc, ValueError) else 'Alanları ve dosya boyutunu kontrol edin.', 'warning')
@@ -362,6 +410,13 @@ def register_broadcast(app, login_required):
         edit = next((i for i in items if i['id'] == edit_id), None)
         if edit_id and not edit:
             abort(404)
+        calendar_year = request.args.get('takvim_yil', default=int(today[:4]), type=int)
+        calendar_year = calendar_year if 2020 <= calendar_year <= 2100 else int(today[:4])
+        calendar = calendar_items(calendar_year) if admin else []
+        calendar_edit_id = request.args.get('takvim_duzenle', '')
+        calendar_edit = next((i for i in calendar if i['id'] == calendar_edit_id), None)
+        if calendar_edit_id and not calendar_edit:
+            abort(404)
         from broadcast_timetable import ROWS
         day = request.args.get('program_gun', default=min(datetime.now(ISTANBUL).weekday(), 4), type=int)
         day = day if day in range(5) else 0
@@ -371,4 +426,6 @@ def register_broadcast(app, login_required):
             info=day_info(stamp), items=items, edit=edit, hours={'haftaici': slots(0), 'cuma': slots(4)},
             program_day=day, program_map=program_map, program_teachers=sorted(r[0] for r in ROWS),
             program_classes=sorted({r['sinif_adi'] for r in timetable()}), days=db.DERS_GUNLERI,
-            admin=admin, ekran_url=url_for('okul_ekran', token=setting('token'), _external=True) if admin else '')
+            admin=admin, calendar=calendar, calendar_edit=calendar_edit, calendar_year=calendar_year,
+            calendar_default=today if calendar_year == int(today[:4]) else f'{calendar_year}-01-01',
+            ekran_url=url_for('okul_ekran', token=setting('token'), _external=True) if admin else '')

@@ -15,7 +15,11 @@
 .broadcast-center{grid-column:2;grid-row:1;display:flex;min-width:0;min-height:0}
 .broadcast-center .content-card{width:100%;padding:1.8vh 1.3vw 1vh}
 .broadcast-center .content-heading h2{font-size:1.6vw}
-.announcement-card{grid-column:2/4;grid-row:2}
+.announcement-card{grid-column:2;grid-row:2}
+.calendar-card{grid-column:3;grid-row:2;min-width:0;background:linear-gradient(145deg,#fff0c9,#f3dfb9);border-radius:1.5vw;padding:1.2vh 1vw;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.calendar-heading{display:flex;justify-content:space-between;align-items:center;gap:.4vw}.calendar-card .eyebrow{font-size:.64vw;margin:0;color:#927451;letter-spacing:.08em}.calendar-heading small{flex-shrink:0;font-size:.65vw;color:#97744e;background:#fff5;padding:.3vh .4vw;border-radius:1vw}
+.calendar-card h2{font-size:1vw;line-height:1.15;margin:.7vh 0 .4vh;overflow-wrap:anywhere}.calendar-card>p{font-size:.7vw;line-height:1.25;margin:0;color:#8e7357}
+.announcement-text h3{font-size:1vw}.announcement-text p{font-size:.85vw;line-height:1.25}
 .teacher-panel{grid-column:3;grid-row:1;background:linear-gradient(145deg,#f5f8ee,#e7eddd);padding:1.8vh 1vw;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;border-radius:1.5vw}
 .teacher-panel .eyebrow{margin-bottom:.6vh;color:#768365}
 .teacher-panel h2{font-size:1.5vw;letter-spacing:-.03em;margin:0;line-height:1.2}
@@ -32,3 +36,4 @@
 .teacher-empty{font-size:1vw;color:#6a775e;align-self:center;text-align:center;width:100%}
 @media(min-aspect-ratio:4/3){.status-column .lesson-card{padding:2vh 1.1vw}.lesson-card h2{font-size:2vw}.countdown{font-size:4.3vw}.next-lesson{font-size:.8vw}.day-plan{padding:1.4vh 1vw}.period-row{font-size:.74vw;padding:.18vh .2vw}.lgs-mini{padding:.7vh 1vw;gap:.6vw}.lgs-icon{font-size:1.7vw}.lgs-mini strong{font-size:.9vw}.lgs-mini small{font-size:.6vw}}
 @media(max-aspect-ratio:4/3){.screen-main{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto;gap:2vh}.status-column,.broadcast-center,.teacher-panel,.announcement-card{grid-column:1;grid-row:auto}.broadcast-center .content-card{min-height:50vw;padding:3vw}.broadcast-center .content-heading h2{font-size:3vw}.teacher-panel{padding:3vw}.teacher-panel h2{font-size:3vw}.teacher-table-status{font-size:2vw}.teacher-table{font-size:2vw;height:auto;min-height:55vw}.teacher-table th,.teacher-table td{padding:1vw}.teacher-table thead th,.teacher-table tbody th{font-size:2vw}.teacher-table thead th:first-child{width:12vw}.teacher-table-times{font-size:1.7vw}.teacher-empty{font-size:2vw}}
+@media(max-aspect-ratio:4/3){.calendar-card{grid-column:1;grid-row:auto;min-height:20vw;padding:3vw}.calendar-card .eyebrow,.calendar-heading small{font-size:1.5vw}.calendar-card h2{font-size:2.5vw}.calendar-card>p{font-size:1.7vw}.announcement-text h3{font-size:2.2vw}.announcement-text p{font-size:1.8vw}}

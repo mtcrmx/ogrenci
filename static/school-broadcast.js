@@ -11,6 +11,7 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   const longDate=new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',weekday:'long',day:'numeric',month:'long',year:'numeric'});
   let offset=Date.parse(data.simdi)-Date.now(), index=0, paused=false, deadline=0, signature='', periodKey='', playlistKey='', fetching=false, revoked=false, wake=null;
   let presentation=null, announcementIndex=0, announcementDeadline=0, announcementKey='';
+  let calendarIndex=0, calendarDeadline=0, calendarKey='';
   const now=()=>new Date(Date.now()+offset);
   function state(){
     const [h,m,s]=timeFmt.format(now()).split(':').map(Number);
@@ -52,9 +53,10 @@ import {mountPresentation} from './school-broadcast-presentations.js';
     if(revoked)return;
     if(playlistKey!==slides().map(i=>i.id||i.type).join(':')){index=0;render();}
     updateAnnouncements();
+    updateCalendar();
     const st=state(),sameDay=dateFmt.format(now())===data.tarih;
     txt('lesson-state',st.ad);txt('lesson-hours',st.hours||'');txt('countdown',st.hedef!==null?`${String(Math.floor(st.kalan/60)).padStart(2,'0')}:${String(st.kalan%60).padStart(2,'0')}`:'—');txt('countdown-label',st.etiket||st.aciklama||'Yarın yeni bir gün.');$('lesson-progress').style.width=`${Math.round((st.oran||0)*100)}%`;
-    const following=data.saatler.find(p=>p.no===(st.inLesson?st.ders+1:st.ders));txt('next-lesson',following&&!st.kapali?`Sıradaki · ${following.no}. ders ${following.baslangic}`:st.kapali?'İyi dinlenmeler.':'Günün dersleri tamamlandı.');
+    const following=data.saatler.find(p=>p.no===(st.inLesson?st.ders+1:st.ders));txt('next-lesson',following&&!st.kapali?`Sıradaki · ${following.no}. ders ${following.baslangic}`:st.kapali?'İyi dinlenmeler.':st.inLesson?'Günün son dersi':'Günün dersleri tamamlandı.');
     const key=`${data.tarih}:${sameDay}:${st.ad}:${st.ders}:${st.inLesson}`;
     if(key!==periodKey){periodKey=key;const p=$('periods');p.replaceChildren();for(const hour of data.saatler){const row=node('div','period-row'+(hour.no===st.ders&&!st.kapali?' active':''));row.append(node('span','',`${hour.no}. ders`),node('span','',`${hour.baslangic} – ${hour.bitis}`));p.append(row);}renderTeacherTable(st,sameDay);}
     for(let i=0;i<3;i++)txt(`duty-${i}`,!sameDay?'Güncelleniyor':data.kapali?'Bugün nöbet yok':data.nobet[i]||'Çizelge bekleniyor');
@@ -88,9 +90,24 @@ import {mountPresentation} from './school-broadcast-presentations.js';
     if(Date.now()>=announcementDeadline){if(announcementDeadline)announcementIndex=(announcementIndex+1)%items.length;announcementDeadline=Date.now()+Math.max(12,items[announcementIndex].sure)*1000;}
     const item=items[announcementIndex];txt('announcement-title',item.baslik);txt('announcement-message',item.metin);txt('announcement-count',`${announcementIndex+1} / ${items.length}`);
   }
+  function updateCalendar(){
+    const day=dateFmt.format(now()), source=data.takvim||{bugun:[],yaklasan:[]};
+    const all=[...source.bugun,...source.yaklasan].filter(i=>i.aktif&&i.bitis>=day);
+    const active=all.filter(i=>i.baslangic<=day),items=active.length?active:all.filter(i=>i.baslangic>day),key=day+JSON.stringify(items);
+    if(key!==calendarKey){calendarKey=key;calendarIndex=0;calendarDeadline=0;}
+    if(!items.length){txt('calendar-state','');txt('calendar-title','Birlikte öğreniyoruz');txt('calendar-dates','Okulun belirli gün ve hafta etkinlikleri burada gösterilir.');return;}
+    if(Date.now()>=calendarDeadline){if(calendarDeadline)calendarIndex=(calendarIndex+1)%items.length;calendarDeadline=Date.now()+15000;}
+    const item=items[calendarIndex],isActive=item.baslangic<=day;
+    const short=new Intl.DateTimeFormat('tr-TR',{timeZone:'UTC',day:'numeric',month:'long',...(item.baslangic.slice(0,4)!==day.slice(0,4)?{year:'numeric'}:{})});
+    const range=short.format(new Date(item.baslangic))+ (item.baslangic!==item.bitis?' – '+short.format(new Date(item.bitis)):'');
+    const remaining=Math.round((Date.parse(item.baslangic)-Date.parse(day))/86400000);
+    txt('calendar-state',isActive?(item.baslangic===item.bitis?'Bugün':item.baslik.toLocaleLowerCase('tr-TR').includes('hafta')?'Bu hafta':'Devam ediyor'):'Yaklaşıyor');
+    txt('calendar-title',item.baslik);
+    txt('calendar-dates',range+(!isActive?` · ${remaining===1?'Yarın':remaining+' gün kaldı'}`:'')+(item.planlama?' · Planlama aralığı':''));
+  }
   async function refresh(){if(fetching||revoked)return;fetching=true;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
     try{const r=await fetch(endpoint,{cache:'no-store',signal:controller.signal,credentials:'same-origin'});
-      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','announcement-title','announcement-message','announcement-count','teacher-table-status','teacher-table-times'].forEach(id=>txt(id,'—'));txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
+      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','announcement-title','announcement-message','announcement-count','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates'].forEach(id=>txt(id,'—'));txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
       if(!r.ok)throw new Error();const updated=await r.json();if(!updated.saatler||!updated.program)throw new Error();
       offset=Date.parse(updated.simdi)-Date.now();const nextSig=JSON.stringify({...updated,simdi:null,lgs:null});data=updated;
       if(signature!==nextSig){signature=nextSig;periodKey='';render();}txt('connection','Güncel · Türkiye saati');$('connection').className='';tick();
