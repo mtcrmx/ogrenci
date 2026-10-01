@@ -40,7 +40,7 @@ if (viewer) {
     } catch (error) {
       if (ownRevision !== revision || error.name === 'RenderingCancelledException') return;
       status.hidden = false;
-      status.textContent = 'Bu sayfa görüntülenemedi. Aşağıdaki Dosyayı aç veya İndir düğmesini kullanabilirsiniz.';
+      status.textContent = 'Bu sayfa görüntülenemedi. Sayfayı yenileyip tekrar deneyin.';
       buttons(false);
     }
   };
@@ -59,7 +59,7 @@ if (viewer) {
     await render();
   } catch (error) {
     console.error('PDF önizleme yüklenemedi:', error);
-    status.textContent = 'Sunum açılamadı. Aşağıdaki Dosyayı aç veya İndir düğmesini kullanabilirsiniz.';
+    status.textContent = 'Sunum açılamadı. Sayfayı yenileyip tekrar deneyin.';
     counter.textContent = 'PDF sunumu';
     canvas.hidden = true;
   }

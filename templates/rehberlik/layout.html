@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Rehberlik servisi{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='rehberlik.css') }}?v=20261001b"><script src="{{ url_for('static', filename='rehberlik.js') }}?v=20261001" defer></script><script src="{{ url_for('static', filename='rehberlik_pdf.js') }}?v=20261001" type="module"></script>{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='rehberlik.css') }}?v=20261001d"><script src="{{ url_for('static', filename='rehberlik.js') }}?v=20261001" defer></script><script src="{{ url_for('static', filename='rehberlik_pdf.js') }}?v=20261001b" type="module"></script><script src="{{ url_for('static', filename='rehberlik_office.js') }}?v=20261001b" defer></script>{% endblock %}
 {% block body %}
 <main class="page-content rh-page">
 {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<p class="app-notice {{ 'app-notice--error' if category in ['error','warning'] else 'app-notice--success' }}" role="status">{{ message }}</p>{% endfor %}{% endwith %}

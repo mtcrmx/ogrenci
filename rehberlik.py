@@ -15,9 +15,23 @@ from werkzeug.datastructures import MultiDict
 import database as db
 
 CATEGORIES = ('Aile iletişimi', 'Ders çalışma', 'Sınav süreci', 'Dijital denge', 'Arkadaşlık', 'Okula uyum', 'Diğer')
-FILE_TYPES = {'pdf': ('application/pdf', 'Sunum / PDF'), 'ppt': ('application/vnd.ms-powerpoint', 'Sunum'),
+FILE_TYPES = {'pdf': ('application/pdf', 'PDF'),
               'pptx': ('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'Sunum'),
-              'mp4': ('video/mp4', 'Video'), 'webm': ('video/webm', 'Video')}
+              'docx': ('application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Word'),
+              'xlsx': ('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Excel'),
+              'xls': ('application/vnd.ms-excel', 'Excel'),
+              'jpg': ('image/jpeg', 'Görsel'), 'jpeg': ('image/jpeg', 'Görsel'), 'png': ('image/png', 'Görsel'),
+              'gif': ('image/gif', 'Görsel'), 'webp': ('image/webp', 'Görsel'),
+              'mp4': ('video/mp4', 'Video'), 'webm': ('video/webm', 'Video'), 'mov': ('video/mp4', 'Video'),
+              'm4v': ('video/mp4', 'Video'),
+              'mp3': ('audio/mpeg', 'Ses'), 'm4a': ('audio/mp4', 'Ses'),
+              # Eski yüklemeler için; yeni PPT yüklemesi kabul edilmez.
+              'ppt': ('application/vnd.ms-powerpoint', 'Sunum')}
+UPLOAD_TYPES = tuple(t for t in FILE_TYPES if t != 'ppt')
+VIDEO_TYPES = ('mp4', 'webm', 'mov', 'm4v')
+AUDIO_TYPES = ('mp3', 'm4a')
+IMAGE_TYPES = ('jpg', 'jpeg', 'png', 'gif', 'webp')
+OOXML_PARTS = {'pptx': 'ppt/presentation.xml', 'docx': 'word/document.xml', 'xlsx': 'xl/workbook.xml'}
 FILE_DIR = Path(os.environ.get('REHBERLIK_DOSYA_KLASORU') or Path(db.DB_PATH).parent / 'rehberlik-dosyalar')
 READ_REPORTS = {'api_ogrenci_ara', 'analiz_merkezi', 'rapor_ozet', 'rapor_ozet_csv', 'rapor_excel', 'rapor_excel_detayli',
                 'rapor_analiz_pdf', 'rapor_haftalik', 'rapor_karsilastir', 'rapor_anonim_sinif',
@@ -136,9 +150,11 @@ def save_upload(upload):
         return '', '', '', 0
     original = Path(upload.filename.replace('\\', '/')).name[:160]
     ext = original.rsplit('.', 1)[-1].lower()
-    if ext not in FILE_TYPES:
-        raise ValueError('PDF, PPT, PPTX, MP4 veya WebM dosyası yükleyin.')
-    limit = (100 if ext in ('mp4', 'webm') else 20) * 1024 * 1024
+    if ext in ('doc', 'ppt'):
+        raise ValueError('Eski Office biçimi tarayıcıda gösterilemiyor. Dosyayı Word/PowerPoint’te “Farklı kaydet” ile DOCX/PPTX olarak kaydedip yükleyin.')
+    if ext not in UPLOAD_TYPES:
+        raise ValueError('Görsel (JPG, PNG, GIF, WebP), PDF, Word (DOCX), Excel (XLSX/XLS), PowerPoint (PPTX), video (MP4, WebM, MOV) veya ses (MP3, M4A) yükleyin.')
+    limit = (100 if ext in VIDEO_TYPES else 20) * 1024 * 1024
     FILE_DIR.mkdir(parents=True, exist_ok=True)
     path = FILE_DIR / (uuid4().hex + '.' + ext)
     size = 0
@@ -147,18 +163,25 @@ def save_upload(upload):
             while chunk := upload.stream.read(256 * 1024):
                 size += len(chunk)
                 if size > limit:
-                    raise ValueError('Video en fazla 100 MB, sunum en fazla 20 MB olabilir.')
+                    raise ValueError('Video en fazla 100 MB, diğer dosyalar en fazla 20 MB olabilir.')
                 stream.write(chunk)
         with path.open('rb') as stream:
             header = stream.read(16)
         valid = ((ext == 'pdf' and header.startswith(b'%PDF-')) or
-                 (ext == 'mp4' and header[4:8] == b'ftyp') or
+                 (ext in ('mp4', 'mov', 'm4v', 'm4a') and header[4:8] == b'ftyp') or
+                 (ext == 'mov' and header[4:8] in (b'moov', b'wide', b'mdat', b'free')) or
                  (ext == 'webm' and header.startswith(b'\x1a\x45\xdf\xa3')) or
-                 (ext == 'ppt' and header.startswith(b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1')))
-        if ext == 'pptx':
+                 (ext == 'xls' and header.startswith(b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1')) or
+                 (ext in ('jpg', 'jpeg') and header.startswith(b'\xff\xd8\xff')) or
+                 (ext == 'png' and header.startswith(b'\x89PNG\r\n\x1a\n')) or
+                 (ext == 'gif' and header[:6] in (b'GIF87a', b'GIF89a')) or
+                 (ext == 'webp' and header[:4] == b'RIFF' and header[8:12] == b'WEBP') or
+                 (ext == 'mp3' and (header.startswith(b'ID3') or (header[0] == 0xFF and header[1] & 0xE0 == 0xE0))))
+        if ext in OOXML_PARTS:
             try:
                 with zipfile.ZipFile(path) as archive:
-                    valid = '[Content_Types].xml' in archive.namelist() and 'ppt/presentation.xml' in archive.namelist()
+                    names = archive.namelist()
+                    valid = '[Content_Types].xml' in names and OOXML_PARTS[ext] in names
             except zipfile.BadZipFile:
                 valid = False
         if not valid or not size:
@@ -242,7 +265,9 @@ def register_rehberlik(app):
 
     @app.context_processor
     def rehber_context():
-        return {'rehber_csrf': csrf, 'rehber_kategoriler': CATEGORIES, 'rehber_turler': FILE_TYPES}
+        return {'rehber_csrf': csrf, 'rehber_kategoriler': CATEGORIES, 'rehber_turler': FILE_TYPES,
+                'rehber_yukleme_turleri': UPLOAD_TYPES, 'rehber_video_turleri': VIDEO_TYPES,
+                'rehber_ses_turleri': AUDIO_TYPES, 'rehber_gorsel_turleri': IMAGE_TYPES}
 
     def page(template, **data):
         return render_template('rehberlik/' + template + '.html', **data)
@@ -478,9 +503,12 @@ def register_rehberlik(app):
             abort(403)
         if not item['dosya'] or Path(item['dosya']).name != item['dosya'] or not (FILE_DIR/item['dosya']).is_file():
             abort(404)
+        # Dosya yalnızca sayfa içi önizlemeye verilir; adres çubuğundan açılınca indirilmesin.
+        if request.headers.get('Sec-Fetch-Dest') in ('document', 'iframe', 'frame', 'embed', 'object'):
+            abort(403)
         response = send_file(FILE_DIR / item['dosya'], mimetype=FILE_TYPES[item['uzanti']][0],
-                             download_name=item['dosya_adi'], conditional=True,
-                             as_attachment=request.args.get('indir') == '1' or item['uzanti'] in ('ppt','pptx'))
+                             download_name=item['dosya_adi'], conditional=True, as_attachment=False)
+        response.headers['Content-Disposition'] = 'inline'
         response.headers['Cache-Control'] = 'private, no-store'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         return response

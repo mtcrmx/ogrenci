@@ -1,7 +1,7 @@
 <div class="rh-grid">
 {% for item in items %}
 <article class="rh-card">
-  <div class="rh-card-top rh-tone-{{ loop.index0 % 4 }}"><span class="rh-media-icon" aria-hidden="true">{{ '▶' if item.uzanti in ['mp4','webm'] else '▤' if item.dosya else '❋' }}</span><span class="rh-pill">{{ rehber_turler[item.uzanti][1] if item.dosya else 'Rehber yazısı' }}</span></div>
+  <div class="rh-card-top rh-tone-{{ loop.index0 % 4 }}"><span class="rh-media-icon" aria-hidden="true">{{ '▶' if item.uzanti in rehber_video_turleri else '♪' if item.uzanti in rehber_ses_turleri else '▣' if item.uzanti in rehber_gorsel_turleri else '▤' if item.dosya else '❋' }}</span><span class="rh-pill">{{ rehber_turler[item.uzanti][1] if item.dosya else 'Rehber yazısı' }}</span></div>
   <div class="rh-card-body"><p class="rh-eyebrow">{{ item.kategori }}</p><h2><a href="{{ url_for('veli_rehberlik_detay' if parent else 'rehberlik_detay', cid=item.id) }}">{{ item.baslik }}</a></h2><p class="rh-description">{{ item.ozet }}</p>
     <div class="rh-card-meta"><span>{{ 'Size özel' if parent and item.hedef == 'Seçili veliler' else item.hedef }}</span>{% if parent %}<span>{{ '✓ İncelediniz' if item.incelendi else 'Yeni' if not item.acildi else 'Açıldı' }}</span>{% else %}<span>{{ {'yayinda':'Yayında','taslak':'Taslak','arsiv':'Arşiv'}[item.durum] }}</span>{% endif %}</div>
     {% if not parent %}<p class="app-muted">{{ item.alici }} veli · {{ item.acan }} açtı · {{ item.inceleyen }} inceledi · {{ item.uygulayan }} uyguladı</p>{% endif %}

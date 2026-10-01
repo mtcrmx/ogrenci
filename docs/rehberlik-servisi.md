@@ -14,9 +14,10 @@ Alperen Murat Leblebici, mevcut öğretmen girişinden kendi adıyla giriş yapa
 
 ## Dosyalar ve yayına geçiş
 
-- PDF, PPT, PPTX: en fazla 20 MB. MP4 / WebM: en fazla 100 MB. İstek üst sınırı 102 MB; yükleme sınırı sunucuda da kontrol edilir.
-- PDF, yerel olarak sunulan PDF.js 6.3.289 ile sayfa sayfa çizilir. Yüksek ekran yoğunluğu ve sayfa metni desteklenir. Lisansı `static/vendor/pdfjs/LICENSE` içindedir.
-- PowerPoint dosyaları indirilerek açılır. Tarayıcıda slayt gösterimi istenirse sunum PDF olarak yüklenir. Otomatik PowerPoint dönüştürme bu sürümde yoktur.
+- Görsel (JPG, PNG, GIF, WebP), PDF, DOCX, XLSX/XLS, PPTX, MP3/M4A: en fazla 20 MB. MP4 / WebM / MOV / M4V: en fazla 100 MB. İstek üst sınırı 102 MB; yükleme sınırı ve dosya imzası sunucuda kontrol edilir. Eski DOC/PPT kabul edilmez (DOCX/PPTX olarak kaydedilmeli).
+- Tüm dosyalar sayfa içinde önizlenir; indirme düğmesi yoktur. Dosya adresi doğrudan sekmede açılırsa (`Sec-Fetch-Dest: document`) 403 döner, yanıt her zaman `Content-Disposition: inline`'dır. Video/ses `controlslist="nodownload"` ile, görseller sağ tık/sürükleme kapalı gösterilir. Tarayıcıya gelen içerik ekran görüntüsü veya geliştirici araçlarıyla yine kaydedilebilir; bu bir caydırmadır, tam koruma değildir.
+- PDF, yerel olarak sunulan PDF.js 6.3.289 ile sayfa sayfa çizilir. Lisansı `static/vendor/pdfjs/LICENSE` içindedir.
+- Word `docx-preview` 0.4.1 (Apache-2.0) + JSZip 3.10.2, Excel SheetJS 0.20.3 (Apache-2.0, sayfa sekmeli), PowerPoint `pptx-preview` 1.0.7 (ISC, slayt slayt) ile tarayıcıda çizilir; hepsi `static/vendor/` altından yerel sunulur, dosya dış servise gönderilmez. Karmaşık animasyon/efektler PowerPoint'teki kadar birebir görünmeyebilir.
 - Video kalitesi değiştirilmez; orijinal dosya aralık istekleriyle sunulur. Oynatım cihazın video biçimi/kodek desteğine bağlıdır.
 - Dosyalar `static` içinde tutulmaz. Her dosya isteğinde rehber rolü veya öğrencinin yayın alıcısı olması doğrulanır; taslak/arşiv dosyaları veliye açılmaz.
 - `REHBERLIK_DOSYA_KLASORU` verilmezse dosyalar veritabanının yanındaki `rehberlik-dosyalar` klasörüne kaydedilir. Mevcut Render yapılandırmasında bu **`/data/rehberlik-dosyalar`** olur; `/data` kalıcı disktir. Ayrı klasör ayarlanırsa kalıcı disk üzerinde olmalıdır.
