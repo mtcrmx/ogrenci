@@ -2,92 +2,30 @@
 {% block title %}Giriş{% endblock %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='login_motion.css') }}?v=20260929d">
+<link rel="stylesheet" href="{{ url_for('static', filename='school-entry.css') }}?v=20261001-softedges">
+<link rel="preload" as="image" href="{{ url_for('static', filename='school-campus.webp') }}">
 <script defer src="{{ url_for('static', filename='login_motion.js') }}?v=20260929b"></script>
 {% endblock %}
-
 {% block body %}
 {% include "_login_motion.html" %}
-<main class="login-stage ui-shell py-8 md:py-12">
-  <section class="ui-hero overflow-hidden">
-    <div class="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.05fr_.95fr] lg:p-8">
-      <div class="flex min-w-0 flex-col justify-between gap-8">
-        <div>
-          <img class="mb-5 h-24 w-24 rounded-full bg-white shadow-lg sm:h-28 sm:w-28" src="{{ url_for('static', filename='okul-logo-192.png') }}" width="112" height="112" alt="Erenler Cumhuriyet Ortaokulu logosu">
-          <h1 class="max-w-2xl text-3xl font-black leading-tight text-violet-950 sm:text-5xl">
-            Erenler Cumhuriyet Ortaokulu
-          </h1>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-1">
-          <a href="{{ url_for('veli_giris') }}"
-             class="group rounded-[28px] bg-white/55 p-4 text-violet-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-white/80">
-            <div class="text-xs font-black uppercase text-violet-700">Veli</div>
-            <div class="mt-2 text-lg font-black">Veli paneli</div>
-            <div class="mt-1 text-xs font-bold leading-5 text-violet-800/80">Haftalık kitap, ödev ve öğretmen notları.</div>
-          </a>
-        </div>
-      </div>
-
-      <div class="ui-card bg-white p-5 sm:p-6">
-        <div class="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <h2 class="text-xl font-black text-violet-950">Öğretmen girişi</h2>
-            <p class="mt-1 text-sm font-bold text-violet-700/70">Sınıf panosu, kitap ödev ve analiz.</p>
-          </div>
-          <span class="inline-flex rounded-full bg-violet-100 px-3 py-1 text-xs font-black text-violet-800">2026-2027</span>
-        </div>
-
-        {% if hata %}
-        <div class="mb-4 rounded-[22px] bg-rose-100 px-4 py-3 text-sm font-bold text-rose-800">
-          {{ hata }}
-        </div>
-        {% endif %}
-
-        <form method="POST" class="space-y-4">
-          <label class="block">
-            <span class="mb-1.5 block text-sm font-black text-violet-900">Öğretmen seçin</span>
-            <select name="ad_soyad" required
-                    class="w-full rounded-[22px] border-0 bg-white px-4 py-3 text-sm font-bold text-violet-950 outline-none">
-              <option value="">Adınızı seçin</option>
-              {% for ogr in ogretmenler %}
-              <option value="{{ ogr }}" {% if ogr == secili %}selected{% endif %}>{{ ogr }}{% if ogr == 'ADEM AKGÜL' %} — Müdür{% elif ogr == 'METEHAN CÜCEN' %} — Müdür Yardımcısı{% endif %}</option>
-              {% endfor %}
-            </select>
-          </label>
-
-          <label class="block">
-            <span class="mb-1.5 block text-sm font-black text-violet-900">Şifre</span>
-            <div class="relative">
-              <input type="password" name="sifre" id="sifre-input"
-                     placeholder="Şifrenizi girin"
-                     autocomplete="current-password" required
-                     class="w-full rounded-[22px] border-0 bg-white px-4 py-3 pr-12 text-sm font-bold text-violet-950 outline-none">
-              <button type="button" onclick="toggleSifre()"
-                      class="absolute right-2 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full text-sm font-black text-violet-700 hover:bg-violet-50">
-                Göster
-              </button>
-            </div>
-          </label>
-
-          <button type="submit" class="w-full rounded-full bg-violet-500 px-4 py-3 text-sm font-black text-white shadow-lg hover:bg-violet-600">
-            Giriş yap
-          </button>
-        </form>
-
-        <div class="mt-5 flex flex-col gap-2 border-t border-violet-100 pt-4 text-xs font-bold text-violet-700 sm:flex-row sm:items-center sm:justify-between">
-          <a href="{{ url_for('admin_sifreler') }}" class="hover:text-violet-900">Şifre listesi</a>
-          <span>Erenler Cumhuriyet Ortaokulu</span>
-        </div>
-      </div>
-    </div>
+<main class="login-stage school-entry">
+  {% set parent_entry = false %}{% include "_school_entry_visual.html" %}
+  <section class="school-entry-form" aria-labelledby="teacher-entry-title">
+    <div class="entry-account"><span>ÖĞRETMEN PANELİ</span><span>2026–2027</span></div>
+    <h2 id="teacher-entry-title">Öğretmen girişi</h2>
+    <p class="entry-intro">Hoş geldiniz. Sınıfınızın gelişimini takip etmek için hesabınıza giriş yapın.</p>
+    {% if hata %}<div class="entry-error" role="alert">{{ hata }}</div>{% endif %}
+    <form method="POST">
+      <label><span>Öğretmen seçin</span><select name="ad_soyad" required><option value="">Adınızı seçin</option>{% for ogr in ogretmenler %}<option value="{{ ogr }}" {% if ogr == secili %}selected{% endif %}>{{ ogr }}{% if ogr == 'ADEM AKGÜL' %} — Müdür{% elif ogr == 'METEHAN CÜCEN' %} — Müdür Yardımcısı{% endif %}</option>{% endfor %}</select></label>
+      <div class="entry-field"><label for="sifre-input">Şifre</label><div class="entry-password"><input type="password" name="sifre" id="sifre-input" placeholder="Şifrenizi girin" autocomplete="current-password" required><button type="button" onclick="toggleSifre()" id="password-toggle" aria-label="Şifreyi göster" aria-pressed="false">Göster</button></div></div>
+      <button type="submit" class="entry-submit">Giriş yap <span aria-hidden="true">→</span></button>
+    </form>
+    <div class="entry-form-footer"><a href="{{ url_for('admin_sifreler') }}">Şifre listesi</a><span>AkademiPuan · Öğrenci takip</span></div>
   </section>
 </main>
 {% endblock %}
-
 {% block scripts %}
 <script>
-function toggleSifre() {
-  const inp = document.getElementById('sifre-input');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-}
+function toggleSifre(){const input=document.getElementById('sifre-input'),button=document.getElementById('password-toggle'),show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Gizle':'Göster';button.setAttribute('aria-label',show?'Şifreyi gizle':'Şifreyi göster');button.setAttribute('aria-pressed',String(show));}
 </script>
 {% endblock %}

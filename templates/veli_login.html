@@ -1,92 +1,29 @@
 <!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="tr"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Veli Girişi - Erenler Cumhuriyet Ortaokulu</title>
-  <link rel="manifest" href="/manifest-veli.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Veli">
-  <link rel="icon" href="{{ url_for('favicon') }}" sizes="any">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="{{ url_for('static', filename='renk.js') }}"></script>
+  <link rel="manifest" href="/manifest-veli.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Veli">
+  <link rel="icon" href="{{ url_for('favicon') }}" sizes="any"><link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <script src="https://cdn.tailwindcss.com"></script><script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
   <link rel="stylesheet" href="{{ url_for('static', filename='login_motion.css') }}?v=20260929d">
+  <link rel="stylesheet" href="{{ url_for('static', filename='school-entry.css') }}?v=20261001-softedges">
+  <link rel="preload" as="image" href="{{ url_for('static', filename='school-campus.webp') }}">
   <script defer src="{{ url_for('static', filename='login_motion.js') }}?v=20260929b"></script>
-</head>
-<body class="ui-theme min-h-screen overflow-x-hidden">
+</head><body class="ui-theme min-h-screen overflow-x-hidden">
   {% include "_login_motion.html" %}
-  <main class="login-stage ui-shell flex min-h-screen items-center py-8">
-    <section class="grid w-full gap-5 lg:grid-cols-[.95fr_1.05fr]">
-      <div class="ui-hero p-6 sm:p-8">
-        <div class="relative z-10 flex h-full min-h-[340px] flex-col justify-between">
-          <div>
-            <a href="{{ url_for('login') }}"
-               class="inline-flex rounded-full bg-white/60 px-3 py-2 text-xs font-black text-violet-900 hover:bg-white">
-              Ana menü
-            </a>
-            <img class="mt-6 h-24 w-24 rounded-full bg-white shadow-lg sm:h-28 sm:w-28" src="{{ url_for('static', filename='okul-logo-192.png') }}" width="112" height="112" alt="Erenler Cumhuriyet Ortaokulu logosu">
-            <h1 class="mt-5 text-3xl font-black leading-tight text-violet-950 sm:text-5xl">Veli takip alanı</h1>
-            <p class="mt-4 max-w-lg text-sm font-bold leading-6 text-violet-800/80">
-              Öğrencinizin kitap, ödev, öğretmen notları ve LGS özeti aynı panelde toplanır.
-            </p>
-          </div>
-          <div class="grid gap-3 sm:grid-cols-3">
-            <div class="rounded-[22px] bg-white/60 p-3 text-violet-950">
-              <div class="text-xs font-black text-violet-700">Özet</div>
-              <div class="mt-1 text-lg font-black">Bu hafta</div>
-            </div>
-            <div class="rounded-[22px] bg-white/60 p-3 text-violet-950">
-              <div class="text-xs font-black text-violet-700">Notlar</div>
-              <div class="mt-1 text-lg font-black">Öğretmen</div>
-            </div>
-            <div class="rounded-[22px] bg-white/60 p-3 text-violet-950">
-              <div class="text-xs font-black text-violet-700">Ödev</div>
-              <div class="mt-1 text-lg font-black">Durum</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <form method="POST" class="ui-card p-5 sm:p-7">
-        <div class="mb-6">
-          <h2 class="text-2xl font-black text-violet-950">Veli girişi</h2>
-          <p class="mt-1 text-sm font-bold text-violet-700/70">Öğrenci numarası ve veli şifresiyle devam edin.</p>
-        </div>
-
-        {% if hata %}
-        <div class="mb-4 rounded-[22px] bg-rose-100 px-4 py-3 text-sm font-bold text-rose-800">
-          {{ hata }}
-        </div>
-        {% endif %}
-
-        <div class="space-y-4">
-          <label class="block">
-            <span class="mb-1.5 block text-sm font-black text-violet-900">Öğrenci numarası</span>
-            <input type="number" name="ogr_no" required inputmode="numeric" placeholder="Örn: 105" autofocus
-                   class="w-full rounded-[22px] border-0 bg-white px-4 py-3 text-sm font-bold text-violet-950 outline-none">
-          </label>
-
-          <label class="block">
-            <span class="mb-1.5 block text-sm font-black text-violet-900">Veli şifresi</span>
-            <input type="password" name="sifre" required autocomplete="current-password"
-                   class="w-full rounded-[22px] border-0 bg-white px-4 py-3 text-sm font-bold text-violet-950 outline-none">
-          </label>
-
-          <button class="w-full rounded-full bg-violet-500 px-4 py-3 text-sm font-black text-white shadow-lg hover:bg-violet-600">
-            Giriş yap
-          </button>
-        </div>
-
-        <div class="mt-5 border-t border-violet-100 pt-4 text-center text-xs font-bold">
-          <a href="{{ url_for('login') }}" class="inline-flex rounded-full bg-violet-50 px-3 py-2 text-violet-800 hover:bg-violet-100">
-            Ana girişe dön
-          </a>
-        </div>
-      </form>
-    </section>
+  <main class="login-stage school-entry">
+    {% set parent_entry = true %}{% include "_school_entry_visual.html" %}
+    <form method="POST" class="school-entry-form" aria-labelledby="parent-entry-title">
+      <div class="entry-account"><span>VELİ PANELİ</span><span>2026–2027</span></div>
+      <h2 id="parent-entry-title">Veli girişi</h2>
+      <p class="entry-intro">Öğrencinizin gelişimine yakından eşlik edin. Öğrenci numarası ve veli şifresiyle devam edin.</p>
+      {% if hata %}<div class="entry-error" role="alert">{{ hata }}</div>{% endif %}
+      <label><span>Öğrenci numarası</span><input type="number" name="ogr_no" required inputmode="numeric" placeholder="Örn: 105" autocomplete="username"></label>
+      <label><span>Veli şifresi</span><input type="password" name="sifre" required autocomplete="current-password" placeholder="Veli şifrenizi girin"></label>
+      <button type="submit" class="entry-submit">Giriş yap <span aria-hidden="true">→</span></button>
+      <div class="entry-form-footer"><a href="{{ url_for('login') }}">Ana girişe dön</a><span>AkademiPuan · Okul ve aile</span></div>
+    </form>
   </main>
-{% include "_renk_ayari.html" %}
-</body>
-</html>
+  {% include "_renk_ayari.html" %}
+</body></html>

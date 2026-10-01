@@ -1,0 +1,13 @@
+<section class="school-entry-visual" aria-label="Okulumuza hoş geldiniz">
+  <div class="school-entry-photo">
+    <img src="{{ url_for('static', filename='school-campus.webp') }}" width="1916" height="821" fetchpriority="high" alt="Çorum İskilip Erenler Cumhuriyet Ortaokulu binası">
+    <img class="school-entry-seal" src="{{ url_for('static', filename='okul-logo-192.png') }}" width="72" height="72" alt="Okul logosu">
+    <span class="school-entry-location">ÇORUM · İSKİLİP</span>
+  </div>
+  <div class="school-entry-story">
+    <p class="school-entry-eyebrow">AKADEMİPUAN · OKUL VE AİLE BİRLİKTE</p>
+    <h1>Erenler Cumhuriyet<br>Ortaokulu</h1>
+    <p class="school-entry-description">{{ 'Öğrencinizin gelişimini birlikte takip edelim. Kitaplar, ödevler ve öğretmeninizden haberler tek bir yerde.' if parent_entry else 'Her öğrencinin gelişimine birlikte eşlik ediyoruz. Sınıfınızın takibi, kitaplar, ödevler ve analizler bir arada.' }}</p>
+    <div class="school-entry-bottom"><span>Birlikte öğreniyor,<br><strong>birlikte büyüyoruz.</strong></span><a href="{{ url_for('login' if parent_entry else 'veli_giris') }}">{{ 'Öğretmen girişi' if parent_entry else 'Veli girişi' }} <span aria-hidden="true">↗</span></a></div>
+  </div>
+</section>

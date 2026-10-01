@@ -1,0 +1,41 @@
+.school-entry{position:relative;z-index:1;width:min(1180px,calc(100% - 48px));margin:clamp(24px,7vh,80px) auto;padding:20px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.85fr);gap:22px;background:rgba(255,250,248,.82);border:1px solid #fff;border-radius:38px;box-shadow:inset 0 2px 3px #fff,0 25px 65px -30px #4e365e60;align-items:stretch;color:#382747}
+.school-entry-visual{overflow:hidden;min-width:0;background:linear-gradient(145deg,#fffaf2,#f5eaf4);border-radius:27px;border:1px solid #fff;box-shadow:inset 0 2px 3px #fff,0 5px 16px #7255840d}
+.school-entry-photo{position:relative;aspect-ratio:1916/821;background:transparent;overflow:hidden;isolation:isolate}
+/* A static blurred edge layer sits beneath the sharp center, fading into the card. */
+.school-entry-photo:before{content:'';position:absolute;inset:0;background:url('school-campus.webp') center/cover no-repeat;filter:blur(7px);pointer-events:none;-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent),linear-gradient(180deg,transparent,#000 6%,#000 83%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent),linear-gradient(180deg,transparent,#000 6%,#000 83%,transparent);-webkit-mask-composite:source-in;mask-composite:intersect}
+.school-entry-photo>img:first-child{display:block;position:relative;width:100%;height:100%;object-fit:cover;-webkit-mask-image:linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent),linear-gradient(180deg,transparent,#000 16%,#000 66%,transparent);mask-image:linear-gradient(90deg,transparent,#000 11%,#000 89%,transparent),linear-gradient(180deg,transparent,#000 16%,#000 66%,transparent);-webkit-mask-composite:source-in;mask-composite:intersect}
+.school-entry-photo img.school-entry-seal{position:absolute;z-index:1;left:20px;top:20px;width:64px;height:64px;border-radius:50%;padding:5px;background:#fffc;border:1px solid #fff;box-shadow:0 4px 15px #221b3426;object-fit:contain}
+.school-entry-location{position:absolute;z-index:1;left:24px;bottom:17px;letter-spacing:.18em;font-size:10px;font-weight:750;color:#584168;background:#fff9;padding:5px 8px;border-radius:8px}
+.school-entry-story{padding:28px 28px 25px}
+.school-entry-eyebrow{color:#927f9c;font-size:10px;font-weight:750;letter-spacing:.14em;margin:0 0 12px}
+.school-entry-story h1{font-size:clamp(26px,3vw,40px);line-height:1.1;letter-spacing:-.045em;margin:0;color:#3d294c;font-weight:800}
+.school-entry-description{font-size:14px;line-height:1.75;color:#827089;max-width:460px;margin:17px 0 23px}
+.school-entry-bottom{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid #e8dcea;padding-top:20px;color:#92798f;font-size:11px;line-height:1.55}
+.school-entry-bottom strong{font-weight:650;color:#634b74}
+.school-entry-bottom a{border:1px solid #fff;background:#eee1f3;color:#684777;text-decoration:none;border-radius:16px;padding:12px 16px;font-size:12px;font-weight:700;box-shadow:inset 0 2px 2px #fff9,0 3px 6px #60476a12;white-space:nowrap;transition:background .2s ease}
+.school-entry-bottom a:hover{background:#e4d1ec}
+.school-entry-form{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:32px;background:#fffaf7;border:1px solid #fff;border-radius:27px;box-shadow:inset 0 2px 3px #fff,0 4px 14px #60476a0c}
+.school-entry-form .entry-account{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:30px}
+.entry-account span:first-child{font-size:10px;letter-spacing:.16em;font-weight:800;color:#8c719e}
+.entry-account span:last-child{font-size:10px;color:#a0888b;background:#f7eee4;border:1px solid #f1e5d9;border-radius:20px;padding:6px 11px}
+.school-entry-form h2{font-size:27px;letter-spacing:-.035em;line-height:1.2;font-weight:800;margin:0 0 8px;color:#3d294c}
+.school-entry-form .entry-intro{font-size:13px;line-height:1.65;color:#968198;margin:0 0 26px}
+.school-entry-form label{display:block;font-size:12px;font-weight:700;color:#695477;margin-bottom:17px}
+.school-entry-form label>span{display:block;margin-bottom:8px}
+body.ui-theme .school-entry-form input,body.ui-theme .school-entry-form select{width:100%;height:52px;min-width:0;padding:0 15px;background:#fff!important;border:1px solid #eaddf0!important;border-radius:15px!important;box-shadow:inset 0 2px 4px #5f367506!important;font-size:14px;color:#53405f;outline:none}
+body.ui-theme .school-entry-form input:focus-visible,body.ui-theme .school-entry-form select:focus-visible{outline:3px solid #b991d259;outline-offset:2px}
+.entry-password{position:relative}.school-entry-form .entry-password input{padding-right:80px}
+body.ui-theme .school-entry-form .entry-password button{position:absolute;right:10px;top:10px;height:32px;padding:0 8px;background:#f6eff9;color:#90719e;border:0;border-radius:9px;box-shadow:none;font-size:11px;min-height:0}
+body.ui-theme .school-entry-form .entry-submit{width:100%;min-height:52px;padding:14px;background:linear-gradient(135deg,#b59bd4,#9271b7)!important;color:#fff!important;font-size:14px;font-weight:750;border:1px solid #d6c3e9;border-radius:17px;box-shadow:inset 0 2px 2px #ffffff45,0 5px 10px #78529a24!important;margin-top:7px;transition:filter .2s ease}
+.school-entry-form .entry-submit:hover{filter:brightness(1.045)}
+.entry-form-footer{border-top:1px solid #eee2ef;padding-top:18px;margin-top:25px;display:flex;justify-content:space-between;gap:12px;font-size:10px;color:#a58ca6}
+.entry-form-footer a{color:#8b709b;text-decoration:none}.entry-error{background:#fbe4e7;border:1px solid #efd3da;border-radius:15px;padding:13px;font-size:13px;color:#a2465a;margin-bottom:18px}
+.school-entry a:focus-visible,.school-entry button:focus-visible{outline:3px solid #9d75b9;outline-offset:3px}
+body:has(.school-entry) .login-motion-backdrop::after{background:linear-gradient(100deg,#f7eff85c,#f8f1f471)}
+@media(max-width:850px){.school-entry{grid-template-columns:1fr;width:min(620px,calc(100% - 28px));padding:14px;gap:14px;margin:20px auto;border-radius:30px}.school-entry-story{padding:23px}.school-entry-form{padding:27px}.school-entry-story h1{font-size:32px}.school-entry-description{margin-bottom:18px}.school-entry-form .entry-account{margin-bottom:20px}}
+@media(max-width:480px){.school-entry{width:calc(100% - 20px);padding:9px;border-radius:25px;margin:12px auto 22px}.school-entry-visual,.school-entry-form{border-radius:19px}.school-entry-story{padding:19px}.school-entry-story h1{font-size:27px}.school-entry-description{font-size:12px;margin:12px 0 16px}.school-entry-eyebrow{font-size:8px;letter-spacing:.09em}.school-entry-photo img.school-entry-seal{width:43px;height:43px;top:10px;left:12px;padding:3px}.school-entry-location{left:17px;bottom:12px;font-size:8px}.school-entry-bottom{padding-top:14px}.school-entry-bottom a{padding:10px 12px;font-size:11px}.school-entry-form{padding:22px}.school-entry-form h2{font-size:25px}.school-entry-form .entry-intro{margin-bottom:20px}.entry-form-footer{flex-wrap:wrap}.school-entry-form .entry-account{margin-bottom:16px}}
+.school-entry-form .entry-field{margin-bottom:17px}.school-entry-form .entry-field label{margin-bottom:8px}
+.school-entry-description{color:#76617d}.school-entry-form .entry-intro{color:#7b657e}.entry-form-footer{color:#806a84}.school-entry-eyebrow{color:#7b6685}
+body.ui-theme .school-entry-form .entry-submit{color:#392349!important}
+@media(max-width:850px){body.ui-theme .school-entry-form input,body.ui-theme .school-entry-form select{font-size:16px}}
+@media(prefers-reduced-motion:reduce){.school-entry *{transition:none!important;animation:none!important}}

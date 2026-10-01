@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
 <title>Erenler Cumhuriyet • Okul ekranı</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='school-broadcast.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='school-broadcast.css') }}?v=20261001-softedges">
 <script type="module" src="{{ url_for('static', filename='school-broadcast.js') }}"></script></head>
 <body class="school-screen">
 <div class="screen-shell">
   <header class="screen-header">
     <div class="school-brand"><img src="{{ url_for('static', filename='school-broadcast-logo.png') }}" alt="Erenler Cumhuriyet Ortaokulu logosu"><div><p>ÇORUM · İSKİLİP</p><h1>Erenler Cumhuriyet<br>Ortaokulu</h1></div></div>
-    <div class="header-center"><span class="live-label"><i></i> OKUL EKRANI</span><span id="school-date"></span></div>
+      <div class="header-center campus-header"><img src="{{ url_for('static', filename='school-campus.webp') }}" width="1916" height="821" alt="Erenler Cumhuriyet Ortaokulu binası"><div class="campus-header-caption"><span class="live-label"><i></i> OKUL EKRANI</span><span id="school-date"></span></div></div>
     <div class="header-clock"><strong id="clock">--:--</strong><span id="seconds">--</span></div>
   </header>
   <main class="screen-main">
