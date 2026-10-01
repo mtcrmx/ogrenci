@@ -6913,6 +6913,8 @@ from student_results import register_results, institution_allowed as kurum_denem
 register_results(app, giris_zorunlu, _ogretmen_ogrencisine_erisebilir)
 from change_history import register_history
 register_history(app, giris_zorunlu)
+from sayfa_sifirlama import register_sayfa_sifirlama
+register_sayfa_sifirlama(app, giris_zorunlu)
 
 if __name__ == "__main__":
     import socket

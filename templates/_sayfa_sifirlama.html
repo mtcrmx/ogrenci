@@ -1,0 +1,108 @@
+{% if sayfa_sifirlama %}
+<button type="button" class="app-button sifirla-ac" data-sifirla-ac>Sayfayı sıfırla</button>
+<dialog class="sifirla-pencere" id="sifirla-pencere" aria-labelledby="sifirla-baslik">
+  <form method="dialog" class="sifirla-icerik" id="sifirla-form">
+    <h2 id="sifirla-baslik">{{ sayfa_sifirlama.ad }} · verileri sıfırla</h2>
+    <p class="sifirla-not">Silmeden önce otomatik yedek alınır; aşağıdaki listeden geri yükleyebilirsiniz.</p>
+    <fieldset>
+      <legend>Kapsam</legend>
+      <label><input type="radio" name="kapsam" value="sinif" checked> Seçili sınıf
+        <select id="sifirla-sinif" aria-label="Sınıf">{% for s in nav_siniflar %}<option value="{{ s.id }}" {{ 'selected' if nav_sinif_id == s.id else '' }}>{{ s.sinif_adi }}</option>{% endfor %}</select></label>
+      <label><input type="radio" name="kapsam" value="okul"> Tüm okul</label>
+      {% if sayfa_sifirlama.hafta_basi %}<label><input type="checkbox" id="sifirla-hafta" value="{{ sayfa_sifirlama.hafta_basi }}" checked> Yalnızca seçili hafta ({{ sayfa_sifirlama.hafta_basi }})</label>{% endif %}
+    </fieldset>
+    <p class="sifirla-ozet" id="sifirla-ozet" role="status">Hesaplanıyor…</p>
+    <label class="sifirla-onay">Onaylamak için <strong>SIFIRLA</strong> yazın
+      <input type="text" id="sifirla-onay" autocomplete="off" spellcheck="false"></label>
+    <p class="sifirla-hata" id="sifirla-hata" role="alert"></p>
+    <div class="sifirla-butonlar">
+      <button type="button" class="app-button" value="iptal" data-sifirla-kapat>Vazgeç</button>
+      <button type="button" class="app-button sifirla-sil" id="sifirla-sil" disabled>Sıfırla</button>
+    </div>
+    <details class="sifirla-yedekler"><summary>Son yedekler</summary><ul id="sifirla-yedek-liste"></ul></details>
+  </form>
+</dialog>
+<script>
+(function(){
+  const pencere=document.getElementById("sifirla-pencere");
+  const form=document.getElementById("sifirla-form");
+  const ozet=document.getElementById("sifirla-ozet");
+  const onay=document.getElementById("sifirla-onay");
+  const sil=document.getElementById("sifirla-sil");
+  const hata=document.getElementById("sifirla-hata");
+  const liste=document.getElementById("sifirla-yedek-liste");
+  const sayfa={{ sayfa_sifirlama.sayfa|tojson }};
+  let toplam=0;
+  function govde(){
+    const kapsam=form.querySelector("input[name=kapsam]:checked").value;
+    const hafta=document.getElementById("sifirla-hafta");
+    return {sayfa, kapsam, sinif_id:document.getElementById("sifirla-sinif").value, hafta_basi:hafta&&hafta.checked?hafta.value:""};
+  }
+  async function istek(url, veri){
+    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(veri),credentials:"same-origin"});
+    const j=await r.json().catch(()=>({ok:false,hata:"Sunucu yanıtı okunamadı."}));
+    if(!r.ok||!j.ok) throw new Error(j.hata||"İşlem yapılamadı.");
+    return j;
+  }
+  function durum(){ sil.disabled=!(onay.value.trim()==="SIFIRLA"&&toplam>0); }
+  function yedekleriYaz(yedekler){
+    liste.replaceChildren();
+    if(!yedekler.length){ const li=document.createElement("li"); li.textContent="Henüz yedek yok."; liste.append(li); return; }
+    yedekler.forEach(y=>{
+      const li=document.createElement("li");
+      li.textContent=`${y.olusturma.replace("T"," ")} · ${y.kapsam==="okul"?"Tüm okul":(y.sinif_adi||"Sınıf")}${y.hafta_basi?" · "+y.hafta_basi:""} · ${y.kayit_sayisi} kayıt `;
+      if(y.geri_yuklendi){ const s=document.createElement("small"); s.textContent="(geri yüklendi)"; li.append(s); }
+      else if(y.kayit_sayisi>0){
+        const b=document.createElement("button"); b.type="button"; b.className="app-button"; b.textContent="Geri yükle";
+        b.addEventListener("click",async()=>{
+          if(!confirm("Bu yedekteki kayıtlar geri yüklensin mi?")) return;
+          try{ const j=await istek(`/api/sayfa-sifirla/geri-yukle/${y.id}`,{}); alert(`${j.eklenen} kayıt geri yüklendi.`); location.reload(); }
+          catch(e){ hata.textContent=e.message; }
+        });
+        li.append(b);
+      }
+      liste.append(li);
+    });
+  }
+  async function onizle(){
+    ozet.textContent="Hesaplanıyor…"; hata.textContent=""; toplam=0; durum();
+    try{
+      const j=await istek("/api/sayfa-sifirla/onizle",govde());
+      toplam=j.toplam;
+      ozet.textContent=toplam?`${toplam} kayıt silinecek.`:"Bu kapsamda silinecek kayıt yok.";
+      yedekleriYaz(j.yedekler);
+    }catch(e){ ozet.textContent=""; hata.textContent=e.message; }
+    durum();
+  }
+  document.querySelector("[data-sifirla-ac]").addEventListener("click",()=>{ onay.value=""; pencere.showModal(); onizle(); });
+  pencere.querySelector("[data-sifirla-kapat]").addEventListener("click",()=>pencere.close());
+  form.addEventListener("change",e=>{ if(e.target!==onay) onizle(); });
+  onay.addEventListener("input",durum);
+  sil.addEventListener("click",async()=>{
+    sil.disabled=true; hata.textContent="";
+    try{
+      const j=await istek("/api/sayfa-sifirla",{...govde(),onay:onay.value.trim()});
+      alert(`${j.toplam} kayıt silindi. Yedek numarası: ${j.yedek_id}`);
+      location.reload();
+    }catch(e){ hata.textContent=e.message; durum(); }
+  });
+})();
+</script>
+<style>
+.sifirla-ac{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+.sifirla-pencere{border:0;border-radius:16px;padding:0;max-width:min(32rem,calc(100vw - 2rem));width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.sifirla-pencere::backdrop{background:rgba(15,23,42,.5)}
+.sifirla-icerik{display:grid;gap:.75rem;padding:1.25rem}
+.sifirla-icerik h2{margin:0;font-size:1.1rem}
+.sifirla-icerik fieldset{display:grid;gap:.5rem;border:1px solid #e2e8f0;border-radius:12px;padding:.75rem}
+.sifirla-icerik label{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+.sifirla-onay input{flex:1 1 100%;padding:.5rem;border:1px solid #cbd5e1;border-radius:10px;font-weight:700;letter-spacing:.1em}
+.sifirla-not,.sifirla-ozet{margin:0;font-size:.9rem}
+.sifirla-ozet{font-weight:700}
+.sifirla-hata{margin:0;color:#b91c1c;font-size:.9rem}
+.sifirla-butonlar{display:flex;justify-content:flex-end;gap:.5rem}
+.sifirla-sil{background:#dc2626;color:#fff;border-color:#dc2626}
+.sifirla-sil:disabled{opacity:.5;cursor:not-allowed}
+.sifirla-yedekler ul{margin:.5rem 0 0;padding-left:1rem;display:grid;gap:.4rem;font-size:.85rem}
+</style>
+{% endif %}
