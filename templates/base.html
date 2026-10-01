@@ -6,6 +6,8 @@
   <title>{% block title %}Öğrenci Takip{% endblock %} — Erenler Cumhuriyet Ortaokulu</title>
   <link rel="manifest" href="{{ url_for('manifest_veli' if ui_role == 'veli' else 'manifest') }}">
   <meta name="theme-color" content="#c9b4f0">
+  <link rel="icon" href="{{ url_for('favicon') }}" sizes="any">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -456,7 +458,7 @@
   </style>
   {% block head %}{% endblock %}
 {% if lgs_sayac %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_sayac.css') }}?v=20261001a"><script src="{{ url_for('static', filename='lgs_sayac.js') }}?v=20261001a" defer></script>{% endif %}
-<link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20261001search">
+<link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20261001logo">
 </head>
 <body class="ui-theme app-background bg-slate-100 layout-page {{ 'dashboard-page' if request.endpoint == 'dashboard' else '' }}">
 {% set aktif_sinif_id = nav_sinif_id %}

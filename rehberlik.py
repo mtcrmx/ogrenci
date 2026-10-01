@@ -258,7 +258,7 @@ def register_rehberlik(app):
         if session.get('ogretmen_id') and not request.path.startswith('/veli') and counselor():
             session['ogretmen_yetki'] = 'rehber'
             ep = request.endpoint or ''
-            if ep.startswith('rehberlik_') or ep in {'static', 'login', 'logout', 'manifest', 'manifest_veli', 'service_worker', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_yonetim'}:
+            if ep.startswith('rehberlik_') or ep in {'static', 'login', 'logout', 'manifest', 'manifest_veli', 'service_worker', 'favicon', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_yonetim'}:
                 return None
             if request.method == 'GET' and ep in READ_REPORTS:
                 return None

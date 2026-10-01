@@ -7,7 +7,8 @@
   <link rel="manifest" href="/manifest-veli.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Veli">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+  <link rel="icon" href="{{ url_for('favicon') }}" sizes="any">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
@@ -25,7 +26,8 @@
                class="inline-flex rounded-full bg-white/60 px-3 py-2 text-xs font-black text-violet-900 hover:bg-white">
               Ana menü
             </a>
-            <h1 class="mt-8 text-3xl font-black leading-tight text-violet-950 sm:text-5xl">Veli takip alanı</h1>
+            <img class="mt-6 h-24 w-24 rounded-full bg-white shadow-lg sm:h-28 sm:w-28" src="{{ url_for('static', filename='okul-logo-192.png') }}" width="112" height="112" alt="Erenler Cumhuriyet Ortaokulu logosu">
+            <h1 class="mt-5 text-3xl font-black leading-tight text-violet-950 sm:text-5xl">Veli takip alanı</h1>
             <p class="mt-4 max-w-lg text-sm font-bold leading-6 text-violet-800/80">
               Öğrencinizin kitap, ödev, öğretmen notları ve LGS özeti aynı panelde toplanır.
             </p>

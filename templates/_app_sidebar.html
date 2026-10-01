@@ -1,7 +1,7 @@
 <aside class="app-sidebar" id="app-menu" aria-label="{{ 'Veli' if ui_role == 'veli' else 'Öğretmen' }} menüsü">
   {% set rehber_only = session.get('ogretmen_yetki') == 'rehber' %}
   {% set rapor_only = session.get('ogretmen_yetki') in ['rapor', 'rehber'] %}
-  <div class="app-brand"><span class="app-brand-mark" aria-hidden="true">A</span><div><strong>AkademiPuan</strong><small>{{ 'Veli paneli' if ui_role == 'veli' else 'Rehberlik servisi' if rehber_only else 'Öğretmen paneli' }}</small></div><button type="button" class="app-menu-close" aria-label="Menüyü kapat" data-app-menu-close>×</button></div>
+  <div class="app-brand"><img class="app-brand-logo" src="{{ url_for('static', filename='okul-logo-192.png') }}" width="44" height="44" alt="Erenler Cumhuriyet Ortaokulu logosu"><div><strong>AkademiPuan</strong><small>{{ 'Veli paneli' if ui_role == 'veli' else 'Rehberlik servisi' if rehber_only else 'Öğretmen paneli' }}</small></div><button type="button" class="app-menu-close" aria-label="Menüyü kapat" data-app-menu-close>×</button></div>
   {% if ui_role == 'veli' %}
   <p class="app-account">{{ nav_student.ad_soyad if nav_student else ogrenci.ad_soyad }}<small>{{ nav_student.sinif_adi if nav_student else ogrenci.sinif_adi }}</small></p>
   <nav class="app-nav" aria-label="Ana menü">
@@ -22,11 +22,11 @@
     {% endfor %}
     {% endif %}
     {% if not rapor_only %}
+    <a href="{{ url_for('dashboard', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'dashboard' else '' }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}><span aria-hidden="true">⌂</span>Ana sayfa</a>
     <h2>Takip</h2>
-    <a href="{{ url_for('sonuclar') }}" class="{{ 'is-current' if request.endpoint == 'sonuclar' else '' }}"><span aria-hidden="true">◈</span>Ders / deneme girişi</a>
-    <a href="{{ url_for('islem_gecmisi') }}" class="{{ 'is-current' if request.endpoint in ['islem_gecmisi','odev_duzenle'] else '' }}"><span aria-hidden="true">↶</span>İşlem geçmişim</a>
-    {% for endpoint, label, icon in [('dashboard','Ana sayfa','⌂'), ('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦')] %}
-    <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint in ['dashboard','haftalik_takip'] else url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
+    {% for endpoint, label, icon in [('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦'), ('sonuclar','Ders / deneme girişi','◈'), ('islem_gecmisi','İşlem geçmişim','↶')] %}
+    {% set current = request.endpoint == endpoint or (endpoint == 'islem_gecmisi' and request.endpoint == 'odev_duzenle') %}
+    <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint == 'haftalik_takip' else url_for(endpoint) }}" class="{{ 'is-current' if current else '' }}"{% if current %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
     {% endif %}
     <h2>Okul</h2>
     <a href="{{ url_for('yayin') }}" target="_blank" rel="noopener"><span aria-hidden="true">▣</span>Okul yayın ekranı</a>

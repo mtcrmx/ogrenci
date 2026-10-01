@@ -8,7 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Veli">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+  <link rel="icon" href="{{ url_for('favicon') }}" sizes="any">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <title>Veli paneli · {{ ogrenci.ad_soyad }}</title>
   {% if lgs_sayac %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_sayac.css') }}?v=20261001a"><script src="{{ url_for('static', filename='lgs_sayac.js') }}?v=20261001a" defer></script>{% endif %}
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
@@ -16,7 +17,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930g">
   <link rel="stylesheet" href="{{ url_for('static', filename='kitap_hazine.css') }}?v=20261001a">
   <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
-<link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20260930a">
+<link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20261001logo">
 </head>
 <body class="ui-theme veli-ekran veli-clay-page layout-page">
 <a class="app-skip" href="#app-content">İçeriğe geç</a><div class="app-shell">{% include '_app_sidebar.html' %}<div class="app-workspace" id="app-content">{% include '_app_toolbar.html' %}

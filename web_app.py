@@ -4924,6 +4924,13 @@ def api_odev_mufredat_ozet():
     return jsonify(odev_mufredat_ozeti(session["ogretmen_id"]))
 
 
+@app.route("/favicon.ico")
+def favicon():
+    resp = app.send_static_file("favicon.ico")
+    resp.headers["Cache-Control"] = "public, max-age=604800"
+    return resp
+
+
 @app.route("/manifest.json")
 def manifest():
     return app.send_static_file("manifest.json")
