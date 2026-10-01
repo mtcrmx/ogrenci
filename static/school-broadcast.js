@@ -10,7 +10,8 @@ import {mountPresentation} from './school-broadcast-presentations.js?v=20261001-
   const dateFmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'});
   const longDate=new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',weekday:'long',day:'numeric',month:'long',year:'numeric'});
   let offset=Date.parse(data.simdi)-Date.now(), index=0, paused=false, deadline=0, signature='', periodKey='', playlistKey='', fetching=false, revoked=false, wake=null;
-  let presentation=null, announcementKey='';
+  let presentation=null, announcementKey='', tickerCopy=null, tickerOffset=0, tickerLast=0;
+  const frame=window.requestAnimationFrame?cb=>window.requestAnimationFrame(cb):cb=>setTimeout(()=>cb(Date.now()),16);
   let calendarIndex=0, calendarDeadline=0, calendarKey='';
   const now=()=>new Date(Date.now()+offset);
   function state(){
@@ -86,21 +87,28 @@ import {mountPresentation} from './school-broadcast-presentations.js?v=20261001-
   function updateAnnouncements(){
     const day=dateFmt.format(now()), items=data.icerikler.filter(i=>i.tur==='metin'&&i.baslangic<=day&&i.bitis>=day), key=JSON.stringify(items);
     if(key===announcementKey)return;
-    announcementKey=key;const ticker=$('ticker-text');ticker.replaceChildren();ticker.style.animation='none';
+    announcementKey=key;const ticker=$('ticker-text');ticker.replaceChildren();tickerCopy=null;tickerOffset=0;ticker.style.transform='';
     if(!items.length){ticker.className='ticker-text static';ticker.textContent='Henüz duyuru yok · Öğretmenlerimizin paylaştığı okul duyuruları burada kayan yazı olarak gösterilir.';return;}
     const copy=node('span','ticker-copy');
     items.forEach(item=>{
       const entry=node('span','ticker-item'),text=(item.metin||'').replace(/\s+/g,' ').trim();
       entry.append(node('b','',item.baslik+' ·'),node('span','',text),node('span','ticker-sep','✦'));copy.append(entry);
     });
-    ticker.className='ticker-text';ticker.style.animation='none';ticker.append(copy);
+    ticker.className='ticker-text';ticker.append(copy);
     // Repeat short messages to fill the strip; two equal halves loop without a blank gap.
-    const originals=Array.from(copy.children),width=$('ticker-text').parentElement.clientWidth;
-    if(copy.scrollWidth>0)while(copy.scrollWidth<width){for(const original of originals){const repeat=original.cloneNode(true);repeat.setAttribute('aria-hidden','true');copy.append(repeat);}}
+    const originals=Array.from(copy.children),width=ticker.parentElement.clientWidth;
+    for(let guard=0;copy.scrollWidth>0&&copy.scrollWidth<width&&guard<50;guard++){for(const original of originals){const repeat=original.cloneNode(true);repeat.setAttribute('aria-hidden','true');copy.append(repeat);}}
     const duplicate=copy.cloneNode(true);duplicate.setAttribute('aria-hidden','true');ticker.append(duplicate);
-    ticker.style.animationDuration=`${copy.scrollWidth/Math.max(24,Math.min(90,innerWidth*.035))}s`;
-    void ticker.offsetWidth;ticker.style.animationName='ticker-scroll';
-    ticker.style.animationTimingFunction='linear';ticker.style.animationIterationCount='infinite';
+    tickerCopy=copy;
+  }
+  // Scrolled from JS, not CSS keyframes: reduced-motion settings and old browsers must not stop the ticker.
+  function scrollTicker(stamp){
+    const dt=tickerLast?Math.min(stamp-tickerLast,100):0;tickerLast=stamp;
+    if(tickerCopy&&!revoked){
+      const half=tickerCopy.getBoundingClientRect().width;
+      if(half>0){tickerOffset=(tickerOffset+dt*Math.max(24,Math.min(90,innerWidth*.035))/1000)%half;$('ticker-text').style.transform=`translate3d(${-tickerOffset}px,0,0)`;}
+    }
+    frame(scrollTicker);
   }
   function updateCalendar(){
     const day=dateFmt.format(now()), source=data.takvim||{bugun:[],yaklasan:[]};
@@ -119,7 +127,7 @@ import {mountPresentation} from './school-broadcast-presentations.js?v=20261001-
   }
   async function refresh(){if(fetching||revoked)return;fetching=true;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
     try{const r=await fetch(endpoint,{cache:'no-store',signal:controller.signal,credentials:'same-origin'});
-      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates'].forEach(id=>txt(id,'—'));$('ticker-text').className='ticker-text static';$('ticker-text').style.animation='none';txt('ticker-text','—');txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
+      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates'].forEach(id=>txt(id,'—'));$('ticker-text').className='ticker-text static';tickerCopy=null;$('ticker-text').style.transform='';txt('ticker-text','—');txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
       if(!r.ok)throw new Error();const updated=await r.json();if(!updated.saatler||!updated.program)throw new Error();
       offset=Date.parse(updated.simdi)-Date.now();const nextSig=JSON.stringify({...updated,simdi:null,lgs:null});data=updated;
       if(signature!==nextSig){signature=nextSig;periodKey='';}txt('connection','Güncel · Türkiye saati');$('connection').className='';tick();
@@ -132,5 +140,5 @@ import {mountPresentation} from './school-broadcast-presentations.js?v=20261001-
   $('previous').addEventListener('click',()=>{index--;render();});$('next').addEventListener('click',()=>{index++;render();});
   for(const [id,delta] of [['presentation-prev',-1],['presentation-next',1]])$(id).addEventListener('click',()=>{if(presentation?.ready)presentation.go(presentation.page+delta);deadline=Date.now()+slides()[index].sure*1000;});
   $('pause').addEventListener('click',()=>{paused=!paused;txt('pause',paused?'▶':'Ⅱ');$('pause').setAttribute('aria-label',paused?'Yayını devam ettir':'Yayını duraklat');deadline=Date.now()+slides()[index].sure*1000;const video=$('slide-body').querySelector('video');if(video){if(paused)video.pause();else{if(Number.isFinite(video.duration))deadline=Date.now()+(video.duration-video.currentTime+10)*1000;video.play().catch(()=>{});}}});
-  signature=JSON.stringify({...data,simdi:null,lgs:null});render();tick();txt('connection','Güncel · Türkiye saati');setInterval(tick,1000);setInterval(refresh,30000);
+  signature=JSON.stringify({...data,simdi:null,lgs:null});render();tick();txt('connection','Güncel · Türkiye saati');setInterval(tick,1000);setInterval(refresh,30000);frame(scrollTicker);
 })();
