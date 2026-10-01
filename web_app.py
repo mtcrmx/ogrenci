@@ -248,7 +248,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "api_curriculum_temel_egitim", "api_curriculum_drive_kazanimlari",
     "ogretmen_kitap_okuma", "ogretmen_kitap_okuma_excel",
     "ogretmen_evrak_takip", "ogretmen_evrak_takip_excel", "evrak_gorev_guncelle",
-    "ders_programi", "yayin", "api_yayin_okul", "yayin_medya",
+    "ders_programi", "yayin", "api_yayin_okul", "yayin_medya", "yayin_sayfa",
 })
 
 

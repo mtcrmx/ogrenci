@@ -2,6 +2,8 @@
 import json
 import os
 import secrets
+import threading
+from functools import lru_cache
 import zipfile
 import xml.etree.ElementTree as ET
 from datetime import date, datetime
@@ -19,6 +21,17 @@ FILE_TYPES = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
               'webp': 'image/webp', 'mp4': 'video/mp4', 'webm': 'video/webm',
               'pdf': 'application/pdf', 'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'}
 MAX_FILE = 100 * 1024 * 1024
+PDF_RENDER_LOCK = threading.Lock()
+try:
+    import pypdfium2 as pdfium
+except ImportError:
+    pdfium = None  # The local browser viewer remains a fallback during upgrades.
+
+
+@lru_cache(maxsize=128)
+def pdf_page_count(path, modified):
+    from pypdf import PdfReader
+    return len(PdfReader(path).pages)
 
 
 def media_dir():
@@ -147,12 +160,21 @@ def payload(token=None, now=None):
     info = day_info(stamp)
     periods = slots(now.weekday())
     con = db._conn()
-    items = [dict(r) for r in con.execute('''SELECT id,baslik,metin,tur,sure,baslangic,bitis FROM okul_yayin_icerik
+    items = [dict(r) for r in con.execute('''SELECT id,baslik,metin,tur,sure,baslangic,bitis,dosya FROM okul_yayin_icerik
         WHERE aktif=1 AND baslangic<=? AND bitis>=? ORDER BY id''', (stamp, stamp))]
     con.close()
     for item in items:
+        filename = item.pop('dosya')
+        item['version'] = filename
         if item['tur'] != 'metin':
             item['url'] = url_for('okul_ekran_medya', token=token, cid=item['id']) if token else url_for('yayin_medya', cid=item['id'])
+        if item['tur'] == 'pdf' and pdfium:
+            path = media_dir() / filename
+            try:
+                item['pdf_pages'] = pdf_page_count(str(path), path.stat().st_mtime_ns)
+                item['page_url'] = url_for('okul_ekran_sayfa', token=token, cid=item['id']) if token else url_for('yayin_sayfa', cid=item['id'])
+            except (OSError, ValueError):
+                pass
     # Only whitelist public timetable fields. Never merge student/parent/guidance data.
     program = program_for(now.weekday())
     return dict(simdi=now.isoformat(), tarih=stamp, gun=now.weekday(), **info,
@@ -217,7 +239,7 @@ def valid_media(upload):
     return name, ext if ext in ('pdf', 'pptx') else 'video' if ext in ('mp4', 'webm') else 'gorsel'
 
 
-def media_response(cid):
+def published_media(cid):
     stamp = datetime.now(ISTANBUL).date().isoformat()
     con = db._conn()
     row = con.execute('SELECT * FROM okul_yayin_icerik WHERE id=? AND aktif=1 AND baslangic<=? AND bitis>=?', (cid, stamp, stamp)).fetchone()
@@ -227,6 +249,60 @@ def media_response(cid):
     path = media_dir() / row['dosya']
     if not path.is_file():
         abort(404)
+    return row, path
+
+
+def pdf_page_response(cid):
+    row, path = published_media(cid)
+    number = request.args.get('sayfa', default=1, type=int)
+    if row['tur'] != 'pdf' or not 1 <= number <= 100:
+        abort(404)
+    if not pdfium:
+        abort(503)
+    # PDFium is not thread-safe. Cache immutable uploads; never serve this directory directly.
+    with PDF_RENDER_LOCK:
+        cache = media_dir() / 'pdf-onizleme'
+        cache.mkdir(exist_ok=True)
+        target = cache / f'{path.name}-{number}.jpg'
+        if not target.exists():
+            with pdfium.PdfDocument(path) as doc:
+                if number > len(doc):
+                    abort(404)
+                page = doc[number - 1]
+                try:
+                    width, height = page.get_size()
+                    if width <= 0 or height <= 0:
+                        abort(422)
+                    bitmap = page.render(scale=min(1920/width, 1080/height), rev_byteorder=True)
+                    try:
+                        with bitmap.to_pil().convert('RGB') as image:
+                            temporary = target.with_suffix('.' + secrets.token_hex(6) + '.tmp')
+                            try:
+                                image.save(temporary, format='JPEG', quality=94)
+                                os.replace(temporary, target)
+                            finally:
+                                temporary.unlink(missing_ok=True)
+                    finally:
+                        bitmap.close()
+                finally:
+                    page.close()
+            # Bound the regenerable preview cache on the school's persistent disk.
+            entries = sorted(cache.glob('*.jpg'), key=lambda p:p.stat().st_mtime)
+            total = sum(p.stat().st_size for p in entries)
+            for entry in entries:
+                if total <= 128 * 1024 * 1024:
+                    break
+                if entry != target:
+                    total -= entry.stat().st_size
+                    entry.unlink(missing_ok=True)
+    response = send_file(target, mimetype='image/jpeg', conditional=True)
+    response.headers['Cache-Control'] = 'private, no-store'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
+def media_response(cid):
+    row, path = published_media(cid)
     response = send_file(path, mimetype=FILE_TYPES[path.suffix[1:]], conditional=True)
     response.headers['Cache-Control'] = 'private, no-store'
     response.headers['X-Content-Type-Options'] = 'nosniff'
@@ -242,7 +318,7 @@ def register_broadcast(app, login_required):
 
     @app.after_request
     def broadcast_headers(response):
-        if request.endpoint in ('yayin', 'api_yayin_okul', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_medya', 'yayin_yonetim'):
+        if request.endpoint in ('yayin', 'api_yayin_okul', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_medya', 'okul_ekran_sayfa', 'yayin_sayfa', 'yayin_yonetim'):
             response.headers['Cache-Control'] = 'private, no-store'
             response.headers['Referrer-Policy'] = 'no-referrer'
         if request.endpoint in ('yayin', 'okul_ekran'):
@@ -277,6 +353,17 @@ def register_broadcast(app, login_required):
     def yayin_medya(cid):
         return media_response(cid)
 
+    @app.get('/ekran/<token>/medya/<int:cid>/sayfa')
+    def okul_ekran_sayfa(token, cid):
+        if not token_ok(token):
+            abort(404)
+        return pdf_page_response(cid)
+
+    @app.get('/yayin/medya/<int:cid>/sayfa')
+    @login_required
+    def yayin_sayfa(cid):
+        return pdf_page_response(cid)
+
     @app.route('/yayin/yonetim', methods=['GET', 'POST'])
     @login_required
     def yayin_yonetim():
@@ -284,7 +371,7 @@ def register_broadcast(app, login_required):
             request.max_content_length = MAX_FILE + 1024 * 1024
         content_guard()
         admin = institution_allowed()
-        if request.method == 'POST' and request.form.get('islem') not in ('icerik', 'sil') and not admin:
+        if request.method == 'POST' and request.form.get('islem') not in ('icerik', 'duyuru', 'sil') and not admin:
             abort(403)
         today = datetime.now(ISTANBUL).date().isoformat()
         con = db._conn()
@@ -360,19 +447,26 @@ def register_broadcast(app, login_required):
                     edit_guard(row)
                     old_file = row['dosya']
                     con.execute('DELETE FROM okul_yayin_icerik WHERE id=?', (request.form.get('id', type=int),))
-                elif action == 'icerik':
+                elif action in ('icerik', 'duyuru'):
                     title = request.form.get('baslik', '').strip()
                     text = request.form.get('metin', '').strip()
                     start, end = (date.fromisoformat(request.form[k]).isoformat() for k in ('baslangic', 'bitis'))
                     duration = int(request.form.get('sure', '20'))
-                    if not title or len(title) > 100 or len(text) > 300 or start > end or not 8 <= duration <= 300:
-                        raise ValueError('Başlık 1–100, metin en fazla 300 karakter; süre 8–300 saniye ve tarih aralığı geçerli olmalı.')
+                    limit = 1000 if action == 'duyuru' else 300
+                    if not title or len(title) > 100 or len(text) > limit or start > end or not 8 <= duration <= 300:
+                        raise ValueError(f'Başlık 1–100, metin en fazla {limit} karakter; süre 8–300 saniye ve tarih aralığı geçerli olmalı.')
+                    if action == 'duyuru' and not text:
+                        raise ValueError('Kayan yazıda gösterilecek duyuru metnini yazın.')
                     cid = request.form.get('id', type=int)
                     old = con.execute('SELECT * FROM okul_yayin_icerik WHERE id=?', (cid,)).fetchone() if cid else None
                     if cid:
                         edit_guard(old)
+                        if action == 'duyuru' and old['tur'] != 'metin':
+                            abort(400)
                     filename, kind = (old['dosya'], old['tur']) if old else ('', 'metin')
                     upload = request.files.get('dosya')
+                    if action == 'duyuru' and upload and upload.filename:
+                        raise ValueError('Duyuruya dosya eklemeyin. Sunum ve videolar bölümünü kullanın.')
                     if upload and upload.filename:
                         old_file = filename
                         filename, kind = valid_media(upload)
@@ -390,7 +484,8 @@ def register_broadcast(app, login_required):
                     (media_dir() / old_file).unlink(missing_ok=True)
                 flash('Yayın ayarları kaydedildi. Ekran en geç 30 saniye içinde yenilenir.', 'success')
                 return redirect(url_for('yayin_yonetim', tarih=request.form.get('tarih', today),
-                    takvim_yil=request.form.get('takvim_yil', today[:4])))
+                    takvim_yil=request.form.get('takvim_yil', today[:4]),
+                    _anchor='duyurular' if action == 'duyuru' or request.form.get('bolum') == 'duyurular' else 'icerik' if action == 'icerik' else None))
         except (ValueError, KeyError, RequestEntityTooLarge) as exc:
             con.rollback()
             flash(str(exc) if isinstance(exc, ValueError) else 'Alanları ve dosya boyutunu kontrol edin.', 'warning')

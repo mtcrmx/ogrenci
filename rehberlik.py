@@ -36,7 +36,7 @@ FILE_DIR = Path(os.environ.get('REHBERLIK_DOSYA_KLASORU') or Path(db.DB_PATH).pa
 READ_REPORTS = {'api_ogrenci_ara', 'analiz_merkezi', 'rapor_ozet', 'rapor_ozet_csv', 'rapor_excel', 'rapor_excel_detayli',
                 'rapor_analiz_pdf', 'rapor_haftalik', 'rapor_karsilastir', 'rapor_anonim_sinif',
                 'ogretmen_kitap_okuma', 'ogretmen_kitap_okuma_excel', 'ders_programi', 'kitap_odev_rapor',
-                'yayin', 'api_yayin_okul', 'yayin_medya'}
+                'yayin', 'api_yayin_okul', 'yayin_medya', 'yayin_sayfa'}
 
 
 def init_schema():

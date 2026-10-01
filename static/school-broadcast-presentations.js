@@ -1,4 +1,5 @@
 // Local viewers: documents and slide assets stay on this school's server.
+import {ensurePresentationPromises} from './school-broadcast-compat.mjs';
 const scripts = new Map();
 // The local PPTX renderer misses paragraph defaults on text runs. Materialize
 // those defaults in an in-memory copy, preserving explicit run formatting.
@@ -31,8 +32,9 @@ const loadScript = path => {
 };
 
 export function mountPresentation(host, item, onPage, onReady) {
-  let disposed=false, pdf=null, pdfTask=null, renderTask=null, deck=null, previewer=null, revision=0;
-  const abort=new AbortController(), timeout=setTimeout(()=>abort.abort(),15000);
+  let disposed=false, failed=false, pdf=null, pdfTask=null, renderTask=null, deck=null, previewer=null, revision=0, serverPdf=false;
+  const abort=new AbortController(), timeout=setTimeout(()=>{abort.abort();fail();},60000);
+  const image=document.createElement('img');image.className='presentation-image';
   const canvas=document.createElement('canvas'), frame=document.createElement('div');
   frame.className='presentation-frame';host.append(frame);
   const api={page:1,count:0,ready:false,busy:false,dispose(){disposed=true;revision++;abort.abort();clearTimeout(timeout);renderTask?.cancel();pdfTask?.destroy();previewer?.destroy();observer.disconnect();}};
@@ -41,10 +43,15 @@ export function mountPresentation(host, item, onPage, onReady) {
     return {width:Math.floor(width),height:Math.floor(width*ratio)};
   }
   async function renderPage(number) {
-    if(disposed||api.busy||number<1||number>api.count)return;
+    if(disposed||failed||api.busy||number<1||number>api.count)return;
     api.busy=true;const own=++revision;api.page=number;
     try {
-      if(pdf){const page=await pdf.getPage(number);if(disposed||own!==revision)return;
+      if(serverPdf){
+        const url=new URL(item.page_url,location.href);url.searchParams.set('sayfa',number);
+        await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error('PDF sayfası yüklenemedi.'));image.src=url.href;});
+        if(disposed||failed||own!==revision)return;
+        image.alt=`${item.baslik} · Sayfa ${number} / ${api.count}`;
+      }else if(pdf){const page=await pdf.getPage(number);if(disposed||failed||own!==revision)return;
         const base=page.getViewport({scale:1}), fitted=size(base.height/base.width);
         const ratio=Math.min(Math.max(devicePixelRatio||1,1),2,Math.sqrt(8000000/(fitted.width*fitted.height)));
         const viewport=page.getViewport({scale:fitted.width/base.width});
@@ -56,22 +63,28 @@ export function mountPresentation(host, item, onPage, onReady) {
         const fitted=size(deck.ratio);frame.style.width=`${deck.width}px`;frame.style.height=`${deck.height}px`;
         frame.style.transform=`translate(-50%,-50%) scale(${fitted.width/deck.width})`;previewer.renderSingleSlide(number-1);
       }
-      if(!disposed&&own===revision)onPage(api.page,api.count);
+      if(!disposed&&!failed&&own===revision)onPage(api.page,api.count);
       return true;
-    } catch(error){if(!disposed&&error.name!=='RenderingCancelledException')fail();}
+    } catch(error){if(!disposed&&error.name!=='RenderingCancelledException'){console.warn('Sunum görüntülenemedi:',error.message);fail();}}
     finally{api.busy=false;}
   }
   api.go=renderPage;
-  function fail(){if(disposed)return;api.ready=false;host.replaceChildren(Object.assign(document.createElement('p'),{className:'media-failure',textContent:'Sunum açılamadı. PDF olarak kaydedip tekrar yükleyebilirsiniz. Sonraki yayın devam edecek.'}));onReady(false);}
-  const observer=new ResizeObserver(()=>{if(api.ready&&!api.busy)renderPage(api.page);});observer.observe(host);
+  function fail(){if(disposed||failed)return;failed=true;clearTimeout(timeout);api.ready=false;host.replaceChildren(Object.assign(document.createElement('p'),{className:'media-failure',textContent:'Sunum açılamadı. PDF olarak kaydedip tekrar yükleyebilirsiniz. Sonraki yayın devam edecek.'}));onReady(false);}
+  const observer=typeof ResizeObserver==='function'?new ResizeObserver(()=>{if(api.ready&&!api.busy&&!serverPdf)renderPage(api.page);}):{observe(){},disconnect(){}};observer.observe(host);
   (async()=>{
     try {
+      if(item.type==='pdf'&&item.page_url&&item.pdf_pages){
+        serverPdf=true;api.count=item.pdf_pages;frame.remove();host.append(image);
+        const rendered=await renderPage(1);if(disposed||failed||!rendered)return;
+        api.ready=true;clearTimeout(timeout);onReady(true);return;
+      }
       const response=await fetch(item.url,{credentials:'same-origin',signal:abort.signal,cache:'no-store'});
       if(!response.ok)throw new Error();const bytes=await response.arrayBuffer();if(disposed)return;
       if(item.type==='pdf'){
-        const pdfjs=await import('./vendor/pdfjs/build/pdf.min.mjs');if(disposed)return;
-        const assets=new URL('./vendor/pdfjs/',import.meta.url);pdfjs.GlobalWorkerOptions.workerSrc=new URL('build/pdf.worker.min.mjs',assets).href;
-        pdfTask=pdfjs.getDocument({data:bytes,cMapUrl:new URL('cmaps/',assets).href,cMapPacked:true,standardFontDataUrl:new URL('standard_fonts/',assets).href,wasmUrl:new URL('wasm/',assets).href,isEvalSupported:false});
+        ensurePresentationPromises();
+        const pdfjs=await import('./vendor/pdfjs/legacy/build/pdf.min.mjs');if(disposed||failed)return;
+        const assets=new URL('./vendor/pdfjs/',import.meta.url);pdfjs.GlobalWorkerOptions.workerSrc=new URL('./school-broadcast-pdf-worker.mjs',import.meta.url).href;
+        pdfTask=pdfjs.getDocument({data:new Uint8Array(bytes),cMapUrl:new URL('cmaps/',assets).href,cMapPacked:true,standardFontDataUrl:new URL('standard_fonts/',assets).href,wasmUrl:new URL('wasm/',assets).href,isEvalSupported:false});
         pdf=await pdfTask.promise;if(disposed)return;api.count=pdf.numPages;frame.remove();host.append(canvas);
       }else{
         await loadScript('./vendor/jszip/jszip.min.js');await loadScript('./vendor/pptx-preview/pptx-preview.umd.js');if(disposed)return;
@@ -82,9 +95,9 @@ export function mountPresentation(host, item, onPage, onReady) {
         previewer=window.pptxPreview.init(frame,{width:deck.width,height:deck.height,mode:'slide'});
         const loaded=await previewer.load(await presentationBytes(zip,bytes));if(disposed)return;api.count=loaded.slides.length;
       }
-      if(disposed||!api.count)throw new Error();const rendered=await renderPage(1);if(disposed||!rendered)return;
+      if(disposed||failed||!api.count)throw new Error();const rendered=await renderPage(1);if(disposed||failed||!rendered)return;
       api.ready=true;clearTimeout(timeout);onReady(true);
-    }catch(error){if(!disposed)fail();}
+    }catch(error){if(!disposed){console.warn('Sunum görüntülenemedi:',error.message);fail();}}
   })();
   return api;
 }

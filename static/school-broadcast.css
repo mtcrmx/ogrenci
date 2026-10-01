@@ -20,11 +20,13 @@
 .ticker-label{flex:none;display:flex;align-items:center;gap:.6vw;padding:0 1.4vw;background:#5b3f97;font-size:.95vw;font-weight:750;letter-spacing:.14em}
 .ticker-label span{font-size:1.4vw}
 .ticker-track{flex:1;min-width:0;overflow:hidden;display:flex;align-items:center}
-.ticker-text{flex:none;margin:0;white-space:nowrap;padding-left:100%;font-size:1.45vw;font-weight:500;animation:ticker-scroll linear infinite;will-change:transform}
+.ticker-text{flex:none;display:flex;width:max-content;margin:0;white-space:nowrap;padding:0;font-size:1.45vw;font-weight:500;animation:ticker-scroll linear infinite;will-change:transform}
+.ticker-copy,.ticker-item{display:inline-flex;flex:none;align-items:center}.ticker-item{gap:.6vw}.ticker-copy{padding-left:1.4vw}
 .ticker-text.static{padding-left:1.4vw;animation:none;opacity:.88}
 .ticker-text b{font-weight:750;margin-right:.6vw}
 .ticker-sep{margin:0 2.2vw;opacity:.65}
-@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.presentation-wrap .presentation-image{display:block;width:100%;height:100%;object-fit:contain}
 .calendar-card{grid-column:3;grid-row:2;min-width:0;background:linear-gradient(145deg,#fff0c9,#f3dfb9);border-radius:1.5vw;padding:1.2vh 1vw;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
 .calendar-heading{display:flex;justify-content:space-between;align-items:center;gap:.4vw}.calendar-card .eyebrow{font-size:.64vw;margin:0;color:#927451;letter-spacing:.08em}.calendar-heading small{flex-shrink:0;font-size:.65vw;color:#97744e;background:#fff5;padding:.3vh .4vw;border-radius:1vw}
 .calendar-card h2{font-size:1vw;line-height:1.15;margin:.7vh 0 .4vh;overflow-wrap:anywhere}.calendar-card>p{font-size:.7vw;line-height:1.25;margin:0;color:#8e7357}

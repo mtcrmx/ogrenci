@@ -1,5 +1,5 @@
 import {lessonState} from './school-broadcast-clock.mjs';
-import {mountPresentation} from './school-broadcast-presentations.js';
+import {mountPresentation} from './school-broadcast-presentations.js?v=20261001-compatible';
 /* No student or parent data enters this screen. Times use Europe/Istanbul. */
 (() => {
   'use strict';
@@ -27,13 +27,13 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   function render(){
     if(revoked)return;
     presentation?.dispose();presentation=null;$('presentation-controls').hidden=true;
-    const list=slides();playlistKey=list.map(i=>i.id||i.type).join(':');index=(index+list.length)%list.length;const item=list[index],body=$('slide-body');
+    const list=slides();playlistKey=JSON.stringify(list);index=(index+list.length)%list.length;const item=list[index],body=$('slide-body');
     body.replaceChildren();body.classList.remove('slide-body');void body.offsetWidth;body.classList.add('slide-body');
     txt('slide-title',item.title);txt('slide-kicker',item.kicker);txt('slide-count',`${String(index+1).padStart(2,'0')} / ${String(list.length).padStart(2,'0')}`);
     const dots=$('slide-dots');dots.replaceChildren(...list.map((_,i)=>node('span','dot'+(i===index?' active':''))));
     deadline=Date.now()+item.sure*1000;
     if(item.type==='pdf'||item.type==='pptx'){
-      const wrap=node('div','presentation-wrap');body.append(wrap);wrap.append(node('p','presentation-loading','Sunum hazırlanıyor…'));deadline=Date.now()+20000;
+      const wrap=node('div','presentation-wrap');body.append(wrap);wrap.append(node('p','presentation-loading','Sunum hazırlanıyor…'));deadline=Date.now()+65000;
       presentation=mountPresentation(wrap,item,(page,count)=>{txt('presentation-page',`${page} / ${count}`);$('presentation-prev').disabled=page<=1;$('presentation-next').disabled=page>=count;},ready=>{$('presentation-controls').hidden=!ready;deadline=Date.now()+item.sure*1000;wrap.querySelector('.presentation-loading')?.remove();});
       if(item.metin)body.append(node('p','media-caption',item.metin));
     }else if(item.type==='gorsel'||item.type==='video'){
@@ -51,7 +51,7 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   function tick(){
     const [hm1,hm2,s]=timeFmt.format(now()).split(':');txt('clock',`${hm1}:${hm2}`);txt('seconds',s);txt('school-date',longDate.format(now()));
     if(revoked)return;
-    if(playlistKey!==slides().map(i=>i.id||i.type).join(':')){index=0;render();}
+    if(playlistKey!==JSON.stringify(slides())){index=0;render();}
     updateAnnouncements();
     updateCalendar();
     const st=state(),sameDay=dateFmt.format(now())===data.tarih;
@@ -86,15 +86,21 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   function updateAnnouncements(){
     const day=dateFmt.format(now()), items=data.icerikler.filter(i=>i.tur==='metin'&&i.baslangic<=day&&i.bitis>=day), key=JSON.stringify(items);
     if(key===announcementKey)return;
-    announcementKey=key;const ticker=$('ticker-text');ticker.replaceChildren();
+    announcementKey=key;const ticker=$('ticker-text');ticker.replaceChildren();ticker.style.animation='none';
     if(!items.length){ticker.className='ticker-text static';ticker.textContent='Henüz duyuru yok · Öğretmenlerimizin paylaştığı okul duyuruları burada kayan yazı olarak gösterilir.';return;}
-    items.forEach((item,i)=>{
-      if(i)ticker.append(node('span','ticker-sep','✦'));
-      const text=(item.metin||'').replace(/\s+/g,' ').trim();
-      ticker.append(node('b','',item.baslik));if(text)ticker.append(document.createTextNode(text));
+    const copy=node('span','ticker-copy');
+    items.forEach(item=>{
+      const entry=node('span','ticker-item'),text=(item.metin||'').replace(/\s+/g,' ').trim();
+      entry.append(node('b','',item.baslik+' ·'),node('span','',text),node('span','ticker-sep','✦'));copy.append(entry);
     });
-    ticker.className='ticker-text';ticker.style.animation='none';void ticker.offsetWidth;ticker.style.animation='';
-    ticker.style.animationDuration=`${Math.max(12,ticker.scrollWidth/(innerWidth*.06))}s`;
+    ticker.className='ticker-text';ticker.style.animation='none';ticker.append(copy);
+    // Repeat short messages to fill the strip; two equal halves loop without a blank gap.
+    const originals=Array.from(copy.children),width=$('ticker-text').parentElement.clientWidth;
+    if(copy.scrollWidth>0)while(copy.scrollWidth<width){for(const original of originals){const repeat=original.cloneNode(true);repeat.setAttribute('aria-hidden','true');copy.append(repeat);}}
+    const duplicate=copy.cloneNode(true);duplicate.setAttribute('aria-hidden','true');ticker.append(duplicate);
+    ticker.style.animationDuration=`${copy.scrollWidth/Math.max(24,Math.min(90,innerWidth*.035))}s`;
+    void ticker.offsetWidth;ticker.style.animationName='ticker-scroll';
+    ticker.style.animationTimingFunction='linear';ticker.style.animationIterationCount='infinite';
   }
   function updateCalendar(){
     const day=dateFmt.format(now()), source=data.takvim||{bugun:[],yaklasan:[]};
@@ -113,10 +119,10 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   }
   async function refresh(){if(fetching||revoked)return;fetching=true;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
     try{const r=await fetch(endpoint,{cache:'no-store',signal:controller.signal,credentials:'same-origin'});
-      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates'].forEach(id=>txt(id,'—'));$('ticker-text').className='ticker-text static';txt('ticker-text','—');txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
+      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates'].forEach(id=>txt(id,'—'));$('ticker-text').className='ticker-text static';$('ticker-text').style.animation='none';txt('ticker-text','—');txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
       if(!r.ok)throw new Error();const updated=await r.json();if(!updated.saatler||!updated.program)throw new Error();
       offset=Date.parse(updated.simdi)-Date.now();const nextSig=JSON.stringify({...updated,simdi:null,lgs:null});data=updated;
-      if(signature!==nextSig){signature=nextSig;periodKey='';render();}txt('connection','Güncel · Türkiye saati');$('connection').className='';tick();
+      if(signature!==nextSig){signature=nextSig;periodKey='';}txt('connection','Güncel · Türkiye saati');$('connection').className='';tick();
     }catch{txt('connection','Bağlantı bekleniyor · Son alınan bilgiler');$('connection').className='offline';}finally{clearTimeout(timer);fetching=false;}
   }
   async function keepAwake(){try{if(document.fullscreenElement&&navigator.wakeLock&&!wake)wake=await navigator.wakeLock.request('screen');if(wake)wake.addEventListener('release',()=>{wake=null;});}catch{/* Browser support is optional. */}}

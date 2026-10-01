@@ -223,6 +223,22 @@ class SchoolBroadcast(unittest.TestCase):
         self.assertEqual(self.admin.post('/yayin/yonetim',data={**fields,'dosya':(stream,'slides.pdf')}).status_code,302)
         item=self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]
         self.assertEqual(item['tur'],'pdf');response=self.guest.get(item['url']);self.assertEqual(response.content_type,'application/pdf');response.close()
+        self.assertEqual(item['pdf_pages'], 2)
+        preview=self.guest.get(item['page_url']+'?sayfa=2')
+        self.assertEqual(preview.status_code,200)
+        self.assertEqual(preview.content_type,'image/jpeg')
+        from PIL import Image
+        with Image.open(BytesIO(preview.data)) as image:
+            self.assertEqual(image.size,(1920,1080))
+        preview.close()
+        self.assertEqual(self.guest.get(item['page_url']+'?sayfa=3').status_code,404)
+        self.assertEqual(self.guest.get(item['page_url']+'?sayfa=0').status_code,404)
+        self.assertEqual(self.guest.get(item['page_url'].replace(self.token,'bad-token')).status_code,404)
+        self.assertEqual(self.guest.get('/yayin/medya/'+str(item['id'])+'/sayfa').status_code,302)
+        no_active={k:v for k,v in fields.items() if k!='aktif'}
+        self.admin.post('/yayin/yonetim',data={**no_active,'id':item['id']})
+        self.assertEqual(self.guest.get(item['page_url']).status_code,404)
+        self.admin.post('/yayin/yonetim',data={**fields,'id':item['id']})
         stream=BytesIO()
         with zipfile.ZipFile(stream,'w') as z:
             z.writestr('[Content_Types].xml','<Types/>')
@@ -234,6 +250,26 @@ class SchoolBroadcast(unittest.TestCase):
             r=self.admin.post('/yayin/yonetim',data={**fields,'dosya':(BytesIO(bytes_),filename)})
             self.assertEqual(r.status_code,200)
             self.assertNotIn('bad.',self.guest.get('/ekran/'+self.token+'/veri').get_data(as_text=True))
+
+    def test_dedicated_announcements_validate_publish_edit_and_draft(self):
+        today=datetime.now(tv.ISTANBUL).date().isoformat()
+        fields=dict(islem='duyuru',baslik='Veli toplantısı',metin='Cuma günü okulumuza bekliyoruz. '*20,
+                    baslangic=today,bitis=today,aktif='on')
+        response=self.post(**fields)
+        self.assertEqual(response.status_code,302)
+        self.assertTrue(response.location.endswith('#duyurular'))
+        item=self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]
+        self.assertEqual(item['tur'],'metin')
+        self.assertNotIn('url',item)
+        self.assertEqual(item['metin'],fields['metin'].strip())
+        edited={**fields,'id':item['id'],'metin':'Saat 16.00’da görüşmek üzere.'}
+        self.assertEqual(self.post(**edited).status_code,302)
+        self.assertIn('Saat 16.00',self.admin.get('/yayin/yonetim?duzenle='+str(item['id'])).get_data(as_text=True))
+        self.assertEqual(self.post(**{**edited,'metin':''}).status_code,200)
+        self.assertEqual(self.post(**{**edited,'metin':'x'*1001}).status_code,200)
+        self.assertEqual(self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]['metin'],edited['metin'])
+        self.post(**{k:v for k,v in edited.items() if k!='aktif'})
+        self.assertEqual(self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'],[])
 
 
 from pathlib import Path
