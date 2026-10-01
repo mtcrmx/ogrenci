@@ -10,7 +10,7 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   const dateFmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'});
   const longDate=new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',weekday:'long',day:'numeric',month:'long',year:'numeric'});
   let offset=Date.parse(data.simdi)-Date.now(), index=0, paused=false, deadline=0, signature='', periodKey='', playlistKey='', fetching=false, revoked=false, wake=null;
-  let presentation=null, programMode=false, announcementIndex=0, announcementDeadline=0, announcementKey='';
+  let presentation=null, announcementIndex=0, announcementDeadline=0, announcementKey='';
   const now=()=>new Date(Date.now()+offset);
   function state(){
     const [h,m,s]=timeFmt.format(now()).split(':').map(Number);
@@ -18,36 +18,20 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   }
   const node=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
   function slides(){
-    const list=[{type:'classes',title:'Sınıflarımızın öğretmenleri',kicker:'BUGÜN OKULDA',sure:24},{type:'table',title:'Bugünün ders programı',kicker:'BİR BAKIŞTA · TÜM SINIFLAR',sure:30}];
     const day=dateFmt.format(now()), published=data.icerikler.filter(i=>i.baslangic<=day&&i.bitis>=day);
     const media=published.filter(i=>i.tur!=='metin').map(i=>({...i,type:i.tur,title:i.baslik,kicker:i.tur==='video'?'ÖĞRETMENLERİMİZDEN · VİDEO':i.tur==='pdf'||i.tur==='pptx'?'ÖĞRETMENLERİMİZDEN · SUNUM':'ÖĞRETMENLERİMİZDEN · GÖRSEL'}));
-    if(media.length&&!programMode)return media;
-    if(!programMode)list.push({type:'welcome',title:'Birlikte öğreniyor, birlikte büyüyoruz.',kicker:'SUNUM VE VİDEO ALANI',sure:18});
-    return list;
+    return media.length?media:[{type:'welcome',title:'Birlikte öğreniyor, birlikte büyüyoruz.',kicker:'SUNUM VE VİDEO ALANI',sure:18}];
   }
   function classNames(){return data.siniflar;}
   function render(){
     if(revoked)return;
     presentation?.dispose();presentation=null;$('presentation-controls').hidden=true;
-    const list=slides();playlistKey=list.map(i=>i.id||i.type).join(':');index=(index+list.length)%list.length;const item=list[index],body=$('slide-body'),st=state();
+    const list=slides();playlistKey=list.map(i=>i.id||i.type).join(':');index=(index+list.length)%list.length;const item=list[index],body=$('slide-body');
     body.replaceChildren();body.classList.remove('slide-body');void body.offsetWidth;body.classList.add('slide-body');
     txt('slide-title',item.title);txt('slide-kicker',item.kicker);txt('slide-count',`${String(index+1).padStart(2,'0')} / ${String(list.length).padStart(2,'0')}`);
     const dots=$('slide-dots');dots.replaceChildren(...list.map((_,i)=>node('span','dot'+(i===index?' active':''))));
     deadline=Date.now()+item.sure*1000;
-    if(item.type==='classes'){
-      const names=classNames(),grid=node('div','classes-grid');
-      if(st.kapali||!names.length){const box=node('div','message-slide');box.append(node('span','message-mark','✦'),node('p','',st.kapali?st.ad:'Bugün için ders programı bulunamadı.'));body.append(box);return;}
-      for(const name of names){const card=node('article','class-card');const rows=data.program.filter(r=>r.sinif_adi===name&&r.ders_no===st.ders);
-        card.append(node('div','class-name',name),node('div','class-course',st.ders?(rows.map(r=>r.ogretmen_adi).join(' / ')||'Program kaydı yok'):'Dersler tamamlandı'),node('div','class-teacher',st.ders?(st.inLesson?'Şu an sınıfta':'Sıradaki ders'):'İyi dinlenmeler'));
-        if(st.ders)card.append(node('small','',st.inLesson?'Şu anki ders':`${st.ders}. ders · sıradaki`));grid.append(card);
-      }body.append(grid);
-    }else if(item.type==='table'){
-      const names=classNames();if(st.kapali||!names.length){body.append(node('div','message-slide',st.kapali?st.ad:'Program henüz eklenmedi.'));return;}
-      const table=node('table','day-table'),head=node('thead'),hr=node('tr');hr.append(node('th','','Ders / saat'));names.forEach(n=>hr.append(node('th','',n)));head.append(hr);table.append(head);const tb=node('tbody');
-      for(const p of data.saatler){const row=node('tr',p.no===st.ders?'current':'');const th=node('th','',`${p.no}. ders`);th.append(node('small','',`${p.baslangic}–${p.bitis}`));row.append(th);
-        for(const name of names){const lessons=data.program.filter(r=>r.sinif_adi===name&&r.ders_no===p.no);const td=node('td','',lessons.map(r=>r.ogretmen_adi).join(' / ')||'—');row.append(td);}tb.append(row);
-      }table.append(tb);body.append(table);
-    }else if(item.type==='pdf'||item.type==='pptx'){
+    if(item.type==='pdf'||item.type==='pptx'){
       const wrap=node('div','presentation-wrap');body.append(wrap);wrap.append(node('p','presentation-loading','Sunum hazırlanıyor…'));deadline=Date.now()+20000;
       presentation=mountPresentation(wrap,item,(page,count)=>{txt('presentation-page',`${page} / ${count}`);$('presentation-prev').disabled=page<=1;$('presentation-next').disabled=page>=count;},ready=>{$('presentation-controls').hidden=!ready;deadline=Date.now()+item.sure*1000;wrap.querySelector('.presentation-loading')?.remove();});
       if(item.metin)body.append(node('p','media-caption',item.metin));
@@ -71,11 +55,31 @@ import {mountPresentation} from './school-broadcast-presentations.js';
     const st=state(),sameDay=dateFmt.format(now())===data.tarih;
     txt('lesson-state',st.ad);txt('lesson-hours',st.hours||'');txt('countdown',st.hedef!==null?`${String(Math.floor(st.kalan/60)).padStart(2,'0')}:${String(st.kalan%60).padStart(2,'0')}`:'—');txt('countdown-label',st.etiket||st.aciklama||'Yarın yeni bir gün.');$('lesson-progress').style.width=`${Math.round((st.oran||0)*100)}%`;
     const following=data.saatler.find(p=>p.no===(st.inLesson?st.ders+1:st.ders));txt('next-lesson',following&&!st.kapali?`Sıradaki · ${following.no}. ders ${following.baslangic}`:st.kapali?'İyi dinlenmeler.':'Günün dersleri tamamlandı.');
-    const key=`${data.tarih}:${st.ad}:${st.ders}`;
-    if(key!==periodKey){periodKey=key;const p=$('periods');p.replaceChildren();for(const hour of data.saatler){const row=node('div','period-row'+(hour.no===st.ders&&!st.kapali?' active':''));row.append(node('span','',`${hour.no}. ders`),node('span','',`${hour.baslangic} – ${hour.bitis}`));p.append(row);}if(['classes','table'].includes(slides()[index]?.type))render();}
+    const key=`${data.tarih}:${sameDay}:${st.ad}:${st.ders}:${st.inLesson}`;
+    if(key!==periodKey){periodKey=key;const p=$('periods');p.replaceChildren();for(const hour of data.saatler){const row=node('div','period-row'+(hour.no===st.ders&&!st.kapali?' active':''));row.append(node('span','',`${hour.no}. ders`),node('span','',`${hour.baslangic} – ${hour.bitis}`));p.append(row);}renderTeacherTable(st,sameDay);}
     for(let i=0;i<3;i++)txt(`duty-${i}`,!sameDay?'Güncelleniyor':data.kapali?'Bugün nöbet yok':data.nobet[i]||'Çizelge bekleniyor');
     const lgs=data.lgs;if(lgs.durum==='sayiyor'){const days=Math.max(0,Math.ceil((Date.parse(lgs.hedef)-now())/86400000));txt('lgs-days',`LGS hedefine ${days} gün`);txt('lgs-caption',`${lgs.tarih}${lgs.kesin?'':' · Planlama hedefi'}`);}else{txt('lgs-days',lgs.durum==='bugun'?'LGS bugün · Başarılar!':'Her gün bir adım ileri');txt('lgs-caption','Birlikte başaracağız.');}
     if(!paused&&Date.now()>=deadline){if(presentation?.ready&&presentation.page<presentation.count){presentation.go(presentation.page+1);deadline=Date.now()+slides()[index].sure*1000;}else{index++;render();}}
+  }
+  function renderTeacherTable(st,sameDay){
+    const body=$('teacher-table-body');body.replaceChildren();txt('teacher-table-times','');
+    if(!sameDay||st.kapali){txt('teacher-table-status',!sameDay?'Yeni günün programı bekleniyor':st.ad);body.append(node('p','teacher-empty','Bugün için aktif ders yok.'));return;}
+    const period=data.saatler.find(p=>p.no===st.ders),next=data.saatler.find(p=>p.no===st.ders+1);
+    txt('teacher-table-status',period?(st.inLesson?`${period.no}. ders · Şu an sınıfta`:`${period.no}. ders · Sıradaki ders`):'Günün dersleri tamamlandı');
+    if(!period){body.append(node('p','teacher-empty','İyi dinlenmeler.'));return;}
+    const table=node('table','teacher-table'),head=node('thead'),heading=node('tr');
+    heading.append(node('th','','Sınıf'),node('th','',`${period.no}. ders`),node('th','',next?`${next.no}. ders`:'Sonraki'));head.append(heading);table.append(head);
+    const rows=node('tbody');
+    for(const name of classNames()){
+      const row=node('tr'),label=node('th','',name);label.scope='row';row.append(label);
+      for(const hour of [period,next]){
+        const teachers=hour?data.program.filter(r=>r.sinif_adi===name&&r.ders_no===hour.no).map(r=>r.ogretmen_adi):[];
+        row.append(node('td',hour===period?'teacher-current':'',teachers.join(' / ')||(hour?'Kayıt yok':'—')));
+      }
+      rows.append(row);
+    }
+    table.append(rows);body.append(table);
+    txt('teacher-table-times',`${period.no}. ders ${period.baslangic}–${period.bitis}${next?`\n${next.no}. ders ${next.baslangic}–${next.bitis}`:''}`);
   }
   function updateAnnouncements(){
     const day=dateFmt.format(now()), items=data.icerikler.filter(i=>i.tur==='metin'&&i.baslangic<=day&&i.bitis>=day), key=JSON.stringify(items);
@@ -86,7 +90,7 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   }
   async function refresh(){if(fetching||revoked)return;fetching=true;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
     try{const r=await fetch(endpoint,{cache:'no-store',signal:controller.signal,credentials:'same-origin'});
-      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));['duty-0','duty-1','duty-2','lesson-hours','next-lesson','announcement-title','announcement-message','announcement-count'].forEach(id=>txt(id,'—'));txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
+      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','announcement-title','announcement-message','announcement-count','teacher-table-status','teacher-table-times'].forEach(id=>txt(id,'—'));txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
       if(!r.ok)throw new Error();const updated=await r.json();if(!updated.saatler||!updated.program)throw new Error();
       offset=Date.parse(updated.simdi)-Date.now();const nextSig=JSON.stringify({...updated,simdi:null,lgs:null});data=updated;
       if(signature!==nextSig){signature=nextSig;periodKey='';render();}txt('connection','Güncel · Türkiye saati');$('connection').className='';tick();
@@ -97,7 +101,6 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   document.addEventListener('fullscreenchange',()=>{txt('fullscreen',document.fullscreenElement?'⛶ Tam ekrandan çık':'⛶ Tam ekran');if(!document.fullscreenElement&&wake)wake.release();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){refresh();keepAwake();}});window.addEventListener('online',refresh);
   $('previous').addEventListener('click',()=>{index--;render();});$('next').addEventListener('click',()=>{index++;render();});
-  $('program-toggle').addEventListener('click',()=>{programMode=!programMode;index=0;render();$('program-toggle').setAttribute('aria-label',programMode?'Sunum ve videoları göster':'Ders programını göster');});
   for(const [id,delta] of [['presentation-prev',-1],['presentation-next',1]])$(id).addEventListener('click',()=>{if(presentation?.ready)presentation.go(presentation.page+delta);deadline=Date.now()+slides()[index].sure*1000;});
   $('pause').addEventListener('click',()=>{paused=!paused;txt('pause',paused?'▶':'Ⅱ');$('pause').setAttribute('aria-label',paused?'Yayını devam ettir':'Yayını duraklat');deadline=Date.now()+slides()[index].sure*1000;const video=$('slide-body').querySelector('video');if(video){if(paused)video.pause();else{if(Number.isFinite(video.duration))deadline=Date.now()+(video.duration-video.currentTime+10)*1000;video.play().catch(()=>{});}}});
   signature=JSON.stringify({...data,simdi:null,lgs:null});render();tick();txt('connection','Güncel · Türkiye saati');setInterval(tick,1000);setInterval(refresh,30000);

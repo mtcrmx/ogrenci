@@ -9,5 +9,26 @@
 
 @media(max-aspect-ratio:4/3){.broadcast-right{grid-template-rows:minmax(50vw,1fr) auto}.announcement-card{min-height:20vw;padding:2vw;gap:2vw}.announcement-label{flex-basis:15vw}.announcement-label h2{font-size:2.3vw}.announcement-label>span{font-size:3vw}.announcement-label small{font-size:1.4vw}.announcement-text h3{font-size:2.2vw}.announcement-text p{font-size:1.8vw}.slide-nav #presentation-controls{font-size:1.5vw}}
 
-/* Keep the seven-period overview inside the smaller media area. */
-@media(min-aspect-ratio:4/3){.broadcast-right .day-table{font-size:.84vw;border-spacing:.18vw .15vh}.broadcast-right .day-table th{font-size:.82vw;padding:.15vh}.broadcast-right .day-table td{padding:.2vh .25vw}}
+/* Media stays in the center while the live teacher table stays on the right. */
+.screen-main{grid-template-columns:18% minmax(0,1fr) 27%;grid-template-rows:minmax(0,1fr) 14vh;gap:1vh 1.1vw}
+.status-column{grid-column:1;grid-row:1/3}
+.broadcast-center{grid-column:2;grid-row:1;display:flex;min-width:0;min-height:0}
+.broadcast-center .content-card{width:100%;padding:1.8vh 1.3vw 1vh}
+.broadcast-center .content-heading h2{font-size:1.6vw}
+.announcement-card{grid-column:2/4;grid-row:2}
+.teacher-panel{grid-column:3;grid-row:1;background:linear-gradient(145deg,#f5f8ee,#e7eddd);padding:1.8vh 1vw;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;border-radius:1.5vw}
+.teacher-panel .eyebrow{margin-bottom:.6vh;color:#768365}
+.teacher-panel h2{font-size:1.5vw;letter-spacing:-.03em;margin:0;line-height:1.2}
+.teacher-table-status{font-size:.8vw;color:#6c775f;margin:.7vh 0 1vh;line-height:1.2}
+.teacher-table-body{flex:1;min-height:0;display:flex}
+.teacher-table{width:100%;height:100%;table-layout:fixed;border-collapse:separate;border-spacing:.2vw .35vh;font-size:.85vw;line-height:1.15}
+.teacher-table th,.teacher-table td{padding:.4vh .3vw;text-align:left;overflow-wrap:anywhere;border-radius:.45vw}
+.teacher-table thead th{font-size:.75vw;color:#6f795f;background:#d9e3cb}
+.teacher-table thead th:first-child{width:3.1vw}
+.teacher-table tbody th{font-size:.86vw;color:#536443;background:#e0e8d5;text-align:center}
+.teacher-table td{background:#f8fbf2;color:#727a68}
+.teacher-table td.teacher-current{background:#e4d8ef;color:#493461;font-weight:650}
+.teacher-table-times{font-size:.7vw;color:#7c846e;line-height:1.4;white-space:pre-line;margin:.7vh .3vw 0}
+.teacher-empty{font-size:1vw;color:#6a775e;align-self:center;text-align:center;width:100%}
+@media(min-aspect-ratio:4/3){.status-column .lesson-card{padding:2vh 1.1vw}.lesson-card h2{font-size:2vw}.countdown{font-size:4.3vw}.next-lesson{font-size:.8vw}.day-plan{padding:1.4vh 1vw}.period-row{font-size:.74vw;padding:.18vh .2vw}.lgs-mini{padding:.7vh 1vw;gap:.6vw}.lgs-icon{font-size:1.7vw}.lgs-mini strong{font-size:.9vw}.lgs-mini small{font-size:.6vw}}
+@media(max-aspect-ratio:4/3){.screen-main{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto;gap:2vh}.status-column,.broadcast-center,.teacher-panel,.announcement-card{grid-column:1;grid-row:auto}.broadcast-center .content-card{min-height:50vw;padding:3vw}.broadcast-center .content-heading h2{font-size:3vw}.teacher-panel{padding:3vw}.teacher-panel h2{font-size:3vw}.teacher-table-status{font-size:2vw}.teacher-table{font-size:2vw;height:auto;min-height:55vw}.teacher-table th,.teacher-table td{padding:1vw}.teacher-table thead th,.teacher-table tbody th{font-size:2vw}.teacher-table thead th:first-child{width:12vw}.teacher-table-times{font-size:1.7vw}.teacher-empty{font-size:2vw}}
