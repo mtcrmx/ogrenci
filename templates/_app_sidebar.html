@@ -7,6 +7,7 @@
   <nav class="app-nav" aria-label="Ana menü">
     {% for hash, label, icon in [('genel','Ana sayfa','⌂'), ('hafta','Ödev ve kitap','▤')] %}<a href="{{ url_for('veli_panel') }}#{{ hash }}" data-parent-nav="{{ hash }}"><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
     {% if (nav_student and nav_student.sinif_adi.startswith('8/')) or lgs_acik|default(false) %}<a href="{{ url_for('veli_lgs') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' else '' }}"><span aria-hidden="true">✦</span>LGS</a>{% endif %}
+    <a href="{{ url_for('veli_sonuclar') }}" class="{{ 'is-current' if request.endpoint == 'veli_sonuclar' else '' }}"><span aria-hidden="true">◈</span>Ders ve deneme sonuçları</a>
     <a href="{{ url_for('veli_panel') }}#mesajlar" data-parent-nav="mesajlar"><span aria-hidden="true">✉</span>Mesajlar</a>
     <a href="{{ url_for('veli_rehberlik') }}" class="{{ 'is-current' if request.endpoint.startswith('veli_rehberlik') else '' }}"><span aria-hidden="true">❋</span>Rehberlik servisi</a>
     <a href="{{ url_for('veli_panel') }}#raporlar" data-parent-nav="raporlar" class="{{ 'is-current' if request.endpoint in ['veli_karne','veli_kitap_odev_rapor','veli_deneme_analiz','veli_belge'] else '' }}"><span aria-hidden="true">◒</span>Raporlar</a>
@@ -22,6 +23,8 @@
     {% endif %}
     {% if not rapor_only %}
     <h2>Takip</h2>
+    <a href="{{ url_for('sonuclar') }}" class="{{ 'is-current' if request.endpoint == 'sonuclar' else '' }}"><span aria-hidden="true">◈</span>Ders / deneme girişi</a>
+    <a href="{{ url_for('islem_gecmisi') }}" class="{{ 'is-current' if request.endpoint in ['islem_gecmisi','odev_duzenle'] else '' }}"><span aria-hidden="true">↶</span>İşlem geçmişim</a>
     {% for endpoint, label, icon in [('dashboard','Ana sayfa','⌂'), ('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦')] %}
     <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint in ['dashboard','haftalik_takip'] else url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
     {% endif %}

@@ -22,7 +22,9 @@ body.ui-theme.layout-page [hidden] { display:none!important; }
 .app-class-picker { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:800; }
 .app-class-picker select { min-width:115px; }
 .app-toolbar-note { margin-left:auto; font-size:12px; color:var(--layout-muted); }
-.app-student-search { display:flex;align-items:center;gap:6px;margin-left:8px; }
+.app-student-search { display:flex;align-items:center;gap:6px;margin-left:8px;position:relative; }
+.app-search-results{position:absolute;top:calc(100% + 8px);left:0;width:min(440px,calc(100vw - 32px));max-height:360px;overflow:auto;background:#fff8f4;border:1px solid #d8c6e9;border-radius:18px;padding:10px;box-shadow:0 8px 22px #674b7626;z-index:55}
+.app-search-results p{font-size:12px;color:#70667d;padding:6px;margin:0}.app-search-results a{display:block;padding:12px;border-radius:12px;font-size:13px;font-weight:800;text-decoration:none;color:#392d50}.app-search-results a:hover,.app-search-results a:focus{background:#eadcf6}
 .app-student-search input { width:220px; }
 .app-student-name strong,.app-student-name small { display:block; }
 .app-student-name small { font-size:12px; color:var(--layout-muted); }
@@ -176,6 +178,7 @@ body.ui-theme.layout-page #alan-tanitimi.aktif { animation:none; }
   .app-toolbar-note { display:none; }
   .app-toolbar { flex-wrap:wrap; }
   .app-student-search { flex:1;min-width:150px;margin-left:0; }
+  .app-search-results { left:auto;right:0;width:calc(100vw - 40px); }
   .app-student-search input { width:100%;min-width:0; }
   .app-student-search .app-button { padding:8px 10px!important; }
   body.ui-theme.layout-page .page-content { padding:18px 12px; gap:14px; }

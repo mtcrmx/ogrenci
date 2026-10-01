@@ -456,7 +456,7 @@
   </style>
   {% block head %}{% endblock %}
 {% if lgs_sayac %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_sayac.css') }}?v=20261001a"><script src="{{ url_for('static', filename='lgs_sayac.js') }}?v=20261001a" defer></script>{% endif %}
-<link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20260930a">
+<link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20261001search">
 </head>
 <body class="ui-theme app-background bg-slate-100 layout-page {{ 'dashboard-page' if request.endpoint == 'dashboard' else '' }}">
 {% set aktif_sinif_id = nav_sinif_id %}
@@ -469,7 +469,7 @@
 {% endif %}
 {% block body %}{% endblock %}
 {% if ui_role %}</div></div>{% endif %}
-<script src="{{ url_for('static', filename='app_layout.js') }}?v=20260930a" defer></script>
+<script src="{{ url_for('static', filename='app_layout.js') }}?v=20261001search" defer></script>
 
 {% block scripts %}{% endblock %}
 {% include "_renk_ayari.html" %}

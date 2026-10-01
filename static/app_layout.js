@@ -32,18 +32,53 @@
   mobile.addEventListener('change', () => setOpen(false));
   setOpen(false);
   const search = document.getElementById('ara');
+  const normalize = value => String(value || '').replaceAll('ı','i').replaceAll('İ','I').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' ');
+  window.studentSearchMatches = (name, number, query) => {
+    query=normalize(query);
+    return /^\d+$/.test(query) ? String(number).startsWith(query) : query.split(' ').every(word=>normalize(name).includes(word));
+  };
   const applySearch = () => {
     if (typeof window.filtrele === 'function') window.filtrele();
     else if (typeof window.filterAnalysis === 'function') window.filterAnalysis();
-    else document.querySelectorAll('#tracking .ogrenci').forEach(row => row.hidden = !row.querySelector('.student-name strong').textContent.toLocaleLowerCase('tr').includes(search.value.toLocaleLowerCase('tr')));
+    else document.querySelectorAll('#tracking .ogrenci').forEach(row => row.hidden = !window.studentSearchMatches(row.querySelector('.student-name strong').textContent, row.querySelector('.student-name small')?.textContent.replace(/\D/g,''), search.value));
   };
-  search?.addEventListener('input', applySearch);
-  document.querySelector('.app-student-search')?.addEventListener('submit', event => {
-    if (document.querySelector('#tracking,.dashboard-shell,#analysis-view')) { event.preventDefault(); applySearch(); }
-  });
+  const searchForm=document.querySelector('.app-student-search');
+  if(search && searchForm){
+    const results=document.createElement('div');results.className='app-search-results';results.id='student-search-results';results.hidden=true;results.setAttribute('aria-label','Öğrenci arama sonuçları');
+    const status=document.createElement('p');status.setAttribute('role','status');
+    searchForm.append(results);search.setAttribute('aria-controls',results.id);search.placeholder='Ad veya okul numarası…';search.autocomplete='off';
+    let timer, controller, revision=0;
+    function destination(student){
+      const current=new URL(location.href), url=new URL(searchForm.action,location.href);
+      if(current.pathname==='/lgs'){url.pathname='/lgs';url.search='';url.searchParams.set('ogrenci',student.id);if(current.searchParams.has('bolum'))url.searchParams.set('bolum',current.searchParams.get('bolum'));}
+      else if(current.pathname==='/sonuclar'){url.pathname='/sonuclar';url.search='';url.searchParams.set('ogrenci',student.id);}
+      else if(current.pathname==='/deneme-analiz'){url.pathname='/deneme-analiz';url.search=current.search;url.searchParams.delete('sinif');url.searchParams.set('ogrenci',student.id);url.searchParams.set('gorunum','birey');}
+      else {url.search='';url.searchParams.set(url.pathname==='/analiz'?'sinif_id':'sinif',student.sinif_id);url.searchParams.set('q',student.no);if(url.pathname==='/dashboard')url.hash='ogrenci-listesi';}
+      return url.href;
+    }
+    async function find(){
+      clearTimeout(timer);controller?.abort();const own=++revision, query=search.value.trim();
+      if(!query){results.hidden=true;return;}
+      results.replaceChildren(status);status.textContent='Öğrenciler aranıyor…';results.hidden=false;
+      controller=new AbortController();const params=new URLSearchParams({q:query});if(location.pathname==='/lgs')params.set('kapsam','lgs');
+      try{
+        const response=await fetch('/api/ogrenci-ara?'+params,{signal:controller.signal});if(!response.ok||!response.headers.get('content-type')?.includes('application/json'))throw new Error('search');
+        const data=await response.json();if(own!==revision)return;
+        status.textContent=data.toplam?data.toplam+' öğrenci bulundu. Açmak için öğrenciyi seçin.':'Öğrenci bulunamadı. Adı veya okul numarasını kontrol edin.';
+        for(const student of data.ogrenciler){const link=document.createElement('a');link.href=destination(student);link.textContent=student.ad+' · '+student.sinif+' · No '+student.no;results.append(link);}
+      }catch(error){if(error.name!=='AbortError'&&own===revision)status.textContent='Arama tamamlanamadı. Ara düğmesiyle yeniden deneyin.';}
+    }
+    search.addEventListener('input',()=>{applySearch();controller?.abort();++revision;clearTimeout(timer);if(!search.value.trim()){results.hidden=true;return;}timer=setTimeout(find,180);});
+    search.addEventListener('keydown',event=>{if(event.key==='Escape'){controller?.abort();++revision;clearTimeout(timer);results.hidden=true;}if(event.key==='ArrowDown'){event.preventDefault();results.querySelector('a')?.focus();}});
+    searchForm.addEventListener('submit',event=>{event.preventDefault();applySearch();window.setDashboardSection?.('liste');find();});
+    document.addEventListener('click',event=>{if(!searchForm.contains(event.target)){controller?.abort();++revision;clearTimeout(timer);results.hidden=true;}});
+  }
   if (search?.value) applySearch();
   document.getElementById('app-class-select')?.addEventListener('change', e => {
     const url = new URL(location.href);
+    if(url.pathname==='/sonuclar'){
+      url.search='';url.searchParams.set('sinif',e.target.value);location.href=url.href;return;
+    }
     const key = url.pathname === '/analiz' || url.searchParams.has('sinif_id') ? 'sinif_id' : 'sinif';
     url.searchParams.delete(key === 'sinif' ? 'sinif_id' : 'sinif');
     url.searchParams.set(key, e.target.value);

@@ -937,6 +937,8 @@ def _conn() -> sqlite3.Connection:
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA foreign_keys = ON")
     c.execute("PRAGMA busy_timeout = 30000")
+    from change_history import install_tracking
+    install_tracking(c)
     return c
 
 
@@ -1362,6 +1364,13 @@ def _lgs_init(con: sqlite3.Connection) -> None:
     deneme_kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_deneme)").fetchall()}
     if "puan" not in deneme_kolon:
         con.execute("ALTER TABLE lgs_deneme ADD COLUMN puan REAL")
+    for ad, tip in [('ogretmen_id', 'INTEGER'), ('tur', "TEXT NOT NULL DEFAULT 'kurum'"), ('surum', 'INTEGER NOT NULL DEFAULT 1')]:
+        if ad not in deneme_kolon:
+            con.execute(f'ALTER TABLE lgs_deneme ADD COLUMN {ad} {tip}')
+    ders_kolon = {r[1] for r in con.execute('PRAGMA table_info(lgs_deneme_ders)')}
+    for ad, tip in [('soru_sayisi', 'INTEGER'), ('yanlis_goturme', 'INTEGER NOT NULL DEFAULT 3')]:
+        if ad not in ders_kolon:
+            con.execute(f'ALTER TABLE lgs_deneme_ders ADD COLUMN {ad} {tip}')
     con.commit()
 
 
@@ -2059,20 +2068,21 @@ def _lgs_toplam_net(satirlar: list[dict]) -> float:
     toplam = 0.0
     for s in satirlar:
         kayitli = float(s["net"] or 0)
-        hesaplanan = max(0, int(s["dogru"] or 0)) - max(0, int(s["yanlis"] or 0)) / 3
+        goturme = s.get('yanlis_goturme', 3)
+        hesaplanan = max(0, int(s["dogru"] or 0)) - (max(0, int(s["yanlis"] or 0)) / goturme if goturme else 0)
         # Preserve explicitly imported net values; undo rounding only for calculated rows.
         toplam += hesaplanan if abs(kayitli - round(hesaplanan, 2)) < 0.00001 else kayitli
     return round(toplam, 2)
 
 
-def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], puan: float | None = None, siki: bool = True) -> dict:
+def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], puan: float | None = None, siki: bool = True, ogretmen_id: int | None = None, tur: str = 'kurum', kurum_yenile: bool = False) -> dict:
     ad = (ad or "").strip()
     if not ad:
         return {"ok": False, "hata": "Deneme adı yazın."}
     temiz = []
     for d in dersler:
         ders = d.get("ders")
-        tavan = LGS_SORU_SAYISI.get(ders)
+        tavan = d.get('soru_sayisi') or LGS_SORU_SAYISI.get(ders)
         if tavan is None and ders == "Sosyal Bilgiler":
             tavan = 10
         if tavan is None:
@@ -2091,26 +2101,41 @@ def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], p
             net = _lgs_net(dogru, yanlis)
         else:
             net = round(float(d.get("net")), 2)
-        temiz.append((ders, dogru, yanlis, bos, net))
+        goturme = int(d.get('yanlis_goturme', 3))
+        if goturme not in (0, 3, 4) or not 1 <= int(tavan) <= 500:
+            return {'ok': False, 'hata': 'Soru sayısı veya net kuralı geçersiz.'}
+        if d.get('net') is None:
+            net = round(dogru - (yanlis / goturme if goturme else 0), 2)
+        temiz.append((ders, dogru, yanlis, bos, net, tavan, goturme))
     if not temiz:
         return {"ok": False, "hata": "En az bir derse doğru, yanlış veya boş yazın."}
     con = _conn()
     _lgs_init(con)
-    cur = con.execute(
-        "INSERT INTO lgs_deneme (ogrenci_id, ad, tarih, puan) VALUES (?, ?, ?, ?)",
-        (ogrenci_id, ad[:80], (tarih or "")[:10], puan),
-    )
-    deneme_id = cur.lastrowid
-    for ders, dogru, yanlis, bos, net in temiz:
-        con.execute(
-            """
-            INSERT INTO lgs_deneme_ders (deneme_id, ders, dogru, yanlis, bos, net)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (deneme_id, ders, dogru, yanlis, bos, net),
+    try:
+        if kurum_yenile:
+            eski = [r[0] for r in con.execute("SELECT id FROM lgs_deneme WHERE ogrenci_id=? AND ad=? AND tarih=? AND tur='kurum'", (ogrenci_id, ad[:80], (tarih or '')[:10]))]
+            for eski_id in eski:
+                con.execute('DELETE FROM lgs_deneme_ders WHERE deneme_id=?', (eski_id,))
+                con.execute('DELETE FROM lgs_deneme WHERE id=?', (eski_id,))
+        cur = con.execute(
+            "INSERT INTO lgs_deneme (ogrenci_id, ad, tarih, puan, ogretmen_id, tur) VALUES (?, ?, ?, ?, ?, ?)",
+            (ogrenci_id, ad[:80], (tarih or "")[:10], puan, ogretmen_id, tur),
         )
-    con.commit()
-    con.close()
+        deneme_id = cur.lastrowid
+        for ders, dogru, yanlis, bos, net, tavan, goturme in temiz:
+            con.execute(
+                """
+                INSERT INTO lgs_deneme_ders (deneme_id, ders, dogru, yanlis, bos, net, soru_sayisi, yanlis_goturme)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (deneme_id, ders, dogru, yanlis, bos, net, tavan, goturme),
+            )
+        con.commit()
+    except Exception:
+        con.rollback()
+        raise
+    finally:
+        con.close()
     return {"ok": True, "id": deneme_id}
 
 
@@ -2132,12 +2157,12 @@ def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
     con = _conn()
     _lgs_init(con)
     denemeler = [dict(r) for r in con.execute(
-        "SELECT id, ad, tarih, puan FROM lgs_deneme WHERE ogrenci_id = ? ORDER BY tarih DESC, id DESC LIMIT ?",
+        "SELECT * FROM lgs_deneme WHERE ogrenci_id = ? ORDER BY tarih DESC, id DESC LIMIT ?",
         (ogrenci_id, limit),
     ).fetchall()]
     for d in denemeler:
         satirlar = [dict(r) for r in con.execute(
-            "SELECT ders, dogru, yanlis, bos, net FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",
+            "SELECT * FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",
             (d["id"],),
         ).fetchall()]
         d["dersler"] = satirlar
@@ -2177,7 +2202,7 @@ def deneme_sinav_ogrencileri(ad: str, tarih: str) -> list[dict]:
     ).fetchall()]
     for d in denemeler:
         satirlar = [dict(r) for r in con.execute(
-            "SELECT ders, dogru, yanlis, bos, net FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",
+            "SELECT * FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",
             (d["id"],),
         ).fetchall()]
         d["dersler"] = satirlar

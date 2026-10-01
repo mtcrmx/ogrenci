@@ -46,6 +46,160 @@ class Workflows(unittest.TestCase):
         self.assertEqual(d.haftalik_takip_sinif(self.sid,self.week)[self.oid]['odev_durum'],'eksik')
         self.assertTrue(d.veli_haber_yeni(self.oid,0))
 
+    def _latest_action(self, client=None):
+        con=d._conn()
+        row=con.execute('SELECT id FROM ogretmen_islem WHERE ogretmen_id=? ORDER BY rowid DESC LIMIT 1',(self.teacher['id'],)).fetchone()
+        con.close()
+        return row[0]
+
+    def test_student_search_by_number_and_turkish_name(self):
+        from student_results import normalize
+        found=self.teacher_client.get('/api/ogrenci-ara',query_string={'q':self.student['ogr_no'],'kapsam':'lgs'})
+        self.assertEqual(found.status_code,200)
+        self.assertIn(self.oid,[r['id'] for r in found.json['ogrenciler']])
+        found=self.teacher_client.get('/api/ogrenci-ara',query_string={'q':normalize(self.student['ad_soyad'])})
+        self.assertIn(self.oid,[r['id'] for r in found.json['ogrenciler']])
+        self.assertEqual(self.parent.get('/api/ogrenci-ara?q=a').status_code,302)
+        self.assertEqual(w.app.test_client().get('/api/ogrenci-ara?q=a').status_code,302)
+        self.assertTrue(all(r['sinif'].startswith('8/') for r in self.teacher_client.get('/api/ogrenci-ara?q=a&kapsam=lgs').json['ogrenciler']))
+
+    def test_institution_upload_has_named_server_permission(self):
+        teachers=d.tum_ogretmenler()
+        for name in ('ADEM AKGÜL','METEHAN CÜCEN'):
+            t=next(r for r in teachers if r['ad_soyad']==name)
+            c=w.app.test_client()
+            with c.session_transaction() as s:s.update(ogretmen_id=t['id'],ogretmen_adi=name,ogretmen_yetki='tam')
+            self.assertIn('/lgs/kurum-pdf',c.get('/lgs').get_data(as_text=True))
+            self.assertEqual(c.post('/lgs/kurum-pdf').status_code,302)
+        other=next(r for r in teachers if r['ad_soyad'] not in ('ADEM AKGÜL','METEHAN CÜCEN') and r['yetki']=='tam')
+        c=w.app.test_client()
+        with c.session_transaction() as s:s.update(ogretmen_id=other['id'],ogretmen_adi='ADEM AKGÜL',ogretmen_yetki='tam')
+        self.assertNotIn('/lgs/kurum-pdf',c.get('/lgs').get_data(as_text=True))
+        self.assertEqual(c.post('/lgs/kurum-pdf').status_code,403)
+
+    def test_course_result_edit_undo_and_parent_analysis(self):
+        payload=dict(ogrenci=self.oid,tur='ders',ad='35 soruluk matematik testi',tarih='2026-10-01',ders='Matematik',soru_sayisi='35',dogru='26',yanlis='4',yanlis_goturme='0')
+        self.assertEqual(self.teacher_client.post('/sonuclar',data=payload).status_code,302)
+        creation=self._latest_action()
+        record=next(r for r in d.lgs_denemeler(self.oid,200) if r['ad']==payload['ad'])
+        self.assertEqual(record['net'],26)
+        self.assertEqual(record['dersler'][0]['bos'],5)
+        self.assertIn('74.3%',self.parent.get('/veli/sonuclar').get_data(as_text=True))
+        self.assertIn('35 soruluk matematik testi',self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True))
+        from flask import template_rendered
+        contexts=[]
+        def capture(sender,template,context,**extra):contexts.append(context)
+        with template_rendered.connected_to(capture,w.app):
+            self.parent.get('/veli/lgs?bolum=deneme')
+        context=next(c for c in contexts if 'kocluk' in c)
+        self.assertNotIn(record['id'],[r['id'] for r in context['denemeler']])
+        payload.update(duzenle=record['id'],surum=record['surum'],dogru='30')
+        self.assertEqual(self.teacher_client.post('/sonuclar',data=payload).status_code,302)
+        edit=self._latest_action()
+        revised=next(r for r in d.lgs_denemeler(self.oid,200) if r['id']==record['id'])
+        self.assertEqual(revised['net'],30)
+        self.assertEqual(revised['surum'],2)
+        self.assertEqual(self.teacher_client.post('/sonuclar',data=payload).status_code,200)
+        self.assertEqual(next(r for r in d.lgs_denemeler(self.oid,200) if r['id']==record['id'])['surum'],2)
+        self.teacher_client.post('/islem-gecmisi/'+edit+'/geri-al')
+        restored=next(r for r in d.lgs_denemeler(self.oid,200) if r['id']==record['id'])
+        self.assertEqual(restored['net'],26)
+        self.assertEqual(restored['surum'],1)
+        self.teacher_client.post('/islem-gecmisi/'+creation+'/geri-al')
+        self.assertNotIn(record['id'],[r['id'] for r in d.lgs_denemeler(self.oid,200)])
+
+    def test_course_result_rejects_invalid_totals_and_foreign_edit(self):
+        payload=dict(ogrenci=self.oid,tur='ders',ad='Geçersiz toplam',tarih='2026-10-01',ders='Türkçe',soru_sayisi='10',dogru='9',yanlis='3',yanlis_goturme='3')
+        self.assertEqual(self.teacher_client.post('/sonuclar',data=payload).status_code,200)
+        self.assertFalse(any(r['ad']==payload['ad'] for r in d.lgs_denemeler(self.oid,200)))
+        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam')
+        saved=d.lgs_deneme_ekle(self.oid,'Başka öğretmenin testi','2026-10-01',[dict(ders='Türkçe',dogru=8,yanlis=1,bos=1,soru_sayisi=10)],ogretmen_id=other['id'],tur='ders')
+        self.assertEqual(self.teacher_client.get('/sonuclar',query_string={'ogrenci':self.oid,'duzenle':saved['id']}).status_code,403)
+
+    def test_school_branch_result_outside_lgs_courses(self):
+        payload=dict(ogrenci=self.oid,tur='ders',ad='Bilişim testi',tarih='2026-10-01',ders='Bilişim Teknolojileri',soru_sayisi='25',dogru='18',yanlis='2',yanlis_goturme='0')
+        self.assertEqual(self.teacher_client.post('/sonuclar',data=payload).status_code,302)
+        record=next(r for r in d.lgs_denemeler(self.oid,200) if r['ad']==payload['ad'])
+        self.assertEqual(record['dersler'][0]['soru_sayisi'],25)
+        self.assertEqual(record['dersler'][0]['bos'],5)
+        self.assertIn('Bilişim Teknolojileri',self.parent.get('/veli/sonuclar').get_data(as_text=True))
+
+    def test_undo_blocks_foreign_actor_and_intervening_change(self):
+        payload=dict(sinif_id=self.sid,ogrenci_id=self.oid,hafta=self.week,alan='odev_not',deger='İlk not')
+        self.teacher_client.post('/haftalik-takip/metin',json=payload)
+        action=self._latest_action()
+        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam')
+        client=w.app.test_client()
+        with client.session_transaction() as s:s.update(ogretmen_id=other['id'],ogretmen_adi=other['ad_soyad'],ogretmen_yetki='tam')
+        self.assertEqual(client.post('/islem-gecmisi/'+action+'/geri-al').status_code,403)
+        client.post('/haftalik-takip/metin',json={**payload,'deger':'Son not'})
+        response=self.teacher_client.post('/islem-gecmisi/'+action+'/geri-al',follow_redirects=True)
+        self.assertIn('daha sonra başka bir değişiklik',response.get_data(as_text=True))
+        self.assertEqual(d.haftalik_takip_sinif(self.sid,self.week)[self.oid]['odev_not'],'Son not')
+
+    def test_book_approval_undo_restores_points_and_treasure(self):
+        con=d._conn()
+        student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='5/B' ORDER BY o.id LIMIT 1").fetchone())
+        con.close()
+        oid,sid=student['id'],student['sinif_id']
+        book='Bana Derler Küp Cadısı'
+        d.haftalik_takip_metin(sid,oid,self.week,'kitap_adi',book,self.teacher['id'])
+        p=w.app.test_client()
+        with p.session_transaction() as s:s['veli_ogrenci_id']=oid
+        p.post('/veli/kitap-okuma/kaydet',data={'kitap_adi':book,'hafta':self.week})
+        entry=d.kitap_okuma_ogrenci_gecmis(oid)[0]
+        con=d._conn()
+        before=con.execute('SELECT * FROM gelisim_puan WHERE ogrenci_id=?',(oid,)).fetchone()
+        before=dict(before) if before else None
+        con.close()
+        self.teacher_client.post('/ogretmen/kitap-okuma/'+str(entry['id'])+'/onayla',data={})
+        action=self._latest_action()
+        self.teacher_client.post('/islem-gecmisi/'+action+'/geri-al')
+        self.assertEqual(d.kitap_okuma_ogrenci_gecmis(oid)[0]['durum'],'onay_bekliyor')
+        con=d._conn()
+        after=con.execute('SELECT * FROM gelisim_puan WHERE ogrenci_id=?',(oid,)).fetchone()
+        after=dict(after) if after else None
+        con.close()
+        self.assertEqual(before,after)
+        self.assertIn('SÜRPRİZ ROZET',p.get('/veli').get_data(as_text=True))
+
+    def test_institution_replacement_undo_restores_deleted_results(self):
+        from unittest.mock import patch
+        teacher=next(r for r in d.tum_ogretmenler() if r['ad_soyad']=='ADEM AKGÜL')
+        client=w.app.test_client()
+        with client.session_transaction() as s:s.update(ogretmen_id=teacher['id'],ogretmen_adi=teacher['ad_soyad'],ogretmen_yetki='tam')
+        title='Kurum geri alma testi'
+        earlier=d.lgs_deneme_ekle(self.oid,title,'2026-09-25',[dict(ders='Matematik',dogru=10,yanlis=5,bos=5)])
+        original=d.lgs_deneme_ekle(self.oid,title,'2026-10-01',[dict(ders='Matematik',dogru=12,yanlis=5,bos=3)])
+        before=next(r for r in d.lgs_denemeler(self.oid,200) if r['id']==original['id'])
+        parsed={'ad':title,'tarih':'2026-10-01','satirlar':[{}]}
+        matched={'eslesen':[{'ogrenci_id':self.oid,'dersler':[dict(ders='Matematik',dogru=16,yanlis=2,bos=2)],'net':15.33}], 'kalan':[]}
+        with patch('deneme_kurum.kurum_pdf_oku',return_value=parsed),patch('deneme_kurum.kurum_ogrenci_esle',return_value=matched):
+            self.assertEqual(client.post('/lgs/kurum-pdf',data={'pdf':(BytesIO(b'%PDF-fixture'),'fixture.pdf')}).status_code,302)
+        con=d._conn()
+        action=con.execute('SELECT id FROM ogretmen_islem WHERE ogretmen_id=? ORDER BY rowid DESC LIMIT 1',(teacher['id'],)).fetchone()[0]
+        con.close()
+        self.assertNotIn(original['id'],[r['id'] for r in d.lgs_denemeler(self.oid,200)])
+        self.assertIn(earlier['id'],[r['id'] for r in d.lgs_denemeler(self.oid,200)])
+        client.post('/islem-gecmisi/'+action+'/geri-al')
+        after=next(r for r in d.lgs_denemeler(self.oid,200) if r['id']==original['id'])
+        self.assertEqual(before,after)
+        self.assertEqual(sum(r['ad']==title for r in d.lgs_denemeler(self.oid,200)),2)
+
+    def test_published_homework_edit_and_undo(self):
+        import re
+        self.teacher_client.post('/odev/ekle',data=dict(sinif_id=self.sid,baslik='Ödev düzenleme testi',aciklama='İlk açıklama',ders='Matematik',son_tarih='2026-10-02'))
+        homework=next(r for r in d.sinif_odevleri(self.sid) if r['baslik']=='Ödev düzenleme testi')
+        html=self.teacher_client.get('/odev/'+str(homework['id'])+'/duzenle').get_data(as_text=True)
+        version=unescape(re.search(r'name="surum" value="([^"]+)"',html).group(1))
+        self.teacher_client.post('/odev/'+str(homework['id'])+'/duzenle',data=dict(surum=version,baslik='Düzeltilmiş ödev',aciklama='Yeni açıklama',ders='Matematik',son_tarih='2026-10-03'))
+        self.assertEqual(d.odev_detay(homework['id'])['baslik'],'Düzeltilmiş ödev')
+        action=self._latest_action()
+        self.teacher_client.post('/islem-gecmisi/'+action+'/geri-al')
+        restored=d.odev_detay(homework['id'])
+        self.assertEqual(restored['baslik'],homework['baslik'])
+        self.assertEqual(restored['aciklama'],'İlk açıklama')
+
     def test_tracking_malformed_request(self):
         for url in ['/haftalik-takip/isaret','/haftalik-takip/metin','/haftalik-takip/toplu']:
             for payload in [{'sinif_id':'abc'},['wrong shape']]:

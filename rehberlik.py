@@ -19,7 +19,7 @@ FILE_TYPES = {'pdf': ('application/pdf', 'Sunum / PDF'), 'ppt': ('application/vn
               'pptx': ('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'Sunum'),
               'mp4': ('video/mp4', 'Video'), 'webm': ('video/webm', 'Video')}
 FILE_DIR = Path(os.environ.get('REHBERLIK_DOSYA_KLASORU') or Path(db.DB_PATH).parent / 'rehberlik-dosyalar')
-READ_REPORTS = {'analiz_merkezi', 'rapor_ozet', 'rapor_ozet_csv', 'rapor_excel', 'rapor_excel_detayli',
+READ_REPORTS = {'api_ogrenci_ara', 'analiz_merkezi', 'rapor_ozet', 'rapor_ozet_csv', 'rapor_excel', 'rapor_excel_detayli',
                 'rapor_analiz_pdf', 'rapor_haftalik', 'rapor_karsilastir', 'rapor_anonim_sinif',
                 'ogretmen_kitap_okuma', 'ogretmen_kitap_okuma_excel', 'ders_programi', 'kitap_odev_rapor'}
 

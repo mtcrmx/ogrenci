@@ -68,6 +68,7 @@
               <div class="h-full bg-emerald-400" style="width:{{ oran }}%"></div>
             </div>
           </a>
+          {% if od.ogretmen_id == session.get('ogretmen_id') %}<a class="app-button" href="{{ url_for('odev_duzenle',odev_id=od.id) }}">Ödevi düzenle</a>{% endif %}
           {% else %}
           <p class="text-sm text-slate-400">Henüz ödev yok.</p>
           {% endfor %}

@@ -237,7 +237,7 @@ _RAPOR_SADECE_ROTALAR = frozenset({
     "rapor_ozet", "rapor_ozet_csv", "rapor_excel", "rapor_excel_detayli",
     "rapor_analiz_pdf", "rapor_arsiv_sayfa", "rapor_arsiv_sifirla",
     "rapor_arsiv_yedek_geri_yukle", "rapor_arsiv_indir",
-    "analiz_merkezi",
+    "analiz_merkezi", "api_ogrenci_ara",
     "rapor_haftalik", "rapor_karsilastir", "rapor_anonim_sinif",
     "manifest", "service_worker",
     "ogretmen_sinav_analiz", "ogretmen_sinav_hazirla",
@@ -429,11 +429,17 @@ def _ekran_duzeni_context():
     veli = endpoint.startswith("veli_") and bool(session.get("veli_ogrenci_id"))
     rol = "veli" if veli else ("ogretmen" if session.get("ogretmen_id") else "")
     siniflar = ogretmen_siniflari(session["ogretmen_id"]) if rol == "ogretmen" else []
-    if rol == "ogretmen" and endpoint in {"dashboard", "karne"}:
+    if rol == "ogretmen" and endpoint in {"dashboard", "karne", "sonuclar", "lgs"}:
         siniflar = aktif_sube_siniflari() or siniflar
     if rol == "ogretmen" and not siniflar:
         siniflar = aktif_sube_siniflari()
+    if rol == 'ogretmen' and endpoint == 'lgs':
+        siniflar = [s for s in siniflar if s['sinif_adi'].startswith('8/')]
     secili = _ui_sinif_sec(siniflar, request.args.get("sinif_id", type=int) or request.args.get("sinif", type=int)) if siniflar else None
+    if rol == 'ogretmen' and endpoint in ('lgs', 'sonuclar') and request.args.get('ogrenci', type=int):
+        selected_student = _ogrenci_bul(request.args.get('ogrenci', type=int))
+        if selected_student and selected_student['sinif_id'] in {s['id'] for s in siniflar}:
+            secili = selected_student['sinif_id']
     ogrenci = _ogrenci_bul(int(session["veli_ogrenci_id"])) if veli else None
     rehber_yeni = []
     if veli and endpoint == 'veli_panel':
@@ -3818,7 +3824,10 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
     """Veli ve öğrencinin gördüğü sonuç, ders analizi ve bir sonraki adım."""
     hedef = (hedef or "").strip()
     son = denemeler[0] if denemeler else None
-    onceki = denemeler[1] if len(denemeler) > 1 else None
+    def kapsam(kayit):
+        return sorted((s['ders'], s.get('soru_sayisi') or LGS_SORU_SAYISI.get(s['ders'], 10), s.get('yanlis_goturme', 3)) for s in kayit['dersler'])
+    onceki = next((d for d in denemeler[1:] if kapsam(d) == kapsam(son)), None) if son else None
+    toplam_soru = sum(s.get('soru_sayisi') or LGS_SORU_SAYISI.get(s['ders'], 10) for s in son['dersler']) if son else 90
     ders_satir = []
     zayif = None
     guclu = None
@@ -3830,10 +3839,10 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
             for s in (onceki["dersler"] if onceki else [])
         }
         for ders in list(LGS_DERSLER) + [d for d in girilen if d not in LGS_DERSLER]:
-            tavan = LGS_SORU_SAYISI.get(ders, 10)
             satir = girilen.get(ders)
             if not satir:
                 continue
+            tavan = satir.get('soru_sayisi') or LGS_SORU_SAYISI.get(ders, 10)
             net = float(satir["net"] or 0)
             yuzde = max(0, min(100, round(net * 100 / tavan))) if tavan else 0
             dogru = int(satir["dogru"] or 0)
@@ -3947,7 +3956,7 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
     )
     if soru >= 30:
         rozetler.append({"ad": "Soru temposu", "aciklama": f"Bu hafta {soru} soru çözüldü."})
-    yuzde = max(0, min(100, round(float(son["net"]) * 100 / 90))) if son else 0
+    yuzde = max(0, min(100, round(float(son["net"]) * 100 / toplam_soru))) if son and toplam_soru else 0
     hedef_net = max(0, min(90, int(hedef_net or 0)))
     kalan = round(max(0, hedef_net - float(son["net"])), 2) if son and hedef_net else hedef_net
     if hedef_net and son:
@@ -3968,7 +3977,7 @@ def _lgs_kocluk(denemeler, oran, gorev_sayisi, bugun_gorev, gunluk, hedef, hedef
         "kisa": kisa,
         "rozetler": rozetler,
         "yuzde": yuzde,
-        "tavan": 90,
+        "tavan": toplam_soru,
         "hafta_soru": soru,
     }
 
@@ -4073,6 +4082,8 @@ def lgs():
 @app.route("/lgs/kurum-pdf", methods=["POST"])
 @giris_zorunlu
 def lgs_kurum_pdf():
+    if not kurum_deneme_yetkili_mi():
+        abort(403)
     dosya = request.files.get("pdf")
     if not dosya or not (dosya.filename or "").lower().endswith(".pdf"):
         flash("Kurum listesinin PDF dosyasını seçin.", "warning")
@@ -4092,18 +4103,24 @@ def lgs_kurum_pdf():
         for ogr in sinif_ogrencileri(sinif["id"]):
             ogrenciler.append({"id": ogr["id"], "ad_soyad": ogr["ad_soyad"], "sinif_adi": sinif["sinif_adi"]})
     sonuc = kurum_ogrenci_esle(liste["satirlar"], ogrenciler)
+    yazilan = 0
+    hatali = 0
     for satir in sonuc["eslesen"]:
-        lgs_deneme_onek_sil(satir["ogrenci_id"], "7. Sınıf Süreç İzleme%")
-        lgs_deneme_onek_sil(satir["ogrenci_id"], liste["ad"])
-        lgs_deneme_ekle(
+        kayit = lgs_deneme_ekle(
             satir["ogrenci_id"], liste["ad"], liste["tarih"], satir["dersler"],
-            puan=satir.get("puan"), siki=False,
+            puan=satir.get("puan"), siki=False, ogretmen_id=session['ogretmen_id'], tur='kurum', kurum_yenile=True,
         )
+        if not kayit.get("ok"):
+            hatali += 1
+            continue
+        yazilan += 1
         veli_haber_ekle(
             satir["ogrenci_id"],
             f"{liste['ad']} sonucu geldi. Toplam net {satir['net']}.",
         )
-    mesaj = f"{liste['ad']}: {len(sonuc['eslesen'])} öğrenci yazıldı."
+    mesaj = f"{liste['ad']}: {yazilan} öğrenci yazıldı."
+    if hatali:
+        mesaj += f" {hatali} geçersiz sonuç kaydedilmedi; eski kayıtları korundu."
     if sonuc["kalan"]:
         mesaj += " Eşleşmeyen: " + ", ".join(sonuc["kalan"][:8])
         if len(sonuc["kalan"]) > 8:
@@ -4458,6 +4475,7 @@ def _lgs_ekran(veli: bool):
                 request.form.get("ad", ""),
                 request.form.get("tarih") or date.today().isoformat(),
                 dersler,
+                ogretmen_id=session['ogretmen_id'], tur='deneme',
             )
             if not sonuc.get("ok"):
                 flash(sonuc.get("hata") or "Deneme kaydedilemedi.", "warning")
@@ -4506,7 +4524,8 @@ def _lgs_ekran(veli: bool):
     oran = round(tamam * 100 / len(gorevler)) if gorevler else 0
     saat = datetime.now().hour
     selam = "Günaydın" if saat < 12 else ("İyi günler" if saat < 18 else "İyi akşamlar")
-    denemeler = lgs_denemeler(oid, 12)
+    tum_sonuclar = lgs_denemeler(oid, 200)
+    denemeler = [d for d in tum_sonuclar if d.get('tur') != 'ders'][:12]
     grafik = list(reversed(denemeler[:8]))
     gunluk = lgs_gunluk_liste(oid) if veli else []
     profil = lgs_profil(oid)
@@ -4542,6 +4561,7 @@ def _lgs_ekran(veli: bool):
         selam=selam,
         gunluk=gunluk,
         denemeler=denemeler,
+        analiz=course_analysis(tum_sonuclar),
         kocluk=kocluk,
         grafik_etiket=[d["ad"] for d in grafik],
         grafik_net=[d["net"] for d in grafik],
@@ -6889,6 +6909,10 @@ def api_admin_yedek_geri_yukle(yedek_id: int):
 
 from rehberlik import register_rehberlik
 register_rehberlik(app)
+from student_results import register_results, institution_allowed as kurum_deneme_yetkili_mi, course_analysis
+register_results(app, giris_zorunlu, _ogretmen_ogrencisine_erisebilir)
+from change_history import register_history
+register_history(app, giris_zorunlu)
 
 if __name__ == "__main__":
     import socket

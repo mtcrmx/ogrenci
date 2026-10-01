@@ -182,7 +182,7 @@
 {# ── Makro: Öğrenci Kartı ─────────────────────────────────────────────── #}
 {% macro ogrenci_karti(o, sinif_id) %}
 <div class="ogrenci-kart flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300"
-     data-ad="{{ o.ad_soyad }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}"
+     data-ad="{{ o.ad_soyad }}" data-no="{{ o.ogr_no }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}"
      role="button" tabindex="0">
   <span class="student-avatar flex-shrink-0" aria-hidden="true">{{ o.emoji }}</span>
   <div class="flex-1 min-w-0">
@@ -236,7 +236,8 @@ function filtrele() {
   const cards = [...document.querySelectorAll('.ogrenci-kart')];
   let visible = 0;
   cards.forEach(k => {
-    const match = k.dataset.ad.toLocaleLowerCase('tr').includes(q);
+    const match = window.studentSearchMatches ? window.studentSearchMatches(k.dataset.ad,k.dataset.no,q) : k.dataset.ad.toLocaleLowerCase('tr').includes(q);
+    k.hidden = !match;
     k.style.display = match ? '' : 'none';
     if (match) visible++;
   });
@@ -270,7 +271,7 @@ async function yenile() {
 function kartHTML(o) {
   const ad = String(o.ad_soyad || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const emoji = String(o.emoji || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  return '<div class="ogrenci-kart flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300" data-ad="' + ad + '" data-id="' + o.id + '" data-sinif="' + SINIF_ID + '" role="button" tabindex="0">' +
+  return '<div class="ogrenci-kart flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300" data-ad="' + ad + '" data-no="' + o.ogr_no + '" data-id="' + o.id + '" data-sinif="' + SINIF_ID + '" role="button" tabindex="0">' +
     '<span class="student-avatar flex-shrink-0" aria-hidden="true">' + emoji + '</span>' +
     '<div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm break-words">' + ad + '</div>' +
     '<div class="text-xs text-slate-500">No: ' + (o.ogr_no || '') + '</div></div>' +
