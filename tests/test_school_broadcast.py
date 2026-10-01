@@ -246,6 +246,22 @@ class SchoolBroadcast(unittest.TestCase):
         stream.seek(0)
         self.assertEqual(self.admin.post('/yayin/yonetim',data={**fields,'dosya':(stream,'slides.pptx')}).status_code,302)
         self.assertIn('pptx',[i['tur'] for i in self.guest.get('/ekran/'+self.token+'/veri').json['icerikler']])
+        con = d._conn()
+        pdf_name = con.execute('SELECT dosya FROM okul_yayin_icerik WHERE id=?', (item['id'],)).fetchone()[0]
+        con.close()
+        with patch.object(tv, 'prepared_presentation', return_value=dict(status='ready', path=tv.media_dir()/pdf_name, pages=2)):
+            pptx = next(i for i in self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'] if i['tur']=='pptx')
+            self.assertEqual(pptx['presentation_status'], 'ready')
+            self.assertEqual(pptx['pdf_pages'], 2)
+            self.assertNotIn('path', pptx)
+            slide = self.guest.get(pptx['page_url']+'?sayfa=2')
+            self.assertEqual(slide.status_code, 200)
+            self.assertEqual(slide.content_type, 'image/jpeg')
+            slide.close()
+            self.assertEqual(self.guest.get(pptx['page_url']+'?sayfa=3').status_code, 404)
+            self.assertEqual(self.guest.get(pptx['page_url'].replace(self.token, 'wrong-token')).status_code, 404)
+            self.post(islem='sil', id=pptx['id'])
+            self.assertEqual(self.guest.get(pptx['page_url']).status_code, 404)
         for filename,bytes_ in [('bad.pptx',b'PK broken archive'),('bad.pdf',b'%PDF-broken')]:
             r=self.admin.post('/yayin/yonetim',data={**fields,'dosya':(BytesIO(bytes_),filename)})
             self.assertEqual(r.status_code,200)

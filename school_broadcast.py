@@ -16,6 +16,7 @@ from broadcast_timetable import timetable
 from broadcast_calendar import calendar_seed
 from lgs_sayac import ISTANBUL, lgs_sayac_verisi
 from student_results import institution_allowed
+from broadcast_presentations import office_command, prepared_presentation
 
 FILE_TYPES = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
               'webp': 'image/webp', 'mp4': 'video/mp4', 'webm': 'video/webm',
@@ -168,11 +169,19 @@ def payload(token=None, now=None):
         item['version'] = filename
         if item['tur'] != 'metin':
             item['url'] = url_for('okul_ekran_medya', token=token, cid=item['id']) if token else url_for('yayin_medya', cid=item['id'])
-        if item['tur'] == 'pdf' and pdfium:
+        if item['tur'] in ('pdf', 'pptx') and pdfium:
             path = media_dir() / filename
             try:
-                item['pdf_pages'] = pdf_page_count(str(path), path.stat().st_mtime_ns)
-                item['page_url'] = url_for('okul_ekran_sayfa', token=token, cid=item['id']) if token else url_for('yayin_sayfa', cid=item['id'])
+                ready = True
+                if item['tur'] == 'pptx':
+                    prepared = prepared_presentation(path)
+                    item['presentation_status'] = prepared['status']
+                    ready = prepared['status'] == 'ready'
+                    if ready:
+                        path = prepared['path']
+                if ready:
+                    item['pdf_pages'] = pdf_page_count(str(path), path.stat().st_mtime_ns)
+                    item['page_url'] = url_for('okul_ekran_sayfa', token=token, cid=item['id']) if token else url_for('yayin_sayfa', cid=item['id'])
             except (OSError, ValueError):
                 pass
     # Only whitelist public timetable fields. Never merge student/parent/guidance data.
@@ -255,15 +264,21 @@ def published_media(cid):
 def pdf_page_response(cid):
     row, path = published_media(cid)
     number = request.args.get('sayfa', default=1, type=int)
-    if row['tur'] != 'pdf' or not 1 <= number <= 100:
+    if row['tur'] not in ('pdf', 'pptx') or not 1 <= number <= 100:
         abort(404)
     if not pdfium:
         abort(503)
+    original_name = path.name
+    if row['tur'] == 'pptx':
+        prepared = prepared_presentation(path)
+        if prepared['status'] != 'ready':
+            abort(503)
+        path = prepared['path']
     # PDFium is not thread-safe. Cache immutable uploads; never serve this directory directly.
     with PDF_RENDER_LOCK:
         cache = media_dir() / 'pdf-onizleme'
         cache.mkdir(exist_ok=True)
-        target = cache / f'{path.name}-{number}.jpg'
+        target = cache / f'{original_name}-{number}.jpg'
         if not target.exists():
             with pdfium.PdfDocument(path) as doc:
                 if number > len(doc):
@@ -325,6 +340,10 @@ def register_broadcast(app, login_required):
             response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; frame-ancestors 'self'"
         return response
 
+    @app.get('/saglik')
+    def saglik():
+        return jsonify(ok=True, pdf=bool(pdfium), sunum=bool(office_command()))
+
     @app.get('/api/yayin/okul')
     @login_required
     def api_yayin_okul():
@@ -371,7 +390,7 @@ def register_broadcast(app, login_required):
             request.max_content_length = MAX_FILE + 1024 * 1024
         content_guard()
         admin = institution_allowed()
-        if request.method == 'POST' and request.form.get('islem') not in ('icerik', 'duyuru', 'sil') and not admin:
+        if request.method == 'POST' and request.form.get('islem') not in ('icerik', 'duyuru', 'sil', 'sunum_hazirla') and not admin:
             abort(403)
         today = datetime.now(ISTANBUL).date().isoformat()
         con = db._conn()
@@ -441,6 +460,13 @@ def register_broadcast(app, login_required):
                                 if teacher:
                                     occupied.add(teacher)
                                 con.execute('INSERT INTO okul_yayin_program VALUES (?,?,?,?)', (day, n, name, teacher))
+                elif action == 'sunum_hazirla':
+                    row = con.execute('SELECT * FROM okul_yayin_icerik WHERE id=?', (request.form.get('id', type=int),)).fetchone()
+                    edit_guard(row)
+                    if row['tur'] != 'pptx':
+                        abort(400)
+                    state = prepared_presentation(media_dir() / row['dosya'], retry=True)
+                    flash(state['message'], 'warning' if state['status'] == 'failed' else 'success')
                 elif action == 'sil':
                     # Hide immediately; keep the file until after the transaction commits.
                     row = con.execute('SELECT * FROM okul_yayin_icerik WHERE id=?', (request.form.get('id', type=int),)).fetchone()
@@ -501,6 +527,9 @@ def register_broadcast(app, login_required):
         con = db._conn()
         items = [dict(r) for r in con.execute('SELECT * FROM okul_yayin_icerik '+('' if admin else 'WHERE ogretmen_id=? ')+'ORDER BY id DESC', () if admin else (session['ogretmen_id'],))]
         con.close()
+        for item in items:
+            if item['tur'] == 'pptx':
+                item['preparation'] = prepared_presentation(media_dir() / item['dosya'])
         edit_id = request.args.get('duzenle', type=int)
         edit = next((i for i in items if i['id'] == edit_id), None)
         if edit_id and not edit:

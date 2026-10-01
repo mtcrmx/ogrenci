@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+__pycache__
+*.pyc
+*.db
+*.db-*
+*.sqlite*
+yayin-dosyalar
+rehberlik-dosyalar
+android_app
+node_modules
+.venv
+design-qa.md
