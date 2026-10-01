@@ -19,4 +19,15 @@ time=145000;assert.equal(player.due(),true,'An error does not leave the playlist
 player.setPaused(true);player.loading();player.visible();time=200000;
 assert.equal(player.due(),false);player.setPaused(false);time=205000;
 assert.equal(player.due(),true,'Content loaded during pause still receives five seconds');
-console.log('PASS: five-second timing, delayed loading, pause/resume, video and error recovery');
+player.setDuration(10);player.loading();time=230000;
+assert.equal(player.due(),false,'Loading does not use up the selected interval');
+player.visible();time=239999;assert.equal(player.due(),false);
+time=240000;assert.equal(player.due(),true,'A ten-second slide receives the full interval');
+player.visible();time=243000;player.setPaused(true);time=300000;
+assert.equal(player.due(),false);player.setPaused(false);time=306999;
+assert.equal(player.due(),false);time=307000;
+assert.equal(player.due(),true,'Resume keeps seven seconds of a ten-second interval');
+player.setDuration(5);player.visible();time=311999;assert.equal(player.due(),false);
+time=312000;assert.equal(player.due(),true,'The next file can select five seconds independently');
+player.setDuration(300);assert.equal(player.duration,5,'Unsupported old intervals use the default');
+console.log('PASS: selectable five/ten-second timing, delayed loading, pause/resume, video and error recovery');

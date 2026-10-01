@@ -165,7 +165,7 @@ def payload(token=None, now=None):
         WHERE aktif=1 AND baslangic<=? AND bitis>=? ORDER BY id''', (stamp, stamp))]
     con.close()
     for item in items:
-        item['sure'] = 5  # Existing uploads use the same five-second TV playback.
+        item['sure'] = 10 if item['sure'] == 10 else 5
         filename = item.pop('dosya')
         item['version'] = filename
         if item['tur'] != 'metin':
@@ -478,7 +478,10 @@ def register_broadcast(app, login_required):
                     title = request.form.get('baslik', '').strip()
                     text = request.form.get('metin', '').strip()
                     start, end = (date.fromisoformat(request.form[k]).isoformat() for k in ('baslangic', 'bitis'))
-                    duration = 5
+                    duration = request.form.get('sure', '5') if action == 'icerik' else '5'
+                    if duration not in ('5', '10'):
+                        raise ValueError('Otomatik geçiş için 5 veya 10 saniye seçin.')
+                    duration = int(duration)
                     limit = 1000 if action == 'duyuru' else 300
                     if not title or len(title) > 100 or len(text) > limit or start > end:
                         raise ValueError(f'Başlık 1–100, metin en fazla {limit} karakter ve tarih aralığı geçerli olmalı.')
@@ -529,7 +532,7 @@ def register_broadcast(app, login_required):
         items = [dict(r) for r in con.execute('SELECT * FROM okul_yayin_icerik '+('' if admin else 'WHERE ogretmen_id=? ')+'ORDER BY id DESC', () if admin else (session['ogretmen_id'],))]
         con.close()
         for item in items:
-            item['sure'] = 5
+            item['sure'] = 10 if item['sure'] == 10 else 5
             if item['tur'] == 'pptx':
                 item['preparation'] = prepared_presentation(media_dir() / item['dosya'])
         edit_id = request.args.get('duzenle', type=int)

@@ -1,6 +1,6 @@
 import {lessonState} from './school-broadcast-clock.mjs';
 import {mountPresentation} from './school-broadcast-presentations.js?v=20261001-fit-autoplay';
-import {BroadcastPlayback} from './school-broadcast-playback.mjs';
+import {BroadcastPlayback} from './school-broadcast-playback.mjs?v=20261001-duration';
 /* No student or parent data enters this screen. Times use Europe/Istanbul. */
 (() => {
   'use strict';
@@ -25,7 +25,7 @@ import {BroadcastPlayback} from './school-broadcast-playback.mjs';
   function slides(){
     const day=dateFmt.format(now()), published=data.icerikler.filter(i=>i.baslangic<=day&&i.bitis>=day);
     const media=published.filter(i=>i.tur!=='metin').map(i=>({...i,type:i.tur,title:i.baslik,kicker:i.tur==='video'?'ÖĞRETMENLERİMİZDEN · VİDEO':i.tur==='pdf'||i.tur==='pptx'?'ÖĞRETMENLERİMİZDEN · SUNUM':'ÖĞRETMENLERİMİZDEN · GÖRSEL'}));
-    return media.length?media:[{type:'welcome',title:'Birlikte öğreniyor, birlikte büyüyoruz.',kicker:'SUNUM VE VİDEO ALANI',sure:18}];
+    return media.length?media:[{type:'welcome',title:'Birlikte öğreniyor, birlikte büyüyoruz.',kicker:'SUNUM VE VİDEO ALANI',sure:5}];
   }
   function classNames(){return data.siniflar;}
   function render(){
@@ -37,7 +37,7 @@ import {BroadcastPlayback} from './school-broadcast-playback.mjs';
     body.replaceChildren();
     txt('slide-title',item.title);txt('slide-kicker',item.kicker);txt('slide-count',`${String(index+1).padStart(2,'0')} / ${String(list.length).padStart(2,'0')}`);
     const dots=$('slide-dots');dots.replaceChildren(...list.map((_,i)=>node('span','dot'+(i===index?' active':''))));
-    playback.loading();
+    playback.setDuration(item.sure);playback.loading();
     if(item.type==='pdf'||item.type==='pptx'){
       const wrap=node('div','presentation-wrap');body.append(wrap);wrap.append(node('p','presentation-loading','Sunum hazırlanıyor…'));
       presentation=mountPresentation(wrap,item,(page,count)=>{if(!current())return;txt('presentation-page',`${page} / ${count}`);$('presentation-prev').disabled=page<=1;$('presentation-next').disabled=page>=count;playback.visible();},ready=>{if(!current())return;$('presentation-controls').hidden=!ready;if(!ready)playback.failed();wrap.querySelector('.presentation-loading')?.remove();});
@@ -59,7 +59,7 @@ import {BroadcastPlayback} from './school-broadcast-playback.mjs';
     const [hm1,hm2,s]=timeFmt.format(now()).split(':');txt('clock',`${hm1}:${hm2}`);txt('seconds',s);txt('school-date',longDate.format(now()));
     if(revoked)return;
     if(playlistKey!==JSON.stringify(slides())){index=0;render();}
-    txt('playback-status',playback.paused?'Duraklatıldı':playback.phase==='loading'?'Yükleniyor…':playback.phase==='video'?'Video oynatılıyor':playback.phase==='failed'?'Sonraki yayın · 5 sn':'Otomatik · 5 sn');
+    txt('playback-status',playback.paused?'Duraklatıldı':playback.phase==='loading'?'Yükleniyor…':playback.phase==='video'?'Video oynatılıyor':`${playback.phase==='failed'?'Sonraki yayın':'Otomatik'} · ${playback.duration} sn`);
     updateAnnouncements();
     updateCalendar();
     const st=state(),sameDay=dateFmt.format(now())===data.tarih;

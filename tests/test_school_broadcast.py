@@ -141,7 +141,7 @@ class SchoolBroadcast(unittest.TestCase):
 
     def test_content_publication_window_edit_draft_and_media(self):
         today=datetime.now(tv.ISTANBUL).date().isoformat()
-        common=dict(islem='icerik',baslik='Kitap okuma saati',metin='<script>private()</script>',baslangic=today,bitis=today,sure='18',aktif='on')
+        common=dict(islem='icerik',baslik='Kitap okuma saati',metin='<script>private()</script>',baslangic=today,bitis=today,sure='5',aktif='on')
         self.assertEqual(self.post(**common).status_code,302)
         data=self.guest.get('/ekran/'+self.token+'/veri').json
         self.assertEqual(len(data['icerikler']),1)
@@ -194,7 +194,7 @@ class SchoolBroadcast(unittest.TestCase):
 
     def test_teacher_owns_content_and_cannot_edit_other_teacher(self):
         today=datetime.now(tv.ISTANBUL).date().isoformat()
-        fields=dict(islem='icerik',baslik='Yönetim duyurusu',metin='Okul duyurusu',baslangic=today,bitis=today,sure='18',aktif='on')
+        fields=dict(islem='icerik',baslik='Yönetim duyurusu',metin='Okul duyurusu',baslangic=today,bitis=today,sure='5',aktif='on')
         self.post(**fields)
         admin_id=self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]['id']
         client=w.app.test_client()
@@ -218,11 +218,14 @@ class SchoolBroadcast(unittest.TestCase):
         from pypdf import PdfWriter
         import zipfile
         today=datetime.now(tv.ISTANBUL).date().isoformat()
-        fields=dict(csrf=self.csrf,islem='icerik',baslik='PDF sunumu',metin='',baslangic=today,bitis=today,sure='8',aktif='on')
+        fields=dict(csrf=self.csrf,islem='icerik',baslik='PDF sunumu',metin='',baslangic=today,bitis=today,sure='10',aktif='on')
         pdf=PdfWriter();pdf.add_blank_page(width=960,height=540);pdf.add_blank_page(width=960,height=540);stream=BytesIO();pdf.write(stream);stream.seek(0)
         self.assertEqual(self.admin.post('/yayin/yonetim',data={**fields,'dosya':(stream,'slides.pdf')}).status_code,302)
         item=self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]
-        self.assertEqual(item['sure'], 5)
+        self.assertEqual(item['sure'], 10)
+        edit_page=self.admin.get('/yayin/yonetim?duzenle='+str(item['id'])).get_data(as_text=True)
+        self.assertIn('<option value="10" selected>10 saniye</option>',edit_page)
+        self.assertIn('Her slayt / görsel 10 sn',edit_page)
         self.assertEqual(item['tur'],'pdf');response=self.guest.get(item['url']);self.assertEqual(response.content_type,'application/pdf');response.close()
         self.assertEqual(item['pdf_pages'], 2)
         preview=self.guest.get(item['page_url']+'?sayfa=2')
@@ -268,7 +271,7 @@ class SchoolBroadcast(unittest.TestCase):
             self.assertEqual(r.status_code,200)
             self.assertNotIn('bad.',self.guest.get('/ekran/'+self.token+'/veri').get_data(as_text=True))
 
-    def test_five_seconds_applies_to_existing_uploads_and_new_form(self):
+    def test_duration_choices_persist_and_invalid_values_do_not_change_content(self):
         today = datetime.now(tv.ISTANBUL).date().isoformat()
         con = d._conn()
         con.execute('INSERT INTO okul_yayin_icerik(baslik,metin,tur,baslangic,bitis,sure,ogretmen_id) VALUES(?,?,?,?,?,?,?)',
@@ -277,11 +280,21 @@ class SchoolBroadcast(unittest.TestCase):
         item = self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]
         self.assertEqual(item['sure'], 5)
         page = self.admin.get('/yayin/yonetim').get_data(as_text=True)
-        self.assertIn('Her slayt ve görsel: 5 saniye', page)
+        self.assertIn('<select name="sure">', page)
+        self.assertIn('<option value="5" selected>5 saniye</option>', page)
+        self.assertIn('<option value="10" >10 saniye</option>', page)
         self.assertNotIn('min="8" max="300"', page)
-        self.assertEqual(self.post(islem='icerik', id=item['id'], baslik='Yeni süre', metin='Örnek',
-            baslangic=today, bitis=today, sure='5', aktif='on').status_code, 302)
-        con=d._conn();self.assertEqual(con.execute('SELECT sure FROM okul_yayin_icerik WHERE id=?',(item['id'],)).fetchone()[0],5);con.close()
+        fields=dict(islem='icerik',id=item['id'],baslik='Yeni süre',metin='Örnek',
+            baslangic=today,bitis=today,aktif='on')
+        for duration in ('10','5'):
+            self.assertEqual(self.post(**fields,sure=duration).status_code,302)
+            con=d._conn();self.assertEqual(con.execute('SELECT sure FROM okul_yayin_icerik WHERE id=?',(item['id'],)).fetchone()[0],int(duration));con.close()
+            self.assertEqual(self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]['sure'],int(duration))
+        for duration in ('7','300','invalid',''):
+            response=self.post(**fields,sure=duration)
+            self.assertEqual(response.status_code,200)
+            self.assertIn('5 veya 10 saniye seçin',response.get_data(as_text=True))
+            con=d._conn();self.assertEqual(con.execute('SELECT sure FROM okul_yayin_icerik WHERE id=?',(item['id'],)).fetchone()[0],5);con.close()
 
     def admin_teacher_id(self):
         with self.admin.session_transaction() as session:
