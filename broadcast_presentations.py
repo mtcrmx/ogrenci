@@ -19,8 +19,9 @@ def office_command():
     configured = os.environ.get('YAYIN_SOFFICE')
     if configured:
         return configured if Path(configured).is_file() else shutil.which(configured)
+    portable = sorted(Path(__file__).resolve().parent.glob('.libreoffice/squashfs-root/opt/libreoffice*/program/soffice'))
     return (shutil.which('libreoffice') or shutil.which('soffice') or
-            next((str(p) for p in (Path('C:/Program Files/LibreOffice/program/soffice.exe'),
+            next((str(p) for p in (*portable, Path('C:/Program Files/LibreOffice/program/soffice.exe'),
                                   Path('C:/Program Files (x86)/LibreOffice/program/soffice.exe')) if p.is_file()), None))
 
 
@@ -50,7 +51,7 @@ def _convert(source, target, command, key):
             result = subprocess.run([command, '-env:UserInstallation=' + profile.as_uri(),
                 '--headless', '--nologo', '--nodefault', '--norestore', '--convert-to',
                 'pdf:impress_pdf_Export', '--outdir', str(root), str(source)],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=90,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=180,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
             converted = root / (source.stem + '.pdf')
             if result.returncode or not converted.is_file() or converted.stat().st_size > 100 * 1024 * 1024:

@@ -1,8 +1,9 @@
 services:
   - type: web
     name: ogrenci-takip
-    runtime: docker
-    dockerfilePath: ./Dockerfile
+    runtime: python
+    buildCommand: pip install -r requirements.txt && (bash scripts/libreoffice_kur.sh || echo "LibreOffice kurulamadi; PPTX tarayicida gosterilecek")
+    startCommand: gunicorn web_app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     envVars:
       - key: SECRET_KEY
         generateValue: true
