@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
 <title>Erenler Cumhuriyet • Okul ekranı</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='school-broadcast.css') }}?v=20261001-jsticker">
-<script type="module" src="{{ url_for('static', filename='school-broadcast.js') }}?v=20261001-pptx-fallback"></script></head>
+<link rel="stylesheet" href="{{ url_for('static', filename='school-broadcast.css') }}?v=20261001-fit-autoplay">
+<script type="module" src="{{ url_for('static', filename='school-broadcast.js') }}?v=20261001-fit-autoplay"></script></head>
 <body class="school-screen">
 <div class="screen-shell">
   <header class="screen-header">
@@ -17,7 +17,7 @@
       <section class="lgs-mini clay"><span class="lgs-icon" aria-hidden="true">✦</span><div><strong id="lgs-days">Birlikte başaracağız</strong><small id="lgs-caption">Her gün bir adım ileri.</small></div></section>
     </aside>
     <div class="broadcast-center">
-      <section class="content-card clay" aria-label="Sunum ve video yayını"><div class="content-heading"><div><p class="eyebrow" id="slide-kicker">ÖĞRETMENLERİMİZDEN</p><h2 id="slide-title">Sunum ve video alanı</h2></div><span class="slide-count" id="slide-count">01 / 01</span></div><div id="slide-body" class="slide-body"></div><div class="slide-nav"><button type="button" id="previous" aria-label="Önceki yayın">‹</button><div id="slide-dots"></div><button type="button" id="next" aria-label="Sonraki yayın">›</button><button type="button" id="pause" aria-label="Yayını duraklat">Ⅱ</button><span id="presentation-controls" hidden><button type="button" id="presentation-prev" aria-label="Önceki sunum sayfası">‹</button><span id="presentation-page"></span><button type="button" id="presentation-next" aria-label="Sonraki sunum sayfası">›</button></span></div></section>
+      <section class="content-card clay" aria-label="Sunum ve video yayını"><div class="content-heading"><div><p class="eyebrow" id="slide-kicker">ÖĞRETMENLERİMİZDEN</p><h2 id="slide-title">Sunum ve video alanı</h2></div><span class="slide-count" id="slide-count">01 / 01</span></div><div id="slide-body" class="slide-body"></div><div class="slide-nav"><button type="button" id="previous" aria-label="Önceki yayın">‹</button><div id="slide-dots"></div><button type="button" id="next" aria-label="Sonraki yayın">›</button><button type="button" id="pause" aria-label="Yayını duraklat">Ⅱ</button><span id="presentation-controls" hidden><button type="button" id="presentation-prev" aria-label="Önceki sunum sayfası">‹</button><span id="presentation-page"></span><button type="button" id="presentation-next" aria-label="Sonraki sunum sayfası">›</button></span><span id="playback-status" class="playback-status" role="status" aria-label="Yayın durumu">Otomatik · 5 sn</span></div></section>
     </div>
     <aside class="teacher-panel clay" aria-label="Sınıfların ders öğretmenleri"><p class="eyebrow">SINIFLARIMIZ</p><h2>Kim hangi derste?</h2><p id="teacher-table-status" class="teacher-table-status"></p><div id="teacher-table-body" class="teacher-table-body"></div><p id="teacher-table-times" class="teacher-table-times"></p></aside>
     <section class="calendar-card clay" aria-label="Belirli gün ve haftalar"><div class="calendar-heading"><p class="eyebrow">BELİRLİ GÜN VE HAFTALAR</p><small id="calendar-state"></small></div><h2 id="calendar-title">Okul takvimi</h2><p id="calendar-dates"></p></section>

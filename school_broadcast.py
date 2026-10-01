@@ -50,7 +50,7 @@ def init_schema():
         CREATE TABLE IF NOT EXISTS okul_yayin_icerik (
             id INTEGER PRIMARY KEY AUTOINCREMENT, baslik TEXT NOT NULL, metin TEXT NOT NULL DEFAULT '',
             dosya TEXT NOT NULL DEFAULT '', tur TEXT NOT NULL DEFAULT 'metin',
-            baslangic TEXT NOT NULL, bitis TEXT NOT NULL, sure INTEGER NOT NULL DEFAULT 20,
+            baslangic TEXT NOT NULL, bitis TEXT NOT NULL, sure INTEGER NOT NULL DEFAULT 5,
             aktif INTEGER NOT NULL DEFAULT 1, ogretmen_id INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS okul_yayin_program (
             gun INTEGER NOT NULL, ders_no INTEGER NOT NULL, sinif_adi TEXT NOT NULL,
@@ -165,6 +165,7 @@ def payload(token=None, now=None):
         WHERE aktif=1 AND baslangic<=? AND bitis>=? ORDER BY id''', (stamp, stamp))]
     con.close()
     for item in items:
+        item['sure'] = 5  # Existing uploads use the same five-second TV playback.
         filename = item.pop('dosya')
         item['version'] = filename
         if item['tur'] != 'metin':
@@ -477,10 +478,10 @@ def register_broadcast(app, login_required):
                     title = request.form.get('baslik', '').strip()
                     text = request.form.get('metin', '').strip()
                     start, end = (date.fromisoformat(request.form[k]).isoformat() for k in ('baslangic', 'bitis'))
-                    duration = int(request.form.get('sure', '20'))
+                    duration = 5
                     limit = 1000 if action == 'duyuru' else 300
-                    if not title or len(title) > 100 or len(text) > limit or start > end or not 8 <= duration <= 300:
-                        raise ValueError(f'Başlık 1–100, metin en fazla {limit} karakter; süre 8–300 saniye ve tarih aralığı geçerli olmalı.')
+                    if not title or len(title) > 100 or len(text) > limit or start > end:
+                        raise ValueError(f'Başlık 1–100, metin en fazla {limit} karakter ve tarih aralığı geçerli olmalı.')
                     if action == 'duyuru' and not text:
                         raise ValueError('Kayan yazıda gösterilecek duyuru metnini yazın.')
                     cid = request.form.get('id', type=int)
@@ -528,6 +529,7 @@ def register_broadcast(app, login_required):
         items = [dict(r) for r in con.execute('SELECT * FROM okul_yayin_icerik '+('' if admin else 'WHERE ogretmen_id=? ')+'ORDER BY id DESC', () if admin else (session['ogretmen_id'],))]
         con.close()
         for item in items:
+            item['sure'] = 5
             if item['tur'] == 'pptx':
                 item['preparation'] = prepared_presentation(media_dir() / item['dosya'])
         edit_id = request.args.get('duzenle', type=int)

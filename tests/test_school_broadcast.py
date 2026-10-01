@@ -222,6 +222,7 @@ class SchoolBroadcast(unittest.TestCase):
         pdf=PdfWriter();pdf.add_blank_page(width=960,height=540);pdf.add_blank_page(width=960,height=540);stream=BytesIO();pdf.write(stream);stream.seek(0)
         self.assertEqual(self.admin.post('/yayin/yonetim',data={**fields,'dosya':(stream,'slides.pdf')}).status_code,302)
         item=self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]
+        self.assertEqual(item['sure'], 5)
         self.assertEqual(item['tur'],'pdf');response=self.guest.get(item['url']);self.assertEqual(response.content_type,'application/pdf');response.close()
         self.assertEqual(item['pdf_pages'], 2)
         preview=self.guest.get(item['page_url']+'?sayfa=2')
@@ -266,6 +267,25 @@ class SchoolBroadcast(unittest.TestCase):
             r=self.admin.post('/yayin/yonetim',data={**fields,'dosya':(BytesIO(bytes_),filename)})
             self.assertEqual(r.status_code,200)
             self.assertNotIn('bad.',self.guest.get('/ekran/'+self.token+'/veri').get_data(as_text=True))
+
+    def test_five_seconds_applies_to_existing_uploads_and_new_form(self):
+        today = datetime.now(tv.ISTANBUL).date().isoformat()
+        con = d._conn()
+        con.execute('INSERT INTO okul_yayin_icerik(baslik,metin,tur,baslangic,bitis,sure,ogretmen_id) VALUES(?,?,?,?,?,?,?)',
+            ('Eski süreli içerik', 'Örnek metin', 'metin', today, today, 300, self.admin_teacher_id()))
+        con.commit();con.close()
+        item = self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'][0]
+        self.assertEqual(item['sure'], 5)
+        page = self.admin.get('/yayin/yonetim').get_data(as_text=True)
+        self.assertIn('Her slayt ve görsel: 5 saniye', page)
+        self.assertNotIn('min="8" max="300"', page)
+        self.assertEqual(self.post(islem='icerik', id=item['id'], baslik='Yeni süre', metin='Örnek',
+            baslangic=today, bitis=today, sure='5', aktif='on').status_code, 302)
+        con=d._conn();self.assertEqual(con.execute('SELECT sure FROM okul_yayin_icerik WHERE id=?',(item['id'],)).fetchone()[0],5);con.close()
+
+    def admin_teacher_id(self):
+        with self.admin.session_transaction() as session:
+            return session['ogretmen_id']
 
     def test_dedicated_announcements_validate_publish_edit_and_draft(self):
         today=datetime.now(tv.ISTANBUL).date().isoformat()
