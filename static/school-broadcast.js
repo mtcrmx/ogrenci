@@ -10,7 +10,7 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   const dateFmt=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'});
   const longDate=new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',weekday:'long',day:'numeric',month:'long',year:'numeric'});
   let offset=Date.parse(data.simdi)-Date.now(), index=0, paused=false, deadline=0, signature='', periodKey='', playlistKey='', fetching=false, revoked=false, wake=null;
-  let presentation=null, announcementIndex=0, announcementDeadline=0, announcementKey='';
+  let presentation=null, announcementKey='';
   let calendarIndex=0, calendarDeadline=0, calendarKey='';
   const now=()=>new Date(Date.now()+offset);
   function state(){
@@ -85,10 +85,16 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   }
   function updateAnnouncements(){
     const day=dateFmt.format(now()), items=data.icerikler.filter(i=>i.tur==='metin'&&i.baslangic<=day&&i.bitis>=day), key=JSON.stringify(items);
-    if(key!==announcementKey){announcementKey=key;announcementIndex=0;announcementDeadline=0;}
-    if(!items.length){txt('announcement-title','Henüz duyuru yok');txt('announcement-message','Öğretmenlerimizin paylaştığı okul duyuruları burada gösterilir.');txt('announcement-count','');return;}
-    if(Date.now()>=announcementDeadline){if(announcementDeadline)announcementIndex=(announcementIndex+1)%items.length;announcementDeadline=Date.now()+Math.max(12,items[announcementIndex].sure)*1000;}
-    const item=items[announcementIndex];txt('announcement-title',item.baslik);txt('announcement-message',item.metin);txt('announcement-count',`${announcementIndex+1} / ${items.length}`);
+    if(key===announcementKey)return;
+    announcementKey=key;const ticker=$('ticker-text');ticker.replaceChildren();
+    if(!items.length){ticker.className='ticker-text static';ticker.textContent='Henüz duyuru yok · Öğretmenlerimizin paylaştığı okul duyuruları burada kayan yazı olarak gösterilir.';return;}
+    items.forEach((item,i)=>{
+      if(i)ticker.append(node('span','ticker-sep','✦'));
+      const text=(item.metin||'').replace(/\s+/g,' ').trim();
+      ticker.append(node('b','',item.baslik));if(text)ticker.append(document.createTextNode(text));
+    });
+    ticker.className='ticker-text';ticker.style.animation='none';void ticker.offsetWidth;ticker.style.animation='';
+    ticker.style.animationDuration=`${Math.max(12,ticker.scrollWidth/(innerWidth*.06))}s`;
   }
   function updateCalendar(){
     const day=dateFmt.format(now()), source=data.takvim||{bugun:[],yaklasan:[]};
@@ -107,7 +113,7 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   }
   async function refresh(){if(fetching||revoked)return;fetching=true;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
     try{const r=await fetch(endpoint,{cache:'no-store',signal:controller.signal,credentials:'same-origin'});
-      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','announcement-title','announcement-message','announcement-count','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates'].forEach(id=>txt(id,'—'));txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
+      if(r.status===404||r.status===403||r.redirected){revoked=true;presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates'].forEach(id=>txt(id,'—'));$('ticker-text').className='ticker-text static';txt('ticker-text','—');txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
       if(!r.ok)throw new Error();const updated=await r.json();if(!updated.saatler||!updated.program)throw new Error();
       offset=Date.parse(updated.simdi)-Date.now();const nextSig=JSON.stringify({...updated,simdi:null,lgs:null});data=updated;
       if(signature!==nextSig){signature=nextSig;periodKey='';render();}txt('connection','Güncel · Türkiye saati');$('connection').className='';tick();
@@ -116,7 +122,7 @@ import {mountPresentation} from './school-broadcast-presentations.js';
   async function keepAwake(){try{if(document.fullscreenElement&&navigator.wakeLock&&!wake)wake=await navigator.wakeLock.request('screen');if(wake)wake.addEventListener('release',()=>{wake=null;});}catch{/* Browser support is optional. */}}
   $('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.querySelector('.screen-shell').requestFullscreen();await keepAwake();}catch{txt('connection','Tam ekran için tarayıcınızda F11 tuşunu kullanın.');}});
   document.addEventListener('fullscreenchange',()=>{txt('fullscreen',document.fullscreenElement?'⛶ Tam ekrandan çık':'⛶ Tam ekran');if(!document.fullscreenElement&&wake)wake.release();});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){refresh();keepAwake();}});window.addEventListener('online',refresh);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){refresh();keepAwake();}});window.addEventListener('online',refresh);window.addEventListener('resize',()=>{announcementKey='';});
   $('previous').addEventListener('click',()=>{index--;render();});$('next').addEventListener('click',()=>{index++;render();});
   for(const [id,delta] of [['presentation-prev',-1],['presentation-next',1]])$(id).addEventListener('click',()=>{if(presentation?.ready)presentation.go(presentation.page+delta);deadline=Date.now()+slides()[index].sure*1000;});
   $('pause').addEventListener('click',()=>{paused=!paused;txt('pause',paused?'▶':'Ⅱ');$('pause').setAttribute('aria-label',paused?'Yayını devam ettir':'Yayını duraklat');deadline=Date.now()+slides()[index].sure*1000;const video=$('slide-body').querySelector('video');if(video){if(paused)video.pause();else{if(Number.isFinite(video.duration))deadline=Date.now()+(video.duration-video.currentTime+10)*1000;video.play().catch(()=>{});}}});
