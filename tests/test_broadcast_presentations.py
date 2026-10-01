@@ -26,7 +26,7 @@ class PresentationPreparation(unittest.TestCase):
         def convert(args, **options):
             self.assertEqual(args[-1], str(self.source))
             self.assertIn('pdf:impress_pdf_Export', args)
-            self.assertEqual(options['timeout'], 90)
+            self.assertEqual(options['timeout'], 180)
             self.assertNotIn('shell', options)
             profile = next(a for a in args if a.startswith('-env:UserInstallation='))
             self.assertIn('file:///', profile)
