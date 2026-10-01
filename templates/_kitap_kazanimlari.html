@@ -1,0 +1,20 @@
+{% if kitap_kazanimlari %}
+<section class="vp-card vp-gains-card book-earned" id="kitap-kazanimlari" aria-labelledby="vp-gains-heading">
+  <div class="vp-section-head"><div><p class="vp-eyebrow">HAZİNE AÇILDI</p><h2 id="vp-gains-heading">Onaylanan kitaplar ve rozetlerin</h2></div><span class="vp-section-deco" aria-hidden="true">✦</span></div>
+  <p class="vp-muted">Öğretmenin okumayı onayladı. Kitaba dokun; özetini ve kazandığın rozeti keşfet.</p>
+  {% for k in kitap_kazanimlari %}
+  <details class="vp-gain">
+    <summary><span class="vp-gain-medal book-earned-medal" aria-hidden="true">{{ k.deger_emoji }}</span><span><strong>{{ k.ad }}</strong><small>{{ k.deger }} rozeti kazanıldı · {{ k.tarih }}</small></span><span class="book-earned-chevron" aria-hidden="true">⌄</span></summary>
+    <div class="vp-gain-body">
+      <p class="book-approved-label">✓ Okuma öğretmen tarafından onaylandı</p>
+      {% if k.yazar %}<p class="vp-muted">{{ k.yazar }}</p>{% endif %}
+      <p><strong>Kitabın özeti</strong><br>{{ k.konu }}</p>
+      <p><strong>Yazar ne demek istiyor?</strong> {{ k.mesaj }}</p>
+      <h4>Bu kitapla kazandıkların</h4><ul>{% for m in k.ulastiklarin %}<li>{{ m }}</li>{% endfor %}</ul>
+      {% if k.bilgiler %}<h4>Öğrendiğin bilgiler</h4><ul>{% for m in k.bilgiler %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+      <p class="vp-gain-value"><span aria-hidden="true">{{ k.deger_emoji }}</span> <strong>{{ k.deger }} rozeti:</strong> {{ k.deger_neden }}</p>
+    </div>
+  </details>
+  {% endfor %}
+</section>
+{% endif %}

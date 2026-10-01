@@ -1,0 +1,22 @@
+{% extends 'rehberlik/layout.html' %}
+{% block guidance %}
+<header class="page-heading"><div><p class="rh-eyebrow">{{ 'TASLAĞI DÜZENLE' if draft else 'YENİ PAYLAŞIM' }}</p><h1>Aileler için bir rehber hazırlayın</h1><p>Önce taslak kaydedilir. Önizlemeden yayınladığınızda seçilen velilere ulaşır.</p></div><a class="app-button" href="{{ url_for('rehberlik_panel') }}">Geri dön</a></header>
+{% if error %}<p class="app-notice app-notice--error" role="alert">{{ error }}{% if request.files.get('dosya') %} Dosyayı yeniden seçin.{% endif %}</p>{% endif %}
+<form class="rh-form" method="post" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{ rehber_csrf() }}">
+<section class="rh-surface"><h2><span class="rh-step">1</span> İçerik</h2><div class="rh-field-grid">
+<label class="rh-wide">Başlık<input name="baslik" maxlength="120" required placeholder="Örn. Evde verimli çalışma ortamı" value="{{ values.get('baslik','') }}"></label>
+<label>Kategori<select name="kategori" required>{% for category in rehber_kategoriler %}<option {{ 'selected' if values.get('kategori') == category }}>{{ category }}</option>{% endfor %}</select></label>
+<label>Video veya sunum <span class="app-muted">İsteğe bağlı</span><input type="file" name="dosya" accept=".pdf,.ppt,.pptx,.mp4,.webm"><small>Video: MP4 / WebM, en fazla 100 MB. Sunum: PDF / PPT / PPTX, en fazla 20 MB. PDF sayfada açılır; PowerPoint indirilerek açılır.{% if draft and draft.dosya %} Mevcut dosya: {{ draft.dosya_adi }}. Yeni dosya seçmezseniz korunur.{% endif %}</small></label>
+<label class="rh-wide">Kısa açıklama<textarea name="ozet" rows="2" maxlength="500" required placeholder="Velinin içerikten ne öğrenebileceğini kısaca anlatın.">{{ values.get('ozet','') }}</textarea></label>
+<label class="rh-wide">Rehber yazısı<textarea name="metin" rows="6" maxlength="20000" placeholder="Dosya yüklemiyorsanız rehberi buraya yazın.">{{ values.get('metin','') }}</textarea></label>
+<label class="rh-wide">Evde deneyelim <span class="app-muted">İsteğe bağlı</span><textarea name="etkinlik" rows="3" maxlength="3000" placeholder="Ailenin uygulayabileceği küçük, somut bir adım…">{{ values.get('etkinlik','') }}</textarea></label>
+</div></section>
+<section class="rh-surface"><h2><span class="rh-step">2</span> Kimler görebilsin?</h2><p class="app-muted">Seçtiğiniz öğrencilerin veli hesaplarına paylaşılır.</p>
+<fieldset class="rh-audience"><legend class="sr-only">Paylaşım kapsamı</legend>{% for mode,label,desc in [('tum','Tüm veliler','Okul genelindeki aktif sınıflar'),('sinif','Sınıf seç','Bir veya birden fazla şube'),('ogrenci','Veli seç','Bir veya birden fazla öğrencinin velisi')] %}<label><input type="radio" name="hedef" value="{{ mode }}" required {{ 'checked' if values.get('hedef','sinif') == mode }}><span><strong>{{ label }}</strong><small>{{ desc }}</small></span></label>{% endfor %}</fieldset>
+<div data-audience="sinif" class="rh-checkbox-grid">{% for s in classes %}<label><input type="checkbox" name="siniflar" value="{{ s.id }}" {{ 'checked' if s.id|string in values.getlist('siniflar') }}>{{ s.sinif_adi }}</label>{% endfor %}</div>
+<div data-audience="ogrenci"><label class="rh-search">Öğrenci bul<input type="search" data-recipient-search placeholder="Ad, sınıf veya öğrenci numarası"></label><p class="app-muted" data-recipient-count aria-live="polite"></p><div class="rh-recipient-list">{% for o in roster %}<label data-recipient><input type="checkbox" name="ogrenciler" value="{{ o.id }}" {{ 'checked' if o.id|string in values.getlist('ogrenciler') }}><span><strong>{{ o.ad_soyad }}</strong><small>{{ o.sinif_adi }} · No {{ o.ogr_no }}</small></span></label>{% endfor %}</div></div>
+</section>
+<div class="rh-form-footer"><p>Veliler taslağı göremez. Yayınlamadan önce içerik ve alıcı listesini kontrol edebilirsiniz.</p><button class="app-primary" type="submit">Taslağı kaydet ve önizle →</button></div>
+</form>
+{% endblock %}

@@ -56,7 +56,7 @@
   });
   const sections = [...document.querySelectorAll('[data-parent-section]')];
   if (!sections.length) return;
-  const aliases = {kitaplar:'hafta',notlar:'mesajlar',gorusme:'mesajlar',rozetler:'raporlar','kitap-kazanimlari':'raporlar','lgs-hedefi':'genel'};
+  const aliases = {kitaplar:'hafta',notlar:'mesajlar',gorusme:'mesajlar',rozetler:'raporlar','kitap-kazanimlari':'hafta','lgs-hedefi':'genel'};
   const titles = {genel:'Ana sayfa',hafta:'Ödev ve kitap',mesajlar:'Mesajlar',raporlar:'Raporlar'};
   const showSection = () => {
     const hash = location.hash.slice(1) || 'genel';

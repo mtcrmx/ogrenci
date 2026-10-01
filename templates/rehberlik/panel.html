@@ -1,0 +1,8 @@
+{% extends 'rehberlik/layout.html' %}
+{% block guidance %}
+<section class="rh-hero"><div><p class="rh-eyebrow">REHBERLİK SERVİSİ</p><h1>Birlikte, adım adım.</h1><p>Hoş geldiniz, Alperen hocam.<br>Ailelere ulaşın, geri bildirimleri takip edin.</p><a class="app-primary" href="{{ url_for('rehberlik_yeni') }}">＋ Yeni içerik paylaş</a></div><div class="rh-hero-art" aria-hidden="true"><div class="rh-flower">❋</div><span class="rh-book">▤</span><span class="rh-heart">♥</span><span class="rh-dot"></span></div></section>
+<section class="rh-stats" aria-label="Servis özeti"><div><span>Yayındaki içerik</span><strong>{{ published }}</strong></div><div><span>İnceledim bildirimi</span><strong>{{ reviewed }}</strong></div><a href="{{ url_for('rehberlik_gorusmeler') }}"><span>Bekleyen görüşme</span><strong>{{ pending }}</strong></a></section>
+<div class="rh-section-title"><div><h2>İçerik kütüphaneniz</h2><p>Taslakları kontrol edin, yayınların geri bildirimlerini açın.</p></div><a class="app-button" href="{{ url_for('rehberlik_gorusmeler') }}">Görüşme talepleri →</a></div>
+{% set parent = false %}{% include 'rehberlik/_cards.html' %}
+<p class="app-muted">“Açıldı”, içeriğin sayfasına girildiğini gösterir. “İnceledim” ve “Evde uyguladık” velinin kendi bildirimidir.</p>
+{% endblock %}

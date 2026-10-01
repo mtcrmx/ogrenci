@@ -390,7 +390,8 @@ def _programdan_siniflar() -> dict[str, list[str]]:
 
 
 _OGRETMEN_SINIF: dict[str, list[str]] = _programdan_siniflar()
-_KADRO_DISI_OGRETMENLER = []
+_REHBER_OGRETMENLER = ("ALPEREN MURAT LEBLEBİCİ",)
+_KADRO_DISI_OGRETMENLER = list(_REHBER_OGRETMENLER)
 _AYRILAN_OGRETMENLER = ("FATMA ÇAPKULAÇ", "YUSUF ERTÜRK")
 _AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B")
 _TUM_SUBE_OGRETMENLERI = tuple(
@@ -2654,13 +2655,15 @@ def _ogretmen_kadrosunu_senkronize(con: sqlite3.Connection) -> None:
             "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
         ).fetchone()
         if row:
+            if ad in _REHBER_OGRETMENLER:
+                con.execute("UPDATE ogretmenler SET yetki = 'rehber' WHERE id = ?", (row['id'],))
             continue
         sifre = _bos_sifre_uret(con)
         con.execute(
-            "INSERT INTO ogretmenler (ad_soyad, sifre) VALUES (?, ?)",
-            (ad, sifre),
+            "INSERT INTO ogretmenler (ad_soyad, sifre, yetki) VALUES (?, ?, ?)",
+            (ad, sifre, 'rehber' if ad in _REHBER_OGRETMENLER else 'tam'),
         )
-        print(f"INFO: Yeni ogretmen eklendi: {ad} ({sifre})")
+        print(f"INFO: Yeni ogretmen eklendi: {ad}")
 
     sube_idler: list[int] = []
     for sinif_adi in _AKTIF_SUBELER:
@@ -2899,7 +2902,7 @@ def ogretmen_yetki_al(ogretmen_id: int) -> str:
 
 
 def ogretmen_yetki_guncelle(ogretmen_id: int, yetki: str) -> None:
-    if yetki not in ("tam", "rapor"):
+    if yetki not in ("tam", "rapor", "rehber"):
         yetki = "tam"
     con = _conn()
     _yardimci_tablolar_init(con)
@@ -5485,6 +5488,10 @@ def _kitap_okuma_init(con: sqlite3.Connection) -> None:
             lig_puani INTEGER NOT NULL DEFAULT 0
         )
     """)
+    cols = {r['name'] for r in con.execute('PRAGMA table_info(kitap_okuma_kayitlari)')}
+    for name, default in [('bildirim_turu','okuma_kaydi'),('atanan_hafta','')]:
+        if name not in cols:
+            con.execute(f"ALTER TABLE kitap_okuma_kayitlari ADD COLUMN {name} TEXT NOT NULL DEFAULT '{default}'")
     con.execute(
         "CREATE INDEX IF NOT EXISTS idx_kitap_okuma_sinif_durum ON kitap_okuma_kayitlari(sinif_id, durum, veli_tarih DESC)"
     )
@@ -5713,6 +5720,11 @@ def haftalik_takip_metin(
         con.close()
         return {"ok": False, "sebep": "ogrenci"}
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    if alan == "kitap_adi":
+        # A previous book's reading decision must not approve its replacement.
+        con.execute("""UPDATE haftalik_takip SET kitap_okuma = '', kitap_sayfa = 0
+                       WHERE ogrenci_id = ? AND hafta_basi = ? AND kitap_adi != ?""",
+                    (ogrenci_id, hafta_basi, deger))
     con.execute(
         f"""
         INSERT INTO haftalik_takip
@@ -6070,11 +6082,11 @@ def veli_push_sil(endpoint: str) -> None:
     con.close()
 
 
-def _veli_push_sonra(ogrenci_id: int, metin: str, tur: str) -> None:
+def _veli_push_sonra(ogrenci_id: int, metin: str, tur: str, url: str = "/veli") -> None:
     def _gonder() -> None:
         try:
             from veli_push import veli_push_gonder
-            veli_push_gonder(int(ogrenci_id), metin, tur)
+            veli_push_gonder(int(ogrenci_id), metin, tur, url)
         except Exception:
             pass
     threading.Thread(target=_gonder, daemon=True).start()
@@ -6745,6 +6757,38 @@ def kitap_okuma_veli_kaydet(
     return {"ok": True, "id": int(kayit_id)}
 
 
+def kitap_okuma_bitirdi_bildir(ogrenci_id: int, hafta: str, kitap_adi: str, veli_notu: str = '') -> dict:
+    """Parent reports completion only for an actual teacher assignment."""
+    verilen = next((k for k in ogrenci_verilen_kitaplar(ogrenci_id)
+                    if k['hafta_basi'] == hafta and k['kitap_adi'] == kitap_adi), None)
+    if not verilen:
+        return {'ok':False,'sebep':'Bu kitap öğretmen tarafından öğrencinize verilmemiş veya değiştirilmiş. Sayfayı yenileyin.'}
+    con = _conn()
+    _kitap_okuma_init(con)
+    con.execute('BEGIN IMMEDIATE')
+    row = con.execute('''SELECT h.*, o.sinif_id AS aktif_sinif FROM haftalik_takip h
+                         JOIN ogrenciler o ON o.id=h.ogrenci_id
+                         WHERE h.ogrenci_id=? AND h.hafta_basi=? AND h.kitap_adi=?''',
+                      (ogrenci_id,hafta,kitap_adi)).fetchone()
+    if not row or int(row['sinif_id']) != int(row['aktif_sinif']):
+        con.rollback(); con.close()
+        return {'ok':False,'sebep':'Kitap görevi değişmiş. Sayfayı yenileyin.'}
+    onceki = con.execute("""SELECT id,durum FROM kitap_okuma_kayitlari
+                            WHERE ogrenci_id=? AND kitap_adi=? AND durum IN ('onay_bekliyor','onaylandi')
+                            ORDER BY id DESC LIMIT 1""",(ogrenci_id,kitap_adi)).fetchone()
+    if row['kitap_okuma'] == 'okudu' or onceki:
+        con.rollback(); con.close()
+        return {'ok':True,'zaten_bildirildi':True,'durum':'onaylandi' if row['kitap_okuma']=='okudu' else onceki['durum']}
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    cur = con.execute('''INSERT INTO kitap_okuma_kayitlari
+        (ogrenci_id,sinif_id,kitap_adi,yazar,sayfa_sayisi,veli_notu,durum,veli_tarih,bildirim_turu,atanan_hafta,bitis_tarihi)
+        VALUES (?,?,?,?,?,?,'onay_bekliyor',?,'kitap_bitirme',?,?)''',
+        (ogrenci_id,row['aktif_sinif'],kitap_adi,verilen.get('yazar') or '',int(verilen.get('sayfa') or 0),
+         (veli_notu or '').strip()[:500],now,hafta,datetime.now().date().isoformat()))
+    con.commit(); con.close()
+    return {'ok':True,'id':cur.lastrowid,'durum':'onay_bekliyor'}
+
+
 def kitap_okuma_ogrenci_gecmis(ogrenci_id: int, limit: int = 40) -> list[dict]:
     con = _conn()
     _kitap_okuma_init(con)
@@ -6836,6 +6880,10 @@ def kitap_okuma_onayla(kayit_id: int, ogretmen_id: int, onay: bool, ogretmen_not
         (int(ogretmen_id), (ogretmen_notu or "")[:500], now, xp, lig_puani, int(kayit_id)),
     )
     rozet = _kitap_deger_rozeti_metni(con, int(row["ogrenci_id"]), row["kitap_adi"])
+    if row['bildirim_turu'] == 'kitap_bitirme':
+        con.execute("""UPDATE haftalik_takip SET kitap_okuma='okudu',kitap_sayfa=?,ogretmen_id=?,guncelleme=?
+                       WHERE ogrenci_id=? AND hafta_basi=? AND kitap_adi=?""",
+                    (row['sayfa_sayisi'],ogretmen_id,now,row['ogrenci_id'],row['atanan_hafta'],row['kitap_adi']))
     con.commit()
     con.close()
     if rozet:

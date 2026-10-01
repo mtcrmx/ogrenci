@@ -14,6 +14,7 @@
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
   <link rel="stylesheet" href="{{ url_for('static', filename='veli_panel_clay.css') }}?v=veli20260930g">
+  <link rel="stylesheet" href="{{ url_for('static', filename='kitap_hazine.css') }}?v=20261001a">
   <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
 <link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20260930a">
 </head>
@@ -22,6 +23,7 @@
 <main class="vp-main" id="veli-icerik"><header class="vp-toolbar"><div><h1 id="parent-page-title">Ana sayfa</h1><p class="app-muted">{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }}</p></div></header>
 {% with mesajlar = get_flashed_messages(with_categories=true) %}{% if mesajlar %}<div class="parent-feedback" role="status">{% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--error' if kategori in ['warning','error'] else 'app-notice--success' }}">{{ mesaj }}</p>{% endfor %}</div>{% endif %}{% endwith %}
 <div class="parent-section" data-parent-section="genel" id="genel">
+{% if rehber_yeni %}<section class="app-card"><div class="app-row" style="justify-content:space-between"><h2>Rehberlik servisinden</h2><a class="app-button" href="{{ url_for('veli_rehberlik') }}">Tüm içerikler →</a></div>{% for item in rehber_yeni %}<p style="margin-top:12px"><a href="{{ url_for('veli_rehberlik_detay',cid=item.id) }}"><strong>{{ item.baslik }}</strong></a><span class="app-muted"> · {{ item.kategori }}{{ ' · Yeni' if not item.acildi else '' }}</span></p>{% endfor %}</section>{% endif %}
 {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
 <section class="app-card parent-today"><h2>Bugünkü işler</h2>
 {% if odev_ogr.odev_not or odev.aciklama %}<p><strong>{{ odev_ogr.odev_ders or odev.ders or 'Ödev' }}:</strong> {{ odev_ogr.odev_not or odev.aciklama }}</p>{% endif %}
@@ -63,9 +65,9 @@
 
 </div><div class="parent-section" data-parent-section="hafta" id="parent-homework" hidden>    <section class="vp-card vp-week-card" id="hafta" aria-labelledby="vp-week-heading">
       <div class="vp-section-head"><div><p class="vp-eyebrow">HAFTALIK TAKİP</p><h2 id="vp-week-heading">Ödev ve kitaplar</h2></div><span class="vp-section-deco" aria-hidden="true">✦</span></div>
-      <a class="app-button" style="margin-bottom:12px" href="{{ url_for('veli_kitap_okuma') }}">Okuma kaydı ekle / geçmişi gör</a>
+      <a class="app-button" style="margin-bottom:12px" href="{{ url_for('veli_kitap_okuma') }}">Verilen kitaplar / bitirdiğimizi bildir</a>
       <div class="vp-week-grid">
-        <div class="vp-inner-card"><p class="vp-eyebrow">Okuduğu kitap</p><h3>{{ odev_ogr.kitap_adi or hafta.kitap_adi or 'Henüz kitap seçilmedi' }}</h3>{% if hafta.kitap_adi %}<p class="vp-muted">{% if hafta.kitap_yazar %}{{ hafta.kitap_yazar }} · {% endif %}{% if hafta.kitap_yayinevi %}{{ hafta.kitap_yayinevi }} · {% endif %}{{ hafta.kitap_sayfa }}{% if hafta.katalog_sayfa %}/{{ hafta.katalog_sayfa }}{% endif %} sayfa</p>{% endif %}</div>
+        <div class="vp-inner-card"><p class="vp-eyebrow">Öğretmenin verdiği kitap</p><h3>{{ odev_ogr.kitap_adi or hafta.kitap_adi or 'Henüz kitap seçilmedi' }}</h3>{% if hafta.kitap_adi %}<p class="vp-muted">{% if hafta.kitap_yazar %}{{ hafta.kitap_yazar }} · {% endif %}{% if hafta.kitap_yayinevi %}{{ hafta.kitap_yayinevi }} · {% endif %}{{ hafta.kitap_sayfa }}{% if hafta.katalog_sayfa %}/{{ hafta.katalog_sayfa }}{% endif %} sayfa</p>{% endif %}</div>
         <div class="vp-inner-card"><p class="vp-eyebrow">Sınıf ödevi</p><h3>{{ odev.ders or 'Ders yazılmadı' }}</h3><p class="vp-muted">{{ odev.aciklama or 'Bu hafta için ödev tanımlanmadı.' }}</p></div>
         {% if odev_ogr.odev_ders or odev_ogr.odev_not %}<div class="vp-inner-card vp-inner-card--wide"><p class="vp-eyebrow">Bu öğrenciye özel</p><h3>{{ odev_ogr.odev_ders or 'Ders' }}</h3><p class="vp-muted">{{ odev_ogr.odev_not }}</p></div>{% endif %}
       </div>
@@ -84,7 +86,17 @@
       </div>
     </section>
 
-    <details class="vp-card vp-books-card app-details" id="kitaplar" aria-labelledby="vp-books-heading">
+    {% if surpriz_kitaplar %}
+    <section class="vp-card book-treasures" aria-labelledby="book-treasures-title">
+      <p class="vp-eyebrow">OKU, KEŞFET, KAZAN</p><h2 id="book-treasures-title">Seni bekleyen hazineler</h2>
+      {% for k in surpriz_kitaplar %}<article class="book-treasure">
+        {% include '_kitap_hazine.html' %}
+        <div><p class="vp-eyebrow">SÜRPRİZ ROZET</p><h3>{{ k.ad }}</h3><p>Kitabı oku; öğretmenin onayladığında hazine kutusu açılacak.</p><span class="book-treasure-status">Özet ve rozet henüz kilitli</span></div>
+      </article>{% endfor %}
+    </section>
+    {% endif %}
+    {% include '_kitap_kazanimlari.html' %}
+    <details class="vp-card vp-books-card app-details" id="kitaplar">
       <summary>Kitap geçmişi ve bu haftanın kitabı</summary>
       {% if kitaplar %}
       <h3>Öğretmenin verdiği kitaplar</h3>
@@ -92,14 +104,6 @@
       {% set okunan = kitaplar|selectattr('kitap_okuma', 'equalto', 'okudu')|list %}
       {% if okunan %}<details class="vp-read-books"><summary>Şimdiye kadar okudukları · {{ okunan|length }} kitap</summary><ul>{% for k in okunan %}<li><strong>{{ k.kitap_adi }}</strong><span class="vp-muted">{% if k.yazar %}{{ k.yazar }} · {% endif %}{% if k.yayinevi %}{{ k.yayinevi }} · {% endif %}{% if k.sayfa %}{{ k.sayfa }} sayfa · {% endif %}{{ k.hafta_basi }}</span></li>{% endfor %}</ul></details>{% endif %}
       {% else %}<p class="vp-muted">Öğretmen henüz bu öğrenciye kitap vermedi.</p>{% endif %}
-      {% if hafta_kitap_icerik %}
-      <div class="vp-book-preview">
-        <p class="vp-eyebrow">Bu haftanın kitabı ne anlatıyor?</p>
-        <h3>{{ hafta_kitap_icerik.ad }}</h3>
-        <p>{{ hafta_kitap_icerik.konu }}</p>
-        <p class="vp-muted">Okuyup bitirince <strong>{{ hafta_kitap_icerik.deger_emoji }} {{ hafta_kitap_icerik.deger }} rozeti</strong> kazanacak.</p>
-      </div>
-      {% endif %}
     </details>
 
 
@@ -157,29 +161,10 @@
 </div><div class="parent-section" data-parent-section="raporlar" id="raporlar" hidden>
 <section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2><div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a><a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a></div></section>
 <details class="app-card app-details"><summary>Rozet koleksiyonu</summary>{% include '_rozet_koleksiyonu.html' %}</details>
-    {% if kitap_kazanimlari %}
-    <section class="vp-card vp-gains-card" id="kitap-kazanimlari" aria-labelledby="vp-gains-heading">
-      <div class="vp-section-head"><div><p class="vp-eyebrow">OKUDUKÇA BÜYÜYOR</p><h2 id="vp-gains-heading">Kitaplarla kazandıkları</h2></div><span class="vp-section-deco" aria-hidden="true">✦</span></div>
-      <div class="vp-gain-values">{% for d in kitap_kazanimlari|groupby('deger') %}<span class="vp-gain-chip">{{ d.list[0].deger_emoji }} {{ d.grouper }}{% if d.list|length > 1 %} ×{{ d.list|length }}{% endif %}</span>{% endfor %}</div>
-      {% for k in kitap_kazanimlari %}
-      <details class="vp-gain">
-        <summary><span class="vp-gain-medal" aria-hidden="true">{{ k.deger_emoji }}</span><span><strong>{{ k.ad }}</strong><small>{{ k.yazar }} · {{ k.deger }} rozeti · {{ k.tarih }}</small></span></summary>
-        <div class="vp-gain-body">
-          <p><strong>Kitap ne anlatıyor?</strong> {{ k.konu }}</p>
-          <p><strong>Yazar ne demek istiyor?</strong> {{ k.mesaj }}</p>
-          <h4>Bu kitapla ulaştıkların</h4>
-          <ul>{% for m in k.ulastiklarin %}<li>{{ m }}</li>{% endfor %}</ul>
-          {% if k.bilgiler %}<h4>Öğrendiğin bilgiler</h4>
-          <ul>{% for m in k.bilgiler %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
-          <p class="vp-gain-value"><span aria-hidden="true">{{ k.deger_emoji }}</span> <strong>{{ k.deger }} rozeti:</strong> {{ k.deger_neden }}</p>
-        </div>
-      </details>
-      {% endfor %}
-    </section>
-    {% endif %}
+    {% if kitap_kazanimlari %}<a class="app-button" href="#kitap-kazanimlari">Onaylanan kitapların özetleri ve rozetleri →</a>{% endif %}
 
 </div></main></div></div>
-<script src="{{ url_for('static', filename='app_layout.js') }}?v=20260930a" defer></script>
+<script src="{{ url_for('static', filename='app_layout.js') }}?v=20261001books" defer></script>
 <script src="{{ url_for('static', filename='rozet_clay.js') }}?v=rozet20260930c" defer></script>
 <script>
 (function () {

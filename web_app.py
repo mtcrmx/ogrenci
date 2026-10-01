@@ -12,7 +12,7 @@ from flask import (
     Flask, render_template, request, redirect, url_for,
     session, jsonify, send_file, make_response, flash, abort,
 )
-from kitap_icerikleri import KITAPLA_KAZANILAN_DEGERLER, deger_bilgisi, deger_kodu, kitap_icerigi
+from kitap_icerikleri import deger_bilgisi, deger_kodu, kitap_icerigi
 from database import (
     ogrenci_ozellikleri_getir, ogrenci_ozellik_artir,
     initialize_db, KRITERLER, OLUMLU_KRITERLER,
@@ -70,7 +70,7 @@ from database import (
     evrak_ogretmen_durumlari, evrak_gorev_durum_guncelle,
     evrak_takip_ozetleri, evrak_takip_matrisi,
     kitap_okuma_veli_kaydet, kitap_okuma_ogrenci_gecmis, kitap_okuma_ogretmen_listesi,
-    kitap_okuma_onayla, kitap_okuma_rapor,
+    kitap_okuma_onayla, kitap_okuma_rapor, kitap_okuma_bitirdi_bildir,
     haftalik_takip_sinif, haftalik_takip_isaretle, haftalik_takip_toplu, haftalik_takip_metin,
     haftalik_odev_bilgi_getir, haftalik_odev_bilgi_kaydet, haftalik_odev_bildir,
     haftalik_odev_onceki_kopyala, sinif_hafta_durumu, onay_bekleyenler,
@@ -435,10 +435,14 @@ def _ekran_duzeni_context():
         siniflar = aktif_sube_siniflari()
     secili = _ui_sinif_sec(siniflar, request.args.get("sinif_id", type=int) or request.args.get("sinif", type=int)) if siniflar else None
     ogrenci = _ogrenci_bul(int(session["veli_ogrenci_id"])) if veli else None
+    rehber_yeni = []
+    if veli and endpoint == 'veli_panel':
+        from rehberlik import library
+        rehber_yeni = library(int(session['veli_ogrenci_id']))[:3]
     sayac_goster = endpoint in {"lgs", "veli_lgs"} or (
         endpoint == "veli_panel" and ogrenci and (ogrenci.get("sinif_adi") or "").startswith("8/")
     )
-    return {"ui_role": rol, "nav_siniflar": siniflar, "nav_sinif_id": secili, "nav_student": ogrenci,
+    return {"ui_role": rol, "nav_siniflar": siniflar, "nav_sinif_id": secili, "nav_student": ogrenci, "rehber_yeni": rehber_yeni,
             "lgs_sayac": lgs_sayac_verisi() if sayac_goster else None}
 
 
@@ -613,6 +617,21 @@ def _ogrenci_rozetleri(ogrenci_id: int) -> list[dict]:
     return rows
 
 
+def _veli_surpriz_kitaplar(ogrenci_id: int, kazanilan=None) -> list[dict]:
+    """Only titles of assigned, unapproved books; never include locked reward content."""
+    ogrenci = _ogrenci_bul(ogrenci_id)
+    if not ogrenci or not (ogrenci.get('sinif_adi') or '').startswith('5'):
+        return []
+    kazanilan = ogrenci_kitap_kazanimlari(ogrenci_id) if kazanilan is None else kazanilan
+    acilan = {k['ad'] for k in kazanilan}
+    bekleyen = {}
+    for k in ogrenci_verilen_kitaplar(ogrenci_id):
+        icerik = kitap_icerigi(k['kitap_adi'])
+        if icerik and icerik['ad'] not in acilan:
+            bekleyen.setdefault(icerik['ad'], {'ad': icerik['ad'], 'hafta': k['hafta_basi']})
+    return list(bekleyen.values())
+
+
 def _rozet_koleksiyonu(ogrenci_id: int) -> dict:
     """Öğrencinin kazanımları ile mevcut rozet hedeflerini bir araya getirir."""
     kazanilan_kayitlar = _ogrenci_rozetleri(ogrenci_id)
@@ -653,14 +672,11 @@ def _rozet_koleksiyonu(ogrenci_id: int) -> dict:
     for rozet in kitap_degerleri.values():
         rozet["aciklama"] = "Kitapla kazanıldı: " + ", ".join(rozet.pop("kitaplar"))
         kazanilan.append(rozet)
-    ogrenci = _ogrenci_bul(ogrenci_id)
-    if ogrenci and (ogrenci.get("sinif_adi") or "").startswith("5"):
-        for deger in KITAPLA_KAZANILAN_DEGERLER:
-            if deger not in kitap_degerleri:
-                emoji, aciklama = deger_bilgisi(deger)
-                kilitli.append({"kod": "deger_" + deger_kodu(deger), "emoji": emoji,
-                                "ad": f"{deger} Rozeti", "aciklama": f"Bu değeri işleyen bir kitabı oku. {aciklama}",
-                                "tarih": ""})
+    for kitap in _veli_surpriz_kitaplar(ogrenci_id):
+        kilitli.append({"kod": "surpriz_kitap", "emoji": "🎁",
+                        "ad": "Sürpriz kitap rozeti",
+                        "aciklama": f"{kitap['ad']} · Öğretmen okuma onayıyla hazine açılır.",
+                        "tarih": ""})
     kazanilan.sort(key=lambda r: r["tarih"], reverse=True)
     return {"kazanilan": kazanilan, "kilitli": kilitli,
             "toplam": len(kazanilan) + len(kilitli)}
@@ -801,6 +817,8 @@ def login():
             session["ogretmen_id"] = oid
             session["ogretmen_adi"] = ad
             session["ogretmen_yetki"] = ogretmen_yetki_al(oid)
+            if session.get("ogretmen_yetki") == "rehber":
+                return redirect(url_for("rehberlik_panel"))
             if session.get("ogretmen_yetki") == "rapor":
                 return redirect(url_for("rapor_ozet"))
             return redirect(url_for("dashboard"))
@@ -2540,13 +2558,7 @@ def veli_panel():
     hafta["kitap_yazar"] = kitap_yazar
     hafta["kitap_yayinevi"] = kitap_yayinevi
     kitap_kazanimlari = ogrenci_kitap_kazanimlari(int(ogrenci_id))
-    okunan_adlar = {k["ad"] for k in kitap_kazanimlari}
-    hafta_kitap_icerik = None
-    if (o.get("sinif_adi") or "").startswith("5") and hafta["kitap_adi"]:
-        icerik = kitap_icerigi(hafta["kitap_adi"])
-        if icerik and icerik["ad"] not in okunan_adlar:
-            emoji, _ = deger_bilgisi(icerik["deger"])
-            hafta_kitap_icerik = {**icerik, "deger_emoji": emoji}
+    surpriz_kitaplar = _veli_surpriz_kitaplar(int(ogrenci_id), kitap_kazanimlari)
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
     lgs_acik = (o.get("sinif_adi") or "") in {"8/A", "8/B"}
@@ -2614,7 +2626,7 @@ def veli_panel():
         notlar=notlar,
         kitaplar=ogrenci_verilen_kitaplar(int(ogrenci_id)),
         kitap_kazanimlari=kitap_kazanimlari,
-        hafta_kitap_icerik=hafta_kitap_icerik,
+        surpriz_kitaplar=surpriz_kitaplar,
         rozet_koleksiyonu=_rozet_koleksiyonu(int(ogrenci_id)),
         kocluk=kocluk,
         lgs_acik=lgs_acik,
@@ -6195,11 +6207,22 @@ def veli_kitap_okuma(form_data=None):
     if not ogrenci:
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
+    kayitlar = kitap_okuma_ogrenci_gecmis(int(oid), 80)
+    durumlar = {k['kitap_adi']:k['durum'] for k in reversed(kayitlar)}
+    kitaplar = []
+    seen = set()
+    for k in ogrenci_verilen_kitaplar(int(oid)):
+        if k['kitap_adi'] in seen:
+            continue
+        seen.add(k['kitap_adi'])
+        k['bildirim_durum'] = 'onaylandi' if k['kitap_okuma']=='okudu' else durumlar.get(k['kitap_adi'],'')
+        kitaplar.append(k)
     return render_template(
         "veli_kitap_okuma.html",
         ogrenci=ogrenci,
         avatar=_avatar(ogrenci),
-        kayitlar=kitap_okuma_ogrenci_gecmis(int(oid), 80),
+        kayitlar=kayitlar,
+        kitaplar=kitaplar,
         form_data=form_data or {},
     )
 
@@ -6209,20 +6232,13 @@ def veli_kitap_okuma_kaydet():
     oid = session.get("veli_ogrenci_id")
     if not oid:
         return redirect(url_for("veli_giris"))
-    sonuc = kitap_okuma_veli_kaydet(
-        int(oid),
-        request.form.get("kitap_adi", ""),
-        request.form.get("yazar", ""),
-        request.form.get("okuma_turu", "sessiz"),
-        request.form.get("sayfa_sayisi", type=int) or 0,
-        request.form.get("saat", type=float) or 0,
-        request.form.get("gun", type=int) or 0,
-        request.form.get("baslangic_tarihi", ""),
-        request.form.get("bitis_tarihi", ""),
-        request.form.get("veli_notu", ""),
-    )
+    sonuc = kitap_okuma_bitirdi_bildir(int(oid),request.form.get('hafta',''),
+                                    request.form.get('kitap_adi',''),request.form.get('veli_notu',''))
+    mesaj = "Kitabı bitirdiğiniz öğretmeninize bildirildi. Okuma onayı bekleniyor."
+    if sonuc.get('zaten_bildirildi'):
+        mesaj = 'Bu kitabın okuması zaten onaylanmış.' if sonuc.get('durum')=='onaylandi' else 'Bu kitap için bildirim alınmış. Öğretmen onayı bekleniyor.'
     flash(
-        "Okuma kaydı öğretmen onayına gönderildi." if sonuc.get("ok") else sonuc.get("sebep", "Kayıt alınamadı."),
+        mesaj if sonuc.get("ok") else sonuc.get("sebep", "Bildirim alınamadı."),
         "success" if sonuc.get("ok") else "warning",
     )
     if not sonuc.get("ok"):
@@ -6870,6 +6886,9 @@ def api_admin_yedek_geri_yukle(yedek_id: int):
 # ══════════════════════════════════════════════════════════════════════════
 # Baslama
 # ══════════════════════════════════════════════════════════════════════════
+
+from rehberlik import register_rehberlik
+register_rehberlik(app)
 
 if __name__ == "__main__":
     import socket

@@ -1,0 +1,2 @@
+{% extends 'rehberlik/layout.html' %}
+{% block guidance %}<header class="page-heading"><div><p class="rh-eyebrow">REHBERLİK SERVİSİ</p><h1>Görüşme talepleri</h1><p>Veliye görünen yanıtı ve görüşme durumunu buradan paylaşın.</p></div><a class="app-button" href="{{ url_for('rehberlik_panel') }}">Genel bakış</a></header><section class="rh-surface">{% include 'rehberlik/_requests.html' %}</section>{% endblock %}

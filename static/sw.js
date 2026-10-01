@@ -46,7 +46,9 @@ self.addEventListener("notificationclick", function (event) {
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
       for (let i = 0; i < list.length; i++) {
         const pencere = list[i];
-        if (pencere.url.indexOf("/veli") !== -1 && "focus" in pencere) return pencere.focus();
+        if (pencere.url.indexOf("/veli") !== -1 && "focus" in pencere) {
+          return pencere.navigate(url).then(function (client) { return (client || pencere).focus(); });
+        }
       }
       if (self.clients.openWindow) return self.clients.openWindow(url);
     })

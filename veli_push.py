@@ -58,7 +58,7 @@ def _vapid_uret() -> tuple[str, str]:
     return priv, pub
 
 
-def veli_push_gonder(ogrenci_id: int, metin: str, tur: str) -> None:
+def veli_push_gonder(ogrenci_id: int, metin: str, tur: str, url: str = "/veli") -> None:
     try:
         from pywebpush import webpush, WebPushException
     except ImportError:
@@ -86,7 +86,7 @@ def veli_push_gonder(ogrenci_id: int, metin: str, tur: str) -> None:
             "baslik": baslik,
             "metin": metin or "Yeni bir mesaj var.",
             "tur": tur or "duyuru",
-            "url": "/veli",
+            "url": url if url.startswith("/veli") and not url.startswith("//") else "/veli",
         },
         ensure_ascii=False,
     )

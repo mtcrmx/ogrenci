@@ -1,17 +1,25 @@
 <aside class="app-sidebar" id="app-menu" aria-label="{{ 'Veli' if ui_role == 'veli' else 'Öğretmen' }} menüsü">
-  {% set rapor_only = session.get('ogretmen_yetki') == 'rapor' %}
-  <div class="app-brand"><span class="app-brand-mark" aria-hidden="true">A</span><div><strong>AkademiPuan</strong><small>{{ 'Veli paneli' if ui_role == 'veli' else 'Öğretmen paneli' }}</small></div><button type="button" class="app-menu-close" aria-label="Menüyü kapat" data-app-menu-close>×</button></div>
+  {% set rehber_only = session.get('ogretmen_yetki') == 'rehber' %}
+  {% set rapor_only = session.get('ogretmen_yetki') in ['rapor', 'rehber'] %}
+  <div class="app-brand"><span class="app-brand-mark" aria-hidden="true">A</span><div><strong>AkademiPuan</strong><small>{{ 'Veli paneli' if ui_role == 'veli' else 'Rehberlik servisi' if rehber_only else 'Öğretmen paneli' }}</small></div><button type="button" class="app-menu-close" aria-label="Menüyü kapat" data-app-menu-close>×</button></div>
   {% if ui_role == 'veli' %}
   <p class="app-account">{{ nav_student.ad_soyad if nav_student else ogrenci.ad_soyad }}<small>{{ nav_student.sinif_adi if nav_student else ogrenci.sinif_adi }}</small></p>
   <nav class="app-nav" aria-label="Ana menü">
     {% for hash, label, icon in [('genel','Ana sayfa','⌂'), ('hafta','Ödev ve kitap','▤')] %}<a href="{{ url_for('veli_panel') }}#{{ hash }}" data-parent-nav="{{ hash }}"><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
     {% if (nav_student and nav_student.sinif_adi.startswith('8/')) or lgs_acik|default(false) %}<a href="{{ url_for('veli_lgs') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' else '' }}"><span aria-hidden="true">✦</span>LGS</a>{% endif %}
     <a href="{{ url_for('veli_panel') }}#mesajlar" data-parent-nav="mesajlar"><span aria-hidden="true">✉</span>Mesajlar</a>
+    <a href="{{ url_for('veli_rehberlik') }}" class="{{ 'is-current' if request.endpoint.startswith('veli_rehberlik') else '' }}"><span aria-hidden="true">❋</span>Rehberlik servisi</a>
     <a href="{{ url_for('veli_panel') }}#raporlar" data-parent-nav="raporlar" class="{{ 'is-current' if request.endpoint in ['veli_karne','veli_kitap_odev_rapor','veli_deneme_analiz','veli_belge'] else '' }}"><span aria-hidden="true">◒</span>Raporlar</a>
   </nav>
   {% else %}
   <p class="app-account">{{ session.ogretmen_adi }}</p>
   <nav class="app-nav" aria-label="Ana menü">
+    {% if rehber_only %}
+    <h2>Rehberlik servisi</h2>
+    {% for endpoint, label, icon in [('rehberlik_panel','Genel bakış','⌂'), ('rehberlik_yeni','İçerik paylaş','＋'), ('rehberlik_gorusmeler','Görüşme talepleri','✉')] %}
+    <a href="{{ url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}"><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
+    {% endfor %}
+    {% endif %}
     {% if not rapor_only %}
     <h2>Takip</h2>
     {% for endpoint, label, icon in [('dashboard','Ana sayfa','⌂'), ('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦')] %}
@@ -30,7 +38,7 @@
   </nav>
   {% endif %}
   <div class="app-sidebar-footer"><h2>Hesap</h2><button type="button" data-renk-ac>Renk paleti</button>
-  {% if ui_role == 'ogretmen' %}<details><summary>Öğretmen görseli</summary>{% for tipi, ad in [('kadin','Kadın öğretmen'),('erkek','Erkek öğretmen')] %}<form method="post" action="{{ url_for('profil_gorsel') }}"><input type="hidden" name="gorsel_tipi" value="{{ tipi }}"><input type="hidden" name="sinif" value="{{ nav_sinif_id or '' }}"><button>{{ ad }}</button></form>{% endfor %}</details>{% endif %}
+  {% if ui_role == 'ogretmen' and not rehber_only %}<details><summary>Öğretmen görseli</summary>{% for tipi, ad in [('kadin','Kadın öğretmen'),('erkek','Erkek öğretmen')] %}<form method="post" action="{{ url_for('profil_gorsel') }}"><input type="hidden" name="gorsel_tipi" value="{{ tipi }}"><input type="hidden" name="sinif" value="{{ nav_sinif_id or '' }}"><button>{{ ad }}</button></form>{% endfor %}</details>{% endif %}
   <a href="{{ url_for('veli_cikis' if ui_role == 'veli' else 'logout') }}">Çıkış yap</a></div>
 </aside>
 <button class="app-scrim" type="button" data-app-menu-close aria-label="Menüyü kapat" hidden></button>
