@@ -23,24 +23,28 @@
     {% endif %}
     {% if not rapor_only %}
     <a href="{{ url_for('dashboard', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'dashboard' else '' }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}><span aria-hidden="true">⌂</span>Ana sayfa</a>
-    <h2>Takip</h2>
+    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['haftalik_takip','onay_kutusu','lgs','sonuclar','islem_gecmisi','odev_duzenle'] %} open{% endif %}><summary>Takip</summary>
     {% for endpoint, label, icon in [('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦'), ('sonuclar','Ders / deneme girişi','◈'), ('islem_gecmisi','İşlem geçmişim','↶')] %}
     {% set current = request.endpoint == endpoint or (endpoint == 'islem_gecmisi' and request.endpoint == 'odev_duzenle') %}
     <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint == 'haftalik_takip' else url_for(endpoint) }}" class="{{ 'is-current' if current else '' }}"{% if current %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
+    </details>
     {% endif %}
-    <h2>Okul</h2>
+    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint == 'yayin_yonetim' %} open{% endif %}><summary>Okul</summary>
     <a href="{{ url_for('yayin') }}" target="_blank" rel="noopener"><span aria-hidden="true">▣</span>Okul yayın ekranı</a>
     {% if yayin_icerik_ekleyebilir() %}<a href="{{ url_for('yayin_yonetim') }}" class="{{ 'is-current' if request.endpoint == 'yayin_yonetim' else '' }}"><span aria-hidden="true">☷</span>{{ 'Yayın yönetimi' if yayin_yonetebilir() else 'Yayına içerik ekle' }}</a>{% endif %}
-    <h2>Raporlar</h2>
+    </details>
+    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['analiz_merkezi','deneme_analiz','karne'] or (rapor_only and request.endpoint == 'ogretmen_kitap_okuma') %} open{% endif %}><summary>Raporlar</summary>
     <a href="{{ url_for('analiz_merkezi', sinif_id=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'analiz_merkezi' else '' }}"><span aria-hidden="true">◒</span>Kitap/ödev analizi</a>
     {% if not rapor_only %}
     <a href="{{ url_for('deneme_analiz') }}" class="{{ 'is-current' if request.endpoint == 'deneme_analiz' else '' }}"><span aria-hidden="true">◈</span>Deneme analizi</a>
     <a href="{{ url_for('karne', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'karne' else '' }}"><span aria-hidden="true">▣</span>Dönem karnesi</a>
-    <details class="app-nav-tools"{% if request.endpoint in ['ogretmen_kitap_okuma','ogretmen_randevular'] %} open{% endif %}><summary>Diğer araçlar</summary>
-      {% for endpoint,label in [('ogretmen_kitap_okuma','Okuma kayıtları ve onay'),('ogretmen_randevular','Veli görüşme talepleri')] %}<a href="{{ url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}">{{ label }}</a>{% endfor %}
     </details>
-    {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}<a href="{{ url_for('giris_raporu') }}">Giriş raporu</a><a href="{{ url_for('ogrenci_ara') }}">Öğrenci ara</a>{% endif %}
-    {% else %}<a href="{{ url_for('ogretmen_kitap_okuma') }}" class="{{ 'is-current' if request.endpoint == 'ogretmen_kitap_okuma' else '' }}">Okuma raporları</a>{% endif %}
+    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['ogretmen_kitap_okuma','ogretmen_randevular','giris_raporu','ogrenci_ara'] %} open{% endif %}><summary>Diğer araçlar</summary>
+      {% for endpoint,label,icon in [('ogretmen_kitap_okuma','Okuma kayıtları ve onay','✎'),('ogretmen_randevular','Veli görüşme talepleri','✉')] %}<a href="{{ url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}"><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
+    {% if session.ogretmen_adi in ['ADEM AKGÜL', 'METEHAN CÜCEN'] %}<a href="{{ url_for('giris_raporu') }}" class="{{ 'is-current' if request.endpoint == 'giris_raporu' else '' }}"><span aria-hidden="true">◷</span>Giriş raporu</a><a href="{{ url_for('ogrenci_ara') }}" class="{{ 'is-current' if request.endpoint == 'ogrenci_ara' else '' }}"><span aria-hidden="true">⌕</span>Öğrenci ara</a>{% endif %}
+    </details>
+    {% else %}<a href="{{ url_for('ogretmen_kitap_okuma') }}" class="{{ 'is-current' if request.endpoint == 'ogretmen_kitap_okuma' else '' }}"><span aria-hidden="true">✎</span>Okuma raporları</a>
+    </details>{% endif %}
   </nav>
   {% endif %}
   <div class="app-sidebar-footer"><h2>Hesap</h2><button type="button" data-renk-ac>Renk paleti</button>
