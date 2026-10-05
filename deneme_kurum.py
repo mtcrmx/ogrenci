@@ -13,6 +13,14 @@ _DERSLER = (
     ("Matematik", 20),
     ("Fen Bilimleri", 20),
 )
+_LGS_DERSLER = (
+    ("Türkçe", 20),
+    ("T.C. İnkılap Tarihi", 10),
+    ("Din Kültürü", 10),
+    ("İngilizce", 10),
+    ("Matematik", 20),
+    ("Fen Bilimleri", 20),
+)
 
 
 def _harf(metin: str) -> str:
@@ -24,6 +32,16 @@ def kurum_pdf_oku(veri: bytes, dosya_adi: str = "") -> dict:
     from io import BytesIO
 
     metin = "\n".join((sayfa.extract_text() or "") for sayfa in PdfReader(BytesIO(veri)).pages)
+    return kurum_metin_oku(metin, dosya_adi)
+
+
+def kurum_metin_oku(metin: str, dosya_adi: str = "") -> dict:
+    if _lgs_sirali_mi(metin):
+        return {
+            "ad": _lgs_sirali_ad(metin),
+            "tarih": _tarih(dosya_adi, metin),
+            "satirlar": _lgs_sirali_satirlar(metin),
+        }
     ad = _sinav_adi(metin)
     tarih = _tarih(dosya_adi, metin)
     satirlar = []
@@ -47,6 +65,105 @@ def kurum_ogrenci_esle(satirlar: list[dict], ogrenciler: list[dict]) -> dict:
         else:
             kalan.append(satir["ad"])
     return {"eslesen": eslesen, "kalan": kalan}
+
+
+def _lgs_sirali_mi(metin: str) -> bool:
+    buyuk = metin.upper()
+    return "LGS-" in buyuk and ("PUAN SIRALI" in buyuk or "İSİM SIRALI" in buyuk or "ISIM SIRALI" in buyuk)
+
+
+def _lgs_sirali_ad(metin: str) -> str:
+    m = re.search(r"(V[İI]P\s+LGS-\d+)", metin)
+    if not m:
+        return "LGS denemesi"
+    return re.sub(r"\s+", " ", m.group(1)).strip()[:80]
+
+
+def _lgs_sayi(token: str) -> float:
+    t = token.strip()
+    if "," in t:
+        return float(t.replace(".", "").replace(",", "."))
+    if re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+", t):
+        return float(t.replace(".", ""))
+    return float(t)
+
+
+def _lgs_ad_temizle(ad: str) -> str:
+    parca = re.sub(r"\s+", " ", ad).strip().split()
+    if len(parca) >= 2 and len(parca) % 2 == 0:
+        yari = len(parca) // 2
+        if parca[:yari] == parca[yari:]:
+            parca = parca[:yari]
+    return " ".join(parca)
+
+
+def _lgs_satir_birlestir(satirlar: list[str]) -> list[str]:
+    birlesik = []
+    i = 0
+    while i < len(satirlar):
+        satir = satirlar[i]
+        sayi = len(re.findall(r"-?\d+(?:[.,]\d+)?", satir))
+        if re.match(r"^\d+\s+", satir) and sayi < 22 and i + 1 < len(satirlar):
+            devam = satirlar[i + 1]
+            if not re.match(r"^\d+\s+", devam):
+                satir = f"{satir} {devam}"
+                i += 1
+        birlesik.append(satir)
+        i += 1
+    return birlesik
+
+
+def _lgs_ogrenci(satir: str) -> dict | None:
+    m = re.match(
+        r"^\d+\s+([A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜa-zçğıöşü\s]*?)\s+(?:\d-[A-ZÇĞİÖŞÜ]\s+)?(?=\d)",
+        satir.strip(),
+    )
+    if not m:
+        return None
+    ham = re.findall(r"-?\d+(?:[.,]\d+)?", satir[m.end():])
+    if len(ham) < 22:
+        return None
+    sayilar = [_lgs_sayi(t) for t in ham]
+    dersler = []
+    for i, (ders, tavan) in enumerate(_LGS_DERSLER):
+        dogru_f, yanlis_f, net = sayilar[i * 3], sayilar[i * 3 + 1], round(sayilar[i * 3 + 2], 2)
+        if abs(dogru_f - round(dogru_f)) > 0.001 or abs(yanlis_f - round(yanlis_f)) > 0.001:
+            return None
+        dogru, yanlis = int(round(dogru_f)), int(round(yanlis_f))
+        if dogru < 0 or yanlis < 0 or dogru + yanlis > tavan:
+            return None
+        if abs(round(dogru - yanlis / 3, 2) - net) > 0.05:
+            return None
+        dersler.append({
+            "ders": ders,
+            "dogru": dogru,
+            "yanlis": yanlis,
+            "bos": tavan - dogru - yanlis,
+            "net": net,
+        })
+    toplam = round(sum(d["net"] for d in dersler), 2)
+    if abs(toplam - round(sayilar[20], 2)) > 0.15:
+        return None
+    puan = round(sayilar[21], 3)
+    if not 100 <= puan <= 500:
+        return None
+    return {"ad": _lgs_ad_temizle(m.group(1)), "dersler": dersler, "puan": puan, "net": toplam}
+
+
+def _lgs_sirali_satirlar(metin: str) -> list[dict]:
+    ham = [s.strip() for s in metin.splitlines() if s.strip()]
+    gorulen: set[str] = set()
+    satirlar = []
+    for satir in _lgs_satir_birlestir(ham):
+        ogr = _lgs_ogrenci(satir)
+        if not ogr:
+            continue
+        anahtar = _harf(ogr["ad"])
+        if not anahtar or anahtar in gorulen:
+            continue
+        gorulen.add(anahtar)
+        satirlar.append(ogr)
+    return satirlar
 
 
 def _sinav_adi(metin: str) -> str:
@@ -119,7 +236,10 @@ def _bul(ad: str, indeks: dict[str, list[dict]], ogrenciler: list[dict]) -> list
                 return tam
         else:
             tam = []
-    return _yakin(ad, ogrenciler)
+    bulunan = _yakin(ad, ogrenciler)
+    if bulunan:
+        return bulunan
+    return _yapisan(ad, ogrenciler)
 
 
 def _kelime(ad: str) -> list[str]:
@@ -147,5 +267,20 @@ def _yakin(ad: str, ogrenciler: list[dict]) -> list[dict]:
             continue
         tutan = sum(1 for p in parcalar if any(_kelime_uyar(p, k) for k in ok))
         if tutan >= max(2, len(parcalar) - 1):
+            aday.append(ogr)
+    return aday if len(aday) == 1 else []
+
+
+def _yapisan(ad: str, ogrenciler: list[dict]) -> list[dict]:
+    hedef = _harf(ad)
+    if len(hedef) < 12:
+        return []
+    aday = []
+    for ogr in ogrenciler:
+        kayit = _harf(ogr["ad_soyad"])
+        if len(kayit) < 12:
+            continue
+        kisa, uzun = (hedef, kayit) if len(hedef) <= len(kayit) else (kayit, hedef)
+        if uzun.startswith(kisa) and len(uzun) - len(kisa) <= 6:
             aday.append(ogr)
     return aday if len(aday) == 1 else []

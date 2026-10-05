@@ -186,6 +186,34 @@ class Workflows(unittest.TestCase):
         self.assertEqual(before,after)
         self.assertEqual(sum(r['ad']==title for r in d.lgs_denemeler(self.oid,200)),2)
 
+    def test_edesıs_lgs_listesi_kurum_formundan_yazilir(self):
+        pdf = Path(r'C:\Users\METE\OneDrive\Desktop\ERENLER CUMHURİYET VİP LGS-1.pdf')
+        if not pdf.exists():
+            self.skipTest('masaüstü listesi yok')
+        teacher = next(r for r in d.tum_ogretmenler() if r['ad_soyad'] == 'ADEM AKGÜL')
+        client = w.app.test_client()
+        with client.session_transaction() as s:
+            s.update(ogretmen_id=teacher['id'], ogretmen_adi=teacher['ad_soyad'], ogretmen_yetki='tam')
+        response = client.post(
+            '/lgs/kurum-pdf',
+            data={'pdf': (BytesIO(pdf.read_bytes()), pdf.name)},
+            content_type='multipart/form-data',
+            follow_redirects=True,
+        )
+        html = response.get_data(as_text=True)
+        self.assertIn('VİP LGS-1: 25 öğrenci yazıldı', html)
+        self.assertIn('AYŞE EBRARK ULA', html)
+        con = d._conn()
+        oid = con.execute("SELECT id FROM ogrenciler WHERE ad_soyad='YAĞMUR NİSA KOCA'").fetchone()[0]
+        con.close()
+        deneme = next(r for r in d.lgs_denemeler(oid, 20) if r['ad'] == 'VİP LGS-1')
+        self.assertEqual(deneme['tarih'], '2026-10-04')
+        self.assertEqual(deneme['puan'], 449.5)
+        turkce = next(ders for ders in deneme['dersler'] if ders['ders'] == 'Türkçe')
+        inkılap = next(ders for ders in deneme['dersler'] if ders['ders'] == 'T.C. İnkılap Tarihi')
+        self.assertEqual((turkce['dogru'], turkce['yanlis'], turkce['net']), (16, 4, 14.67))
+        self.assertEqual((inkılap['dogru'], inkılap['net']), (10, 10.0))
+
     def test_published_homework_edit_and_undo(self):
         import re
         self.teacher_client.post('/odev/ekle',data=dict(sinif_id=self.sid,baslik='Ödev düzenleme testi',aciklama='İlk açıklama',ders='Matematik',son_tarih='2026-10-02'))

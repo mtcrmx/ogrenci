@@ -18,7 +18,7 @@
   {% if kurum_deneme_yetkili %}<form method="post" action="{{ url_for('lgs_kurum_pdf') }}" enctype="multipart/form-data" class="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4">
     <div class="min-w-0 flex-1">
       <p class="text-sm font-black">Kurum deneme listesi</p>
-      <p class="text-xs text-slate-500">Puan sıralı PDF. İsimler öğrenciyle eşleşir, doğru yanlış ve net kendiliğinden yazılır.</p>
+      <p class="text-xs text-slate-500">Puan sıralı PDF. Edesis LGS listesi de alınır. İsimler öğrenciyle eşleşir, doğru yanlış ve net kendiliğinden yazılır.</p>
     <a class="mt-2 inline-block text-xs font-black text-sky-800" href="{{ url_for('deneme_analiz') }}">Deneme analizini aç</a>
     </div>
     <input type="file" name="pdf" accept="application/pdf" required class="text-sm">
