@@ -93,7 +93,7 @@
         <tr class="lgs-month-group"><th colspan="10" scope="rowgroup" class="text-left">{{ g.sinif.sinif_adi }}</th></tr>
         {% for o in g.ogrenciler %}
         <tr>
-          <th scope="row" class="text-left"><a href="{{ url_for('lgs', ogrenci=o.id, bolum='program') }}">{{ o.ad_soyad }}</a></th>
+          <th scope="row" class="text-left"><a href="{{ url_for('lgs', ogrenci=o.id, bolum='deneme') }}">{{ o.ad_soyad }}</a></th>
           {% for kod, ad in aylar %}
           {% set isaretli = ay_harita.get(o.id, {}).get(kod) %}
           <td data-label="{{ ad }}">
@@ -138,11 +138,11 @@
     <p class="mt-3 text-sm">Bugün {{ bugun_ad }}{% if tempo_ad %}: {{ bugun_gorev|selectattr('tamamlandi')|list|length }}/{{ bugun_gorev|length }} iş onaylı{% elif veli %}. Öğretmen tempo seçince ders programın burada durur{% else %}. Program sekmesinden tempo seçilir{% endif %}.</p>
   </header>{% endif %}
 
-  <nav class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+  <nav class="mt-3 grid grid-cols-2 gap-2">
     {% if veli %}
-    {% set sekmeler = [('ozet','Özet'), ('program','Program'), ('soru','Soru'), ('deneme','Analiz')] %}
+    {% set sekmeler = [('soru','Soru'), ('deneme','Analiz')] %}
     {% else %}
-    {% set sekmeler = [('deneme','Deneme'), ('program','Program'), ('soru','Soru')] %}
+    {% set sekmeler = [('deneme','Deneme'), ('soru','Soru')] %}
     {% endif %}
     {% for kod, ad in sekmeler %}
     {% if veli and kod == 'soru' %}

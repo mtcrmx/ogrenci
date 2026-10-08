@@ -4435,12 +4435,12 @@ def _lgs_ekran(veli: bool):
         ogr = _lgs_ogrenci(oid) if oid else None
         if ogr and ogr.get("sinif_adi") not in {"8/A", "8/B"}:
             return redirect(url_for("lgs"))
-    bolum = request.values.get("bolum") or ("ozet" if veli else "deneme")
-    if bolum in {"gunluk", "defter"}:
-        bolum = "soru"
-    izinli = {"ozet", "program", "soru", "deneme"} if veli else {"deneme", "program", "soru"}
+    bolum = request.values.get("bolum") or ("soru" if veli else "deneme")
+    if bolum in {"gunluk", "defter", "ozet", "program"}:
+        bolum = "soru" if veli or bolum in {"gunluk", "defter"} else "deneme"
+    izinli = {"soru", "deneme"}
     if bolum not in izinli:
-        bolum = "ozet" if veli else "deneme"
+        bolum = "soru" if veli else "deneme"
     hafta_sec = _lgs_hafta_sec(request.values.get("hafta"))
     if request.method == "POST":
         islem = request.form.get("islem")

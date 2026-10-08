@@ -380,7 +380,10 @@ class Workflows(unittest.TestCase):
         self.teacher_client.post('/lgs',data={'ogrenci':self.oid,'islem':'program_onay','tarih':today.isoformat(),'sira':'0','karar':'onay'})
         record=d.lgs_program_isaretler(self.oid,today.isoformat(),today.isoformat())[(today.isoformat(),0)]
         self.assertTrue(record.get('tamamlandi'))
-        self.assertTrue('Matematik: 15 soru' in self.parent.get('/veli/lgs?bolum=program').get_data(as_text=True))
+        sayfa = self.parent.get('/veli/lgs').get_data(as_text=True)
+        self.assertIn('>Soru<', sayfa)
+        self.assertNotIn('>Özet<', sayfa)
+        self.assertNotIn('>Program<', sayfa)
 
     def test_exports(self):
         for url in ['/karne.xlsx?sinif='+str(self.sid), '/veli/karne.xlsx','/veli/karne.pdf']:
