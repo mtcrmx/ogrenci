@@ -27,20 +27,29 @@
 {% if rehber_yeni %}<section class="app-card"><div class="app-row" style="justify-content:space-between"><h2>Rehberlik servisinden</h2><a class="app-button" href="{{ url_for('veli_rehberlik') }}">Tüm içerikler →</a></div>{% for item in rehber_yeni %}<p style="margin-top:12px"><a href="{{ url_for('veli_rehberlik_detay',cid=item.id) }}"><strong>{{ item.baslik }}</strong></a><span class="app-muted"> · {{ item.kategori }}{{ ' · Yeni' if not item.acildi else '' }}</span></p>{% endfor %}</section>{% endif %}
 {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
 <section class="app-card parent-today"><h2>Bugünkü işler</h2>
+{% if not lgs_acik %}
 {% if odev_ogr.odev_not or odev.aciklama %}<p><strong>{{ odev_ogr.odev_ders or odev.ders or 'Ödev' }}:</strong> {{ odev_ogr.odev_not or odev.aciklama }}</p>{% endif %}
 {% if bugun_odev and bugun_odev.odev %}<p><strong>{{ bugun_odev.odev.baslik }}</strong> · {{ bugun_odev.odev.ders }}</p><p>{{ bugun_odev.odev.aciklama }}</p><p class="app-muted">Son tarih: {{ bugun_odev.odev.son_tarih or 'Belirtilmedi' }}</p>{% endif %}
 {% if hafta.kitap_adi %}<p><strong>Kitap:</strong> {{ hafta.kitap_adi }}{% if hafta.kitap_sayfa %} · {{ hafta.kitap_sayfa }} sayfa{% endif %}</p>{% endif %}
+{% endif %}
 {% if program_bugun %}<p><strong>LGS programı:</strong> {{ program_bugun }}</p>{% endif %}
-{% if not (odev_ogr.odev_not or odev.aciklama or hafta.kitap_adi or program_bugun or bugun_odev) %}<p class="app-muted">Bugün için görev tanımlanmadı.</p>{% endif %}
+{% if lgs_acik %}<p>Sorular ve optik LGS ekranında.</p>{% endif %}
+{% if not lgs_acik and not (odev_ogr.odev_not or odev.aciklama or hafta.kitap_adi or program_bugun or bugun_odev) %}<p class="app-muted">Bugün için görev tanımlanmadı.</p>{% elif lgs_acik and not program_bugun %}<p class="app-muted">Bugünkü program henüz işaretlenmedi.</p>{% endif %}
+{% if not lgs_acik %}
 {% if hafta.odev_kod in ['eksik','yok'] %}<p class="app-notice"><strong>{{ hafta.odev_durum }}:</strong> {{ hafta.odev_karar_not or 'Öğretmen eksik bölüm veya son tarih belirtmedi. Ayrıntıyı Mesajlar bölümünden sorabilirsiniz.' }}</p>{% elif hafta.odev_bildirim == 'yaptim' and not hafta.odev_kod %}<p class="app-notice">Tamamlandı bildirimi alındı. Öğretmen onayı bekleniyor.</p>{% endif %}
 {% if hafta.odev_foto %}<details class="app-details"><summary>Ödev fotoğrafı</summary><img class="vp-homework-photo" src="{{ url_for('veli_odev_foto') }}" alt="Öğretmenin eklediği ödev fotoğrafı"></details>{% endif %}
 <div class="app-row" style="margin-top:12px">{% if not hafta.odev_kod and hafta.odev_bildirim != 'yaptim' and (odev_ogr.odev_not or odev.aciklama) %}<form method="post" action="{{ url_for('veli_odev_bildir') }}"><input type="hidden" name="yaptim" value="1"><button class="app-primary">Çocuğum tamamladı</button></form>{% endif %}<a class="app-button" href="#hafta">Ödev ve kitap ayrıntısı →</a></div>
+{% else %}
+<div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_lgs', bolum='soru') }}">Sorular ve optik →</a></div>
+{% endif %}
 </section>
+{% if not lgs_acik %}
     <section class="vp-status" aria-label="Bu haftanın durumları">
       <article class="vp-status-card vp-status-card--lilac"><span class="vp-status-icon" aria-hidden="true">▣</span><p>Kitap okuma</p><strong>{{ hafta.kitap_okuma }}</strong></article>
       <article class="vp-status-card vp-status-card--pink"><span class="vp-status-icon" aria-hidden="true">▤</span><p>Kitabı getirme</p><strong>{{ hafta.kitap_getirme }}</strong></article>
       <article class="vp-status-card vp-status-card--peach"><span class="vp-status-icon" aria-hidden="true">✓</span><p>Ödev durumu</p><strong>{{ hafta.odev_durum }}</strong></article>
     </section>
+{% endif %}
 
 <section class="app-card parent-latest" id="veli-uyari" aria-labelledby="veli-uyari-baslik">
 <h2 id="veli-uyari-baslik">Son öğretmen mesajı</h2>
@@ -50,9 +59,9 @@
       <section class="vp-card vp-card--mint">
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">★</span><div><p class="vp-eyebrow">Gelişim</p><h2>Kendi temposu</h2></div></div>
         <p class="vp-card-lead">{{ duzen_metin }}</p>
-        {% if duzen.seri >= 4 %}<p id="kutlama" class="vp-progress-good">{{ duzen.seri }} haftadır ödev tam. Alkış!</p>
-        {% elif duzen.seri %}<p class="vp-muted">Üst üste {{ duzen.seri }} hafta tam ödev.</p>{% endif %}
-        {% if duzen.okunan %}<a class="vp-text-link" href="{{ url_for('veli_belge') }}">Kitap belgesi →</a>{% endif %}
+        {% if not lgs_acik and duzen.seri >= 4 %}<p id="kutlama" class="vp-progress-good">{{ duzen.seri }} haftadır ödev tam. Alkış!</p>
+        {% elif not lgs_acik and duzen.seri %}<p class="vp-muted">Üst üste {{ duzen.seri }} hafta tam ödev.</p>{% endif %}
+        {% if not lgs_acik and duzen.okunan %}<a class="vp-text-link" href="{{ url_for('veli_belge') }}">Kitap belgesi →</a>{% endif %}
       </section>
       {% if hikaye %}
       <section class="vp-card vp-card--sky">
@@ -64,7 +73,7 @@
     </div>
 
 
-</div><div class="parent-section" data-parent-section="hafta" id="parent-homework" hidden>    <section class="vp-card vp-week-card" id="hafta" aria-labelledby="vp-week-heading">
+</div>{% if lgs_acik %}<div class="parent-section" data-parent-section="hafta" id="parent-homework" hidden><section class="vp-card" id="hafta"><h2>Sorular ve optik</h2><p class="vp-muted">8. sınıflarda ödev ve kitap takibi kapandı. Sorular LGS ekranında açılır, cevaplar optiğe işaretlenir.</p><a class="app-button" href="{{ url_for('veli_lgs', bolum='soru') }}">Sorulara git</a></section></div>{% else %}<div class="parent-section" data-parent-section="hafta" id="parent-homework" hidden>    <section class="vp-card vp-week-card" id="hafta" aria-labelledby="vp-week-heading">
       <div class="vp-section-head"><div><p class="vp-eyebrow">HAFTALIK TAKİP</p><h2 id="vp-week-heading">Ödev ve kitaplar</h2></div><span class="vp-section-deco" aria-hidden="true">✦</span></div>
       <a class="app-button" style="margin-bottom:12px" href="{{ url_for('veli_kitap_okuma') }}">Verilen kitaplar / bitirdiğimizi bildir</a>
       <div class="vp-week-grid">
@@ -108,7 +117,7 @@
     </details>
 
 
-</div><div class="parent-section" data-parent-section="mesajlar" id="mesajlar" hidden>
+</div>{% endif %}<div class="parent-section" data-parent-section="mesajlar" id="mesajlar" hidden>
 <details class="app-card app-details"><summary>Bildirim geçmişi</summary><ul class="parent-feed" id="parent-message-feed">{% for h in haberler %}<li data-id="{{ h.id }}" data-key="{{ h.tur }}|{{ h.metin }}|{{ h.zaman[:16] }}"><time>{{ h.zaman }} · {{ 'Okundu' if h.goruldu else 'Yeni' }}</time><p>{{ h.metin }}</p></li>{% else %}<li data-empty>Henüz bildirim yok.</li>{% endfor %}</ul></details>
     <div class="vp-communication">
       <section class="vp-card" id="notlar" aria-labelledby="vp-notes-heading">

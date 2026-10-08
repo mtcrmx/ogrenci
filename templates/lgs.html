@@ -8,7 +8,7 @@
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
     <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS koçluk</p>
     <h1 class="mt-1 text-2xl font-black">Öğrenci seç</h1>
-        <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Tempo, çalışma defteri ve deneme buradan yürür.</p>
+        <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Tempo, soru optiği ve deneme buradan yürür.</p>
   </header>
   {% with mesajlar = get_flashed_messages(with_categories=true) %}
   {% if mesajlar %}
@@ -47,6 +47,38 @@
     </details>
     {% endfor %}
   </div>
+  <section class="mt-5 rounded-3xl border border-slate-200 bg-white p-4">
+    <p class="text-[11px] font-black uppercase tracking-widest text-violet-700">Soru girişi</p>
+    <h2 class="text-lg font-black">Soru PDF ve optik</h2>
+    <p class="mt-1 text-xs text-slate-600">PDF’i yükleyin, cevap anahtarını A B C D olarak yazın. Öğrenci soruları görür, optiğe işaretler ve bitirince sonucu burada görünür.</p>
+    <form method="post" enctype="multipart/form-data" class="mt-3 grid gap-3 sm:grid-cols-2">
+      <input type="hidden" name="islem" value="optik_ekle">
+      <label class="text-sm font-bold">Sınav adı<input name="ad" required maxlength="80" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" placeholder="Kasım denemesi"></label>
+      <label class="text-sm font-bold">Tarih<input type="date" name="tarih" value="{{ bugun }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"></label>
+      <label class="text-sm font-bold sm:col-span-2">Soru PDF<input type="file" name="pdf" accept="application/pdf" required class="mt-1 block w-full text-sm"></label>
+      <label class="text-sm font-bold sm:col-span-2">Cevap anahtarı<textarea name="anahtar" required rows="3" maxlength="400" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono" placeholder="ABCD ACDB ..."></textarea></label>
+      <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white sm:col-span-2">Optiği aç</button>
+    </form>
+    {% for s in optik_sinavlar %}
+    <article class="mt-4 rounded-2xl border border-slate-200 p-3">
+      <h3 class="font-black">{{ s.ad }} · {{ s.tarih }} · {{ s.soru_sayisi }} soru</h3>
+      <p class="mt-1 text-xs text-slate-500">Anahtar: {{ s.cevaplar|join('') }}</p>
+      <a class="mt-2 inline-block text-sm font-black text-indigo-800" href="{{ url_for('lgs_optik_pdf', sinav_id=s.id) }}">Soruları aç</a>
+      <div class="mt-3 overflow-x-auto">
+        <table class="w-full min-w-[520px] text-left text-sm">
+          <thead><tr class="text-xs uppercase text-slate-500"><th>Öğrenci</th><th>Sınıf</th><th>Doğru</th><th>Yanlış</th><th>Boş</th><th>Net</th></tr></thead>
+          <tbody>
+          {% for r in s.sonuclar %}
+          <tr class="border-t border-slate-100"><td class="py-2 font-bold">{{ r.ad_soyad }}</td><td>{{ r.sinif_adi }}</td><td>{{ r.dogru }}</td><td>{{ r.yanlis }}</td><td>{{ r.bos }}</td><td class="font-black">{{ r.net }}</td></tr>
+          {% else %}
+          <tr><td class="py-2 text-slate-500" colspan="6">Henüz optik bitirilmedi.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    {% endfor %}
+  </section>
   <section id="aylik-takip" class="lgs-month-board mt-5 rounded-3xl border border-slate-200 bg-white p-4" aria-labelledby="aylik-takip-baslik">
     <div class="mb-3">
       <p class="text-[11px] font-black uppercase tracking-widest text-violet-700">Koçluk çizelgesi</p>
@@ -108,17 +140,17 @@
 
   <nav class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
     {% if veli %}
-    {% set sekmeler = [('ozet','Özet'), ('program','Program'), ('defter','Defter'), ('deneme','Analiz')] %}
+    {% set sekmeler = [('ozet','Özet'), ('program','Program'), ('soru','Soru'), ('deneme','Analiz')] %}
     {% else %}
-    {% set sekmeler = [('deneme','Deneme'), ('program','Program'), ('defter','Defter')] %}
+    {% set sekmeler = [('deneme','Deneme'), ('program','Program'), ('soru','Soru')] %}
     {% endif %}
     {% for kod, ad in sekmeler %}
-    {% if veli and kod == 'defter' %}
-    <a href="{{ url_for('veli_lgs', bolum=kod, hafta=hafta_sec) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
+    {% if veli and kod == 'soru' %}
+    <a href="{{ url_for('veli_lgs', bolum=kod) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
     {% elif veli %}
     <a href="{{ url_for('veli_lgs', bolum=kod) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
-    {% elif kod == 'defter' %}
-    <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum=kod, hafta=hafta_sec) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
+    {% elif kod == 'soru' %}
+    <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum=kod) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
     {% else %}
     <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum=kod) }}" class="rounded-xl px-3 py-2 text-center text-sm font-black {{ 'bg-slate-900 text-white' if bolum == kod else 'border border-slate-200 bg-white' }}">{{ ad }}</a>
     {% endif %}
@@ -159,7 +191,7 @@
         {% endfor %}
       </ul>
       <a href="{{ url_for('veli_lgs', bolum='program') }}" class="mt-3 inline-block text-sm font-black text-indigo-800">Haftalık program</a>
-      <a href="{{ url_for('veli_lgs', bolum='defter', hafta=hafta_sec) }}" class="mt-3 ml-3 inline-block text-sm font-black text-indigo-800">Çalışma defteri</a>
+      <a href="{{ url_for('veli_lgs', bolum='soru') }}" class="mt-3 ml-3 inline-block text-sm font-black text-indigo-800">Sorular ve optik</a>
   </section>
   {% elif bolum == 'program' %}
   <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
@@ -313,6 +345,59 @@
   <p class="mt-3 text-sm text-slate-500">Öğretmenin tempo seçince haftalık ders programın burada açılır.</p>
   {% endif %}
 
+  {% elif bolum == 'soru' %}
+  <section class="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+    <h2 class="font-black">Sorular ve optik</h2>
+    {% if not optik_sinavlar %}
+    <p class="mt-2 text-sm text-slate-600">Öğretmen henüz soru PDF’i yüklemedi.</p>
+    {% else %}
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for s in optik_sinavlar %}
+      {% if veli %}
+      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{{ s.ad }}</a>
+      {% else %}
+      <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{{ s.ad }}</a>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% if not optik_secili %}
+    <p class="mt-3 text-sm text-slate-600">Görmek istediğin sınavı seç.</p>
+    {% else %}
+    <p class="mt-3 text-sm font-bold">{{ optik_secili.ad }} · {{ optik_secili.tarih }} · {{ optik_secili.soru_sayisi }} soru</p>
+    <iframe class="mt-3 h-[70vh] w-full rounded-2xl border border-slate-200" src="{{ url_for('lgs_optik_pdf', sinav_id=optik_secili.id) }}" title="{{ optik_secili.ad }} soruları"></iframe>
+    {% if optik_secili.sonuc %}
+    <p class="mt-4 text-sm font-black">Doğru {{ optik_secili.sonuc.dogru }} · Yanlış {{ optik_secili.sonuc.yanlis }} · Boş {{ optik_secili.sonuc.bos }} · Net {{ optik_secili.sonuc.net }}</p>
+    {% if optik_detay %}
+    <ul class="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+      {% for satir in optik_detay.satirlar %}
+      <li class="rounded-lg px-2 py-1 {{ 'bg-emerald-50' if satir.durum == 'dogru' else ('bg-rose-50' if satir.durum == 'yanlis' else 'bg-slate-50') }}">{{ satir.no }}. {{ satir.verilen or 'boş' }} · doğru {{ satir.dogru }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% elif veli %}
+    <form method="post" action="{{ url_for('veli_lgs') }}" class="mt-4">
+      <input type="hidden" name="islem" value="optik_bitir">
+      <input type="hidden" name="bolum" value="soru">
+      <input type="hidden" name="sinav_id" value="{{ optik_secili.id }}">
+      <div class="grid gap-2">
+        {% for n in range(optik_secili.soru_sayisi) %}
+        <fieldset class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 px-3 py-2">
+          <legend class="px-1 text-sm font-black">{{ n + 1 }}</legend>
+          {% for harf in 'ABCD' %}
+          <label class="text-sm font-bold"><input type="radio" name="c{{ n }}" value="{{ harf }}"> {{ harf }}</label>
+          {% endfor %}
+        </fieldset>
+        {% endfor %}
+      </div>
+      <button class="mt-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Bitir</button>
+    </form>
+    {% else %}
+    <p class="mt-4 text-sm text-slate-600">Bu öğrenci optiği henüz bitirmedi.</p>
+    {% if not veli %}<p class="mt-1 font-mono text-xs text-slate-500">Anahtar: {{ optik_secili.cevaplar|join('') }}</p>{% endif %}
+    {% endif %}
+    {% endif %}
+    {% endif %}
+  </section>
   {% elif bolum == 'defter' %}
   <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
     <div class="flex items-center justify-between gap-2">

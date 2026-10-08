@@ -15,7 +15,13 @@
   {% if not loop.last %}<a class="app-button" href="{{ url_for('haftalik_takip', sinif=aktif.id if aktif else none, donem=donem, hafta=haftalar[loop.index0+1].basi) }}">Sonraki →</a>{% else %}<span class="app-button is-disabled">Sonraki →</span>{% endif %}
   {% endif %}{% endfor %}</div>
 </section>
-{% if aktif %}
+{% if aktif and aktif.sinif_adi.startswith('8/') %}
+<section class="app-card">
+  <h2>8. sınıflar LGS soru optiğinde</h2>
+  <p>Bu sınıfta ödev ve kitap takibi kapalı. Öğretmen soru PDF’ini yükler, öğrenci optiğe işaretler.</p>
+  <a class="app-primary" href="{{ url_for('lgs') }}">LGS sorularını aç</a>
+</section>
+{% elif aktif %}
 <section class="app-stat-row" aria-label="Haftanın özeti">{% for kod,ad in [('okudu','Okudu'),('getirdi','Getirdi'),('tam','Ödev tam'),('eksik','Ödev eksik'),('yok','Ödev yok')] %}<div><span>{{ ad }}</span><strong id="say-{{ kod }}">{{ ozet[kod] }}</strong></div>{% endfor %}</section>
 {% if ozet.onay_bekleyen %}<p class="app-notice">{{ ozet.onay_bekleyen }} veli tamamlandı bildirimi gönderdi. Öğretmen onayı bekliyor.</p>{% endif %}
 <details class="app-card app-details"><summary>Sınıf ödevi ve toplu işlemler</summary>

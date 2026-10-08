@@ -40,11 +40,16 @@ class Workflows(unittest.TestCase):
             s['veli_ogrenci_id'] = self.oid
 
     def test_tracking_and_notification(self):
-        payload = dict(sinif_id=self.sid,ogrenci_id=self.oid,hafta=self.week,alan='odev_durum',deger='eksik')
+        con=d._conn()
+        student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='6/A' ORDER BY o.id LIMIT 1").fetchone())
+        con.close()
+        payload = dict(sinif_id=student['sinif_id'],ogrenci_id=student['id'],hafta=self.week,alan='odev_durum',deger='eksik')
         r=self.teacher_client.post('/haftalik-takip/isaret',json=payload)
         self.assertTrue(r.json['ok'])
-        self.assertEqual(d.haftalik_takip_sinif(self.sid,self.week)[self.oid]['odev_durum'],'eksik')
-        self.assertTrue(d.veli_haber_yeni(self.oid,0))
+        self.assertEqual(d.haftalik_takip_sinif(student['sinif_id'],self.week)[student['id']]['odev_durum'],'eksik')
+        self.assertTrue(d.veli_haber_yeni(student['id'],0))
+        blocked=self.teacher_client.post('/haftalik-takip/isaret',json=dict(sinif_id=self.sid,ogrenci_id=self.oid,hafta=self.week,alan='odev_durum',deger='eksik'))
+        self.assertEqual(blocked.status_code,403)
 
     def _latest_action(self, client=None):
         con=d._conn()
@@ -125,7 +130,10 @@ class Workflows(unittest.TestCase):
         self.assertIn('Bilişim Teknolojileri',self.parent.get('/veli/sonuclar').get_data(as_text=True))
 
     def test_undo_blocks_foreign_actor_and_intervening_change(self):
-        payload=dict(sinif_id=self.sid,ogrenci_id=self.oid,hafta=self.week,alan='odev_not',deger='İlk not')
+        con=d._conn()
+        student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='6/B' ORDER BY o.id LIMIT 1").fetchone())
+        con.close()
+        payload=dict(sinif_id=student['sinif_id'],ogrenci_id=student['id'],hafta=self.week,alan='odev_not',deger='İlk not')
         self.teacher_client.post('/haftalik-takip/metin',json=payload)
         action=self._latest_action()
         other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam')
@@ -135,7 +143,7 @@ class Workflows(unittest.TestCase):
         client.post('/haftalik-takip/metin',json={**payload,'deger':'Son not'})
         response=self.teacher_client.post('/islem-gecmisi/'+action+'/geri-al',follow_redirects=True)
         self.assertIn('daha sonra başka bir değişiklik',response.get_data(as_text=True))
-        self.assertEqual(d.haftalik_takip_sinif(self.sid,self.week)[self.oid]['odev_not'],'Son not')
+        self.assertEqual(d.haftalik_takip_sinif(student['sinif_id'],self.week)[student['id']]['odev_not'],'Son not')
 
     def test_book_approval_undo_restores_points_and_treasure(self):
         con=d._conn()
@@ -239,7 +247,15 @@ class Workflows(unittest.TestCase):
         self.assertEqual(r.status_code,400)
 
     def test_parent_menu_has_reading_entry(self):
-        self.assertTrue('/veli/kitap-okuma' in self.parent.get('/veli').get_data(as_text=True))
+        html=self.parent.get('/veli').get_data(as_text=True)
+        self.assertNotIn('data-parent-nav="hafta"', html)
+        self.assertIn('Sorular ve optik', html)
+        con=d._conn()
+        student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='5/A' ORDER BY o.id LIMIT 1").fetchone())
+        con.close()
+        parent=w.app.test_client()
+        with parent.session_transaction() as s:s['veli_ogrenci_id']=student['id']
+        self.assertIn('/veli/kitap-okuma', parent.get('/veli').get_data(as_text=True))
 
     def test_guidance_teacher_roster(self):
         teachers=[o for o in d.tum_ogretmenler() if o['ad_soyad']=='ALPEREN MURAT LEBLEBİCİ']
@@ -313,30 +329,42 @@ class Workflows(unittest.TestCase):
             self.assertFalse(d.kitap_okuma_veli_kaydet(self.oid,**payload)['ok'])
 
     def test_reading_save_and_approve(self):
-        d.haftalik_takip_metin(self.sid,self.oid,self.week,'kitap_adi','Test kitabı',self.teacher['id'])
-        r=self.parent.post('/veli/kitap-okuma/kaydet',data={'kitap_adi':'Test kitabı','hafta':self.week},follow_redirects=True)
+        con=d._conn()
+        student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='5/A' ORDER BY o.id LIMIT 1").fetchone())
+        con.close()
+        oid,sid=student['id'],student['sinif_id']
+        d.haftalik_takip_metin(sid,oid,self.week,'kitap_adi','Test kitabı',self.teacher['id'])
+        parent=w.app.test_client()
+        with parent.session_transaction() as s:s['veli_ogrenci_id']=oid
+        r=parent.post('/veli/kitap-okuma/kaydet',data={'kitap_adi':'Test kitabı','hafta':self.week},follow_redirects=True)
         self.assertTrue('Kitabı bitirdiğiniz öğretmeninize bildirildi' in r.get_data(as_text=True))
-        entry=d.kitap_okuma_ogrenci_gecmis(self.oid)[0]
+        entry=d.kitap_okuma_ogrenci_gecmis(oid)[0]
         r=self.teacher_client.post('/ogretmen/kitap-okuma/'+str(entry['id'])+'/onayla',data={})
         self.assertEqual(r.status_code,302)
-        self.assertEqual(d.kitap_okuma_ogrenci_gecmis(self.oid)[0]['durum'],'onaylandi')
-        self.assertEqual(d.haftalik_takip_sinif(self.sid,self.week)[self.oid]['kitap_okuma'],'okudu')
+        self.assertEqual(d.kitap_okuma_ogrenci_gecmis(oid)[0]['durum'],'onaylandi')
+        self.assertEqual(d.haftalik_takip_sinif(sid,self.week)[oid]['kitap_okuma'],'okudu')
 
     def test_reading_completion_is_assigned_and_deduplicated(self):
+        con=d._conn()
+        student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='5/B' ORDER BY o.id LIMIT 1").fetchone())
+        con.close()
+        oid,sid=student['id'],student['sinif_id']
         book='Tek düğme test kitabı'
-        d.haftalik_takip_metin(self.sid,self.oid,self.week,'kitap_adi',book,self.teacher['id'])
-        html=self.parent.get('/veli/kitap-okuma').get_data(as_text=True)
+        d.haftalik_takip_metin(sid,oid,self.week,'kitap_adi',book,self.teacher['id'])
+        parent=w.app.test_client()
+        with parent.session_transaction() as s:s['veli_ogrenci_id']=oid
+        html=parent.get('/veli/kitap-okuma').get_data(as_text=True)
         self.assertNotIn('name="sayfa_sayisi"',html)
         self.assertNotIn('XP',html)
         self.assertIn('Kitabı bitirdik',html)
         payload={'kitap_adi':book,'hafta':self.week,'sayfa_sayisi':'9999','saat':'999','xp':'999'}
-        self.assertEqual(self.parent.post('/veli/kitap-okuma/kaydet',data=payload).status_code,302)
-        self.parent.post('/veli/kitap-okuma/kaydet',data=payload)
-        entries=[k for k in d.kitap_okuma_ogrenci_gecmis(self.oid) if k['kitap_adi']==book]
+        self.assertEqual(parent.post('/veli/kitap-okuma/kaydet',data=payload).status_code,302)
+        parent.post('/veli/kitap-okuma/kaydet',data=payload)
+        entries=[k for k in d.kitap_okuma_ogrenci_gecmis(oid) if k['kitap_adi']==book]
         self.assertEqual(len(entries),1)
         self.assertEqual((entries[0]['sayfa_sayisi'],entries[0]['saat'],entries[0]['xp']),(0,0,0))
-        self.assertEqual(self.parent.post('/veli/kitap-okuma/kaydet',data={**payload,'kitap_adi':'Verilmemiş kitap'}).status_code,400)
-        self.assertEqual(self.parent.post('/veli/kitap-okuma/kaydet',data={**payload,'hafta':'2000-01-03'}).status_code,400)
+        self.assertEqual(parent.post('/veli/kitap-okuma/kaydet',data={**payload,'kitap_adi':'Verilmemiş kitap'}).status_code,400)
+        self.assertEqual(parent.post('/veli/kitap-okuma/kaydet',data={**payload,'hafta':'2000-01-03'}).status_code,400)
 
     def test_teacher_secondary_tools_reachable(self):
         html=self.teacher_client.get('/dashboard').get_data(as_text=True)
@@ -389,17 +417,66 @@ class Workflows(unittest.TestCase):
         self.assertTrue('action="/analiz"' in html)
 
     def test_photo_upload_and_parent_access(self):
+        con=d._conn()
+        student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='7/A' ORDER BY o.id LIMIT 1").fetchone())
+        con.close()
         png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lN8AAAAASUVORK5CYII=')
-        payload={'sinif_id':self.sid,'ogrenci_id':self.oid,'hafta':self.week}
+        payload={'sinif_id':student['sinif_id'],'ogrenci_id':student['id'],'hafta':self.week}
         r=self.teacher_client.post('/haftalik-takip/foto',data={**payload,'foto':(BytesIO(png),'test.png')},follow_redirects=True)
         self.assertTrue('Ödev fotoğrafı kaydedildi' in r.get_data(as_text=True))
-        r=self.parent.get('/veli/odev-foto')
+        parent=w.app.test_client()
+        with parent.session_transaction() as s:s['veli_ogrenci_id']=student['id']
+        r=parent.get('/veli/odev-foto')
         self.assertEqual(r.status_code,200)
         self.assertEqual(r.data,png)
         r.close()
         r=self.teacher_client.post('/haftalik-takip/foto',data={**payload,'foto':(BytesIO(b'not an image'),'test.png')},follow_redirects=True)
         self.assertTrue('Dosya geçerli bir' in r.get_data(as_text=True))
         self.assertEqual(self.teacher_client.post('/haftalik-takip/foto',data={**payload,'hafta':'../invalid'}).status_code,400)
+
+    def test_lgs_optik_veli_bitirince_ogretmen_listesinde(self):
+        import lgs_optik
+        pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
+        response = self.teacher_client.post(
+            '/lgs',
+            data={
+                'islem': 'optik_ekle',
+                'ad': 'Optik deneme',
+                'tarih': '2026-10-08',
+                'anahtar': 'A B C D',
+                'pdf': (BytesIO(pdf), 'soru.pdf'),
+            },
+            content_type='multipart/form-data',
+            follow_redirects=True,
+        )
+        html = response.get_data(as_text=True)
+        self.assertIn('4 soruluk optik açıldı', html)
+        self.assertIn('Henüz optik bitirilmedi', html)
+        sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Optik deneme')
+        soru = self.parent.get('/veli/lgs?bolum=soru&sinav=' + str(sinav['id']))
+        sayfa = soru.get_data(as_text=True)
+        self.assertIn('name="c0"', sayfa)
+        self.assertNotIn('>Defter<', sayfa)
+        pdf_yanit = self.parent.get('/lgs/optik/%s/pdf' % sinav['id'])
+        self.assertEqual(pdf_yanit.data[:5], b'%PDF-')
+        pdf_yanit.close()
+        bitirdi = self.parent.post('/veli/lgs', data={
+            'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'],
+            'c0': 'A', 'c1': 'A', 'c2': 'C', 'c3': '',
+        }, follow_redirects=True)
+        sonuc = bitirdi.get_data(as_text=True)
+        self.assertIn('Net 1.67', sonuc)
+        self.assertIn('Doğru 2', sonuc)
+        tekrar = self.parent.post('/veli/lgs', data={
+            'islem': 'optik_bitir', 'sinav_id': sinav['id'], 'c0': 'A',
+        }, follow_redirects=True)
+        self.assertIn('daha önce bitirilmiş', tekrar.get_data(as_text=True))
+        pano = self.teacher_client.get('/lgs').get_data(as_text=True)
+        self.assertIn(self.student['ad_soyad'], pano)
+        self.assertIn('1.67', pano)
+        takip = self.teacher_client.get('/haftalik-takip?sinif=' + str(self.sid)).get_data(as_text=True)
+        self.assertIn('LGS soru optiğinde', takip)
+        self.assertNotIn('tracking-table', takip)
 
 
 class GuidanceService(unittest.TestCase):

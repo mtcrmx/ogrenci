@@ -106,6 +106,7 @@ from veli_cihaz import veli_cihaz_kaydet, veli_cihaz_ogrenci, veli_cihaz_sil
 from export import excel_raporu_olustur, OPENPYXL_OK
 from lgs_konular import LGS_KONULAR
 from lgs_program import DEFTER_DERSLER, LGS_AYLAR, TEMPO_AD, blok_metin, gun_plani
+import lgs_optik
 from lgs_sayac import lgs_sayac_verisi
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes, pdf_odev_raporu_bytes
 from rapor_analiz import (
@@ -2793,6 +2794,9 @@ def haftalik_foto():
     donem = request.form.get("donem", type=int) or 1
     if not _haftalik_takip_yetki(sinif_id) or not hafta or not ogrenci_id:
         abort(403)
+    if _sekizinci_sinif_mi(sinif_id):
+        flash("8. sınıflarda ödev ve kitap takibi kapalı. Sorular LGS optiğinde.", "warning")
+        return redirect(url_for("lgs"))
     ogrenci = _ogrenci_bul(ogrenci_id)
     if not ogrenci or int(ogrenci["sinif_id"]) != sinif_id:
         abort(403)
@@ -2846,6 +2850,9 @@ def veli_odev_bildir():
     if not ogr or ogr.get("sinif_adi") not in {"5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"}:
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
+    if str(ogr.get("sinif_adi") or "").startswith("8/"):
+        flash("8. sınıflarda ödev bildirimi kapalı. Cevaplar LGS optiğine işaretlenir.", "warning")
+        return redirect(url_for("veli_lgs"))
     bugun = date.today()
     hafta_basi = (bugun - timedelta(days=bugun.weekday())).isoformat()
     haftalik_odev_bildir(int(oid), hafta_basi, request.form.get("yaptim") == "1")
@@ -3476,6 +3483,15 @@ def _haftalik_takip_yetki(sinif_id: int) -> bool:
     return _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id)
 
 
+def _sekizinci_sinif_mi(sinif_id: int) -> bool:
+    if not sinif_id:
+        return False
+    for sinif in aktif_sube_siniflari():
+        if int(sinif["id"]) == int(sinif_id):
+            return str(sinif.get("sinif_adi") or "").startswith("8/")
+    return False
+
+
 def _haftalik_payload(ogrenci_gerekli=True):
     payload = request.get_json(silent=True) if request.is_json else request.form
     if not hasattr(payload, "get"):
@@ -3508,6 +3524,8 @@ def haftalik_takip_isaret():
     deger = str(payload.get("deger") or "").strip()
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
         return jsonify({"ok": False}), 403
+    if _sekizinci_sinif_mi(sinif_id):
+        return jsonify(ok=False, sebep="8. sınıflarda ödev ve kitap takibi kapalı."), 403
     sonuc = haftalik_takip_isaretle(
         sinif_id, ogrenci_id, hafta, alan, deger, session["ogretmen_id"]
     )
@@ -3526,6 +3544,8 @@ def haftalik_takip_metin_route():
     deger = str(payload.get("deger") or "")
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
         return jsonify({"ok": False}), 403
+    if _sekizinci_sinif_mi(sinif_id):
+        return jsonify(ok=False, sebep="8. sınıflarda ödev ve kitap takibi kapalı."), 403
     if alan == "kitap_adi" and deger.strip():
         from database import _conn as _db
         con = _db()
@@ -3552,6 +3572,8 @@ def haftalik_takip_toplu_route():
     deger = str(payload.get("deger") or "").strip()
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
         return jsonify({"ok": False}), 403
+    if _sekizinci_sinif_mi(sinif_id):
+        return jsonify(ok=False, sebep="8. sınıflarda ödev ve kitap takibi kapalı."), 403
     sonuc = haftalik_takip_toplu(
         sinif_id, hafta, alan, deger, session["ogretmen_id"]
     )
@@ -3567,6 +3589,9 @@ def haftalik_odev_bilgi_route():
     donem = request.form.get("donem", type=int) or 1
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
         abort(403)
+    if _sekizinci_sinif_mi(sinif_id):
+        flash("8. sınıflarda ödev ve kitap takibi kapalı. Sorular LGS optiğinde.", "warning")
+        return redirect(url_for("lgs"))
     haftalik_odev_bilgi_kaydet(
         sinif_id,
         hafta,
@@ -3587,6 +3612,9 @@ def haftalik_odev_kopyala_route():
     donem = request.form.get("donem", type=int) or 1
     if not _haftalik_takip_yetki(sinif_id) or not hafta:
         abort(403)
+    if _sekizinci_sinif_mi(sinif_id):
+        flash("8. sınıflarda ödev ve kitap takibi kapalı. Sorular LGS optiğinde.", "warning")
+        return redirect(url_for("lgs"))
     sonuc = haftalik_odev_onceki_kopyala(sinif_id, hafta, session["ogretmen_id"])
     if not sonuc.get("ok"):
         flash("Önceki haftada kopyalanacak bir sınıf ödevi yok.", "warning")
@@ -4316,8 +4344,70 @@ def veli_lgs():
     return _lgs_ekran(veli=True)
 
 
+def _lgs_optik_ekle():
+    dosya = request.files.get("pdf")
+    anahtar = lgs_optik.anahtar_oku(request.form.get("anahtar") or "")
+    ad = (request.form.get("ad") or "").strip()
+    tarih = (request.form.get("tarih") or date.today().isoformat())[:10]
+    if not ad:
+        flash("Sınav adı yazın.", "warning")
+        return redirect(url_for("lgs"))
+    if not anahtar:
+        flash("Cevap anahtarına her soru için A, B, C veya D yazın. En fazla 90 soru.", "warning")
+        return redirect(url_for("lgs"))
+    if not dosya or not (dosya.filename or "").lower().endswith(".pdf"):
+        flash("Soruların PDF dosyasını seçin.", "warning")
+        return redirect(url_for("lgs"))
+    ham = dosya.read(lgs_optik.AZAMI_BOYUT + 1)
+    if not ham.startswith(b"%PDF-") or len(ham) > lgs_optik.AZAMI_BOYUT:
+        flash("PDF boş, bozuk veya 20 MB'dan büyük.", "warning")
+        return redirect(url_for("lgs"))
+    from uuid import uuid4
+    ad_dosya = uuid4().hex + ".pdf"
+    (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
+    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"))
+    flash(f"{ad}: {len(anahtar)} soruluk optik açıldı.", "success")
+    return redirect(url_for("lgs"))
+
+
+def _lgs_optik_paketi(ogrenci_id: int | None = None):
+    sinavlar = lgs_optik.sinavlari_listele()
+    for sinav in sinavlar:
+        sinav["sonuclar"] = lgs_optik.sinav_sonuclari(sinav["id"])
+        sinav["sonuc"] = lgs_optik.sonuc_getir(sinav["id"], ogrenci_id) if ogrenci_id else None
+    secili_id = request.args.get("sinav", type=int)
+    secili = next((s for s in sinavlar if s["id"] == secili_id), None)
+    if secili is None and len(sinavlar) == 1:
+        secili = sinavlar[0]
+    detay = None
+    if secili and secili.get("sonuc"):
+        detay = lgs_optik.puan_hesapla(secili["cevaplar"], secili["sonuc"]["isaretler"])
+    return sinavlar, secili, detay
+
+
+@app.route("/lgs/optik/<int:sinav_id>/pdf")
+def lgs_optik_pdf(sinav_id):
+    sinav = lgs_optik.sinav_getir(sinav_id)
+    if not sinav:
+        abort(404)
+    if session.get("ogretmen_id"):
+        pass
+    elif session.get("veli_ogrenci_id"):
+        ogr = _ogrenci_bul(int(session["veli_ogrenci_id"]))
+        if not ogr or ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+            abort(403)
+    else:
+        abort(403)
+    yol = lgs_optik.pdf_yolu(sinav)
+    if not yol:
+        abort(404)
+    return send_file(yol, mimetype="application/pdf", download_name=f"{sinav['ad']}.pdf", as_attachment=False)
+
+
 def _lgs_ekran(veli: bool):
     hafta = _lgs_hafta()
+    if not veli and request.method == "POST" and request.form.get("islem") == "optik_ekle":
+        return _lgs_optik_ekle()
     if not veli and request.method == "POST" and request.form.get("islem") == "sinif_tempo":
         sinif_id = request.form.get("sinif_id", type=int) or 0
         yetkili_siniflar = ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari()
@@ -4346,9 +4436,9 @@ def _lgs_ekran(veli: bool):
         if ogr and ogr.get("sinif_adi") not in {"8/A", "8/B"}:
             return redirect(url_for("lgs"))
     bolum = request.values.get("bolum") or ("ozet" if veli else "deneme")
-    if bolum == "gunluk":
-        bolum = "defter"
-    izinli = {"ozet", "program", "defter", "deneme"} if veli else {"deneme", "program", "defter"}
+    if bolum in {"gunluk", "defter"}:
+        bolum = "soru"
+    izinli = {"ozet", "program", "soru", "deneme"} if veli else {"deneme", "program", "soru"}
     if bolum not in izinli:
         bolum = "ozet" if veli else "deneme"
     hafta_sec = _lgs_hafta_sec(request.values.get("hafta"))
@@ -4360,6 +4450,18 @@ def _lgs_ekran(veli: bool):
         elif not veli and islem == "onay":
             lgs_gorev_onayla(oid, request.form.get("gorev_id", type=int) or 0, request.form.get("karar") or "")
             bolum = "deneme"
+        elif veli and islem == "optik_bitir":
+            sinav_id = request.form.get("sinav_id", type=int) or 0
+            sinav = lgs_optik.sinav_getir(sinav_id)
+            isaret = []
+            if sinav:
+                isaret = [((request.form.get(f"c{i}") or "").strip().upper()) for i in range(len(sinav["cevaplar"]))]
+            kayit = lgs_optik.sonuc_kaydet(sinav_id, oid, isaret)
+            if not kayit.get("ok"):
+                flash(kayit.get("hata") or "Optik kaydedilemedi.", "warning")
+            else:
+                flash(f"Optik bitti. Doğru {kayit['dogru']}, yanlış {kayit['yanlis']}, boş {kayit['bos']}, net {kayit['net']}.", "success")
+            bolum = "soru"
         elif veli and islem == "program_bildir":
             tarih = (request.form.get("tarih") or "")[:10]
             sira = request.form.get("sira", type=int)
@@ -4489,6 +4591,8 @@ def _lgs_ekran(veli: bool):
         parametre["bolum"] = bolum
         if bolum == "defter":
             parametre["hafta"] = hafta_sec
+        if bolum == "soru" and request.form.get("sinav_id"):
+            parametre["sinav"] = request.form.get("sinav_id", type=int)
         return redirect(url_for(hedef_url, **parametre))
 
     if not veli and not oid:
@@ -4507,7 +4611,7 @@ def _lgs_ekran(veli: bool):
                 ay_harita[int(ogrenci_satir["id"])] = lgs_ay_durum(int(ogrenci_satir["id"]))
         return render_template(
             "lgs.html", gruplar=gruplar, ogrenci=None, veli=False, tempo_adlari=TEMPO_AD,
-            aylar=LGS_AYLAR, ay_harita=ay_harita,
+            aylar=LGS_AYLAR, ay_harita=ay_harita, optik_sinavlar=_lgs_optik_paketi()[0], bugun=date.today().isoformat(),
         )
 
     gorevler = lgs_gorevler(oid, hafta)
@@ -4543,6 +4647,7 @@ def _lgs_ekran(veli: bool):
         denemeler, oran, plan["toplam"] if plan["gunler"] else len(gorevler), bugun_gorev,
         gunluk, profil["hedef"], profil.get("hedef_net") or 0,
     )
+    optik_sinavlar, optik_secili, optik_detay = _lgs_optik_paketi(oid)
     return render_template(
         "lgs.html",
         veli=veli,
@@ -4587,6 +4692,9 @@ def _lgs_ekran(veli: bool):
         hafta_sonraki=_lgs_hafta_sec(
             (datetime.strptime(hafta_sec, "%Y-%m-%d").date() + timedelta(days=7)).isoformat()
         ),
+        optik_sinavlar=optik_sinavlar,
+        optik_secili=optik_secili,
+        optik_detay=optik_detay,
     )
 
 
@@ -6223,6 +6331,8 @@ def veli_kitap_okuma(form_data=None):
     if not ogrenci:
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
+    if str(ogrenci.get("sinif_adi") or "").startswith("8/"):
+        return redirect(url_for("veli_lgs", bolum="soru"))
     kayitlar = kitap_okuma_ogrenci_gecmis(int(oid), 80)
     durumlar = {k['kitap_adi']:k['durum'] for k in reversed(kayitlar)}
     kitaplar = []
@@ -6248,6 +6358,9 @@ def veli_kitap_okuma_kaydet():
     oid = session.get("veli_ogrenci_id")
     if not oid:
         return redirect(url_for("veli_giris"))
+    ogrenci = _ogrenci_bul(int(oid))
+    if ogrenci and str(ogrenci.get("sinif_adi") or "").startswith("8/"):
+        return redirect(url_for("veli_lgs", bolum="soru"))
     sonuc = kitap_okuma_bitirdi_bildir(int(oid),request.form.get('hafta',''),
                                     request.form.get('kitap_adi',''),request.form.get('veli_notu',''))
     mesaj = "Kitabı bitirdiğiniz öğretmeninize bildirildi. Okuma onayı bekleniyor."
