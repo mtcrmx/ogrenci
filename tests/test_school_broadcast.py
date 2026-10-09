@@ -182,6 +182,20 @@ class SchoolBroadcast(unittest.TestCase):
         self.post(islem='program_sifirla',gun='3')
         self.assertEqual(tv.program_for(3),before)
 
+    def test_friday_afternoon_starts_at_1320(self):
+        import json
+        friday = tv.slots(4)
+        self.assertEqual((friday[4]['baslangic'], friday[4]['bitis']), ('13:20', '14:00'))
+        self.assertEqual(friday[5]['baslangic'], '14:00')
+        self.assertEqual(tv.slots(0)[4]['baslangic'], '12:55')
+        saved = [[p['baslangic'], p['bitis']] for p in friday]
+        saved[4][0] = '13:30'
+        con = d._conn()
+        con.execute("INSERT OR REPLACE INTO okul_yayin_ayar VALUES ('cuma', ?)", (json.dumps(saved),))
+        con.commit(); con.close()
+        tv.init_schema()
+        self.assertEqual(tv.slots(4)[4]['baslangic'], '13:20')
+
     def test_invalid_bell_hours_do_not_partially_update(self):
         fields={f'{key}_{p["no"]}_{edge}':p[source] for key,day in [('haftaici',0),('cuma',4)] for p in tv.slots(day) for edge,source in [('bas','baslangic'),('bit','bitis')]}
         fields['haftaici_1_bas']='08:10'

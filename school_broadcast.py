@@ -60,6 +60,12 @@ def init_schema():
             bitis TEXT NOT NULL, aktif INTEGER NOT NULL DEFAULT 1);
     ''')
     con.execute('INSERT OR IGNORE INTO okul_yayin_ayar VALUES (?,?)', ('token', secrets.token_urlsafe(32)))
+    saved = con.execute("SELECT deger FROM okul_yayin_ayar WHERE anahtar='cuma'").fetchone()
+    if saved:
+        hours = json.loads(saved[0])
+        if len(hours) >= 5 and hours[4][:2] == ['13:30', '14:00']:
+            hours[4][0] = '13:20'
+            con.execute('UPDATE okul_yayin_ayar SET deger=? WHERE anahtar=?', (json.dumps(hours), 'cuma'))
     con.commit()
     con.close()
 
