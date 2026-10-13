@@ -86,7 +86,7 @@ from database import (
     lgs_ay_tek_kaydet, lgs_program_ozel_getir, lgs_program_ozel_kaydet, lgs_program_ozel_sil,
     lgs_program_isaretler, lgs_program_bildir, lgs_program_onayla,
     lgs_defter_getir, lgs_defter_kaydet, lgs_defter_ogretmen, lgs_defter_onayli_soru,
-    deneme_sinav_listesi, deneme_sinav_ogrencileri,
+    deneme_sinav_listesi, deneme_sinav_ogrencileri, deneme_sinav_katalog,
     LGS_DERSLER, LGS_GUNLER, LGS_SORU_SAYISI,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
@@ -4314,6 +4314,214 @@ def _deneme_ekran_verisi(veli: bool, kendi_id: int | None = None) -> dict:
         ],
         "gorunum": "birey" if (veli or request.args.get("gorunum") == "birey" or (request.args.get("ogrenci") and request.args.get("gorunum") != "genel")) else (request.args.get("gorunum") or "genel"),
     }
+
+
+def _test_ort(ogrenciler: list[dict]) -> dict:
+    if not ogrenciler:
+        return {"adet": 0, "net": 0, "dogru": 0, "yanlis": 0, "bos": 0}
+    n = len(ogrenciler)
+    return {
+        "adet": n,
+        "net": round(sum(float(o["net"] or 0) for o in ogrenciler) / n, 2),
+        "dogru": round(sum(int(o["dogru"] or 0) for o in ogrenciler) / n, 1),
+        "yanlis": round(sum(int(o["yanlis"] or 0) for o in ogrenciler) / n, 1),
+        "bos": round(sum(int(o["bos"] or 0) for o in ogrenciler) / n, 1),
+    }
+
+
+def _test_dilim(netler: list[float], tavan: int) -> tuple[list[str], list[int]]:
+    if not netler:
+        return [], []
+    alt = min(0, int(min(netler)))
+    ust = max(int(tavan), int(max(netler)) + 1)
+    if ust <= alt:
+        ust = alt + 1
+    adim = max(1, -(-(ust - alt) // 6))
+    adlar, adetler = [], []
+    x = alt
+    while x < ust:
+        y = min(ust, x + adim)
+        son = y >= ust
+        adlar.append(f"{x}–{y}" if y > x + 1 else str(x))
+        adetler.append(sum(1 for n in netler if x <= n < y or (son and n >= y)))
+        x = y
+    return adlar, adetler
+
+
+def _soru_istatistik(ogrenciler: list[dict], cevaplar: list[str]) -> list[dict]:
+    toplam = len(ogrenciler)
+    sorular = []
+    for i, harf in enumerate(cevaplar):
+        say = {"dogru": 0, "yanlis": 0, "bos": 0}
+        sec = {"A": 0, "B": 0, "C": 0, "D": 0, "bos": 0}
+        for ogrenci in ogrenciler:
+            satir = ogrenci["satirlar"][i]
+            say[satir["durum"]] += 1
+            verilen = satir["verilen"] if satir["verilen"] in {"A", "B", "C", "D"} else "bos"
+            sec[verilen] += 1
+        basari = round(say["dogru"] * 100 / toplam, 1) if toplam else 0
+        en = max(("A", "B", "C", "D", "bos"), key=lambda k: sec[k])
+        sorular.append({
+            "no": i + 1,
+            "cevap": harf,
+            "dogru": say["dogru"],
+            "yanlis": say["yanlis"],
+            "bos": say["bos"],
+            "basari": basari,
+            "sec": sec,
+            "en_cok": "boş" if en == "bos" else en,
+            "en_adet": sec[en],
+            "renk": "#1f9d62" if basari >= 70 else ("#d4a017" if basari >= 40 else "#d4536a"),
+        })
+    return sorular
+
+
+def _sinif_mevcut(adlar: set[str]) -> dict[str, int]:
+    mevcut = {}
+    for sinif in aktif_sube_siniflari():
+        if sinif["sinif_adi"] in adlar:
+            mevcut[sinif["sinif_adi"]] = len(sinif_ogrencileri(sinif["id"]))
+    return mevcut
+
+
+def _sonuc_satirlari(kayitlar: list[dict]) -> list[dict]:
+    cikti = []
+    for kayit in kayitlar:
+        dersler = kayit.get("dersler") or []
+        cikti.append({
+            "id": kayit["ogrenci_id"],
+            "ad": kayit["ad_soyad"],
+            "no": kayit["ogr_no"],
+            "sinif": kayit["sinif_adi"],
+            "net": kayit["net"],
+            "dogru": sum(int(d["dogru"] or 0) for d in dersler),
+            "yanlis": sum(int(d["yanlis"] or 0) for d in dersler),
+            "bos": sum(int(d["bos"] or 0) for d in dersler),
+            "dersler": dersler,
+        })
+    return cikti
+
+
+@app.route("/lgs/test-analiz")
+@giris_zorunlu
+def test_sinif_analiz():
+    optikler = lgs_optik.sinavlari_listele()
+    for sinav in optikler:
+        sinav["katilan"] = len(lgs_optik.sinav_sonuclari(sinav["id"]))
+    katalog = deneme_sinav_katalog()
+    sinif_ad = (request.args.get("sinif") or "").strip()
+    sinav_id = request.args.get("sinav", type=int)
+    sonuc_ad = (request.args.get("ad") or "").strip()
+    sonuc_tarih = (request.args.get("tarih") or "")[:10]
+    sonuc_tur = request.args.get("tur") or ""
+    if sonuc_tur not in {"ders", "deneme", "kurum"}:
+        sonuc_tur = ""
+    if sinav_id:
+        kaynak = "optik"
+    elif sonuc_ad and sonuc_tarih and sonuc_tur:
+        kaynak = "sonuc"
+    elif optikler:
+        kaynak = "optik"
+        sinav_id = optikler[0]["id"]
+    elif katalog:
+        kaynak = "sonuc"
+        sonuc_ad, sonuc_tarih, sonuc_tur = katalog[0]["ad"], katalog[0]["tarih"], katalog[0]["tur"]
+    else:
+        return render_template("test_sinif_analiz.html", bos=True, optikler=[], katalog=[])
+
+    if kaynak == "optik":
+        sinav = lgs_optik.sinav_getir(sinav_id or 0)
+        if not sinav:
+            abort(404)
+        hepsi = lgs_optik.cozen_ogrenciler(sinav["id"])
+        sinif_adlari = sorted({o["sinif"] for o in hepsi})
+        if sinif_ad not in sinif_adlari:
+            sinif_ad = ""
+        kapsam = [o for o in hepsi if o["sinif"] == sinif_ad] if sinif_ad else list(hepsi)
+        sorular = _soru_istatistik(kapsam, sinav["cevaplar"])
+        zor = [q for q in sorted(sorular, key=lambda q: (q["basari"], -q["yanlis"], q["no"])) if q["basari"] < 100][:8]
+        siniflar = []
+        for ad in sinif_adlari:
+            grup = [o for o in hepsi if o["sinif"] == ad]
+            siniflar.append({"sinif": ad, **_test_ort(grup)})
+        ort = _test_ort(kapsam)
+        okul = _test_ort(hepsi)
+        tavan = sinav["soru_sayisi"] or 1
+        siralama = []
+        for o in sorted(kapsam, key=lambda o: (-o["net"], o["ad"])):
+            siralama.append({
+                "id": o["id"], "ad": o["ad"], "no": o["no"], "sinif": o["sinif"],
+                "dogru": o["dogru"], "yanlis": o["yanlis"], "bos": o["bos"], "net": o["net"],
+                "yuzde": max(0, min(100, round(o["net"] * 100 / tavan, 1))),
+            })
+        dag_ad, dag_adet = _test_dilim([o["net"] for o in kapsam], tavan)
+        mevcut = _sinif_mevcut(set(sinif_adlari or ([sinif_ad] if sinif_ad else [])))
+        beklenen = mevcut.get(sinif_ad, 0) if sinif_ad else sum(mevcut.values())
+        grafik = {
+            "soru": True,
+            "no": [q["no"] for q in sorular],
+            "dogru": [q["dogru"] for q in sorular],
+            "yanlis": [q["yanlis"] for q in sorular],
+            "bos": [q["bos"] for q in sorular],
+            "sinif_ad": [s["sinif"] for s in siniflar],
+            "sinif_net": [s["net"] for s in siniflar],
+            "dagilim_ad": dag_ad,
+            "dagilim_adet": dag_adet,
+            "dyb": [
+                sum(o["dogru"] for o in kapsam),
+                sum(o["yanlis"] for o in kapsam),
+                sum(o["bos"] for o in kapsam),
+            ],
+        }
+        baslik = sinav["ad"]
+        alt = f"{'Yaprak test' if sinav.get('tur') == 'yaprak' else 'Deneme'} · {sinav['tarih']} · {sinav['soru_sayisi']} soru"
+        return render_template(
+            "test_sinif_analiz.html", bos=False, kaynak="optik", optikler=optikler, katalog=katalog,
+            sinav=sinav, sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
+            sorular=sorular, zor=zor, siralama=siralama, grafik=grafik, baslik=baslik, alt=alt,
+            sonuc=None,
+        )
+
+    kayit = next((k for k in katalog if k["ad"] == sonuc_ad and k["tarih"] == sonuc_tarih and k["tur"] == sonuc_tur), None)
+    if not kayit:
+        abort(404)
+    hepsi = _sonuc_satirlari(deneme_sinav_ogrencileri(sonuc_ad, sonuc_tarih, sonuc_tur))
+    sinif_adlari = sorted({o["sinif"] for o in hepsi})
+    if sinif_ad not in sinif_adlari:
+        sinif_ad = ""
+    kapsam = [o for o in hepsi if o["sinif"] == sinif_ad] if sinif_ad else list(hepsi)
+    siniflar = [{"sinif": ad, **_test_ort([o for o in hepsi if o["sinif"] == ad])} for ad in sinif_adlari]
+    ort = _test_ort(kapsam)
+    okul = _test_ort(hepsi)
+    ders_ort = _deneme_ort([{**o, "puan": None, "dersler": o["dersler"]} for o in kapsam])
+    tavan = max((sum(int(d.get("soru_sayisi") or (d["dogru"] + d["yanlis"] + d["bos"])) for d in o["dersler"]) for o in kapsam), default=1) or 1
+    siralama = []
+    for o in sorted(kapsam, key=lambda o: (-o["net"], o["ad"])):
+        siralama.append({**{k: o[k] for k in ("id", "ad", "no", "sinif", "dogru", "yanlis", "bos", "net")},
+                         "yuzde": max(0, min(100, round(float(o["net"]) * 100 / tavan, 1)))})
+    dag_ad, dag_adet = _test_dilim([float(o["net"]) for o in kapsam], tavan)
+    mevcut = _sinif_mevcut(set(sinif_adlari))
+    beklenen = mevcut.get(sinif_ad, 0) if sinif_ad else sum(mevcut.values())
+    grafik = {
+        "soru": False,
+        "no": [d["ders"] for d in ders_ort["dersler"]],
+        "dogru": [d["dogru"] for d in ders_ort["dersler"]],
+        "yanlis": [d["yanlis"] for d in ders_ort["dersler"]],
+        "bos": [d["bos"] for d in ders_ort["dersler"]],
+        "sinif_ad": [s["sinif"] for s in siniflar],
+        "sinif_net": [s["net"] for s in siniflar],
+        "dagilim_ad": dag_ad,
+        "dagilim_adet": dag_adet,
+        "dyb": [sum(o["dogru"] for o in kapsam), sum(o["yanlis"] for o in kapsam), sum(o["bos"] for o in kapsam)],
+    }
+    tur_ad = {"ders": "Yaprak test", "deneme": "Deneme", "kurum": "Kurum denemesi"}.get(sonuc_tur, "Sonuç")
+    return render_template(
+        "test_sinif_analiz.html", bos=False, kaynak="sonuc", optikler=optikler, katalog=katalog,
+        sinav=None, sonuc={"ad": sonuc_ad, "tarih": sonuc_tarih, "tur": sonuc_tur},
+        sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
+        sorular=[], zor=[], siralama=siralama, grafik=grafik, baslik=sonuc_ad,
+        alt=f"{tur_ad} · {sonuc_tarih} · soru numarası yok, ders toplamları",
+    )
 
 
 @app.route("/deneme-analiz")

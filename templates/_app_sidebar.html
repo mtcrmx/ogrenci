@@ -35,10 +35,11 @@
     <a href="{{ url_for('yayin') }}" target="_blank" rel="noopener"><span aria-hidden="true">▣</span>Okul yayın ekranı</a>
     {% if yayin_icerik_ekleyebilir() %}<a href="{{ url_for('yayin_yonetim') }}" class="{{ 'is-current' if request.endpoint == 'yayin_yonetim' else '' }}"><span aria-hidden="true">☷</span>{{ 'Yayın yönetimi' if yayin_yonetebilir() else 'Yayına içerik ekle' }}</a>{% endif %}
     </details>
-    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['analiz_merkezi','deneme_analiz','karne'] or (rapor_only and request.endpoint == 'ogretmen_kitap_okuma') %} open{% endif %}><summary>Raporlar</summary>
+    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['analiz_merkezi','deneme_analiz','test_sinif_analiz','karne'] or (rapor_only and request.endpoint == 'ogretmen_kitap_okuma') %} open{% endif %}><summary>Raporlar</summary>
     <a href="{{ url_for('analiz_merkezi', sinif_id=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'analiz_merkezi' else '' }}"><span aria-hidden="true">◒</span>Kitap/ödev analizi</a>
     {% if not rapor_only %}
     <a href="{{ url_for('deneme_analiz') }}" class="{{ 'is-current' if request.endpoint == 'deneme_analiz' else '' }}"><span aria-hidden="true">◈</span>Deneme analizi</a>
+    <a href="{{ url_for('test_sinif_analiz') }}" class="{{ 'is-current' if request.endpoint == 'test_sinif_analiz' else '' }}"><span aria-hidden="true">▦</span>Test ve sınıf analizi</a>
     <a href="{{ url_for('karne', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'karne' else '' }}"><span aria-hidden="true">▣</span>Dönem karnesi</a>
     </details>
     <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['ogretmen_kitap_okuma','ogretmen_randevular','giris_raporu','ogrenci_ara'] %} open{% endif %}><summary>Diğer araçlar</summary>

@@ -182,6 +182,31 @@ def sonuc_kaydet(sinav_id: int, ogrenci_id: int, isaretler: list[str]) -> dict:
     return {"ok": True, **puan}
 
 
+def cozen_ogrenciler(sinav_id: int) -> list[dict]:
+    """Her bitiren öğrencinin soru soru doğru, yanlış ve boş dökümü."""
+    sinav = sinav_getir(sinav_id)
+    if not sinav:
+        return []
+    cikti = []
+    for row in sinav_sonuclari(sinav_id):
+        isaret = row["isaretler"]
+        if isinstance(isaret, str):
+            isaret = json.loads(isaret)
+        puan = puan_hesapla(sinav["cevaplar"], isaret)
+        cikti.append({
+            "id": row["ogrenci_id"],
+            "ad": row["ad_soyad"],
+            "no": row["ogr_no"],
+            "sinif": row["sinif_adi"],
+            "dogru": puan["dogru"],
+            "yanlis": puan["yanlis"],
+            "bos": puan["bos"],
+            "net": puan["net"],
+            "satirlar": puan["satirlar"],
+        })
+    return cikti
+
+
 def sinav_sonuclari(sinav_id: int) -> list[dict]:
     con = db._conn()
     _init(con)

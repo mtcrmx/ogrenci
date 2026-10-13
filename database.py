@@ -2186,20 +2186,37 @@ def deneme_sinav_listesi() -> list[dict]:
     return rows
 
 
-def deneme_sinav_ogrencileri(ad: str, tarih: str) -> list[dict]:
+def deneme_sinav_katalog() -> list[dict]:
     con = _conn()
     _lgs_init(con)
-    denemeler = [dict(r) for r in con.execute(
+    rows = [dict(r) for r in con.execute(
         """
-        SELECT d.id, d.ogrenci_id, d.puan, o.ad_soyad, o.ogr_no, s.sinif_adi
+        SELECT ad, tarih, tur, COUNT(*) AS adet
+        FROM lgs_deneme
+        GROUP BY ad, tarih, tur
+        ORDER BY tarih DESC, ad
+        """
+    ).fetchall()]
+    con.close()
+    return rows
+
+
+def deneme_sinav_ogrencileri(ad: str, tarih: str, tur: str | None = None) -> list[dict]:
+    con = _conn()
+    _lgs_init(con)
+    sql = """
+        SELECT d.id, d.ogrenci_id, d.puan, d.tur, o.ad_soyad, o.ogr_no, s.sinif_adi
         FROM lgs_deneme d
         JOIN ogrenciler o ON o.id = d.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
         WHERE d.ad = ? AND d.tarih = ?
-        ORDER BY s.sinif_adi, o.ad_soyad
-        """,
-        (ad, tarih),
-    ).fetchall()]
+    """
+    params: list = [ad, tarih]
+    if tur:
+        sql += " AND d.tur = ?"
+        params.append(tur)
+    sql += " ORDER BY s.sinif_adi, o.ad_soyad"
+    denemeler = [dict(r) for r in con.execute(sql, params).fetchall()]
     for d in denemeler:
         satirlar = [dict(r) for r in con.execute(
             "SELECT * FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",

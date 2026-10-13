@@ -577,6 +577,45 @@ class Workflows(unittest.TestCase):
         self.assertIn('class="soru-cubuk"', kart)
         self.assertIn('Ekim denemesi', kart)
 
+    def test_teacher_class_analysis_charts_questions_and_scores(self):
+        import lgs_optik
+        pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
+        self.teacher_client.post('/lgs', data={
+            'islem': 'optik_ekle', 'ad': 'Sınıf analiz denemesi', 'tarih': '2026-10-13', 'tur': 'deneme',
+            'anahtar': 'ABCD', 'pdf': (BytesIO(pdf), 'sinif.pdf'),
+        }, content_type='multipart/form-data')
+        sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Sınıf analiz denemesi')
+        self.parent.post('/veli/lgs', data={
+            'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'],
+            'c0': 'A', 'c1': 'A', 'c2': 'C', 'c3': '',
+        })
+        con = d._conn()
+        diger = dict(con.execute("SELECT o.id, o.ad_soyad FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='8/B' ORDER BY o.id LIMIT 1").fetchone())
+        con.close()
+        lgs_optik.sonuc_kaydet(sinav['id'], diger['id'], ['A', 'A', 'A', 'A'])
+        sayfa = self.teacher_client.get('/lgs/test-analiz', query_string={'sinav': sinav['id']}).get_data(as_text=True)
+        self.assertIn('Soru soru başarı', sayfa)
+        self.assertIn('En çok zorlayan sorular', sayfa)
+        self.assertIn('2. soru', sayfa)
+        self.assertIn('en çok işaret A', sayfa)
+        self.assertIn('8/A', sayfa)
+        self.assertIn('8/B', sayfa)
+        self.assertIn('id="soru-dyb"', sayfa)
+        self.assertIn('id="sinif-net"', sayfa)
+        sinif = self.teacher_client.get('/lgs/test-analiz', query_string={'sinav': sinav['id'], 'sinif': '8/A'}).get_data(as_text=True)
+        self.assertIn(self.student['ad_soyad'], sinif)
+        self.assertNotIn(diger['ad_soyad'], sinif)
+        self.teacher_client.post('/sonuclar', data={
+            'ogrenci': self.oid, 'tur': 'ders', 'ad': 'Sınıf yaprak testi', 'tarih': '2026-10-13',
+            'ders': 'Matematik', 'soru_sayisi': '20', 'dogru': '14', 'yanlis': '4', 'yanlis_goturme': '0',
+        })
+        yaprak = self.teacher_client.get('/lgs/test-analiz', query_string={'ad': 'Sınıf yaprak testi', 'tarih': '2026-10-13', 'tur': 'ders'}).get_data(as_text=True)
+        self.assertIn('Ders başına ortalama', yaprak)
+        self.assertIn('Matematik', yaprak)
+        self.assertIn(self.student['ad_soyad'], yaprak)
+        self.assertEqual(self.parent.get('/lgs/test-analiz').status_code, 302)
+        self.assertIn('Sınıf analizi', self.teacher_client.get('/lgs').get_data(as_text=True))
+
 
 class GuidanceService(unittest.TestCase):
     def setUp(self):
