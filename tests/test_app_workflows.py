@@ -535,6 +535,8 @@ class Workflows(unittest.TestCase):
         self.assertIn('is-bos', sonuc)
         self.assertIn('2. soru yanlış', sonuc)
         self.assertIn('4. soru boş', sonuc)
+        self.assertIn('Yapılan testler', sonuc)
+        self.assertLess(sonuc.index('Yapılan testler'), sonuc.index('Optik deneme'))
         analiz = self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True)
         self.assertIn('Soru analizi', analiz)
         self.assertIn('Optik deneme', analiz)

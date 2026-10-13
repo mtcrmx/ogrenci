@@ -369,15 +369,38 @@
     {% if not optik_sinavlar %}
     <p class="mt-2 text-sm text-slate-600">Öğretmen henüz soru PDF’i yüklemedi.</p>
     {% else %}
-    <div class="mt-3 flex flex-wrap gap-2">
-      {% for s in optik_sinavlar %}
-      {% if veli %}
-      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</a>
-      {% else %}
-      <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</a>
-      {% endif %}
+    {% if veli %}
+    {% set cozulen = optik_sinavlar|selectattr('sonuc')|list %}
+    {% set bekleyen = optik_sinavlar|rejectattr('sonuc')|list %}
+    {% if bekleyen %}
+    <p class="mt-4 text-xs font-black uppercase tracking-wide text-slate-400">Çözülecek</p>
+    <div class="mt-2 grid gap-2">
+      {% for s in bekleyen %}
+      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="block rounded-xl px-3 py-3 text-sm {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">
+        <span class="block font-black">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</span>
+        <span class="mt-1 block text-xs {{ 'text-slate-300' if optik_secili and optik_secili.id == s.id else 'text-slate-500' }}">{{ s.tarih }} · {{ s.soru_sayisi }} soru · henüz çözülmedi</span>
+      </a>
       {% endfor %}
     </div>
+    {% endif %}
+    {% if cozulen %}
+    <p class="mt-4 text-xs font-black uppercase tracking-wide text-slate-400">Yapılan testler</p>
+    <div class="mt-2 grid gap-2">
+      {% for s in cozulen %}
+      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="block rounded-xl px-3 py-3 text-sm {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">
+        <span class="block font-black">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</span>
+        <span class="mt-1 block text-xs {{ 'text-slate-300' if optik_secili and optik_secili.id == s.id else 'text-slate-500' }}">{{ s.tarih }} · net {{ s.sonuc.net }} · doğru {{ s.sonuc.dogru }} · yanlış {{ s.sonuc.yanlis }} · boş {{ s.sonuc.bos }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for s in optik_sinavlar %}
+      <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% if not optik_secili %}
     <p class="mt-3 text-sm text-slate-600">Görmek istediğin sınavı seç.</p>
     {% else %}
