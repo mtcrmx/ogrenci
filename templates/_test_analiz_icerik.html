@@ -9,6 +9,12 @@
   .ta-sec i { display:block; height:8px; border-radius:99px; background:#e2e8f0; overflow:hidden; }
   .ta-sec b { height:100%; display:block; background:#94a3b8; border-radius:99px; }
   .ta-sec .dogru b { background:#1f9d62; }
+  .ta-baslik { margin-top:12px; }
+  .ta-baslik > summary { cursor:pointer; font-weight:900; list-style:none; }
+  .ta-baslik > summary::-webkit-details-marker { display:none; }
+  .ta-baslik > summary::before { content:"›"; display:inline-block; margin-right:8px; color:#8964ae; }
+  .ta-baslik[open] > summary::before { transform:rotate(90deg); }
+  .ta-baslik[open] > summary { margin-bottom:12px; }
 </style>
 <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
   <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{% if ta.veli %}Sınıfın ve sen{% else %}Öğretmen · genel ve sınıf{% endif %}</p>
@@ -77,22 +83,22 @@
 </section>
 
 {% if ta.grafik.soru and ta.sorular %}
-<section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-  <h2 class="font-black">Soru soru başarı</h2>
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>Soru soru başarı</summary>
   <p class="mt-1 text-sm text-slate-500">Yeşil %70 ve üzeri, sarı %40–69, kırmızı %40’ın altı. Sayı, soru numarası.{% if ta.veli %} Kutunun altındaki işaret senin sonucun.{% endif %}</p>
   <div class="ta-isi mt-3" aria-label="Soru başarı ısısı">
     {% for q in ta.sorular %}
     <span class="ta-hucre" style="background:{{ q.renk }}" title="{{ q.no }}. soru · doğru cevap {{ q.cevap }} · %{{ q.basari }} · doğru {{ q.dogru }}, yanlış {{ q.yanlis }}, boş {{ q.bos }}{% if q.ben %} · sen {{ 'doğru' if q.ben == 'dogru' else ('yanlış' if q.ben == 'yanlis' else 'boş') }}{% endif %}">{{ q.no }}<small>{% if q.ben == 'dogru' %}✓{% elif q.ben == 'yanlis' %}✗{% elif q.ben == 'bos' %}–{% endif %}%{{ q.basari }}</small></span>
     {% endfor %}
-  </div>
-</section>
-<section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-  <h2 class="font-black">Her soruda doğru, yanlış, boş</h2>
+    </div>
+</details>
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>Her soruda doğru, yanlış, boş</summary>
   <div class="mt-3 overflow-x-auto"><canvas id="soru-dyb" style="min-width:{{ [640, ta.sorular|length * 28]|max }}px; height:280px"></canvas></div>
-</section>
+</details>
 {% if ta.zor %}
-<section class="mt-3">
-  <h2 class="font-black">En çok zorlayan sorular</h2>
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>En çok zorlayan sorular</summary>
   <div class="mt-2 grid gap-3 md:grid-cols-2">
     {% for q in ta.zor %}
     <article class="rounded-2xl border border-slate-200 bg-white p-4">
@@ -108,33 +114,40 @@
     </article>
     {% endfor %}
   </div>
-</section>
+</details>
 {% endif %}
 {% elif ta.grafik.no %}
-<section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-  <h2 class="font-black">Ders başına ortalama doğru, yanlış, boş</h2>
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>Ders başına ortalama doğru, yanlış, boş</summary>
   <canvas id="soru-dyb" class="mt-3 max-h-80 w-full"></canvas>
-</section>
+</details>
 {% endif %}
 
-<section class="mt-3 grid gap-3 lg:grid-cols-2">
-  <article class="rounded-2xl border border-slate-200 bg-white p-4">
-    <h2 class="font-black">Sınıfların net ortalaması</h2>
-    <canvas id="sinif-net" class="mt-3 max-h-64 w-full"></canvas>
-  </article>
-  <article class="rounded-2xl border border-slate-200 bg-white p-4">
-    <h2 class="font-black">Net dağılımı</h2>
-    <canvas id="net-dagilim" class="mt-3 max-h-64 w-full"></canvas>
-  </article>
-</section>
-<section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-  <h2 class="font-black">Doğru, yanlış, boş</h2>
-  <canvas id="dyb" class="mx-auto mt-3 max-h-64"></canvas>
-</section>
+{% if not ta.veli and ta.gelisim and ta.gelisim.etiket %}
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>Gelişim grafiği</summary>
+  <p class="text-sm text-slate-500">Yaprak testlerde netin nasıl değişti. Her çizgi bir ders; seçili sınıfın ortalamasıdır.</p>
+  <canvas id="ta-gelisim" class="mt-3 max-h-64 w-full"></canvas>
+</details>
+{% endif %}
 
-<section class="mt-3 space-y-2">
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>Sınıfların net ortalaması</summary>
+  <canvas id="sinif-net" class="mt-3 max-h-64 w-full"></canvas>
+</details>
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>Net dağılımı</summary>
+  <canvas id="net-dagilim" class="mt-3 max-h-64 w-full"></canvas>
+</details>
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>Doğru, yanlış, boş</summary>
+  <canvas id="dyb" class="mx-auto mt-3 max-h-64"></canvas>
+</details>
+
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+  <summary>{% if ta.veli %}Senin sıran{% if ta.sinif %} · {{ ta.sinif }}{% else %} · genel{% endif %}{% else %}{{ ta.sinif or 'Genel' }} sıralama{% endif %}</summary>
+  <div class="space-y-2">
   {% if ta.veli %}
-  <h2 class="font-black">Senin sıran{% if ta.sinif %} · {{ ta.sinif }}{% else %} · genel{% endif %}</h2>
   {% if ta.siralama %}
   {% set o = ta.siralama[0] %}
   <article class="rounded-2xl border border-slate-200 bg-white p-3">
@@ -149,7 +162,6 @@
   <p class="rounded-2xl border border-slate-200 bg-white p-3 text-sm">Bu sınavda sıran yok.</p>
   {% endif %}
   {% else %}
-  <h2 class="font-black">{{ ta.sinif or 'Genel' }} sıralama</h2>
   {% for o in ta.siralama %}
   <article class="rounded-2xl border border-slate-200 bg-white p-3">
     <div class="flex items-baseline justify-between gap-2 text-sm">
@@ -161,40 +173,75 @@
   </article>
   {% endfor %}
   {% endif %}
-</section>
+  </div>
+</details>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const ortak = { animation: { duration: 900 }, plugins: { legend: { position: "bottom" } } };
 const g = {{ ta.grafik|tojson }};
+const gelisim = {{ (ta.gelisim if ta.gelisim else {"etiket": [], "seriler": []})|tojson }};
 const dybRenk = ["#1f9d62", "#d4536a", "#c5bcc8"];
-if (document.getElementById("soru-dyb")) {
-  new Chart(document.getElementById("soru-dyb"), {
-    type: "bar",
-    data: {
-      labels: g.no,
-      datasets: [
-        { label: "Doğru", data: g.dogru, backgroundColor: dybRenk[0], borderRadius: 6 },
-        { label: "Yanlış", data: g.yanlis, backgroundColor: dybRenk[1], borderRadius: 6 },
-        { label: "Boş", data: g.bos, backgroundColor: dybRenk[2], borderRadius: 6 }
-      ]
-    },
-    options: { ...ortak, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
-  });
+const taGrafik = {
+  "soru-dyb": function () {
+    return {
+      type: "bar",
+      data: {
+        labels: g.no,
+        datasets: [
+          { label: "Doğru", data: g.dogru, backgroundColor: dybRenk[0], borderRadius: 6 },
+          { label: "Yanlış", data: g.yanlis, backgroundColor: dybRenk[1], borderRadius: 6 },
+          { label: "Boş", data: g.bos, backgroundColor: dybRenk[2], borderRadius: 6 }
+        ]
+      },
+      options: { ...ortak, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+    };
+  },
+  "sinif-net": function () {
+    return {
+      type: "bar",
+      data: { labels: g.sinif_ad, datasets: [{ label: "Net ortalaması", data: g.sinif_net, backgroundColor: "#7954bb", borderRadius: 10 }] },
+      options: { ...ortak, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    };
+  },
+  "net-dagilim": function () {
+    return {
+      type: "bar",
+      data: { labels: g.dagilim_ad, datasets: [{ label: "Öğrenci", data: g.dagilim_adet, backgroundColor: "#c9b4f0", borderRadius: 10 }] },
+      options: { ...ortak, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    };
+  },
+  "dyb": function () {
+    return {
+      type: "doughnut",
+      data: { labels: ["Doğru", "Yanlış", "Boş"], datasets: [{ data: g.dyb, backgroundColor: dybRenk, borderWidth: 0 }] },
+      options: ortak
+    };
+  },
+  "ta-gelisim": function () {
+    return {
+      type: "line",
+      data: {
+        labels: gelisim.etiket,
+        datasets: (gelisim.seriler || []).map(function (s) {
+          return { label: s.ad, data: s.net, borderColor: s.renk, backgroundColor: s.renk, spanGaps: true, tension: 0.35 };
+        })
+      },
+      options: { ...ortak, scales: { y: { beginAtZero: true } } }
+    };
+  }
+};
+function taCiz(el) {
+  if (!el || el.dataset.hazir || !taGrafik[el.id]) return;
+  el.dataset.hazir = "1";
+  requestAnimationFrame(function () { new Chart(el, taGrafik[el.id]()); });
 }
-new Chart(document.getElementById("sinif-net"), {
-  type: "bar",
-  data: { labels: g.sinif_ad, datasets: [{ label: "Net ortalaması", data: g.sinif_net, backgroundColor: "#7954bb", borderRadius: 10 }] },
-  options: { ...ortak, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-});
-new Chart(document.getElementById("net-dagilim"), {
-  type: "bar",
-  data: { labels: g.dagilim_ad, datasets: [{ label: "Öğrenci", data: g.dagilim_adet, backgroundColor: "#c9b4f0", borderRadius: 10 }] },
-  options: { ...ortak, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-});
-new Chart(document.getElementById("dyb"), {
-  type: "doughnut",
-  data: { labels: ["Doğru", "Yanlış", "Boş"], datasets: [{ data: g.dyb, backgroundColor: dybRenk, borderWidth: 0 }] },
-  options: ortak
+document.querySelectorAll("details.ta-baslik").forEach(function (kutu) {
+  const calistir = function () {
+    if (!kutu.open) return;
+    kutu.querySelectorAll("canvas").forEach(taCiz);
+  };
+  kutu.addEventListener("toggle", calistir);
+  calistir();
 });
 </script>
 {% endif %}

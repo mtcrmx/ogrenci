@@ -4402,6 +4402,83 @@ def _sonuc_satirlari(kayitlar: list[dict]) -> list[dict]:
     return cikti
 
 
+_GELISIM_RENK = ("#7954bb", "#1f9d62", "#d4536a", "#d4a017", "#2563eb", "#0f766e", "#be185d")
+
+
+def _gelisim_cizelgesi(noktalar: list[dict]) -> dict:
+    sirali = sorted(noktalar, key=lambda n: (n.get("tarih") or "", n.get("ad") or ""))
+    dersler: list[str] = []
+    for nokta in sirali:
+        if nokta["ders"] not in dersler:
+            dersler.append(nokta["ders"])
+    return {
+        "etiket": [f"{(n.get('tarih') or '')[5:]} {n.get('ad') or ''}".strip() for n in sirali],
+        "seriler": [
+            {
+                "ad": ders,
+                "renk": _GELISIM_RENK[i % len(_GELISIM_RENK)],
+                "net": [n["net"] if n["ders"] == ders else None for n in sirali],
+            }
+            for i, ders in enumerate(dersler)
+        ],
+    }
+
+
+def _yaprak_noktalari(kayitlar: list[dict], optikler: list[dict] | None = None) -> list[dict]:
+    noktalar = []
+    for kayit in kayitlar:
+        if kayit.get("tur") != "ders":
+            continue
+        dersler = kayit.get("dersler") or []
+        ders = (dersler[0].get("ders") if dersler else "") or "Yaprak"
+        noktalar.append({"tarih": kayit.get("tarih") or "", "ad": kayit.get("ad") or "", "ders": ders, "net": kayit.get("net") or 0})
+    for sinav in optikler or []:
+        if sinav.get("tur") != "yaprak" or not sinav.get("sonuc"):
+            continue
+        noktalar.append({
+            "tarih": sinav.get("tarih") or "",
+            "ad": sinav.get("ad") or "",
+            "ders": sinav.get("ders") or "Yaprak",
+            "net": sinav["sonuc"].get("net") or 0,
+        })
+    return noktalar
+
+
+def _analiz_gelisim(katalog: list[dict], optikler: list[dict], sinif_ad: str, ogrenci_id: int | None) -> dict:
+    noktalar = []
+    for kayit in katalog:
+        if kayit.get("tur") != "ders":
+            continue
+        kisiler = deneme_sinav_ogrencileri(kayit["ad"], kayit["tarih"], "ders")
+        if ogrenci_id:
+            kisiler = [o for o in kisiler if int(o["ogrenci_id"]) == int(ogrenci_id)]
+        elif sinif_ad:
+            kisiler = [o for o in kisiler if o.get("sinif_adi") == sinif_ad]
+        if not kisiler:
+            continue
+        net = round(sum(float(o["net"] or 0) for o in kisiler) / len(kisiler), 2)
+        ders = ((kayit.get("dersler") or ["Yaprak"])[0]) or "Yaprak"
+        noktalar.append({"tarih": kayit["tarih"], "ad": kayit["ad"], "ders": ders, "net": net})
+    for sinav in optikler:
+        if sinav.get("tur") != "yaprak":
+            continue
+        kisiler = lgs_optik.sinav_sonuclari(sinav["id"])
+        if ogrenci_id:
+            kisiler = [o for o in kisiler if int(o["ogrenci_id"]) == int(ogrenci_id)]
+        elif sinif_ad:
+            kisiler = [o for o in kisiler if o.get("sinif_adi") == sinif_ad]
+        if not kisiler:
+            continue
+        net = round(sum(float(o["net"] or 0) for o in kisiler) / len(kisiler), 2)
+        noktalar.append({
+            "tarih": sinav.get("tarih") or "",
+            "ad": sinav.get("ad") or "",
+            "ders": sinav.get("ders") or "Yaprak",
+            "net": net,
+        })
+    return _gelisim_cizelgesi(noktalar)
+
+
 def _test_analiz_baglam(
     sinif_istek: str | None,
     sinav_id: int | None,
@@ -4471,6 +4548,7 @@ def _test_analiz_baglam(
     else:
         return {"bos": True, "optikler": [], "katalog": [], "veli": bool(ogrenci_id)}
 
+    gelisim = _analiz_gelisim(katalog, optikler, sinif_ad, ogrenci_id)
     if kaynak == "optik":
         sinav = lgs_optik.sinav_getir(sinav_id or 0)
         if not sinav:
@@ -4525,7 +4603,7 @@ def _test_analiz_baglam(
             bos=False, kaynak="optik", optikler=optikler, katalog=katalog, veli=bool(ogrenci_id),
             sinav=sinav, sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
             sorular=sorular, zor=zor, siralama=siralama, grafik=grafik, baslik=baslik, alt=alt, sonuc=None,
-            ders=ders_ad, dersler=list(LGS_DERSLER),
+            ders=ders_ad, dersler=list(LGS_DERSLER), gelisim=gelisim,
         )
         return _analiz_veli_sirasi(paket, ogrenci_id)
 
@@ -4568,7 +4646,7 @@ def _test_analiz_baglam(
         sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
         sorular=[], zor=[], siralama=siralama, grafik=grafik, baslik=sonuc_ad,
         alt=f"{tur_ad} · {sonuc_tarih} · soru numarası yok, ders toplamları",
-        ders=ders_ad, dersler=list(LGS_DERSLER),
+        ders=ders_ad, dersler=list(LGS_DERSLER), gelisim=gelisim,
     )
     return _analiz_veli_sirasi(paket, ogrenci_id)
 
@@ -4965,6 +5043,7 @@ def _lgs_ekran(veli: bool):
         gunluk, profil["hedef"], profil.get("hedef_net") or 0,
     )
     optik_sinavlar, optik_secili, optik_detay = _lgs_optik_paketi(oid)
+    yaprak_gelisim = _gelisim_cizelgesi(_yaprak_noktalari(tum_sonuclar, optik_sinavlar))
     ta = None
     if veli and bolum == "deneme":
         ta = _test_analiz_baglam(
@@ -5027,6 +5106,7 @@ def _lgs_ekran(veli: bool):
         optik_secili=optik_secili,
         optik_detay=optik_detay,
         ta=ta,
+        yaprak_gelisim=yaprak_gelisim,
     )
 
 
