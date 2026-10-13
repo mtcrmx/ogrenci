@@ -40,7 +40,7 @@
 {% if hafta.odev_foto %}<details class="app-details"><summary>Ödev fotoğrafı</summary><img class="vp-homework-photo" src="{{ url_for('veli_odev_foto') }}" alt="Öğretmenin eklediği ödev fotoğrafı"></details>{% endif %}
 <div class="app-row" style="margin-top:12px">{% if not hafta.odev_kod and hafta.odev_bildirim != 'yaptim' and (odev_ogr.odev_not or odev.aciklama) %}<form method="post" action="{{ url_for('veli_odev_bildir') }}"><input type="hidden" name="yaptim" value="1"><button class="app-primary">Çocuğum tamamladı</button></form>{% endif %}<a class="app-button" href="#hafta">Ödev ve kitap ayrıntısı →</a></div>
 {% else %}
-<div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_lgs', bolum='soru') }}">Sorular ve optik →</a><a class="app-button" href="{{ url_for('veli_lgs', bolum='deneme') }}">Soru analizi →</a></div>
+<div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_lgs', bolum='soru') }}">Sorular ve optik →</a><a class="app-button" href="{{ url_for('veli_lgs', bolum='deneme') }}">Soru analizi →</a><a class="app-button" href="{{ url_for('veli_lgs', bolum='sonuc') }}">Ders ve deneme sonuçları →</a></div>
 {% endif %}
 </section>
 {% if not lgs_acik %}

@@ -4651,7 +4651,9 @@ def _lgs_ekran(veli: bool):
     bolum = request.values.get("bolum") or ("soru" if veli else "deneme")
     if bolum in {"gunluk", "defter", "ozet", "program"}:
         bolum = "soru" if veli or bolum in {"gunluk", "defter"} else "deneme"
-    izinli = {"soru", "deneme"}
+    if not veli and bolum == "sonuc":
+        bolum = "deneme"
+    izinli = {"soru", "deneme", "sonuc"} if veli else {"soru", "deneme"}
     if bolum not in izinli:
         bolum = "soru" if veli else "deneme"
     hafta_sec = _lgs_hafta_sec(request.values.get("hafta"))
@@ -4880,6 +4882,7 @@ def _lgs_ekran(veli: bool):
         gunluk=gunluk,
         denemeler=denemeler,
         yapraklar=[d for d in tum_sonuclar if d.get("tur") == "ders"][:20],
+        kayitlar=tum_sonuclar,
         analiz=course_analysis(tum_sonuclar),
         kocluk=kocluk,
         grafik_etiket=[d["ad"] for d in grafik],

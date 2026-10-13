@@ -305,12 +305,18 @@ class Workflows(unittest.TestCase):
         html=self.parent.get('/veli').get_data(as_text=True)
         self.assertNotIn('data-parent-nav="hafta"', html)
         self.assertIn('Sorular ve optik', html)
+        self.assertIn('bolum=sonuc', html)
+        self.assertIn('Ders ve deneme sonuçları', html)
+        self.assertLess(html.find('>LGS<'), html.find('Ders ve deneme sonuçları'))
         con=d._conn()
         student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='5/A' ORDER BY o.id LIMIT 1").fetchone())
         con.close()
         parent=w.app.test_client()
         with parent.session_transaction() as s:s['veli_ogrenci_id']=student['id']
-        self.assertIn('/veli/kitap-okuma', parent.get('/veli').get_data(as_text=True))
+        bes=parent.get('/veli').get_data(as_text=True)
+        self.assertIn('/veli/kitap-okuma', bes)
+        self.assertIn('/veli/sonuclar', bes)
+        self.assertNotIn('bolum=sonuc', bes)
 
     def test_guidance_teacher_roster(self):
         teachers=[o for o in d.tum_ogretmenler() if o['ad_soyad']=='ALPEREN MURAT LEBLEBİCİ']

@@ -8,8 +8,15 @@
     {% set sekiz = (nav_student and nav_student.sinif_adi.startswith('8/')) or lgs_acik|default(false) %}
     <a href="{{ url_for('veli_panel') }}#genel" data-parent-nav="genel"><span aria-hidden="true">⌂</span>Ana sayfa</a>
     {% if not sekiz %}<a href="{{ url_for('veli_panel') }}#hafta" data-parent-nav="hafta"><span aria-hidden="true">▤</span>Ödev ve kitap</a>{% endif %}
-    {% if (nav_student and nav_student.sinif_adi.startswith('8/')) or lgs_acik|default(false) %}<a href="{{ url_for('veli_lgs') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' else '' }}"><span aria-hidden="true">✦</span>LGS</a>{% endif %}
+    {% if sekiz %}
+    <details class="app-nav-group" open><summary>LGS</summary>
+      <a href="{{ url_for('veli_lgs', bolum='soru') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' and request.args.get('bolum') not in ['deneme','sonuc'] else '' }}"><span aria-hidden="true">✦</span>Sorular</a>
+      <a href="{{ url_for('veli_lgs', bolum='deneme') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' and request.args.get('bolum') == 'deneme' else '' }}"><span aria-hidden="true">◈</span>Analiz</a>
+      <a href="{{ url_for('veli_lgs', bolum='sonuc') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' and request.args.get('bolum') == 'sonuc' else '' }}"><span aria-hidden="true">▤</span>Ders ve deneme sonuçları</a>
+    </details>
+    {% else %}
     <a href="{{ url_for('veli_sonuclar') }}" class="{{ 'is-current' if request.endpoint == 'veli_sonuclar' else '' }}"><span aria-hidden="true">◈</span>Ders ve deneme sonuçları</a>
+    {% endif %}
     <a href="{{ url_for('veli_panel') }}#mesajlar" data-parent-nav="mesajlar"><span aria-hidden="true">✉</span>Mesajlar</a>
     <a href="{{ url_for('veli_rehberlik') }}" class="{{ 'is-current' if request.endpoint.startswith('veli_rehberlik') else '' }}"><span aria-hidden="true">❋</span>Rehberlik servisi</a>
     <a href="{{ url_for('veli_panel') }}#raporlar" data-parent-nav="raporlar" class="{{ 'is-current' if request.endpoint in ['veli_karne','veli_kitap_odev_rapor','veli_deneme_analiz','veli_belge'] else '' }}"><span aria-hidden="true">◒</span>Raporlar</a>
