@@ -129,6 +129,31 @@ class Workflows(unittest.TestCase):
         self.assertEqual(record['dersler'][0]['bos'],5)
         self.assertIn('Bilişim Teknolojileri',self.parent.get('/veli/sonuclar').get_data(as_text=True))
 
+    def test_class_course_exam_writes_only_filled_scores(self):
+        con=d._conn()
+        students=[dict(r) for r in con.execute("SELECT o.id,o.ad_soyad FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='8/A' ORDER BY o.id LIMIT 3")]
+        con.close()
+        self.assertGreaterEqual(len(students),3)
+        a,b,c=students
+        payload={'islem':'sinif_ders','sinif_id':self.sid,'ad':'Sınıf matematik denemesi','tarih':'2026-10-13','ders':'Matematik','soru_sayisi':'20','yanlis_goturme':'3',f'dogru_{a["id"]}':'12',f'yanlis_{a["id"]}':'3',f'dogru_{b["id"]}':'0',f'yanlis_{b["id"]}':'0'}
+        page=self.teacher_client.post('/sonuclar',data=payload,follow_redirects=True).get_data(as_text=True)
+        self.assertIn('2 öğrenciye yazıldı',page)
+        rec=next(r for r in d.lgs_denemeler(a['id'],20) if r['ad']==payload['ad'])
+        self.assertEqual((rec['dersler'][0]['dogru'],rec['dersler'][0]['yanlis'],rec['dersler'][0]['bos'],rec['dersler'][0]['net']),(12,3,5,11))
+        bos=next(r for r in d.lgs_denemeler(b['id'],20) if r['ad']==payload['ad'])
+        self.assertEqual(bos['dersler'][0]['bos'],20)
+        self.assertFalse(any(r['ad']==payload['ad'] for r in d.lgs_denemeler(c['id'],20)))
+        bad=dict(payload,ad='Geçersiz sınıf denemesi')
+        bad[f'dogru_{a["id"]}']='19'
+        bad[f'yanlis_{a["id"]}']='5'
+        self.assertEqual(self.teacher_client.post('/sonuclar',data=bad).status_code,200)
+        self.assertFalse(any(r['ad']=='Geçersiz sınıf denemesi' for r in d.lgs_denemeler(a['id'],20)))
+        liste=self.teacher_client.get('/sonuclar',query_string={'sinif':self.sid}).get_data(as_text=True)
+        self.assertIn(f'name="dogru_{a["id"]}"',liste)
+        birey=self.teacher_client.get('/sonuclar',query_string={'ogrenci':self.oid}).get_data(as_text=True)
+        self.assertIn('Bireysel sonuç',birey)
+        self.assertIn('name="dogru"',birey)
+
     def test_undo_blocks_foreign_actor_and_intervening_change(self):
         con=d._conn()
         student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='6/B' ORDER BY o.id LIMIT 1").fetchone())

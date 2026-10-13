@@ -93,13 +93,26 @@ def register_results(app, login_required, accessible):
         full_teacher()
         oid = request.values.get('ogrenci', type=int)
         if not oid:
+            sinif_form = None
             if request.method == 'POST':
-                abort(400)
+                if request.form.get('islem') != 'sinif_ders':
+                    abort(400)
+                sinif_form = request.form
+                try:
+                    return _sinif_ders_kaydet()
+                except (ValueError, TypeError) as error:
+                    flash(str(error) or 'Ders denemesi alanlarını kontrol edin.', 'warning')
             classes = db.aktif_sube_siniflari() or db.ogretmen_siniflari(session['ogretmen_id'])
             selected = request.args.get('sinif', type=int) or session.get('ui_sinif_id')
+            if sinif_form and sinif_form.get('sinif_id', type=int):
+                selected = sinif_form.get('sinif_id', type=int)
             if selected in {s['id'] for s in classes}:
                 classes = [s for s in classes if s['id'] == selected]
-            return render_template('sonuclar.html', ogrenci=None, gruplar=[{'sinif': s, 'ogrenciler': db.sinif_ogrencileri(s['id'])} for s in classes])
+            return render_template(
+                'sonuclar.html', ogrenci=None, dersler=school_courses(), bugun=date.today().isoformat(),
+                sinif_form=sinif_form,
+                gruplar=[{'sinif': s, 'ogrenciler': db.sinif_ogrencileri(s['id'])} for s in classes],
+            )
         if not accessible(session['ogretmen_id'], oid):
             abort(403)
         con = db._conn()
@@ -171,6 +184,45 @@ def register_results(app, login_required, accessible):
                 flash(str(error) or 'Sonuç alanlarını kontrol edin.', 'warning')
         return render_template('sonuclar.html', ogrenci=dict(student), kayitlar=records, duzenlenen=editing,
                                dersler=courses, bugun=date.today().isoformat(), analiz=course_analysis(records, True), form=form, veli=False)
+
+    def _sinif_ders_kaydet():
+        classes = db.aktif_sube_siniflari() or db.ogretmen_siniflari(session['ogretmen_id'])
+        sinif_id = request.form.get('sinif_id', type=int) or 0
+        if sinif_id not in {int(s['id']) for s in classes}:
+            abort(403)
+        title = request.form.get('ad', '').strip()
+        when = date.fromisoformat(request.form.get('tarih', '')).isoformat()
+        course = request.form.get('ders', '').strip()
+        count = int(request.form.get('soru_sayisi', ''))
+        penalty = int(request.form.get('yanlis_goturme', ''))
+        courses = school_courses()
+        if not title or course not in courses or not 1 <= count <= 500 or penalty not in (0, 3, 4):
+            raise ValueError('Deneme adı, ders, soru sayısı ve net kuralını seçin.')
+        students = db.sinif_ogrencileri(sinif_id)
+        hazir = []
+        for student in students:
+            raw_dogru = (request.form.get(f"dogru_{student['id']}") or '').strip()
+            raw_yanlis = (request.form.get(f"yanlis_{student['id']}") or '').strip()
+            if raw_dogru == '' and raw_yanlis == '':
+                continue
+            dogru = int(raw_dogru or 0)
+            yanlis = int(raw_yanlis or 0)
+            if min(dogru, yanlis) < 0 or dogru + yanlis > count:
+                raise ValueError(f"{student['ad_soyad']}: doğru ve yanlış toplamı {count} soruyu geçemez.")
+            hazir.append((student, dogru, yanlis))
+        if not hazir:
+            raise ValueError('En az bir öğrencinin doğru veya yanlışını yazın. Boş satırlar kayda girmez.')
+        for student, dogru, yanlis in hazir:
+            saved = db.lgs_deneme_ekle(
+                student['id'], title, when,
+                [dict(ders=course, soru_sayisi=count, dogru=dogru, yanlis=yanlis, bos=count - dogru - yanlis, yanlis_goturme=penalty)],
+                ogretmen_id=session['ogretmen_id'], tur='ders',
+            )
+            if not saved.get('ok'):
+                raise ValueError(saved.get('hata') or f"{student['ad_soyad']} kaydedilemedi.")
+            db.veli_haber_ekle(student['id'], f'{title}: sonuç kaydedildi. Ders analizinizi inceleyebilirsiniz.')
+        flash(f'{title}: {len(hazir)} öğrenciye yazıldı. Boş bırakılan satırlar kayda girmedi.', 'success')
+        return redirect(url_for('sonuclar', sinif=sinif_id))
 
     @app.route('/veli/sonuclar')
     def veli_sonuclar():
