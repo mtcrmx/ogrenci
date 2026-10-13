@@ -596,6 +596,9 @@
     {% endfor %}
   </section>
   {% elif bolum == 'deneme' and veli %}
+  {% if ta and not ta.bos %}
+  {% include '_test_analiz_icerik.html' %}
+  {% endif %}
   <section class="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
     <h2 class="font-black">Soru analizi</h2>
     <p class="mt-1 text-sm text-slate-600">Öğrenci çözünce bu ekranı öğrenci de veli de görür. Yeşil doğru, kırmızı yanlış, gri boş. PDF optiğinde soru numarası belli olur. Elle girilen yaprak test ve denemede doğru, yanlış ve boş sayıları görünür.</p>

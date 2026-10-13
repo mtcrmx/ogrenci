@@ -1,0 +1,189 @@
+<style>
+  .ta-isi { display:flex; flex-wrap:wrap; gap:6px; }
+  .ta-hucre { width:52px; min-height:52px; border-radius:12px; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:900; font-size:13px; }
+  .ta-hucre small { font-size:10px; font-weight:800; opacity:.9; }
+  .ta-pil { display:inline-flex; align-items:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; font-size:13px; font-weight:800; }
+  .ta-pil.on { background:#0f172a; color:#fff; border-color:#0f172a; }
+  .ta-sec { display:grid; gap:4px; margin-top:8px; }
+  .ta-sec span { display:grid; grid-template-columns:2.2rem 1fr 1.5rem; gap:8px; align-items:center; font-size:12px; font-weight:800; }
+  .ta-sec i { display:block; height:8px; border-radius:99px; background:#e2e8f0; overflow:hidden; }
+  .ta-sec b { height:100%; display:block; background:#94a3b8; border-radius:99px; }
+  .ta-sec .dogru b { background:#1f9d62; }
+</style>
+<header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
+  <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{% if ta.veli %}Sınıfın ve sen{% else %}Öğretmen · genel ve sınıf{% endif %}</p>
+  <h1 class="mt-1 text-2xl font-black">{{ ta.baslik }}</h1>
+  <p class="mt-1 text-sm text-slate-300">{{ ta.alt }}</p>
+  <div class="mt-4 grid gap-3 lg:grid-cols-2">
+    <form method="get">
+      <input type="hidden" name="sinif" value="{{ 'genel' if ta.veli and not ta.sinif else ta.sinif }}">
+      {% if ta.veli %}<input type="hidden" name="bolum" value="deneme">{% endif %}
+      <label class="block text-xs font-black text-slate-300">PDF optik<select name="sinav" class="mt-1 w-full rounded-xl border-0 px-3 py-2 text-sm text-slate-900" onchange="this.form.submit()">
+        <option value="">Seçin</option>
+        {% for s in ta.optikler %}<option value="{{ s.id }}" {{ 'selected' if ta.kaynak == 'optik' and ta.sinav and ta.sinav.id == s.id else '' }}>{{ s.ad }} · {{ 'Yaprak' if s.tur == 'yaprak' else 'Deneme' }} · {{ s.tarih }} · {{ s.katilan }} öğrenci</option>{% endfor %}
+      </select></label>
+    </form>
+    <form method="get">
+      <input type="hidden" name="sinif" value="{{ 'genel' if ta.veli and not ta.sinif else ta.sinif }}">
+      {% if ta.veli %}<input type="hidden" name="bolum" value="deneme">{% endif %}
+      <label class="block text-xs font-black text-slate-300">Girilen yaprak test ve deneme<select class="mt-1 w-full rounded-xl border-0 px-3 py-2 text-sm text-slate-900" onchange="const p=this.value.split('|'); this.form.tur.value=p[0]; this.form.tarih.value=p[1]; this.form.ad.value=p.slice(2).join('|'); this.form.submit()">
+        <option value="">Seçin</option>
+        {% for k in ta.katalog %}<option value="{{ k.tur }}|{{ k.tarih }}|{{ k.ad }}" {{ 'selected' if ta.kaynak == 'sonuc' and ta.sonuc and ta.sonuc.ad == k.ad and ta.sonuc.tarih == k.tarih and ta.sonuc.tur == k.tur else '' }}>{{ k.ad }} · {{ 'Yaprak' if k.tur == 'ders' else ('Kurum' if k.tur == 'kurum' else 'Deneme') }} · {{ k.tarih }} · {{ k.adet }} öğrenci</option>{% endfor %}
+      </select></label>
+      <input type="hidden" name="tur"><input type="hidden" name="tarih"><input type="hidden" name="ad">
+    </form>
+  </div>
+</header>
+
+<nav class="mt-3 flex flex-wrap gap-2" aria-label="Sınıf">
+  {% if ta.sinav %}
+  {% if ta.veli %}
+  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinif='genel', sinav=ta.sinav.id) }}">Genel</a>
+  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinav=ta.sinav.id, sinif=s.sinif) }}">{{ s.sinif }}</a>{% endfor %}
+  {% else %}
+  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('test_sinif_analiz', sinav=ta.sinav.id) }}">Genel</a>
+  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('test_sinif_analiz', sinav=ta.sinav.id, sinif=s.sinif) }}">{{ s.sinif }}</a>{% endfor %}
+  {% endif %}
+  {% else %}
+  {% if ta.veli %}
+  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinif='genel', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur) }}">Genel</a>
+  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur, sinif=s.sinif) }}">{{ s.sinif }}</a>{% endfor %}
+  {% else %}
+  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('test_sinif_analiz', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur) }}">Genel</a>
+  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('test_sinif_analiz', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur, sinif=s.sinif) }}">{{ s.sinif }}</a>{% endfor %}
+  {% endif %}
+  {% endif %}
+</nav>
+
+{% if not ta.ort.adet %}
+<p class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm">Bu seçimde bitiren öğrenci yok.</p>
+{% else %}
+<section class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+  <article class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-[10px] font-black uppercase text-slate-400">Bitiren</div><div class="text-3xl font-black">{{ ta.ort.adet }}<span class="text-base text-slate-400">/{{ ta.beklenen }}</span></div></article>
+  <article class="rounded-2xl border border-slate-200 bg-white p-4"><div class="text-[10px] font-black uppercase text-slate-400">Net ort.</div><div class="text-3xl font-black">{{ ta.ort.net }}</div>{% if ta.sinif %}<p class="text-xs font-bold text-slate-500">Okul {{ ta.okul.net }} · fark {{ (ta.ort.net - ta.okul.net)|round(2) }}</p>{% endif %}</article>
+  <article class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div class="text-[10px] font-black uppercase text-emerald-700">Doğru ort.</div><div class="text-3xl font-black">{{ ta.ort.dogru }}</div></article>
+  <article class="rounded-2xl border border-rose-200 bg-rose-50 p-4"><div class="text-[10px] font-black uppercase text-rose-700">Yanlış ort.</div><div class="text-3xl font-black">{{ ta.ort.yanlis }}</div><p class="text-xs font-bold text-rose-700">Boş {{ ta.ort.bos }}</p></article>
+</section>
+
+{% if ta.grafik.soru and ta.sorular %}
+<section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+  <h2 class="font-black">Soru soru başarı</h2>
+  <p class="mt-1 text-sm text-slate-500">Yeşil %70 ve üzeri, sarı %40–69, kırmızı %40’ın altı. Sayı, soru numarası.{% if ta.veli %} Kutunun altındaki işaret senin sonucun.{% endif %}</p>
+  <div class="ta-isi mt-3" aria-label="Soru başarı ısısı">
+    {% for q in ta.sorular %}
+    <span class="ta-hucre" style="background:{{ q.renk }}" title="{{ q.no }}. soru · doğru cevap {{ q.cevap }} · %{{ q.basari }} · doğru {{ q.dogru }}, yanlış {{ q.yanlis }}, boş {{ q.bos }}{% if q.ben %} · sen {{ 'doğru' if q.ben == 'dogru' else ('yanlış' if q.ben == 'yanlis' else 'boş') }}{% endif %}">{{ q.no }}<small>{% if q.ben == 'dogru' %}✓{% elif q.ben == 'yanlis' %}✗{% elif q.ben == 'bos' %}–{% endif %}%{{ q.basari }}</small></span>
+    {% endfor %}
+  </div>
+</section>
+<section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+  <h2 class="font-black">Her soruda doğru, yanlış, boş</h2>
+  <div class="mt-3 overflow-x-auto"><canvas id="soru-dyb" style="min-width:{{ [640, ta.sorular|length * 28]|max }}px; height:280px"></canvas></div>
+</section>
+{% if ta.zor %}
+<section class="mt-3">
+  <h2 class="font-black">En çok zorlayan sorular</h2>
+  <div class="mt-2 grid gap-3 md:grid-cols-2">
+    {% for q in ta.zor %}
+    <article class="rounded-2xl border border-slate-200 bg-white p-4">
+      <div class="flex items-baseline justify-between gap-2"><h3 class="font-black">{{ q.no }}. soru</h3><span class="text-sm font-black" style="color:{{ q.renk }}">%{{ q.basari }}</span></div>
+      <p class="text-xs text-slate-500">Doğru cevap {{ q.cevap }} · en çok işaret {{ q.en_cok }} ({{ q.en_adet }})</p>
+      <div class="ta-sec">
+        {% for harf in ['A','B','C','D','bos'] %}
+        {% set adet = q.sec[harf] %}
+        {% set n = (q.dogru + q.yanlis + q.bos) or 1 %}
+        <span><em>{{ 'Boş' if harf == 'bos' else harf }}</em><i><b class="{{ 'dogru' if harf == q.cevap else '' }}" style="width:{{ (adet * 100 / n)|round(1) }}%"></b></i><strong>{{ adet }}</strong></span>
+        {% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% elif ta.grafik.no %}
+<section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+  <h2 class="font-black">Ders başına ortalama doğru, yanlış, boş</h2>
+  <canvas id="soru-dyb" class="mt-3 max-h-80 w-full"></canvas>
+</section>
+{% endif %}
+
+<section class="mt-3 grid gap-3 lg:grid-cols-2">
+  <article class="rounded-2xl border border-slate-200 bg-white p-4">
+    <h2 class="font-black">Sınıfların net ortalaması</h2>
+    <canvas id="sinif-net" class="mt-3 max-h-64 w-full"></canvas>
+  </article>
+  <article class="rounded-2xl border border-slate-200 bg-white p-4">
+    <h2 class="font-black">Net dağılımı</h2>
+    <canvas id="net-dagilim" class="mt-3 max-h-64 w-full"></canvas>
+  </article>
+</section>
+<section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+  <h2 class="font-black">Doğru, yanlış, boş</h2>
+  <canvas id="dyb" class="mx-auto mt-3 max-h-64"></canvas>
+</section>
+
+<section class="mt-3 space-y-2">
+  {% if ta.veli %}
+  <h2 class="font-black">Senin sıran{% if ta.sinif %} · {{ ta.sinif }}{% else %} · genel{% endif %}</h2>
+  {% if ta.siralama %}
+  {% set o = ta.siralama[0] %}
+  <article class="rounded-2xl border border-slate-200 bg-white p-3">
+    <div class="flex items-baseline justify-between gap-2 text-sm">
+      <p class="font-black text-indigo-900">{{ o.ad }} · {{ o.sira }}. sıradasın <span class="font-bold text-slate-400">{{ o.adet }} öğrenci arasında</span></p>
+      <span class="font-black">{{ o.net }} net</span>
+    </div>
+    <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-indigo-500" style="width:{{ o.yuzde }}%"></div></div>
+    <p class="mt-1 text-xs text-slate-500">Doğru {{ o.dogru }} · yanlış {{ o.yanlis }} · boş {{ o.bos }}</p>
+  </article>
+  {% else %}
+  <p class="rounded-2xl border border-slate-200 bg-white p-3 text-sm">Bu sınavda sıran yok.</p>
+  {% endif %}
+  {% else %}
+  <h2 class="font-black">{{ ta.sinif or 'Genel' }} sıralama</h2>
+  {% for o in ta.siralama %}
+  <article class="rounded-2xl border border-slate-200 bg-white p-3">
+    <div class="flex items-baseline justify-between gap-2 text-sm">
+      <a class="font-black text-indigo-900" href="{{ url_for('lgs', ogrenci=o.id, bolum='soru', sinav=ta.sinav.id if ta.sinav else none) }}">{{ loop.index }}. {{ o.ad }} <span class="font-bold text-slate-400">{{ o.sinif }} · No {{ o.no }}</span></a>
+      <span class="font-black">{{ o.net }} net</span>
+    </div>
+    <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-indigo-500" style="width:{{ o.yuzde }}%"></div></div>
+    <p class="mt-1 text-xs text-slate-500">Doğru {{ o.dogru }} · yanlış {{ o.yanlis }} · boş {{ o.bos }}</p>
+  </article>
+  {% endfor %}
+  {% endif %}
+</section>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ortak = { animation: { duration: 900 }, plugins: { legend: { position: "bottom" } } };
+const g = {{ ta.grafik|tojson }};
+const dybRenk = ["#1f9d62", "#d4536a", "#c5bcc8"];
+if (document.getElementById("soru-dyb")) {
+  new Chart(document.getElementById("soru-dyb"), {
+    type: "bar",
+    data: {
+      labels: g.no,
+      datasets: [
+        { label: "Doğru", data: g.dogru, backgroundColor: dybRenk[0], borderRadius: 6 },
+        { label: "Yanlış", data: g.yanlis, backgroundColor: dybRenk[1], borderRadius: 6 },
+        { label: "Boş", data: g.bos, backgroundColor: dybRenk[2], borderRadius: 6 }
+      ]
+    },
+    options: { ...ortak, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+  });
+}
+new Chart(document.getElementById("sinif-net"), {
+  type: "bar",
+  data: { labels: g.sinif_ad, datasets: [{ label: "Net ortalaması", data: g.sinif_net, backgroundColor: "#7954bb", borderRadius: 10 }] },
+  options: { ...ortak, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+new Chart(document.getElementById("net-dagilim"), {
+  type: "bar",
+  data: { labels: g.dagilim_ad, datasets: [{ label: "Öğrenci", data: g.dagilim_adet, backgroundColor: "#c9b4f0", borderRadius: 10 }] },
+  options: { ...ortak, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+});
+new Chart(document.getElementById("dyb"), {
+  type: "doughnut",
+  data: { labels: ["Doğru", "Yanlış", "Boş"], datasets: [{ data: g.dyb, backgroundColor: dybRenk, borderWidth: 0 }] },
+  options: ortak
+});
+</script>
+{% endif %}

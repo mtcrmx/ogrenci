@@ -621,6 +621,16 @@ class Workflows(unittest.TestCase):
         self.assertIn(self.student['ad_soyad'], yaprak)
         self.assertEqual(self.parent.get('/lgs/test-analiz').status_code, 302)
         self.assertIn('Sınıf analizi', self.teacher_client.get('/lgs').get_data(as_text=True))
+        veli = self.parent.get('/veli/lgs', query_string={'bolum': 'deneme', 'sinav': sinav['id']}).get_data(as_text=True)
+        self.assertIn('Soru soru başarı', veli)
+        self.assertIn('En çok zorlayan sorular', veli)
+        self.assertIn('sıradasın', veli)
+        self.assertIn('id="soru-dyb"', veli)
+        self.assertIn('id="sinif-net"', veli)
+        self.assertNotIn(diger['ad_soyad'], veli)
+        yaprak_veli = self.parent.get('/veli/lgs', query_string={'bolum': 'deneme', 'ad': 'Sınıf yaprak testi', 'tarih': '2026-10-13', 'tur': 'ders'}).get_data(as_text=True)
+        self.assertIn('Ders başına ortalama', yaprak_veli)
+        self.assertNotIn(diger['ad_soyad'], yaprak_veli)
 
 
 class GuidanceService(unittest.TestCase):

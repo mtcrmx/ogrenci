@@ -4402,20 +4402,33 @@ def _sonuc_satirlari(kayitlar: list[dict]) -> list[dict]:
     return cikti
 
 
-@app.route("/lgs/test-analiz")
-@giris_zorunlu
-def test_sinif_analiz():
+def _test_analiz_baglam(
+    sinif_istek: str | None,
+    sinav_id: int | None,
+    sonuc_ad: str,
+    sonuc_tarih: str,
+    sonuc_tur: str,
+    ogrenci_id: int | None = None,
+    varsayilan_sinif: str = "",
+) -> dict:
     optikler = lgs_optik.sinavlari_listele()
     for sinav in optikler:
         sinav["katilan"] = len(lgs_optik.sinav_sonuclari(sinav["id"]))
+    if ogrenci_id:
+        optikler = [s for s in optikler if lgs_optik.sonuc_getir(s["id"], ogrenci_id)]
     katalog = deneme_sinav_katalog()
-    sinif_ad = (request.args.get("sinif") or "").strip()
-    sinav_id = request.args.get("sinav", type=int)
-    sonuc_ad = (request.args.get("ad") or "").strip()
-    sonuc_tarih = (request.args.get("tarih") or "")[:10]
-    sonuc_tur = request.args.get("tur") or ""
+    if ogrenci_id:
+        katalog = [
+            k for k in katalog
+            if any(int(o["ogrenci_id"]) == int(ogrenci_id) for o in deneme_sinav_ogrencileri(k["ad"], k["tarih"], k["tur"]))
+        ]
+    sinif_ad = varsayilan_sinif if sinif_istek is None else ("" if sinif_istek == "genel" else sinif_istek.strip())
     if sonuc_tur not in {"ders", "deneme", "kurum"}:
         sonuc_tur = ""
+    if ogrenci_id and sinav_id and not lgs_optik.sonuc_getir(sinav_id, ogrenci_id):
+        sinav_id = None
+    if ogrenci_id and sonuc_ad and not any(k["ad"] == sonuc_ad and k["tarih"] == sonuc_tarih and k["tur"] == sonuc_tur for k in katalog):
+        sonuc_ad = ""
     if sinav_id:
         kaynak = "optik"
     elif sonuc_ad and sonuc_tarih and sonuc_tur:
@@ -4427,7 +4440,7 @@ def test_sinif_analiz():
         kaynak = "sonuc"
         sonuc_ad, sonuc_tarih, sonuc_tur = katalog[0]["ad"], katalog[0]["tarih"], katalog[0]["tur"]
     else:
-        return render_template("test_sinif_analiz.html", bos=True, optikler=[], katalog=[])
+        return {"bos": True, "optikler": [], "katalog": [], "veli": bool(ogrenci_id)}
 
     if kaynak == "optik":
         sinav = lgs_optik.sinav_getir(sinav_id or 0)
@@ -4439,6 +4452,10 @@ def test_sinif_analiz():
             sinif_ad = ""
         kapsam = [o for o in hepsi if o["sinif"] == sinif_ad] if sinif_ad else list(hepsi)
         sorular = _soru_istatistik(kapsam, sinav["cevaplar"])
+        ben = next((o for o in hepsi if ogrenci_id and int(o["id"]) == int(ogrenci_id)), None)
+        if ben:
+            for soru, satir in zip(sorular, ben["satirlar"]):
+                soru["ben"] = satir["durum"]
         zor = [q for q in sorted(sorular, key=lambda q: (q["basari"], -q["yanlis"], q["no"])) if q["basari"] < 100][:8]
         siniflar = []
         for ad in sinif_adlari:
@@ -4475,12 +4492,12 @@ def test_sinif_analiz():
         }
         baslik = sinav["ad"]
         alt = f"{'Yaprak test' if sinav.get('tur') == 'yaprak' else 'Deneme'} · {sinav['tarih']} · {sinav['soru_sayisi']} soru"
-        return render_template(
-            "test_sinif_analiz.html", bos=False, kaynak="optik", optikler=optikler, katalog=katalog,
+        paket = dict(
+            bos=False, kaynak="optik", optikler=optikler, katalog=katalog, veli=bool(ogrenci_id),
             sinav=sinav, sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
-            sorular=sorular, zor=zor, siralama=siralama, grafik=grafik, baslik=baslik, alt=alt,
-            sonuc=None,
+            sorular=sorular, zor=zor, siralama=siralama, grafik=grafik, baslik=baslik, alt=alt, sonuc=None,
         )
+        return _analiz_veli_sirasi(paket, ogrenci_id)
 
     kayit = next((k for k in katalog if k["ad"] == sonuc_ad and k["tarih"] == sonuc_tarih and k["tur"] == sonuc_tur), None)
     if not kayit:
@@ -4515,13 +4532,37 @@ def test_sinif_analiz():
         "dyb": [sum(o["dogru"] for o in kapsam), sum(o["yanlis"] for o in kapsam), sum(o["bos"] for o in kapsam)],
     }
     tur_ad = {"ders": "Yaprak test", "deneme": "Deneme", "kurum": "Kurum denemesi"}.get(sonuc_tur, "Sonuç")
-    return render_template(
-        "test_sinif_analiz.html", bos=False, kaynak="sonuc", optikler=optikler, katalog=katalog,
+    paket = dict(
+        bos=False, kaynak="sonuc", optikler=optikler, katalog=katalog, veli=bool(ogrenci_id),
         sinav=None, sonuc={"ad": sonuc_ad, "tarih": sonuc_tarih, "tur": sonuc_tur},
         sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
         sorular=[], zor=[], siralama=siralama, grafik=grafik, baslik=sonuc_ad,
         alt=f"{tur_ad} · {sonuc_tarih} · soru numarası yok, ders toplamları",
     )
+    return _analiz_veli_sirasi(paket, ogrenci_id)
+
+
+def _analiz_veli_sirasi(paket: dict, ogrenci_id: int | None) -> dict:
+    if ogrenci_id and paket.get("siralama") is not None:
+        tam = paket["siralama"]
+        benim = next((o for o in tam if int(o["id"]) == int(ogrenci_id)), None)
+        if benim:
+            paket["siralama"] = [{**benim, "sira": tam.index(benim) + 1, "adet": len(tam)}]
+        else:
+            paket["siralama"] = []
+    return paket
+
+
+@app.route("/lgs/test-analiz")
+@giris_zorunlu
+def test_sinif_analiz():
+    return render_template("test_sinif_analiz.html", ta=_test_analiz_baglam(
+        request.args.get("sinif"),
+        request.args.get("sinav", type=int),
+        (request.args.get("ad") or "").strip(),
+        (request.args.get("tarih") or "")[:10],
+        request.args.get("tur") or "",
+    ))
 
 
 @app.route("/deneme-analiz")
@@ -4863,6 +4904,17 @@ def _lgs_ekran(veli: bool):
         gunluk, profil["hedef"], profil.get("hedef_net") or 0,
     )
     optik_sinavlar, optik_secili, optik_detay = _lgs_optik_paketi(oid)
+    ta = None
+    if veli and bolum == "deneme":
+        ta = _test_analiz_baglam(
+            request.args.get("sinif"),
+            request.args.get("sinav", type=int),
+            (request.args.get("ad") or "").strip(),
+            (request.args.get("tarih") or "")[:10],
+            request.args.get("tur") or "",
+            ogrenci_id=oid,
+            varsayilan_sinif=ogr.get("sinif_adi") or "",
+        )
     return render_template(
         "lgs.html",
         veli=veli,
@@ -4912,6 +4964,7 @@ def _lgs_ekran(veli: bool):
         optik_sinavlar=optik_sinavlar,
         optik_secili=optik_secili,
         optik_detay=optik_detay,
+        ta=ta,
     )
 
 
