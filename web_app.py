@@ -82,7 +82,7 @@ from database import (
     ogrenci_verilen_kitaplar, ogrenci_kitap_kazanimlari,
     lgs_profil, lgs_profil_kaydet, lgs_gorevler, lgs_gorev_ekle, lgs_gorev_bildir, lgs_gorev_onayla,
     lgs_gunluk_ekle, lgs_gunluk_liste, lgs_gunluk_onayla, lgs_deneme_ekle, lgs_deneme_onek_sil, lgs_denemeler,
-    lgs_tempo_kaydet, lgs_tempo_sinifa, lgs_tempo_harita, lgs_ay_durum, lgs_ay_kaydet,
+    lgs_tempo_kaydet, lgs_tempo_harita, lgs_ay_durum, lgs_ay_kaydet,
     lgs_ay_tek_kaydet, lgs_program_ozel_getir, lgs_program_ozel_kaydet, lgs_program_ozel_sil,
     lgs_program_isaretler, lgs_program_bildir, lgs_program_onayla,
     lgs_defter_getir, lgs_defter_kaydet, lgs_defter_ogretmen, lgs_defter_onayli_soru,
@@ -4798,18 +4798,6 @@ def _lgs_ekran(veli: bool):
     hafta = _lgs_hafta()
     if not veli and request.method == "POST" and request.form.get("islem") == "optik_ekle":
         return _lgs_optik_ekle()
-    if not veli and request.method == "POST" and request.form.get("islem") == "sinif_tempo":
-        sinif_id = request.form.get("sinif_id", type=int) or 0
-        yetkili_siniflar = ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari()
-        if sinif_id not in {int(s["id"]) for s in yetkili_siniflar}:
-            abort(403)
-        tempo = request.form.get("tempo") or ""
-        adet = lgs_tempo_sinifa(sinif_id, tempo)
-        if adet:
-            flash(f"{adet} öğrenciye {TEMPO_AD.get(tempo, 'temposuz')} yazıldı.", "success")
-        else:
-            flash("Tempo yalnızca 8/A ve 8/B için kaydedilir.", "warning")
-        return redirect(url_for("lgs"))
     if veli:
         oid = int(session["veli_ogrenci_id"])
         ogr = _ogrenci_bul(oid)

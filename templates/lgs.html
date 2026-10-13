@@ -8,7 +8,7 @@
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
     <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS koçluk</p>
     <h1 class="mt-1 text-2xl font-black">Öğrenci seç</h1>
-        <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Tempo, soru optiği ve deneme buradan yürür.</p>
+        <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Soru optiği ve deneme buradan yürür.</p>
   </header>
   {% with mesajlar = get_flashed_messages(with_categories=true) %}
   {% if mesajlar %}
@@ -28,17 +28,6 @@
     {% for g in gruplar %}
     <details class="rounded-2xl border border-slate-200 bg-white p-4" {% if loop.first %}open{% endif %}>
       <summary class="cursor-pointer font-black">{{ g.sinif.sinif_adi }} · {{ g.ogrenciler|length }} öğrenci</summary>
-      <form method="post" class="mt-3 flex flex-wrap items-center gap-2">
-        <input type="hidden" name="islem" value="sinif_tempo">
-        <input type="hidden" name="sinif_id" value="{{ g.sinif.id }}">
-        <select name="tempo" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-          <option value="">Temposuz</option>
-          {% for kod, ad in tempo_adlari.items() %}
-          <option value="{{ kod }}">{{ ad }}</option>
-          {% endfor %}
-        </select>
-        <button class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">Sınıfın temposunu kaydet</button>
-      </form>
       <div class="mt-3 grid gap-2 sm:grid-cols-2">
         {% for o in g.ogrenciler %}
         <a href="{{ url_for('lgs', ogrenci=o.id) }}" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold hover:border-amber-400">{{ o.ad_soyad }} <span class="text-slate-400">No {{ o.ogr_no }}</span>{% if o.tempo %} <span class="text-amber-700">{{ tempo_adlari[o.tempo] }}</span>{% endif %}</a>
