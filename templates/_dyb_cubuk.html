@@ -1,0 +1,7 @@
+<p class="soru-cubuk-baslik"><strong>{{ etiket }}</strong> · doğru {{ dogru }} · yanlış {{ yanlis }} · boş {{ bos }}</p>
+{% set toplam = (dogru + yanlis + bos) or 1 %}
+<div class="soru-cubuk" role="img" aria-label="{{ etiket }}: doğru {{ dogru }}, yanlış {{ yanlis }}, boş {{ bos }}">
+  <span class="dogru" style="width:{{ (dogru * 100 / toplam)|round(1) }}%"></span>
+  <span class="yanlis" style="width:{{ (yanlis * 100 / toplam)|round(1) }}%"></span>
+  <span class="bos" style="width:{{ (bos * 100 / toplam)|round(1) }}%"></span>
+</div>

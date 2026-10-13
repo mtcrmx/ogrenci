@@ -30,7 +30,8 @@ def _init(con) -> None:
             cevaplar TEXT NOT NULL,
             soru_sayisi INTEGER NOT NULL,
             ogretmen_id INTEGER,
-            olusturma TEXT NOT NULL
+            olusturma TEXT NOT NULL,
+            tur TEXT NOT NULL DEFAULT 'deneme'
         );
         CREATE TABLE IF NOT EXISTS lgs_optik_sonuc (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +47,9 @@ def _init(con) -> None:
         );
         """
     )
+    kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_optik_sinav)").fetchall()}
+    if "tur" not in kolon:
+        con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN tur TEXT NOT NULL DEFAULT 'deneme'")
 
 
 def anahtar_oku(metin: str) -> list[str] | None:
@@ -80,16 +84,18 @@ def puan_hesapla(anahtar: list[str], isaretler: list[str]) -> dict:
     }
 
 
-def sinav_ekle(ad: str, tarih: str, pdf_adi: str, anahtar: list[str], ogretmen_id: int | None) -> int:
+def sinav_ekle(ad: str, tarih: str, pdf_adi: str, anahtar: list[str], ogretmen_id: int | None, tur: str = "deneme") -> int:
+    if tur not in ("yaprak", "deneme"):
+        tur = "deneme"
     con = db._conn()
     _init(con)
     simdi = datetime.now().strftime("%Y-%m-%d %H:%M")
     cur = con.execute(
         """
-        INSERT INTO lgs_optik_sinav (ad, tarih, pdf_dosya, cevaplar, soru_sayisi, ogretmen_id, olusturma)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO lgs_optik_sinav (ad, tarih, pdf_dosya, cevaplar, soru_sayisi, ogretmen_id, olusturma, tur)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        ((ad or "LGS soruları")[:80], (tarih or "")[:10], pdf_adi, json.dumps(anahtar), len(anahtar), ogretmen_id, simdi),
+        ((ad or "LGS soruları")[:80], (tarih or "")[:10], pdf_adi, json.dumps(anahtar), len(anahtar), ogretmen_id, simdi, tur),
     )
     con.commit()
     sinav_id = int(cur.lastrowid)

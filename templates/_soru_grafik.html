@@ -1,0 +1,26 @@
+<article class="soru-grafik">
+  <header>
+    <h3>{{ sinav.ad }}</h3>
+    <p>{{ 'Yaprak test' if sinav.tur == 'yaprak' else 'Deneme' }} · {{ sinav.tarih }} · {{ sinav.soru_sayisi }} soru</p>
+  </header>
+  <p class="soru-ozet">Doğru {{ sinav.analiz.dogru }} · Yanlış {{ sinav.analiz.yanlis }} · Boş {{ sinav.analiz.bos }} · Net {{ sinav.analiz.net }}</p>
+  {% with dogru=sinav.analiz.dogru, yanlis=sinav.analiz.yanlis, bos=sinav.analiz.bos, etiket='Tüm sorular' %}
+  {% include '_dyb_cubuk.html' %}
+  {% endwith %}
+  <p class="soru-lejant"><span class="is-dogru">Doğru</span><span class="is-yanlis">Yanlış</span><span class="is-bos">Boş</span></p>
+  <div class="soru-izgara" aria-label="Soru soru sonuç">
+    {% for satir in sinav.analiz.satirlar %}
+    <span class="soru-hucre is-{{ satir.durum }}" title="{{ satir.no }}. soru {{ 'doğru' if satir.durum == 'dogru' else ('yanlış, işaret ' ~ (satir.verilen or 'yok') ~ ', doğru cevap ' ~ satir.dogru) if satir.durum == 'yanlis' else ('boş, doğru cevap ' ~ satir.dogru) }}">{{ satir.no }}</span>
+    {% endfor %}
+  </div>
+  {% set yanlislar = sinav.analiz.satirlar|selectattr('durum','equalto','yanlis')|list %}
+  {% set boslar = sinav.analiz.satirlar|selectattr('durum','equalto','bos')|list %}
+  {% if yanlislar or boslar %}
+  <ul class="soru-doku">
+    {% for satir in yanlislar %}<li class="is-yanlis">{{ satir.no }}. soru yanlış. İşaret {{ satir.verilen }}, doğru cevap {{ satir.dogru }}.</li>{% endfor %}
+    {% for satir in boslar %}<li class="is-bos">{{ satir.no }}. soru boş. Doğru cevap {{ satir.dogru }}.</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="soru-temiz">Bütün sorular doğru.</p>
+  {% endif %}
+</article>

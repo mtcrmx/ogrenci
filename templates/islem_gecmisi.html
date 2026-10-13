@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block title %}İşlem geçmişi{% endblock %}{% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=2">{% endblock %}
-{% block body %}<main class="page-content"><header class="page-heading"><div><h1>İşlem geçmişim</h1><p>Bu güncellemeden sonra yaptığınız ödev, kitap, puan ve sonuç değişiklikleri. Her işlem, ona bağlı puanlarla birlikte geri alınır.</p></div></header>
+{% block body %}<main class="page-content"><header class="page-heading"><div><h1>İşlem geçmişim</h1><p>Ödev, kitap, puan ve sonuç kayıtlarınız burada durur. Sildiğiniz kayıt da bu listededir; geri alırsanız yeniden yazılır.</p></div></header>
 {% for message in get_flashed_messages() %}<p class="app-notice" role="status">{{ message }}</p>{% endfor %}
 <p class="app-muted">Düzenle ile ilgili kayıt ekranını açabilirsiniz. Kitap onayını veya puan girişini değiştirmek için önce geri alıp doğru bilgiyi yeniden girin. Telefona gönderilmiş bildirimler geri çekilemez; düzeltme bildirimi gönderilir.</p>
 {% for i in islemler %}<article class="app-card"><h2>{{ i.baslik or 'Değişiklik' }}</h2><p>{{ i.zaman }}</p><p>{{ i.ayrinti[:5]|join(' · ') }}{% if i.ayrinti|length > 5 %} · {{ i.ayrinti|length-5 }} öğrenci daha{% endif %}</p><ul>{% for change in i.degisiklikler[:8] %}<li>{{ change }}</li>{% endfor %}</ul>

@@ -154,6 +154,36 @@ class Workflows(unittest.TestCase):
         self.assertIn('Bireysel sonuç',birey)
         self.assertIn('name="dogru"',birey)
 
+    def test_teacher_can_delete_and_restore_exam_results(self):
+        students=d.sinif_ogrencileri(self.sid)[:2]
+        self.assertGreaterEqual(len(students),2)
+        a,b=students[0],students[1]
+        payload={'islem':'sinif_ders','sinif_id':self.sid,'ad':'Silinecek sınıf denemesi','tarih':'2026-10-13','ders':'Türkçe','soru_sayisi':'10','yanlis_goturme':'0',f'dogru_{a["id"]}':'8',f'yanlis_{a["id"]}':'1',f'dogru_{b["id"]}':'4',f'yanlis_{b["id"]}':'2'}
+        self.teacher_client.post('/sonuclar',data=payload)
+        liste=self.teacher_client.get('/sonuclar',query_string={'sinif':self.sid}).get_data(as_text=True)
+        self.assertIn('sinif_ders_sil',liste)
+        self.assertIn('Silinecek sınıf denemesi',liste)
+        deleted=self.teacher_client.post('/sonuclar',data={'islem':'sinif_ders_sil','sinif_id':self.sid,'ad':payload['ad'],'tarih':payload['tarih'],'tur':'ders'},follow_redirects=True).get_data(as_text=True)
+        self.assertIn('2 öğrencinin kaydı silindi',deleted)
+        self.assertFalse(any(r['ad']==payload['ad'] for r in d.lgs_denemeler(a['id'],30)))
+        self.teacher_client.post('/islem-gecmisi/'+self._latest_action()+'/geri-al')
+        restored=next(r for r in d.lgs_denemeler(a['id'],30) if r['ad']==payload['ad'])
+        self.assertEqual((restored['dersler'][0]['dogru'],restored['dersler'][0]['yanlis'],restored['dersler'][0]['bos']),(8,1,1))
+        self.assertTrue(any(r['ad']==payload['ad'] for r in d.lgs_denemeler(b['id'],30)))
+        self.teacher_client.post('/sonuclar',data={'ogrenci':self.oid,'tur':'ders','ad':'Tek silinecek','tarih':'2026-10-13','ders':'Matematik','soru_sayisi':'10','dogru':'7','yanlis':'1','yanlis_goturme':'0'})
+        rec=next(r for r in d.lgs_denemeler(self.oid,30) if r['ad']=='Tek silinecek')
+        card=self.teacher_client.get('/sonuclar',query_string={'ogrenci':self.oid}).get_data(as_text=True)
+        self.assertIn(f'name="deneme" value="{rec["id"]}"',card)
+        self.teacher_client.post('/sonuclar',data={'ogrenci':self.oid,'islem':'sil','deneme':rec['id']})
+        self.assertFalse(any(r['ad']=='Tek silinecek' for r in d.lgs_denemeler(self.oid,30)))
+        self.teacher_client.post('/islem-gecmisi/'+self._latest_action()+'/geri-al')
+        back=next(r for r in d.lgs_denemeler(self.oid,30) if r['ad']=='Tek silinecek')
+        self.assertEqual((back['dersler'][0]['dogru'],back['dersler'][0]['yanlis']),(7,1))
+        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam')
+        client=w.app.test_client()
+        with client.session_transaction() as s:s.update(ogretmen_id=other['id'],ogretmen_adi=other['ad_soyad'],ogretmen_yetki='tam')
+        self.assertEqual(client.post('/sonuclar',data={'ogrenci':self.oid,'islem':'sil','deneme':back['id']}).status_code,403)
+
     def test_undo_blocks_foreign_actor_and_intervening_change(self):
         con=d._conn()
         student=dict(con.execute("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='6/B' ORDER BY o.id LIMIT 1").fetchone())
@@ -478,7 +508,7 @@ class Workflows(unittest.TestCase):
             follow_redirects=True,
         )
         html = response.get_data(as_text=True)
-        self.assertIn('4 soruluk optik açıldı', html)
+        self.assertIn('4 soruluk deneme açıldı', html)
         self.assertIn('Henüz optik bitirilmedi', html)
         sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Optik deneme')
         soru = self.parent.get('/veli/lgs?bolum=soru&sinav=' + str(sinav['id']))
@@ -495,6 +525,14 @@ class Workflows(unittest.TestCase):
         sonuc = bitirdi.get_data(as_text=True)
         self.assertIn('Net 1.67', sonuc)
         self.assertIn('Doğru 2', sonuc)
+        self.assertIn('is-yanlis', sonuc)
+        self.assertIn('is-bos', sonuc)
+        self.assertIn('2. soru yanlış', sonuc)
+        self.assertIn('4. soru boş', sonuc)
+        analiz = self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True)
+        self.assertIn('Soru analizi', analiz)
+        self.assertIn('Optik deneme', analiz)
+        self.assertIn('2. soru yanlış', analiz)
         tekrar = self.parent.post('/veli/lgs', data={
             'islem': 'optik_bitir', 'sinav_id': sinav['id'], 'c0': 'A',
         }, follow_redirects=True)
@@ -505,6 +543,39 @@ class Workflows(unittest.TestCase):
         takip = self.teacher_client.get('/haftalik-takip?sinif=' + str(self.sid)).get_data(as_text=True)
         self.assertIn('LGS soru optiğinde', takip)
         self.assertNotIn('tracking-table', takip)
+
+    def test_leaf_and_exam_charts_on_parent_analysis(self):
+        import lgs_optik
+        pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
+        self.teacher_client.post('/lgs', data={
+            'islem': 'optik_ekle', 'ad': 'Yaprak üslü', 'tarih': '2026-10-13', 'tur': 'yaprak',
+            'anahtar': 'AB', 'pdf': (BytesIO(pdf), 'yaprak.pdf'),
+        }, content_type='multipart/form-data')
+        sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Yaprak üslü')
+        self.assertEqual(sinav['tur'], 'yaprak')
+        self.parent.post('/veli/lgs', data={
+            'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'], 'c0': 'A', 'c1': '',
+        })
+        self.teacher_client.post('/sonuclar', data={
+            'ogrenci': self.oid, 'tur': 'ders', 'ad': 'Yaprak matematik', 'tarih': '2026-10-12',
+            'ders': 'Matematik', 'soru_sayisi': '10', 'dogru': '6', 'yanlis': '2', 'yanlis_goturme': '0',
+        })
+        self.teacher_client.post('/sonuclar', data={
+            'ogrenci': self.oid, 'tur': 'deneme', 'ad': 'Ekim denemesi', 'tarih': '2026-10-11',
+            'ders': ['Türkçe', 'Matematik'], 'soru_sayisi': ['10', '10'],
+            'dogru': ['7', '5'], 'yanlis': ['1', '3'], 'yanlis_goturme': ['3', '3'],
+        })
+        sayfa = self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True)
+        self.assertIn('Yaprak testler', sayfa)
+        self.assertIn('Yaprak üslü', sayfa)
+        self.assertIn('2. soru boş', sayfa)
+        self.assertIn('Yaprak matematik', sayfa)
+        self.assertIn('Ekim denemesi', sayfa)
+        self.assertIn('class="soru-cubuk"', sayfa)
+        kart = self.parent.get('/veli/sonuclar').get_data(as_text=True)
+        self.assertIn('Yaprak matematik', kart)
+        self.assertIn('class="soru-cubuk"', kart)
+        self.assertIn('Ekim denemesi', kart)
 
 
 class GuidanceService(unittest.TestCase):

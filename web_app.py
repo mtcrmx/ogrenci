@@ -4365,8 +4365,11 @@ def _lgs_optik_ekle():
     from uuid import uuid4
     ad_dosya = uuid4().hex + ".pdf"
     (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
-    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"))
-    flash(f"{ad}: {len(anahtar)} soruluk optik açıldı.", "success")
+    tur = request.form.get("tur") or "deneme"
+    if tur not in ("yaprak", "deneme"):
+        tur = "deneme"
+    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), tur)
+    flash(f"{ad}: {len(anahtar)} soruluk {'yaprak test' if tur == 'yaprak' else 'deneme'} açıldı.", "success")
     return redirect(url_for("lgs"))
 
 
@@ -4375,6 +4378,8 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
     for sinav in sinavlar:
         sinav["sonuclar"] = lgs_optik.sinav_sonuclari(sinav["id"])
         sinav["sonuc"] = lgs_optik.sonuc_getir(sinav["id"], ogrenci_id) if ogrenci_id else None
+        if sinav.get("sonuc"):
+            sinav["analiz"] = lgs_optik.puan_hesapla(sinav["cevaplar"], sinav["sonuc"]["isaretler"])
     secili_id = request.args.get("sinav", type=int)
     secili = next((s for s in sinavlar if s["id"] == secili_id), None)
     if secili is None and len(sinavlar) == 1:
@@ -4666,6 +4671,7 @@ def _lgs_ekran(veli: bool):
         selam=selam,
         gunluk=gunluk,
         denemeler=denemeler,
+        yapraklar=[d for d in tum_sonuclar if d.get("tur") == "ders"][:20],
         analiz=course_analysis(tum_sonuclar),
         kocluk=kocluk,
         grafik_etiket=[d["ad"] for d in grafik],
