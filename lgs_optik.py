@@ -50,6 +50,10 @@ def _init(con) -> None:
     kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_optik_sinav)").fetchall()}
     if "tur" not in kolon:
         con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN tur TEXT NOT NULL DEFAULT 'deneme'")
+    if "ders" not in kolon:
+        con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN ders TEXT NOT NULL DEFAULT ''")
+    if "sinif_id" not in kolon:
+        con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN sinif_id INTEGER")
 
 
 def anahtar_oku(metin: str) -> list[str] | None:
@@ -84,7 +88,7 @@ def puan_hesapla(anahtar: list[str], isaretler: list[str]) -> dict:
     }
 
 
-def sinav_ekle(ad: str, tarih: str, pdf_adi: str, anahtar: list[str], ogretmen_id: int | None, tur: str = "deneme") -> int:
+def sinav_ekle(ad: str, tarih: str, pdf_adi: str, anahtar: list[str], ogretmen_id: int | None, tur: str = "deneme", ders: str = "", sinif_id: int | None = None) -> int:
     if tur not in ("yaprak", "deneme"):
         tur = "deneme"
     con = db._conn()
@@ -92,10 +96,10 @@ def sinav_ekle(ad: str, tarih: str, pdf_adi: str, anahtar: list[str], ogretmen_i
     simdi = datetime.now().strftime("%Y-%m-%d %H:%M")
     cur = con.execute(
         """
-        INSERT INTO lgs_optik_sinav (ad, tarih, pdf_dosya, cevaplar, soru_sayisi, ogretmen_id, olusturma, tur)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO lgs_optik_sinav (ad, tarih, pdf_dosya, cevaplar, soru_sayisi, ogretmen_id, olusturma, tur, ders, sinif_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        ((ad or "LGS soruları")[:80], (tarih or "")[:10], pdf_adi, json.dumps(anahtar), len(anahtar), ogretmen_id, simdi, tur),
+        ((ad or "LGS soruları")[:80], (tarih or "")[:10], pdf_adi, json.dumps(anahtar), len(anahtar), ogretmen_id, simdi, tur, (ders or "")[:40], sinif_id),
     )
     con.commit()
     sinav_id = int(cur.lastrowid)
@@ -106,7 +110,14 @@ def sinav_ekle(ad: str, tarih: str, pdf_adi: str, anahtar: list[str], ogretmen_i
 def sinavlari_listele() -> list[dict]:
     con = db._conn()
     _init(con)
-    rows = [dict(r) for r in con.execute("SELECT * FROM lgs_optik_sinav ORDER BY tarih DESC, id DESC")]
+    rows = [dict(r) for r in con.execute(
+        """
+        SELECT o.*, s.sinif_adi
+        FROM lgs_optik_sinav o
+        LEFT JOIN siniflar s ON s.id = o.sinif_id
+        ORDER BY o.tarih DESC, o.id DESC
+        """
+    )]
     con.close()
     for row in rows:
         row["cevaplar"] = json.loads(row["cevaplar"])

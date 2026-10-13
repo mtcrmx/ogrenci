@@ -2191,13 +2191,21 @@ def deneme_sinav_katalog() -> list[dict]:
     _lgs_init(con)
     rows = [dict(r) for r in con.execute(
         """
-        SELECT ad, tarih, tur, COUNT(*) AS adet
-        FROM lgs_deneme
-        GROUP BY ad, tarih, tur
-        ORDER BY tarih DESC, ad
+        SELECT d.ad, d.tarih, d.tur, COUNT(DISTINCT d.id) AS adet,
+               GROUP_CONCAT(DISTINCT dd.ders) AS dersler,
+               GROUP_CONCAT(DISTINCT s.sinif_adi) AS siniflar
+        FROM lgs_deneme d
+        JOIN ogrenciler o ON o.id = d.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        LEFT JOIN lgs_deneme_ders dd ON dd.deneme_id = d.id
+        GROUP BY d.ad, d.tarih, d.tur
+        ORDER BY d.tarih DESC, d.ad
         """
     ).fetchall()]
     con.close()
+    for row in rows:
+        row["dersler"] = [p for p in (row.get("dersler") or "").split(",") if p]
+        row["siniflar"] = [p for p in (row.get("siniflar") or "").split(",") if p]
     return rows
 
 

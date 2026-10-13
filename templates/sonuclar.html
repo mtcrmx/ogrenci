@@ -4,14 +4,35 @@
 {% block body %}<main class="page-content">
 <header class="page-heading"><div><h1>Ders ve deneme sonuçları</h1><p>{% if ogrenci %}{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% else %}Öğrenci seçin veya üstteki alandan ad / okul numarasıyla arayın.{% endif %}</p></div>{% if not veli %}<a class="app-button" href="{{ url_for('islem_gecmisi') }}">İşlem geçmişi / geri al</a>{% endif %}</header>
 {% for message in get_flashed_messages() %}<p class="app-notice" role="status">{{ message }}</p>{% endfor %}
-{% if not ogrenci %}{% for group in gruplar %}{% set ayni = sinif_form and sinif_form.get('sinif_id')|int == group.sinif.id %}{% set kural = sinif_form.get('yanlis_goturme') if ayni else '0' %}<details class="app-card" open><summary>{{ group.sinif.sinif_adi }} · sınıf ders denemesi</summary>
-<section class="class-exam"><h2>Sınıfın tümüne ders denemesi</h2><p class="app-muted">Deneme adını, dersi ve soru sayısını bir kez yazın. Her öğrencide yalnız doğru ve yanlış girin. İki kutu da boşsa o öğrenci kayda girmez. Tek öğrenci için aşağıdaki ada tıklayın.</p>
+{% if not ogrenci %}
+<nav class="mt-3 flex flex-wrap gap-2" aria-label="Sınıf">{% for s in sinif_nav %}<a class="app-button {{ 'app-primary' if secili_sinif == s.id else '' }}" href="{{ url_for('sonuclar', sinif=s.id) }}">{{ s.sinif_adi }}</a>{% endfor %}</nav>
+{% for group in gruplar %}{% set ayni = sinif_form and sinif_form.get('sinif_id')|int == group.sinif.id %}{% set kural = sinif_form.get('yanlis_goturme') if ayni else '0' %}<details class="app-card" open><summary>{{ group.sinif.sinif_adi }} · sınıf ders denemesi</summary>
+<section class="class-exam" data-class-exam><h2>Sınıfın tümüne yaprak test</h2><p class="app-muted">Dersi seçin; bu sınıfta bugüne kadar yapılan o dersin yaprak testleri yeniden eskiye sıralanır. Yeni test için adı, tarihi ve soru sayısını yazın. Her öğrencide yalnız doğru ve yanlış girin. İki kutu da boşsa o öğrenci kayda girmez.</p>
 <form method="post"><input type="hidden" name="islem" value="sinif_ders"><input type="hidden" name="sinif_id" value="{{ group.sinif.id }}">
 <div class="result-fields result-meta"><label>Deneme adı<input name="ad" required maxlength="80" value="{{ sinif_form.get('ad','') if ayni else '' }}" placeholder="Matematik denemesi"></label><label>Tarih<input type="date" name="tarih" required value="{{ sinif_form.get('tarih', bugun) if ayni else bugun }}"></label><label>Ders<select name="ders" required>{% for name in dersler %}<option {{ 'selected' if ayni and sinif_form.get('ders') == name else '' }}>{{ name }}</option>{% endfor %}</select></label><label>Soru sayısı<input name="soru_sayisi" type="number" min="1" max="500" required value="{{ sinif_form.get('soru_sayisi','20') if ayni else 20 }}"></label><label>Net kuralı<select name="yanlis_goturme"><option value="0" {{ 'selected' if kural == '0' else '' }}>Yanlış doğruları götürmez</option><option value="3" {{ 'selected' if kural == '3' else '' }}>3 yanlış, 1 doğru</option><option value="4" {{ 'selected' if kural == '4' else '' }}>4 yanlış, 1 doğru</option></select></label></div>
 <div class="class-score-list">{% for s in group.ogrenciler %}<div class="class-score-row"><strong>{{ s.ad_soyad }} <small>No {{ s.ogr_no }}</small></strong><label>Doğru<input name="dogru_{{ s.id }}" type="number" min="0" max="500" inputmode="numeric" value="{{ sinif_form.get('dogru_' ~ s.id, '') if ayni else '' }}"></label><label>Yanlış<input name="yanlis_{{ s.id }}" type="number" min="0" max="500" inputmode="numeric" value="{{ sinif_form.get('yanlis_' ~ s.id, '') if ayni else '' }}"></label></div>{% else %}<p class="app-muted">Bu sınıfta öğrenci yok.</p>{% endfor %}</div>
 <div class="result-actions"><button class="app-primary" type="submit">Sınıf sonuçlarını kaydet</button></div></form>
-{% if group.denemeler %}<div class="class-saved"><h3>Bu sınıfa yazdığınız kayıtlar</h3>{% for kayit in group.denemeler %}<form method="post" onsubmit='return confirm({{ (kayit.ad ~ " kaydı " ~ kayit.n ~ " öğrenciden silinsin mi? İşlem geçmişinden geri alabilirsiniz.")|tojson }})'><input type="hidden" name="islem" value="sinif_ders_sil"><input type="hidden" name="sinif_id" value="{{ group.sinif.id }}"><input type="hidden" name="ad" value="{{ kayit.ad }}"><input type="hidden" name="tarih" value="{{ kayit.tarih }}"><input type="hidden" name="tur" value="{{ kayit.tur }}"><span>{{ kayit.ad }} · {{ kayit.tarih }} · {{ kayit.n }} öğrenci</span><button class="app-button" type="submit">Sınıftan sil</button></form>{% endfor %}</div>{% endif %}</section>
+{% if group.denemeler %}<div class="class-saved"><h3>Bu derste bugüne kadar yapılan yaprak testler</h3>{% for kayit in group.denemeler if kayit.tur == 'ders' %}<form method="post" data-yaprak="{{ kayit.ders_listesi|join('|') }}" onsubmit='return confirm({{ (kayit.ad ~ " kaydı " ~ kayit.n ~ " öğrenciden silinsin mi? İşlem geçmişinden geri alabilirsiniz.")|tojson }})'><input type="hidden" name="islem" value="sinif_ders_sil"><input type="hidden" name="sinif_id" value="{{ group.sinif.id }}"><input type="hidden" name="ad" value="{{ kayit.ad }}"><input type="hidden" name="tarih" value="{{ kayit.tarih }}"><input type="hidden" name="tur" value="{{ kayit.tur }}"><span>{{ kayit.tarih }} · {{ kayit.ders_listesi|join(', ') }} · {{ kayit.ad }} · {{ kayit.n }} öğrenci</span><button class="app-button" type="submit">Sınıftan sil</button></form>{% endfor %}<p class="app-muted" data-yaprak-bos hidden>Bu derste henüz yaprak test yok.</p>{% set denemeler = group.denemeler|selectattr('tur', 'ne', 'ders')|list %}{% if denemeler %}<h3>Denemeler</h3>{% for kayit in denemeler %}<form method="post" onsubmit='return confirm({{ (kayit.ad ~ " kaydı " ~ kayit.n ~ " öğrenciden silinsin mi? İşlem geçmişinden geri alabilirsiniz.")|tojson }})'><input type="hidden" name="islem" value="sinif_ders_sil"><input type="hidden" name="sinif_id" value="{{ group.sinif.id }}"><input type="hidden" name="ad" value="{{ kayit.ad }}"><input type="hidden" name="tarih" value="{{ kayit.tarih }}"><input type="hidden" name="tur" value="{{ kayit.tur }}"><span>{{ kayit.tarih }} · {{ kayit.ad }} · {{ kayit.n }} öğrenci</span><button class="app-button" type="submit">Sınıftan sil</button></form>{% endfor %}{% endif %}</div>{% endif %}</section>
 <div class="result-student-grid">{% for s in group.ogrenciler %}<a class="app-button" href="{{ url_for('sonuclar',ogrenci=s.id) }}">{{ s.ad_soyad }} · bireysel</a>{% endfor %}</div></details>{% endfor %}
+<script>
+document.querySelectorAll("[data-class-exam]").forEach(function (kutu) {
+  var secim = kutu.querySelector('select[name="ders"]');
+  var satirlar = kutu.querySelectorAll("[data-yaprak]");
+  var bos = kutu.querySelector("[data-yaprak-bos]");
+  function uygula() {
+    var ders = secim ? secim.value : "";
+    var adet = 0;
+    satirlar.forEach(function (satir) {
+      var varMi = (satir.getAttribute("data-yaprak") || "").split("|").indexOf(ders) >= 0;
+      satir.hidden = !varMi;
+      if (varMi) adet += 1;
+    });
+    if (bos) bos.hidden = adet !== 0;
+  }
+  if (secim) secim.addEventListener("change", uygula);
+  uygula();
+});
+</script>
 {% else %}
 {% if not veli %}
 <section class="app-card"><h2>{{ 'Sonucu düzenle' if duzenlenen else 'Bireysel sonuç' }}</h2><p class="app-muted">Bu öğrenciye özel ders testi veya deneme. Boş sayısı otomatik hesaplanır. Sınıfın tümüne aynı denemeyi yazmak için <a href="{{ url_for('sonuclar', sinif=ogrenci.sinif_id) }}">sınıf listesine</a> dönün.</p>

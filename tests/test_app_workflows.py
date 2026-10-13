@@ -555,6 +555,7 @@ class Workflows(unittest.TestCase):
         pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
         self.teacher_client.post('/lgs', data={
             'islem': 'optik_ekle', 'ad': 'Yaprak üslü', 'tarih': '2026-10-13', 'tur': 'yaprak',
+            'ders': 'Matematik', 'sinif_id': str(self.sid),
             'anahtar': 'AB', 'pdf': (BytesIO(pdf), 'yaprak.pdf'),
         }, content_type='multipart/form-data')
         sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Yaprak üslü')
@@ -582,6 +583,62 @@ class Workflows(unittest.TestCase):
         self.assertIn('Yaprak matematik', kart)
         self.assertIn('class="soru-cubuk"', kart)
         self.assertIn('Ekim denemesi', kart)
+
+    def test_leaf_tests_list_by_class_and_course(self):
+        import lgs_optik
+        pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
+        eksik = self.teacher_client.post('/lgs', data={
+            'islem': 'optik_ekle', 'ad': 'Eksik yaprak', 'tarih': '2026-10-01', 'tur': 'yaprak',
+            'anahtar': 'AB', 'pdf': (BytesIO(pdf), 'eksik.pdf'),
+        }, content_type='multipart/form-data', follow_redirects=True)
+        self.assertIn('sınıf ve ders seçin', eksik.get_data(as_text=True))
+        self.assertFalse(any(s['ad'] == 'Eksik yaprak' for s in lgs_optik.sinavlari_listele()))
+        con = d._conn()
+        diger_sinif = con.execute("SELECT id FROM siniflar WHERE sinif_adi='8/B'").fetchone()[0]
+        con.close()
+
+        def yukle(ad, tarih, ders, sinif_id):
+            self.teacher_client.post('/lgs', data={
+                'islem': 'optik_ekle', 'ad': ad, 'tarih': tarih, 'tur': 'yaprak',
+                'ders': ders, 'sinif_id': str(sinif_id), 'anahtar': 'AB',
+                'pdf': (BytesIO(pdf), 'yaprak.pdf'),
+            }, content_type='multipart/form-data', follow_redirects=True)
+
+        yukle('Eski Türkçe', '2026-09-01', 'Türkçe', self.sid)
+        yukle('Yeni Türkçe', '2026-10-12', 'Türkçe', self.sid)
+        yukle('Sınıf matematiği', '2026-10-10', 'Matematik', self.sid)
+        yukle('Diğer sınıf Türkçe', '2026-10-11', 'Türkçe', diger_sinif)
+        turkce = self.teacher_client.get('/lgs', query_string={'yaprak_sinif': self.sid, 'yaprak_ders': 'Türkçe'}).get_data(as_text=True)
+        self.assertLess(turkce.index('Yeni Türkçe'), turkce.index('Eski Türkçe'))
+        self.assertNotIn('Sınıf matematiği', turkce)
+        self.assertNotIn('Diğer sınıf Türkçe', turkce)
+        diger = self.teacher_client.get('/lgs', query_string={'yaprak_sinif': diger_sinif, 'yaprak_ders': 'Türkçe'}).get_data(as_text=True)
+        self.assertIn('Diğer sınıf Türkçe', diger)
+        self.assertNotIn('Yeni Türkçe', diger)
+        matematik = self.teacher_client.get('/lgs', query_string={'yaprak_sinif': self.sid, 'yaprak_ders': 'Matematik'}).get_data(as_text=True)
+        self.assertIn('Sınıf matematiği', matematik)
+        self.assertNotIn('Yeni Türkçe', matematik)
+        self.assertNotIn('Eski Türkçe', matematik)
+        students = d.sinif_ogrencileri(self.sid)[:1]
+        self.teacher_client.post('/sonuclar', data={
+            'islem': 'sinif_ders', 'sinif_id': self.sid, 'ad': 'Ekim Türkçe yaprağı', 'tarih': '2026-10-02',
+            'ders': 'Türkçe', 'soru_sayisi': '10', 'yanlis_goturme': '0',
+            f'dogru_{students[0]["id"]}': '6', f'yanlis_{students[0]["id"]}': '1',
+        }, follow_redirects=True)
+        self.teacher_client.post('/sonuclar', data={
+            'islem': 'sinif_ders', 'sinif_id': self.sid, 'ad': 'Ekim matematik yaprağı', 'tarih': '2026-10-03',
+            'ders': 'Matematik', 'soru_sayisi': '10', 'yanlis_goturme': '0',
+            f'dogru_{students[0]["id"]}': '7', f'yanlis_{students[0]["id"]}': '1',
+        }, follow_redirects=True)
+        liste = self.teacher_client.get('/sonuclar', query_string={'sinif': self.sid}).get_data(as_text=True)
+        self.assertIn('data-yaprak="Türkçe"', liste)
+        self.assertIn('data-yaprak="Matematik"', liste)
+        self.assertLess(liste.index('Ekim matematik yaprağı'), liste.index('Ekim Türkçe yaprağı'))
+        sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Yeni Türkçe')
+        analiz = self.teacher_client.get('/lgs/test-analiz', query_string={'sinif': '8/A', 'ders': 'Türkçe', 'sinav': sinav['id']}).get_data(as_text=True)
+        self.assertIn('Yeni Türkçe', analiz)
+        self.assertIn('Eski Türkçe', analiz)
+        self.assertNotIn('Sınıf matematiği', analiz)
 
     def test_teacher_class_analysis_charts_questions_and_scores(self):
         import lgs_optik

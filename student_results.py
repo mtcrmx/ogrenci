@@ -90,15 +90,23 @@ def register_results(app, login_required, accessible):
     def _sinif_denemeleri(sinif_id):
         con = db._conn()
         rows = con.execute(
-            '''SELECT d.ad, d.tarih, d.tur, count(*) AS n
-               FROM lgs_deneme d JOIN ogrenciler o ON o.id=d.ogrenci_id
+            '''SELECT d.ad, d.tarih, d.tur, COUNT(DISTINCT d.id) AS n,
+                      GROUP_CONCAT(DISTINCT dd.ders) AS dersler
+               FROM lgs_deneme d
+               JOIN ogrenciler o ON o.id=d.ogrenci_id
+               LEFT JOIN lgs_deneme_ders dd ON dd.deneme_id=d.id
                WHERE o.sinif_id=? AND d.ogretmen_id=?
                GROUP BY d.ad, d.tarih, d.tur
                ORDER BY d.tarih DESC, d.ad''',
             (sinif_id, session['ogretmen_id']),
         ).fetchall()
         con.close()
-        return [dict(r) for r in rows]
+        cikti = []
+        for row in rows:
+            kayit = dict(row)
+            kayit['ders_listesi'] = [parca for parca in (kayit.get('dersler') or '').split(',') if parca]
+            cikti.append(kayit)
+        return cikti
 
     def _denemeleri_sil(ids):
         if not ids:
@@ -206,16 +214,16 @@ def register_results(app, login_required, accessible):
             selected = request.args.get('sinif', type=int) or session.get('ui_sinif_id')
             if sinif_form and sinif_form.get('sinif_id', type=int):
                 selected = sinif_form.get('sinif_id', type=int)
-            if selected in {s['id'] for s in classes}:
-                classes = [s for s in classes if s['id'] == selected]
+            sinif_idler = {s['id'] for s in classes}
+            goster = [s for s in classes if s['id'] == selected] if selected in sinif_idler else classes
             return render_template(
                 'sonuclar.html', ogrenci=None, dersler=school_courses(), bugun=date.today().isoformat(),
-                sinif_form=sinif_form,
+                sinif_form=sinif_form, sinif_nav=classes, secili_sinif=selected if selected in sinif_idler else None,
                 gruplar=[{
                     'sinif': s,
                     'ogrenciler': db.sinif_ogrencileri(s['id']),
                     'denemeler': _sinif_denemeleri(s['id']),
-                } for s in classes],
+                } for s in goster],
             )
         if not accessible(session['ogretmen_id'], oid):
             abort(403)

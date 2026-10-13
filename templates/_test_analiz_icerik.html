@@ -14,21 +14,32 @@
   <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{% if ta.veli %}Sınıfın ve sen{% else %}Öğretmen · genel ve sınıf{% endif %}</p>
   <h1 class="mt-1 text-2xl font-black">{{ ta.baslik }}</h1>
   <p class="mt-1 text-sm text-slate-300">{{ ta.alt }}</p>
+  <form method="get" class="mt-4 max-w-sm">
+    <input type="hidden" name="sinif" value="{{ 'genel' if ta.veli and not ta.sinif else ta.sinif }}">
+    {% if ta.veli %}<input type="hidden" name="bolum" value="deneme">{% endif %}
+    <label class="block text-xs font-black text-slate-300">Ders<select name="ders" class="mt-1 w-full rounded-xl border-0 px-3 py-2 text-sm text-slate-900" onchange="this.form.submit()">
+      <option value="">Tüm dersler</option>
+      {% for ad in ta.dersler %}<option value="{{ ad }}" {{ 'selected' if ta.ders == ad else '' }}>{{ ad }}</option>{% endfor %}
+    </select></label>
+  </form>
+  <p class="mt-2 text-xs text-slate-400">Dersi seçince bu sınıfın bugüne kadarki yaprak testleri, yeniden eskiye sıralanır.</p>
   <div class="mt-4 grid gap-3 lg:grid-cols-2">
     <form method="get">
       <input type="hidden" name="sinif" value="{{ 'genel' if ta.veli and not ta.sinif else ta.sinif }}">
+      <input type="hidden" name="ders" value="{{ ta.ders }}">
       {% if ta.veli %}<input type="hidden" name="bolum" value="deneme">{% endif %}
       <label class="block text-xs font-black text-slate-300">PDF optik<select name="sinav" class="mt-1 w-full rounded-xl border-0 px-3 py-2 text-sm text-slate-900" onchange="this.form.submit()">
         <option value="">Seçin</option>
-        {% for s in ta.optikler %}<option value="{{ s.id }}" {{ 'selected' if ta.kaynak == 'optik' and ta.sinav and ta.sinav.id == s.id else '' }}>{{ s.ad }} · {{ 'Yaprak' if s.tur == 'yaprak' else 'Deneme' }} · {{ s.tarih }} · {{ s.katilan }} öğrenci</option>{% endfor %}
+        {% for s in ta.optikler %}<option value="{{ s.id }}" {{ 'selected' if ta.kaynak == 'optik' and ta.sinav and ta.sinav.id == s.id else '' }}>{{ s.tarih }} · {{ s.ders or ('Yaprak' if s.tur == 'yaprak' else 'Deneme') }}{% if s.sinif_adi %} · {{ s.sinif_adi }}{% endif %} · {{ s.ad }} · {{ s.katilan }} öğrenci</option>{% endfor %}
       </select></label>
     </form>
     <form method="get">
       <input type="hidden" name="sinif" value="{{ 'genel' if ta.veli and not ta.sinif else ta.sinif }}">
+      <input type="hidden" name="ders" value="{{ ta.ders }}">
       {% if ta.veli %}<input type="hidden" name="bolum" value="deneme">{% endif %}
       <label class="block text-xs font-black text-slate-300">Girilen yaprak test ve deneme<select class="mt-1 w-full rounded-xl border-0 px-3 py-2 text-sm text-slate-900" onchange="const p=this.value.split('|'); this.form.tur.value=p[0]; this.form.tarih.value=p[1]; this.form.ad.value=p.slice(2).join('|'); this.form.submit()">
         <option value="">Seçin</option>
-        {% for k in ta.katalog %}<option value="{{ k.tur }}|{{ k.tarih }}|{{ k.ad }}" {{ 'selected' if ta.kaynak == 'sonuc' and ta.sonuc and ta.sonuc.ad == k.ad and ta.sonuc.tarih == k.tarih and ta.sonuc.tur == k.tur else '' }}>{{ k.ad }} · {{ 'Yaprak' if k.tur == 'ders' else ('Kurum' if k.tur == 'kurum' else 'Deneme') }} · {{ k.tarih }} · {{ k.adet }} öğrenci</option>{% endfor %}
+        {% for k in ta.katalog %}<option value="{{ k.tur }}|{{ k.tarih }}|{{ k.ad }}" {{ 'selected' if ta.kaynak == 'sonuc' and ta.sonuc and ta.sonuc.ad == k.ad and ta.sonuc.tarih == k.tarih and ta.sonuc.tur == k.tur else '' }}>{{ k.tarih }} · {{ k.dersler|join(', ') if k.dersler else ('Yaprak' if k.tur == 'ders' else ('Kurum' if k.tur == 'kurum' else 'Deneme')) }} · {{ k.ad }} · {{ k.adet }} öğrenci</option>{% endfor %}
       </select></label>
       <input type="hidden" name="tur"><input type="hidden" name="tarih"><input type="hidden" name="ad">
     </form>
@@ -38,19 +49,19 @@
 <nav class="mt-3 flex flex-wrap gap-2" aria-label="Sınıf">
   {% if ta.sinav %}
   {% if ta.veli %}
-  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinif='genel', sinav=ta.sinav.id) }}">Genel</a>
-  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinav=ta.sinav.id, sinif=s.sinif) }}">{{ s.sinif }}</a>{% endfor %}
+  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinif='genel', sinav=ta.sinav.id, ders=ta.ders or none) }}">Genel</a>
+  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinav=ta.sinav.id, sinif=s.sinif, ders=ta.ders or none) }}">{{ s.sinif }}</a>{% endfor %}
   {% else %}
-  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('test_sinif_analiz', sinav=ta.sinav.id) }}">Genel</a>
-  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('test_sinif_analiz', sinav=ta.sinav.id, sinif=s.sinif) }}">{{ s.sinif }}</a>{% endfor %}
+  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('test_sinif_analiz', sinav=ta.sinav.id, ders=ta.ders or none) }}">Genel</a>
+  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('test_sinif_analiz', sinav=ta.sinav.id, sinif=s.sinif, ders=ta.ders or none) }}">{{ s.sinif }}</a>{% endfor %}
   {% endif %}
-  {% else %}
+  {% elif ta.sonuc %}
   {% if ta.veli %}
-  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinif='genel', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur) }}">Genel</a>
-  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur, sinif=s.sinif) }}">{{ s.sinif }}</a>{% endfor %}
+  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', sinif='genel', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur, ders=ta.ders or none) }}">Genel</a>
+  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('veli_lgs', bolum='deneme', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur, sinif=s.sinif, ders=ta.ders or none) }}">{{ s.sinif }}</a>{% endfor %}
   {% else %}
-  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('test_sinif_analiz', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur) }}">Genel</a>
-  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('test_sinif_analiz', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur, sinif=s.sinif) }}">{{ s.sinif }}</a>{% endfor %}
+  <a class="ta-pil {{ 'on' if not ta.sinif else '' }}" href="{{ url_for('test_sinif_analiz', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur, ders=ta.ders or none) }}">Genel</a>
+  {% for s in ta.siniflar %}<a class="ta-pil {{ 'on' if ta.sinif == s.sinif else '' }}" href="{{ url_for('test_sinif_analiz', ad=ta.sonuc.ad, tarih=ta.sonuc.tarih, tur=ta.sonuc.tur, sinif=s.sinif, ders=ta.ders or none) }}">{{ s.sinif }}</a>{% endfor %}
   {% endif %}
   {% endif %}
 </nav>

@@ -55,14 +55,26 @@
       <input type="hidden" name="islem" value="optik_ekle">
       <label class="text-sm font-bold">Ad<input name="ad" required maxlength="80" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" placeholder="Kasım denemesi"></label>
       <label class="text-sm font-bold">Tür<select name="tur" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="yaprak">Yaprak test</option><option value="deneme" selected>Deneme</option></select></label>
+      <label class="text-sm font-bold">Sınıf<select name="sinif_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="">Deneme: tüm 8. sınıflar</option>{% for g in gruplar %}<option value="{{ g.sinif.id }}">{{ g.sinif.sinif_adi }}</option>{% endfor %}</select></label>
+      <label class="text-sm font-bold">Ders<select name="ders" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="">Deneme için boş</option>{% for ders in lgs_dersler %}<option>{{ ders }}</option>{% endfor %}</select></label>
       <label class="text-sm font-bold">Tarih<input type="date" name="tarih" value="{{ bugun }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"></label>
       <label class="text-sm font-bold sm:col-span-2">Soru PDF<input type="file" name="pdf" accept="application/pdf" required class="mt-1 block w-full text-sm"></label>
       <label class="text-sm font-bold sm:col-span-2">Cevap anahtarı<textarea name="anahtar" required rows="3" maxlength="400" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono" placeholder="ABCD ACDB ..."></textarea></label>
       <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white sm:col-span-2">Optiği aç</button>
     </form>
-    {% for s in optik_sinavlar %}
+    {% for tur_kod in ['yaprak', 'deneme'] %}
+    <div class="mt-5">
+      <h3 class="font-black">{{ 'Yaprak testler' if tur_kod == 'yaprak' else 'Denemeler' }}</h3>
+      {% if tur_kod == 'yaprak' %}
+      <form method="get" class="mt-2 grid gap-2 sm:grid-cols-2">
+        <label class="text-sm font-bold">Sınıf<select name="yaprak_sinif" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" onchange="this.form.submit()"><option value="">Tüm sınıflar</option>{% for g in gruplar %}<option value="{{ g.sinif.id }}" {{ 'selected' if yaprak_sinif == g.sinif.id else '' }}>{{ g.sinif.sinif_adi }}</option>{% endfor %}</select></label>
+        <label class="text-sm font-bold">Ders<select name="yaprak_ders" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" onchange="this.form.submit()"><option value="">Tüm dersler</option>{% for ders in lgs_dersler %}<option {{ 'selected' if yaprak_ders == ders else '' }}>{{ ders }}</option>{% endfor %}</select></label>
+      </form>
+      <p class="mt-2 text-xs text-slate-500">Türkçe’yi seçince bu sınıfın bugüne kadarki Türkçe yaprak testleri, matematikse matematik testleri yeniden eskiye sıralanır.</p>
+      {% endif %}
+    {% for s in optik_sinavlar if s.tur == tur_kod and (tur_kod != 'yaprak' or ((not yaprak_sinif or s.sinif_id == yaprak_sinif) and (not yaprak_ders or s.ders == yaprak_ders))) %}
     <article class="mt-4 rounded-2xl border border-slate-200 p-3">
-      <h3 class="font-black">{{ s.ad }} · {{ 'Yaprak test' if s.tur == 'yaprak' else 'Deneme' }} · {{ s.tarih }} · {{ s.soru_sayisi }} soru</h3>
+      <h3 class="font-black">{{ s.tarih }} · {% if s.tur == 'yaprak' %}{{ s.sinif_adi or 'Sınıf' }} · {{ s.ders or 'Ders' }} · {% endif %}{{ s.ad }} · {{ s.soru_sayisi }} soru</h3>
       <p class="mt-1 text-xs text-slate-500">Anahtar: {{ s.cevaplar|join('') }}</p>
       <a class="mt-2 inline-block text-sm font-black text-indigo-800" href="{{ url_for('lgs_optik_pdf', sinav_id=s.id) }}">Soruları aç</a>
       <a class="mt-2 ml-3 inline-block text-sm font-black text-indigo-800" href="{{ url_for('test_sinif_analiz', sinav=s.id) }}">Sınıf analizi</a>
@@ -79,6 +91,10 @@
         </table>
       </div>
     </article>
+    {% else %}
+    <p class="mt-2 text-sm text-slate-500">{% if tur_kod == 'yaprak' %}Bu sınıf ve derste yaprak test yok.{% else %}Henüz deneme yok.{% endif %}</p>
+    {% endfor %}
+    </div>
     {% endfor %}
   </section>
   <section id="aylik-takip" class="lgs-month-board mt-5 rounded-3xl border border-slate-200 bg-white p-4" aria-labelledby="aylik-takip-baslik">
@@ -356,9 +372,9 @@
     <div class="mt-3 flex flex-wrap gap-2">
       {% for s in optik_sinavlar %}
       {% if veli %}
-      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{{ s.ad }}</a>
+      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</a>
       {% else %}
-      <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{{ s.ad }}</a>
+      <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</a>
       {% endif %}
       {% endfor %}
     </div>

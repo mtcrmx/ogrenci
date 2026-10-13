@@ -4410,6 +4410,7 @@ def _test_analiz_baglam(
     sonuc_tur: str,
     ogrenci_id: int | None = None,
     varsayilan_sinif: str = "",
+    ders_istek: str = "",
 ) -> dict:
     optikler = lgs_optik.sinavlari_listele()
     for sinav in optikler:
@@ -4425,6 +4426,34 @@ def _test_analiz_baglam(
     sinif_ad = varsayilan_sinif if sinif_istek is None else ("" if sinif_istek == "genel" else sinif_istek.strip())
     if sonuc_tur not in {"ders", "deneme", "kurum"}:
         sonuc_tur = ""
+    ders_ad = (ders_istek or "").strip()
+    if ders_ad not in LGS_DERSLER:
+        ders_ad = ""
+    ham_var = bool(optikler or katalog)
+    if sinif_ad:
+        optikler = [s for s in optikler if not s.get("sinif_id") or (s.get("sinif_adi") or "") == sinif_ad]
+        katalog = [k for k in katalog if sinif_ad in (k.get("siniflar") or [])]
+    if ders_ad:
+        optikler = [s for s in optikler if s.get("tur") == "yaprak" and (s.get("ders") or "") == ders_ad]
+        katalog = [k for k in katalog if k.get("tur") == "ders" and ders_ad in (k.get("dersler") or [])]
+    if sinav_id and not any(int(s["id"]) == int(sinav_id) for s in optikler):
+        sinav_id = None
+    if sonuc_ad and not any(k["ad"] == sonuc_ad and k["tarih"] == sonuc_tarih and k["tur"] == sonuc_tur for k in katalog):
+        sonuc_ad = ""
+    if not optikler and not katalog:
+        if not ham_var:
+            return {"bos": True, "optikler": [], "katalog": [], "veli": bool(ogrenci_id)}
+        return {
+            "bos": False, "kaynak": "", "optikler": [], "katalog": [], "veli": bool(ogrenci_id),
+            "sinav": None, "sonuc": None, "sinif": sinif_ad, "siniflar": [],
+            "ort": {"adet": 0, "net": 0, "dogru": 0, "yanlis": 0, "bos": 0},
+            "okul": {"adet": 0, "net": 0, "dogru": 0, "yanlis": 0, "bos": 0},
+            "beklenen": 0, "sorular": [], "zor": [], "siralama": [],
+            "grafik": {"soru": False, "no": []},
+            "baslik": ders_ad or "Yaprak test",
+            "alt": "Bu sınıf ve derste bugüne kadar yaprak test yok.",
+            "ders": ders_ad, "dersler": list(LGS_DERSLER),
+        }
     if ogrenci_id and sinav_id and not lgs_optik.sonuc_getir(sinav_id, ogrenci_id):
         sinav_id = None
     if ogrenci_id and sonuc_ad and not any(k["ad"] == sonuc_ad and k["tarih"] == sonuc_tarih and k["tur"] == sonuc_tur for k in katalog):
@@ -4496,6 +4525,7 @@ def _test_analiz_baglam(
             bos=False, kaynak="optik", optikler=optikler, katalog=katalog, veli=bool(ogrenci_id),
             sinav=sinav, sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
             sorular=sorular, zor=zor, siralama=siralama, grafik=grafik, baslik=baslik, alt=alt, sonuc=None,
+            ders=ders_ad, dersler=list(LGS_DERSLER),
         )
         return _analiz_veli_sirasi(paket, ogrenci_id)
 
@@ -4538,6 +4568,7 @@ def _test_analiz_baglam(
         sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
         sorular=[], zor=[], siralama=siralama, grafik=grafik, baslik=sonuc_ad,
         alt=f"{tur_ad} · {sonuc_tarih} · soru numarası yok, ders toplamları",
+        ders=ders_ad, dersler=list(LGS_DERSLER),
     )
     return _analiz_veli_sirasi(paket, ogrenci_id)
 
@@ -4562,6 +4593,7 @@ def test_sinif_analiz():
         (request.args.get("ad") or "").strip(),
         (request.args.get("tarih") or "")[:10],
         request.args.get("tur") or "",
+        ders_istek=request.args.get("ders") or "",
     ))
 
 
@@ -4611,19 +4643,43 @@ def _lgs_optik_ekle():
     if not ham.startswith(b"%PDF-") or len(ham) > lgs_optik.AZAMI_BOYUT:
         flash("PDF boş, bozuk veya 20 MB'dan büyük.", "warning")
         return redirect(url_for("lgs"))
-    from uuid import uuid4
-    ad_dosya = uuid4().hex + ".pdf"
-    (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
     tur = request.form.get("tur") or "deneme"
     if tur not in ("yaprak", "deneme"):
         tur = "deneme"
-    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), tur)
+    ders = (request.form.get("ders") or "").strip()
+    sinif_id = request.form.get("sinif_id", type=int)
+    if tur == "yaprak":
+        siniflar = [
+            s for s in (ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari())
+            if s.get("sinif_adi") in {"8/A", "8/B"}
+        ] or [s for s in aktif_sube_siniflari() if s.get("sinif_adi") in {"8/A", "8/B"}]
+        if ders not in LGS_DERSLER or sinif_id not in {int(s["id"]) for s in siniflar}:
+            flash("Yaprak test için sınıf ve ders seçin.", "warning")
+            return redirect(url_for("lgs"))
+    else:
+        ders, sinif_id = "", None
+    from uuid import uuid4
+    ad_dosya = uuid4().hex + ".pdf"
+    (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
+    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), tur, ders, sinif_id)
     flash(f"{ad}: {len(anahtar)} soruluk {'yaprak test' if tur == 'yaprak' else 'deneme'} açıldı.", "success")
-    return redirect(url_for("lgs"))
+    hedef = {}
+    if sinif_id:
+        hedef["yaprak_sinif"] = sinif_id
+    if ders:
+        hedef["yaprak_ders"] = ders
+    return redirect(url_for("lgs", **hedef))
 
 
 def _lgs_optik_paketi(ogrenci_id: int | None = None):
     sinavlar = lgs_optik.sinavlari_listele()
+    if ogrenci_id:
+        ogr = _ogrenci_bul(int(ogrenci_id))
+        sinif_id = int(ogr["sinif_id"]) if ogr else 0
+        sinavlar = [
+            s for s in sinavlar
+            if s.get("tur") != "yaprak" or not s.get("sinif_id") or int(s["sinif_id"]) == sinif_id
+        ]
     for sinav in sinavlar:
         sinav["sonuclar"] = lgs_optik.sinav_sonuclari(sinav["id"])
         sinav["sonuc"] = lgs_optik.sonuc_getir(sinav["id"], ogrenci_id) if ogrenci_id else None
@@ -4649,6 +4705,8 @@ def lgs_optik_pdf(sinav_id):
     elif session.get("veli_ogrenci_id"):
         ogr = _ogrenci_bul(int(session["veli_ogrenci_id"]))
         if not ogr or ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+            abort(403)
+        if sinav.get("tur") == "yaprak" and sinav.get("sinif_id") and int(sinav["sinif_id"]) != int(ogr["sinif_id"]):
             abort(403)
     else:
         abort(403)
@@ -4868,6 +4926,9 @@ def _lgs_ekran(veli: bool):
         return render_template(
             "lgs.html", gruplar=gruplar, ogrenci=None, veli=False, tempo_adlari=TEMPO_AD,
             aylar=LGS_AYLAR, ay_harita=ay_harita, optik_sinavlar=_lgs_optik_paketi()[0], bugun=date.today().isoformat(),
+            lgs_dersler=LGS_DERSLER,
+            yaprak_sinif=request.args.get("yaprak_sinif", type=int),
+            yaprak_ders=(request.args.get("yaprak_ders") or "").strip(),
         )
 
     gorevler = lgs_gorevler(oid, hafta)
@@ -4914,6 +4975,7 @@ def _lgs_ekran(veli: bool):
             request.args.get("tur") or "",
             ogrenci_id=oid,
             varsayilan_sinif=ogr.get("sinif_adi") or "",
+            ders_istek=request.args.get("ders") or "",
         )
     return render_template(
         "lgs.html",
