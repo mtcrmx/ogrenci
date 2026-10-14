@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
 <title>Erenler Cumhuriyet • Okul ekranı</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='school-broadcast.css') }}?v=20261014-iklim">
+<link rel="stylesheet" href="{{ url_for('static', filename='school-broadcast.css') }}?v=20261014-iklim-etiket">
 <script type="module" src="{{ url_for('static', filename='school-broadcast.js') }}?v=20261014-iklim"></script></head>
 <body class="school-screen">
 <div class="screen-shell">
   <header class="screen-header">
     <div class="school-brand"><img src="{{ url_for('static', filename='school-broadcast-logo.png') }}" alt="Erenler Cumhuriyet Ortaokulu logosu"><div><p>ÇORUM · İSKİLİP</p><h1>Erenler Cumhuriyet<br>Ortaokulu</h1></div></div>
       <div class="header-center campus-header"><img src="{{ url_for('static', filename='school-campus.webp') }}" width="1916" height="821" alt="Erenler Cumhuriyet Ortaokulu binası"><div class="campus-header-caption"><span class="live-label"><i></i> OKUL EKRANI</span><span id="school-date"></span></div></div>
-    <div class="header-side"><div class="header-climate" aria-label="Ortam sıcaklığı ve nemi"><strong id="climate-temp">—</strong><span id="climate-hum">Sensör bekleniyor</span></div><div class="header-clock"><strong id="clock">--:--</strong><span id="seconds">--</span></div></div>
+    <div class="header-side"><div class="header-climate" aria-label="Okul ısı ve nem bilgisi"><small class="climate-label">OKUL ISI VE NEM</small><strong id="climate-temp">—</strong><span id="climate-hum">Sensör bekleniyor</span></div><div class="header-clock"><strong id="clock">--:--</strong><span id="seconds">--</span></div></div>
   </header>
   <main class="screen-main">
     <aside class="status-column">
