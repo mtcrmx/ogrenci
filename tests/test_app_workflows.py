@@ -366,8 +366,9 @@ class Workflows(unittest.TestCase):
         dersler = [dict(ders=ders,dogru=14 if tavan == 20 else 7,yanlis=2,bos=4 if tavan == 20 else 1)
                    for ders,tavan in [('Türkçe',20),('Matematik',20),('Fen Bilimleri',20),
                                      ('T.C. İnkılap Tarihi',10),('Din Kültürü',10),('İngilizce',10)]]
-        self.assertTrue(d.lgs_deneme_ekle(self.oid,'Yuvarlama testi','2026-10-01',dersler)['ok'])
-        self.assertEqual(d.lgs_denemeler(self.oid)[0]['net'],59)
+        saved=d.lgs_deneme_ekle(self.oid,'Yuvarlama testi','2026-10-01',dersler)
+        self.assertTrue(saved['ok'])
+        self.assertEqual(next(r for r in d.lgs_denemeler(self.oid,200) if r['id']==saved['id'])['net'],59)
         self.assertEqual(d._lgs_toplam_net([dict(dogru=0,yanlis=0,net=12.5)]),12.5)
 
     def test_meeting_confirmation_and_empty_message(self):
