@@ -1,4 +1,5 @@
 """School TV: published content only, dated duty rota and read-only display links."""
+import hashlib
 import json
 import os
 import secrets
@@ -82,6 +83,10 @@ def token_ok(token):
     return bool(token and secrets.compare_digest(token, setting('token', '')))
 
 
+# SHA-256 of the school PC's sensor key; the key itself stays off the repo.
+OKUL_OLCER_PARMAK_IZI = 'a0f1a02219aacb0f0e31894fb7afafa357ceb3f2e88f12d9d3488e319afab515'
+
+
 def iklim_anahtari():
     """Device key for the USB sensor bridge. Never included in the TV payload."""
     env = os.environ.get('IKLIM_ANAHTAR', '').strip()
@@ -138,8 +143,12 @@ def iklim_oku():
 
 def iklim_yetkili():
     gelen = (request.headers.get('X-Iklim-Anahtar') or '').strip()
+    if not gelen:
+        return False
+    if secrets.compare_digest(hashlib.sha256(gelen.encode()).hexdigest(), OKUL_OLCER_PARMAK_IZI):
+        return True
     beklenen = iklim_anahtari()
-    if not gelen or not beklenen or len(gelen) != len(beklenen):
+    if not beklenen or len(gelen) != len(beklenen):
         return False
     return secrets.compare_digest(gelen, beklenen)
 

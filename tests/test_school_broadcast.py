@@ -338,6 +338,13 @@ class SchoolBroadcast(unittest.TestCase):
         from pathlib import Path
         key = tv.iklim_anahtari()
         self.assertEqual(self.guest.post('/api/iklim', json={'sicaklik': 23.4, 'nem': 41, 'wifi': 'ok'}).status_code, 403)
+        self.assertEqual(self.guest.post('/api/iklim', json={'sicaklik': 23.4, 'nem': 41},
+            headers={'X-Iklim-Anahtar': key + 'x'}).status_code, 403)
+        from unittest import mock
+        import hashlib
+        with mock.patch.object(tv, 'OKUL_OLCER_PARMAK_IZI', hashlib.sha256(b'okul-pc').hexdigest()):
+            self.assertEqual(self.guest.post('/api/iklim', json={'sicaklik': 90, 'nem': 41},
+                headers={'X-Iklim-Anahtar': 'okul-pc'}).status_code, 400)
         self.assertEqual(self.guest.post('/api/iklim', json={'sicaklik': 90, 'nem': 41, 'wifi': 'ok'},
             headers={'X-Iklim-Anahtar': key}).status_code, 400)
         saved = self.guest.post('/api/iklim', json={'sicaklik': 23.4, 'nem': 41.2, 'wifi': 'ok'},
