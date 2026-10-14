@@ -7,6 +7,8 @@
   <h1>{{ 'Okul yayın yönetimi' if admin else 'Yayına içerik ekle' }}</h1><p>Okulun TV ekranını buradan hazırlayın. Yayın ekranı otomatik olarak yenilenir.</p>
   {% if admin %}<section><h2>TV’yi yayına alın</h2><p>TV tarayıcısında bu bağlantıyı açıp <strong>Tam ekran</strong> düğmesine basın. Yalnızca yayın bilgilerini gösterir.</p>
     <label>Ekran bağlantısı<input class="display-url" readonly value="{{ ekran_url }}" aria-label="Ekran bağlantısı"></label>
+    <label>Sensör anahtarı<input class="display-url" readonly value="{{ iklim_anahtar }}" aria-label="Sensör anahtarı"></label>
+    <p class="note">Isı ve nem ölçer bu anahtarla yayın ekranını on saniyede bir günceller. Ölçerin takılı olduğu bilgisayar açık kalmalı.</p>
     <div class="actions"><a href="{{ ekran_url }}" class="link-button" target="_blank" rel="noopener noreferrer">TV ekranını aç</a><a href="{{ url_for('yayin') }}" class="link-button" target="_blank" rel="noopener">Önizle</a>
     <form method="post" onsubmit="return confirm('Eski TV bağlantısı kapanacak. Yeni bağlantıyı TV’de açmanız gerekecek. Devam edilsin mi?')"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="islem" value="token"><button>Bağlantıyı yenile</button></form></div>
     <p class="note">TV bağlantısı ve okul ayarlarını Adem Akgül ve Metehan Cücen yönetir. Öğretmenler kendi yayın içeriklerini ekleyip düzenleyebilir. TV bağlantısını okul ekranı için kullanın. Videolar otomatik ve sessiz oynar; görüntü kalitesi yüklediğiniz dosyaya bağlıdır.</p>

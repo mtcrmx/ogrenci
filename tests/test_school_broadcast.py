@@ -334,6 +334,36 @@ class SchoolBroadcast(unittest.TestCase):
         self.post(**{k:v for k,v in edited.items() if k!='aktif'})
         self.assertEqual(self.guest.get('/ekran/'+self.token+'/veri').json['icerikler'],[])
 
+    def test_room_climate_reaches_the_screen_every_ten_seconds(self):
+        from pathlib import Path
+        key = tv.iklim_anahtari()
+        self.assertEqual(self.guest.post('/api/iklim', json={'sicaklik': 23.4, 'nem': 41, 'wifi': 'ok'}).status_code, 403)
+        self.assertEqual(self.guest.post('/api/iklim', json={'sicaklik': 90, 'nem': 41, 'wifi': 'ok'},
+            headers={'X-Iklim-Anahtar': key}).status_code, 400)
+        saved = self.guest.post('/api/iklim', json={'sicaklik': 23.4, 'nem': 41.2, 'wifi': 'ok'},
+            headers={'X-Iklim-Anahtar': key})
+        self.assertEqual(saved.status_code, 200)
+        body = self.guest.get('/ekran/'+self.token+'/iklim').json
+        self.assertEqual(body['sicaklik'], 23.4)
+        self.assertEqual(body['nem'], 41)
+        self.assertEqual(body['wifi'], 'ok')
+        self.assertTrue(body['taze'])
+        self.assertNotIn(key, str(body))
+        self.assertNotIn('iklim', self.guest.get('/ekran/'+self.token+'/veri').json)
+        page = self.guest.get('/ekran/'+self.token).get_data(as_text=True)
+        self.assertIn('id="climate-temp"', page)
+        self.assertNotIn(key, page)
+        script = Path(__file__).resolve().parents[1].joinpath('static', 'school-broadcast.js').read_text(encoding='utf-8')
+        self.assertIn('setInterval(refreshClimate,10000)', script)
+        self.assertIn('setInterval(refresh,30000)', script)
+        tv.iklim_kaydet(22, 40, 'ok')
+        con = d._conn()
+        con.execute("UPDATE okul_yayin_ayar SET deger=? WHERE anahtar='iklim_son'",
+            ('{"sicaklik":22.0,"nem":40,"wifi":"ok","guncelleme":"2020-01-01T08:00:00+03:00"}',))
+        con.commit(); con.close()
+        self.assertFalse(self.guest.get('/ekran/'+self.token+'/iklim').json['taze'])
+        self.assertEqual(self.guest.get('/ekran/not-a-token/iklim').status_code, 404)
+
 
 from pathlib import Path
 PathLogo=Path(__file__).resolve().parents[1]/'static'/'school-broadcast-logo.png'

@@ -60,6 +60,7 @@ def init_schema():
             bitis TEXT NOT NULL, aktif INTEGER NOT NULL DEFAULT 1);
     ''')
     con.execute('INSERT OR IGNORE INTO okul_yayin_ayar VALUES (?,?)', ('token', secrets.token_urlsafe(32)))
+    con.execute('INSERT OR IGNORE INTO okul_yayin_ayar VALUES (?,?)', ('iklim_anahtar', secrets.token_urlsafe(24)))
     saved = con.execute("SELECT deger FROM okul_yayin_ayar WHERE anahtar='cuma'").fetchone()
     if saved:
         hours = json.loads(saved[0])
@@ -79,6 +80,68 @@ def setting(key, default=None):
 
 def token_ok(token):
     return bool(token and secrets.compare_digest(token, setting('token', '')))
+
+
+def iklim_anahtari():
+    """Device key for the USB sensor bridge. Never included in the TV payload."""
+    env = os.environ.get('IKLIM_ANAHTAR', '').strip()
+    if env:
+        return env
+    key = setting('iklim_anahtar')
+    if key:
+        return key
+    key = secrets.token_urlsafe(24)
+    con = db._conn()
+    con.execute('INSERT OR IGNORE INTO okul_yayin_ayar VALUES (?,?)', ('iklim_anahtar', key))
+    con.commit()
+    con.close()
+    return setting('iklim_anahtar') or key
+
+
+def iklim_kaydet(sicaklik, nem, wifi=''):
+    try:
+        sicaklik = round(float(sicaklik), 1)
+        nem = int(round(float(nem)))
+    except (TypeError, ValueError):
+        raise ValueError('okunamadi')
+    if not -20 <= sicaklik <= 60 or not 0 <= nem <= 100:
+        raise ValueError('aralik')
+    durum = str(wifi or '').strip().lower()
+    durum = 'ok' if durum in ('ok', 'bagli', 'bağlı') else 'yok' if durum in ('yok', 'hayir', 'hayır') else ''
+    body = {'sicaklik': sicaklik, 'nem': nem, 'wifi': durum,
+            'guncelleme': datetime.now(ISTANBUL).isoformat(timespec='seconds')}
+    con = db._conn()
+    con.execute('''INSERT INTO okul_yayin_ayar(anahtar,deger) VALUES(?,?)
+        ON CONFLICT(anahtar) DO UPDATE SET deger=excluded.deger''', ('iklim_son', json.dumps(body)))
+    con.commit()
+    con.close()
+    return body
+
+
+def iklim_oku():
+    bos = {'sicaklik': None, 'nem': None, 'wifi': '', 'guncelleme': None, 'taze': False}
+    raw = setting('iklim_son')
+    if not raw:
+        return bos
+    try:
+        data = json.loads(raw)
+        an = datetime.fromisoformat(data['guncelleme'])
+        if an.tzinfo is None:
+            an = an.replace(tzinfo=ISTANBUL)
+        data['taze'] = (datetime.now(ISTANBUL) - an.astimezone(ISTANBUL)).total_seconds() <= 35
+        data['sicaklik'] = round(float(data['sicaklik']), 1)
+        data['nem'] = int(data['nem'])
+        return data
+    except (TypeError, ValueError, KeyError):
+        return bos
+
+
+def iklim_yetkili():
+    gelen = (request.headers.get('X-Iklim-Anahtar') or '').strip()
+    beklenen = iklim_anahtari()
+    if not gelen or not beklenen or len(gelen) != len(beklenen):
+        return False
+    return secrets.compare_digest(gelen, beklenen)
 
 
 def csrf():
@@ -340,7 +403,7 @@ def register_broadcast(app, login_required):
 
     @app.after_request
     def broadcast_headers(response):
-        if request.endpoint in ('yayin', 'api_yayin_okul', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_medya', 'okul_ekran_sayfa', 'yayin_sayfa', 'yayin_yonetim'):
+        if request.endpoint in ('yayin', 'api_yayin_okul', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_medya', 'okul_ekran_sayfa', 'yayin_sayfa', 'yayin_yonetim', 'okul_ekran_iklim', 'api_yayin_iklim', 'api_iklim_yaz'):
             response.headers['Cache-Control'] = 'private, no-store'
             response.headers['Referrer-Policy'] = 'no-referrer'
         if request.endpoint in ('yayin', 'okul_ekran'):
@@ -360,13 +423,35 @@ def register_broadcast(app, login_required):
     def okul_ekran(token):
         if not token_ok(token):
             abort(404)
-        return render_template('school_broadcast.html', data=payload(token), veri_url=url_for('okul_ekran_veri', token=token), tv=True)
+        return render_template('school_broadcast.html', data=payload(token), veri_url=url_for('okul_ekran_veri', token=token),
+            iklim_url=url_for('okul_ekran_iklim', token=token), tv=True)
 
     @app.get('/ekran/<token>/veri')
     def okul_ekran_veri(token):
         if not token_ok(token):
             abort(404)
         return jsonify(payload(token))
+
+    @app.get('/ekran/<token>/iklim')
+    def okul_ekran_iklim(token):
+        if not token_ok(token):
+            abort(404)
+        return jsonify(iklim_oku())
+
+    @app.get('/api/yayin/iklim')
+    @login_required
+    def api_yayin_iklim():
+        return jsonify(iklim_oku())
+
+    @app.post('/api/iklim')
+    def api_iklim_yaz():
+        if not iklim_yetkili():
+            abort(403)
+        body = request.get_json(silent=True) or request.form
+        try:
+            return jsonify(ok=True, **iklim_kaydet(body.get('sicaklik'), body.get('nem'), body.get('wifi', '')))
+        except ValueError:
+            abort(400)
 
     @app.get('/ekran/<token>/medya/<int:cid>')
     def okul_ekran_medya(token, cid):
@@ -563,4 +648,5 @@ def register_broadcast(app, login_required):
             program_classes=sorted({r['sinif_adi'] for r in timetable()}), days=db.DERS_GUNLERI,
             admin=admin, calendar=calendar, calendar_edit=calendar_edit, calendar_year=calendar_year,
             calendar_default=today if calendar_year == int(today[:4]) else f'{calendar_year}-01-01',
-            ekran_url=url_for('okul_ekran', token=setting('token'), _external=True) if admin else '')
+            ekran_url=url_for('okul_ekran', token=setting('token'), _external=True) if admin else '',
+            iklim_anahtar=iklim_anahtari() if admin else '')

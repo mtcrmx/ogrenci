@@ -5746,7 +5746,8 @@ def api_olumlu_gecmis(sinif_id):
 @giris_zorunlu
 def yayin(sinif_id=None):
     from school_broadcast import payload
-    return render_template('school_broadcast.html', data=payload(), veri_url=url_for('api_yayin_okul'), tv=False)
+    return render_template('school_broadcast.html', data=payload(), veri_url=url_for('api_yayin_okul'),
+        iklim_url=url_for('api_yayin_iklim'), tv=False)
 
 
 # ══════════════════════════════════════════════════════════════════════════

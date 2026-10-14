@@ -138,7 +138,7 @@ import {BroadcastPlayback} from './school-broadcast-playback.mjs?v=20261001-dura
   }
   async function refresh(){if(fetching||revoked)return;fetching=true;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
     try{const r=await fetch(endpoint,{cache:'no-store',signal:controller.signal,credentials:'same-origin'});
-      if(r.status===404||r.status===403||r.redirected){revoked=true;mediaRevision++;disposeMedia();presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates'].forEach(id=>txt(id,'—'));$('ticker-text').className='ticker-text static';tickerCopy=null;$('ticker-text').style.transform='';txt('ticker-text','—');txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
+      if(r.status===404||r.status===403||r.redirected){revoked=true;mediaRevision++;disposeMedia();presentation?.dispose();$('slide-body').replaceChildren(node('div','message-slide','Yayın bağlantısı kapatıldı. Yönetimden yeni ekran bağlantısını açın.'));$('teacher-table-body').replaceChildren();['duty-0','duty-1','duty-2','lesson-hours','next-lesson','teacher-table-status','teacher-table-times','calendar-state','calendar-title','calendar-dates','climate-temp','climate-hum'].forEach(id=>txt(id,'—'));$('ticker-text').className='ticker-text static';tickerCopy=null;$('ticker-text').style.transform='';txt('ticker-text','—');txt('connection','Yayın erişimi kapatıldı');$('connection').className='error';return;}
       if(!r.ok)throw new Error();const updated=await r.json();if(!updated.saatler||!updated.program)throw new Error();
       offset=Date.parse(updated.simdi)-Date.now();const nextSig=JSON.stringify({...updated,simdi:null,lgs:null});data=updated;
       if(signature!==nextSig){signature=nextSig;periodKey='';}txt('connection','Güncel · Türkiye saati');$('connection').className='';tick();
@@ -155,5 +155,17 @@ import {BroadcastPlayback} from './school-broadcast-playback.mjs?v=20261001-dura
     const video=$('slide-body').querySelector('video'),own=mediaRevision;
     if(video){if(playback.paused)video.pause();else video.play().then(()=>{if(own===mediaRevision)video.parentElement?.querySelector('.media-failure')?.remove();}).catch(()=>{if(own===mediaRevision)playback.failed();});}
   });
-  signature=JSON.stringify({...data,simdi:null,lgs:null});render();tick();txt('connection','Güncel · Türkiye saati');setInterval(tick,100);setInterval(refresh,30000);frame(scrollTicker);
+  const climateEndpoint=JSON.parse(document.getElementById('climate-url').textContent);
+  function paintClimate(c){
+    if(!c||!c.taze||c.sicaklik==null||c.nem==null){txt('climate-temp','—');txt('climate-hum','Sensör bekleniyor');return;}
+    const wifi=c.wifi==='ok'?' · Wi-Fi bağlı':c.wifi==='yok'?' · Wi-Fi yok':'';
+    txt('climate-temp',`${Number(c.sicaklik).toFixed(1)}°C`);
+    txt('climate-hum',`Nem %${Math.round(Number(c.nem))}${wifi}`);
+  }
+  async function refreshClimate(){
+    if(revoked)return;
+    try{const r=await fetch(climateEndpoint,{cache:'no-store',credentials:'same-origin'});if(!r.ok)return;paintClimate(await r.json());}
+    catch{/* Keep the last reading while the sensor link retries. */}
+  }
+  signature=JSON.stringify({...data,simdi:null,lgs:null});render();tick();txt('connection','Güncel · Türkiye saati');refreshClimate();setInterval(tick,100);setInterval(refresh,30000);setInterval(refreshClimate,10000);frame(scrollTicker);
 })();
