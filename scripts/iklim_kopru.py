@@ -48,20 +48,31 @@ def main():
         print("Sensör anahtarı yok. IKLIM_ANAHTAR tanımlayın.", file=sys.stderr)
         return 1
     import serial
-    link = serial.Serial(port, 9600, timeout=2)
-    print(f"{port} dinleniyor", flush=True)
     while True:
-        raw = link.readline().decode("utf-8", "ignore").strip()
-        match = LINE.search(raw)
-        if not match:
-            continue
-        wifi = match.group(3) or ""
         try:
-            post(url, key, match.group(1), match.group(2), wifi)
-            print(f"gonderildi {match.group(1)} C nem {match.group(2)} {wifi}", flush=True)
-        except OSError as exc:
-            print(f"gonderilemedi: {exc}", file=sys.stderr)
-            time.sleep(2)
+            link = serial.Serial(port, 9600, timeout=2)
+        except serial.SerialException:
+            print(f"{port} bulunamadi, olcer bekleniyor", file=sys.stderr, flush=True)
+            time.sleep(5)
+            continue
+        print(f"{port} dinleniyor", flush=True)
+        try:
+            while True:
+                raw = link.readline().decode("utf-8", "ignore").strip()
+                match = LINE.search(raw)
+                if not match:
+                    continue
+                wifi = match.group(3) or ""
+                try:
+                    post(url, key, match.group(1), match.group(2), wifi)
+                    print(f"gonderildi {match.group(1)} C nem {match.group(2)} {wifi}", flush=True)
+                except OSError as exc:
+                    print(f"gonderilemedi: {exc}", file=sys.stderr)
+                    time.sleep(2)
+        except serial.SerialException:
+            print(f"{port} baglantisi koptu, yeniden baglaniliyor", file=sys.stderr, flush=True)
+            link.close()
+            time.sleep(5)
 
 
 if __name__ == "__main__":
