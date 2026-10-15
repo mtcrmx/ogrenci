@@ -205,6 +205,18 @@ class Workflows(unittest.TestCase):
         evde = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)
         self.assertIn('data-key-slots', evde)
         self.assertNotIn('textarea name="anahtar"', evde)
+        soru = self.parent.get('/veli/lgs', query_string={'bolum': 'soru'}).get_data(as_text=True).split('<main', 1)[-1]
+        self.assertIn('<h1>Sorular</h1>', soru)
+        self.assertNotIn('<h1>Analiz</h1>', soru)
+        self.assertNotIn('grid-cols-3', soru)
+        analiz = self.parent.get('/veli/lgs', query_string={'bolum': 'deneme'}).get_data(as_text=True).split('<main', 1)[-1]
+        self.assertIn('<h1>Analiz</h1>', analiz)
+        self.assertNotIn('hedefin duruyor', analiz)
+        self.assertNotIn('Ders ve deneme sonuçlarına geç', analiz)
+        self.assertNotIn('Sorular ve optik', analiz)
+        sonuc = self.parent.get('/veli/lgs', query_string={'bolum': 'sonuc'}).get_data(as_text=True).split('<main', 1)[-1]
+        self.assertIn('<h1>Sonuçlar</h1>', sonuc)
+        self.assertNotIn('Sorular ve optik', sonuc)
 
     def test_teacher_can_delete_and_restore_exam_results(self):
         students=d.sinif_ogrencileri(self.sid)[:2]
@@ -494,8 +506,8 @@ class Workflows(unittest.TestCase):
         self.teacher_client.post('/lgs',data={'ogrenci':self.oid,'islem':'program_onay','tarih':today.isoformat(),'sira':'0','karar':'onay'})
         record=d.lgs_program_isaretler(self.oid,today.isoformat(),today.isoformat())[(today.isoformat(),0)]
         self.assertTrue(record.get('tamamlandi'))
-        sayfa = self.parent.get('/veli/lgs').get_data(as_text=True)
-        self.assertIn('>Soru<', sayfa)
+        sayfa = self.parent.get('/veli/lgs').get_data(as_text=True).split('<main', 1)[-1]
+        self.assertIn('<h1>Sorular</h1>', sayfa)
         self.assertNotIn('>Özet<', sayfa)
         self.assertNotIn('>Program<', sayfa)
 
