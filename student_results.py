@@ -111,7 +111,8 @@ def register_results(app, login_required, accessible):
         con = db._conn()
         rows = con.execute(
             '''SELECT d.ad, d.tarih, d.tur, COUNT(DISTINCT d.id) AS n,
-                      GROUP_CONCAT(DISTINCT dd.ders) AS dersler
+                      GROUP_CONCAT(DISTINCT dd.ders) AS dersler,
+                      MAX(dd.anahtar) AS anahtar
                FROM lgs_deneme d
                JOIN ogrenciler o ON o.id=d.ogrenci_id
                LEFT JOIN lgs_deneme_ders dd ON dd.deneme_id=d.id
@@ -125,6 +126,10 @@ def register_results(app, login_required, accessible):
         for row in rows:
             kayit = dict(row)
             kayit['ders_listesi'] = [parca for parca in (kayit.get('dersler') or '').split(',') if parca]
+            try:
+                kayit['anahtar'] = json.loads(kayit.get('anahtar') or 'null') or []
+            except ValueError:
+                kayit['anahtar'] = []
             cikti.append(kayit)
         return cikti
 
@@ -218,7 +223,7 @@ def register_results(app, login_required, accessible):
             saved = db.lgs_deneme_ekle(
                 student['id'], title, when,
                 [dict(ders=course, soru_sayisi=count, dogru=dogru, yanlis=yanlis, bos=count - dogru - yanlis, yanlis_goturme=penalty,
-                      anahtar=key if marks else None, isaretler=marks)],
+                      anahtar=key or None, isaretler=marks)],
                 ogretmen_id=session['ogretmen_id'], tur='ders',
             )
             if not saved.get('ok'):

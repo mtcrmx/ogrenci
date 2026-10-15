@@ -2094,11 +2094,12 @@ def _ders_satiri(row) -> dict:
         isaretler = json.loads(satir.get("isaretler") or "null")
     except ValueError:
         anahtar = isaretler = None
-    if anahtar and isinstance(isaretler, list):
-        satir["anahtar"], satir["isaretler"] = anahtar, isaretler
+    satir["anahtar"] = anahtar if isinstance(anahtar, list) and anahtar else None
+    if satir["anahtar"] and isinstance(isaretler, list):
+        satir["isaretler"] = isaretler
         satir["sorular"] = soru_durumlari(anahtar, isaretler)
     else:
-        satir["anahtar"] = satir["isaretler"] = None
+        satir["isaretler"] = None
         satir["sorular"] = []
     return satir
 
@@ -2136,7 +2137,10 @@ def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], p
             net = round(dogru - (yanlis / goturme if goturme else 0), 2)
         anahtar = list(d.get('anahtar') or [])
         isaretler = list(d.get('isaretler') or [])
-        cevap = (json.dumps(anahtar), json.dumps(isaretler)) if anahtar and len(anahtar) == len(isaretler) == int(tavan) else (None, None)
+        if anahtar and len(anahtar) == int(tavan) and all(h in CEVAP_SIKLARI for h in anahtar):
+            cevap = (json.dumps(anahtar), json.dumps(isaretler) if len(isaretler) == int(tavan) else None)
+        else:
+            cevap = (None, None)
         temiz.append((ders, dogru, yanlis, bos, net, tavan, goturme, *cevap))
     if not temiz:
         return {"ok": False, "hata": "En az bir derse doğru, yanlış veya boş yazın."}

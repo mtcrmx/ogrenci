@@ -4397,7 +4397,7 @@ def _cevapli_ogrenciler(ogrenciler: list[dict], ders: str, anahtar: list[str]) -
     cikti = []
     for o in ogrenciler:
         d = next((d for d in o["dersler"] if d["ders"] == ders and d.get("anahtar") == anahtar), None)
-        if d:
+        if d and d.get("sorular"):
             cikti.append({**o, "satirlar": d["sorular"]})
     return cikti
 

@@ -185,6 +185,10 @@ class Workflows(unittest.TestCase):
         self.assertNotIn(b['ad_soyad'],veli)
         birey=self.teacher_client.get('/sonuclar',query_string={'ogrenci':self.oid}).get_data(as_text=True)
         self.assertIn('class="q-strip"',birey)
+        liste=self.teacher_client.get('/sonuclar',query_string={'sinif':self.sid}).get_data(as_text=True)
+        self.assertIn('<details class="saved-key"><summary>Cevap anahtarı</summary>',liste)
+        self.assertNotIn('saved-key" open',liste)
+        self.assertIn('data-key-slots',liste)
 
     def test_teacher_can_delete_and_restore_exam_results(self):
         students=d.sinif_ogrencileri(self.sid)[:2]
