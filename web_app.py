@@ -4765,17 +4765,17 @@ def _lgs_optik_ekle():
     tarih = (request.form.get("tarih") or date.today().isoformat())[:10]
     if not ad:
         flash("Sınav adı yazın.", "warning")
-        return redirect(url_for("lgs"))
+        return redirect(url_for("lgs", ekran="evde"))
     if not anahtar:
         flash("Cevap anahtarına her soru için A, B, C veya D yazın. En fazla 90 soru.", "warning")
-        return redirect(url_for("lgs"))
+        return redirect(url_for("lgs", ekran="evde"))
     if not dosya or not (dosya.filename or "").lower().endswith(".pdf"):
         flash("Soruların PDF dosyasını seçin.", "warning")
-        return redirect(url_for("lgs"))
+        return redirect(url_for("lgs", ekran="evde"))
     ham = dosya.read(lgs_optik.AZAMI_BOYUT + 1)
     if not ham.startswith(b"%PDF-") or len(ham) > lgs_optik.AZAMI_BOYUT:
         flash("PDF boş, bozuk veya 20 MB'dan büyük.", "warning")
-        return redirect(url_for("lgs"))
+        return redirect(url_for("lgs", ekran="evde"))
     tur = request.form.get("tur") or "deneme"
     if tur not in ("yaprak", "deneme"):
         tur = "deneme"
@@ -4788,7 +4788,7 @@ def _lgs_optik_ekle():
         ] or [s for s in aktif_sube_siniflari() if s.get("sinif_adi") in {"8/A", "8/B"}]
         if ders not in LGS_DERSLER or sinif_id not in {int(s["id"]) for s in siniflar}:
             flash("Yaprak test için sınıf ve ders seçin.", "warning")
-            return redirect(url_for("lgs"))
+            return redirect(url_for("lgs", ekran="evde"))
     else:
         ders, sinif_id = "", None
     from uuid import uuid4
@@ -4796,12 +4796,7 @@ def _lgs_optik_ekle():
     (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
     lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), tur, ders, sinif_id)
     flash(f"{ad}: {len(anahtar)} soruluk {'yaprak test' if tur == 'yaprak' else 'deneme'} açıldı.", "success")
-    hedef = {}
-    if sinif_id:
-        hedef["yaprak_sinif"] = sinif_id
-    if ders:
-        hedef["yaprak_ders"] = ders
-    return redirect(url_for("lgs", **hedef))
+    return redirect(url_for("lgs", ekran="evde"))
 
 
 def _lgs_optik_paketi(ogrenci_id: int | None = None):
@@ -5048,8 +5043,7 @@ def _lgs_ekran(veli: bool):
             "lgs.html", gruplar=gruplar, ogrenci=None, veli=False, tempo_adlari=TEMPO_AD,
             aylar=LGS_AYLAR, ay_harita=ay_harita, optik_sinavlar=_lgs_optik_paketi()[0], bugun=date.today().isoformat(),
             lgs_dersler=LGS_DERSLER,
-            yaprak_sinif=request.args.get("yaprak_sinif", type=int),
-            yaprak_ders=(request.args.get("yaprak_ders") or "").strip(),
+            ekran="evde" if request.args.get("ekran") == "evde" else "",
         )
 
     gorevler = lgs_gorevler(oid, hafta)

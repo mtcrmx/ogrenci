@@ -15,6 +15,7 @@ body.ui-theme.layout-page [hidden] { display:none!important; }
 .app-nav a { display:flex; align-items:center; gap:10px; min-height:44px; padding:9px 10px; border-radius:12px; font-size:13px; font-weight:750; text-decoration:none; color:#4b3a62; }
 .app-nav a>span { width:22px; text-align:center; font-size:19px; color:#755693; }
 .app-nav a:hover,.app-nav a.is-current { background:#fff8f4; color:#503374; box-shadow:0 2px 4px #6b4d8420,inset 0 1px #fff; }
+.app-nav a.app-nav-sub { min-height:36px; padding-left:28px; font-size:12.5px; }
 .app-sidebar-footer { margin-top:auto; display:grid; gap:6px; font-size:13px; }
 .app-sidebar-footer a,.app-sidebar-footer button,.app-sidebar-footer summary { text-align:left; padding:9px 10px; color:#4c3b61; cursor:pointer; background:none; border:0; border-radius:10px; text-decoration:none; }
 .app-sidebar-footer button { width:100%; }

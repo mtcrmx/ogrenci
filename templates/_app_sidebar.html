@@ -33,9 +33,14 @@
     {% if not rapor_only %}
     <a href="{{ url_for('dashboard', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'dashboard' else '' }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}><span aria-hidden="true">⌂</span>Ana sayfa</a>
     <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['haftalik_takip','onay_kutusu','lgs','sonuclar','islem_gecmisi','odev_duzenle'] %} open{% endif %}><summary>Takip</summary>
-    {% for endpoint, label, icon in [('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦'), ('sonuclar','Ders / deneme girişi','◈'), ('islem_gecmisi','İşlem geçmişim','↶')] %}
-    {% set current = request.endpoint == endpoint or (endpoint == 'islem_gecmisi' and request.endpoint == 'odev_duzenle') %}
-    <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint == 'haftalik_takip' else url_for(endpoint) }}" class="{{ 'is-current' if current else '' }}"{% if current %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}
+    {% for endpoint, label, icon in [('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦'), ('islem_gecmisi','İşlem geçmişim','↶')] %}
+    {% set current = (request.endpoint == endpoint or (endpoint == 'islem_gecmisi' and request.endpoint == 'odev_duzenle')) and not (endpoint == 'lgs' and request.args.get('ekran') == 'evde') %}
+    <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint == 'haftalik_takip' else url_for(endpoint) }}" class="{{ 'is-current' if current else '' }}"{% if current %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
+    {% if endpoint == 'lgs' and request.endpoint in ['lgs', 'sonuclar'] %}
+    <a href="{{ url_for('lgs', ekran='evde') }}" class="app-nav-sub {{ 'is-current' if request.endpoint == 'lgs' and request.args.get('ekran') == 'evde' else '' }}"><span aria-hidden="true">✉</span>Evde Soru Testleri</a>
+    <a href="{{ url_for('sonuclar') }}" class="app-nav-sub {{ 'is-current' if request.endpoint == 'sonuclar' else '' }}"><span aria-hidden="true">▤</span>Okulda Yaprak Test</a>
+    {% endif %}
+    {% endfor %}
     </details>
     {% endif %}
     <details class="app-nav-group" name="app-nav-group"{% if request.endpoint == 'yayin_yonetim' %} open{% endif %}><summary>Okul</summary>

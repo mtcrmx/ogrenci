@@ -1,17 +1,16 @@
 {% extends 'base.html' %}
-{% block title %}Ders ve deneme sonuçları{% endblock %}
+{% block title %}{{ 'Okulda Yaprak Test' if not veli and not ogrenci else 'Ders ve deneme sonuçları' }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=6">{% endblock %}
 {% block body %}<main class="page-content">
-<header class="page-heading"><div><h1>Ders ve deneme sonuçları</h1><p>{% if ogrenci %}{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% else %}Öğrenci seçin veya üstteki alandan ad / okul numarasıyla arayın.{% endif %}</p></div>{% if not veli %}<a class="app-button" href="{{ url_for('islem_gecmisi') }}">İşlem geçmişi / geri al</a>{% endif %}</header>
+<header class="page-heading"><div><h1>{{ 'Okulda Yaprak Test' if not veli and not ogrenci else 'Ders ve deneme sonuçları' }}</h1><p>{% if ogrenci %}{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% else %}Öğrenci seçin veya üstteki alandan ad / okul numarasıyla arayın.{% endif %}</p></div>{% if not veli %}<a class="app-button" href="{{ url_for('islem_gecmisi') }}">İşlem geçmişi / geri al</a>{% endif %}</header>
 {% for message in get_flashed_messages() %}<p class="app-notice" role="status">{{ message }}</p>{% endfor %}
 {% if not ogrenci %}
 <nav class="mt-3 flex flex-wrap gap-2" aria-label="Sınıf">{% for s in sinif_nav %}<a class="app-button {{ 'app-primary' if secili_sinif == s.id else '' }}" href="{{ url_for('sonuclar', sinif=s.id) }}">{{ s.sinif_adi }}</a>{% endfor %}</nav>
 {% for group in gruplar %}{% set ayni = sinif_form and sinif_form.get('sinif_id')|int == group.sinif.id %}{% set kural = sinif_form.get('yanlis_goturme') if ayni else '0' %}<details class="app-card" open><summary>{{ group.sinif.sinif_adi }} · sınıf ders denemesi</summary>
-<section class="class-exam" data-class-exam><h2>Sınıfın tümüne yaprak test</h2><p class="app-muted">Dersi seçin; bu sınıfta bugüne kadar yapılan o dersin yaprak testleri yeniden eskiye sıralanır. Yeni test için adı ve tarihi yazın. <strong>Cevap anahtarını</strong> girerseniz her öğrencinin işaretlediği harfleri yazarsınız; doğru, yanlış ve boş kendiliğinden hesaplanır ve analizde hangi soruda ne yaptığı görünür. Anahtar girmezseniz yalnız doğru ve yanlış sayısını yazın. Boş bırakılan öğrenci kayda girmez.</p>
-<form method="post" data-answer-form><input type="hidden" name="islem" value="sinif_ders"><input type="hidden" name="sinif_id" value="{{ group.sinif.id }}">
-<div class="result-fields result-meta"><label>Deneme adı<input name="ad" required maxlength="80" value="{{ sinif_form.get('ad','') if ayni else '' }}" placeholder="Matematik denemesi"></label><label>Tarih<input type="date" name="tarih" required value="{{ sinif_form.get('tarih', bugun) if ayni else bugun }}"></label><label>Ders<select name="ders" required>{% for name in dersler %}<option {{ 'selected' if ayni and sinif_form.get('ders') == name else '' }}>{{ name }}</option>{% endfor %}</select></label><label>Soru sayısı<input name="soru_sayisi" type="number" min="1" max="500" required value="{{ sinif_form.get('soru_sayisi','20') if ayni else 20 }}" data-question-count></label><label>Net kuralı<select name="yanlis_goturme"><option value="0" {{ 'selected' if kural == '0' else '' }}>Yanlış doğruları götürmez</option><option value="3" {{ 'selected' if kural == '3' else '' }}>3 yanlış, 1 doğru</option><option value="4" {{ 'selected' if kural == '4' else '' }}>4 yanlış, 1 doğru</option></select></label><label class="answer-key">Cevap anahtarı <small>isteğe bağlı · örn. ABCDA BDCAB</small><input name="anahtar" maxlength="1200" autocomplete="off" spellcheck="false" placeholder="ABCDABDCAB…" value="{{ sinif_form.get('anahtar','') if ayni else '' }}" data-answer-key></label></div>
-<p class="app-muted answer-help" data-answer-help hidden>Her öğrencinin işaretlediği harfleri soru sırasıyla yazın. Boş bıraktığı soru için <strong>-</strong> yazın; boşluklar yalnız ayırıcıdır. Sondaki boş sorular yazılmasa da olur.</p>
-<div class="class-score-list">{% for s in group.ogrenciler %}<div class="class-score-row"><strong>{{ s.ad_soyad }} <small>No {{ s.ogr_no }}</small></strong><label class="score-count">Doğru<input name="dogru_{{ s.id }}" type="number" min="0" max="500" inputmode="numeric" value="{{ sinif_form.get('dogru_' ~ s.id, '') if ayni else '' }}"></label><label class="score-count">Yanlış<input name="yanlis_{{ s.id }}" type="number" min="0" max="500" inputmode="numeric" value="{{ sinif_form.get('yanlis_' ~ s.id, '') if ayni else '' }}"></label><label class="score-answers">Cevaplar<input name="cevap_{{ s.id }}" maxlength="1200" autocomplete="off" spellcheck="false" value="{{ sinif_form.get('cevap_' ~ s.id, '') if ayni else '' }}" data-answer-input><small data-answer-summary aria-live="polite"></small></label></div>{% else %}<p class="app-muted">Bu sınıfta öğrenci yok.</p>{% endfor %}</div>
+<section class="class-exam" data-class-exam><h2>Sınıfın tümüne yaprak test</h2><p class="app-muted">Dersi seçin; bu sınıfta bugüne kadar yapılan o dersin yaprak testleri yeniden eskiye sıralanır. Yeni test için adı, tarihi ve soru sayısını yazın. Her öğrencide yalnız doğru ve yanlış girin. İki kutu da boşsa o öğrenci kayda girmez.</p>
+<form method="post"><input type="hidden" name="islem" value="sinif_ders"><input type="hidden" name="sinif_id" value="{{ group.sinif.id }}">
+<div class="result-fields result-meta"><label>Deneme adı<input name="ad" required maxlength="80" value="{{ sinif_form.get('ad','') if ayni else '' }}" placeholder="Matematik denemesi"></label><label>Tarih<input type="date" name="tarih" required value="{{ sinif_form.get('tarih', bugun) if ayni else bugun }}"></label><label>Ders<select name="ders" required>{% for name in dersler %}<option {{ 'selected' if ayni and sinif_form.get('ders') == name else '' }}>{{ name }}</option>{% endfor %}</select></label><label>Soru sayısı<input name="soru_sayisi" type="number" min="1" max="500" required value="{{ sinif_form.get('soru_sayisi','20') if ayni else 20 }}"></label><label>Net kuralı<select name="yanlis_goturme"><option value="0" {{ 'selected' if kural == '0' else '' }}>Yanlış doğruları götürmez</option><option value="3" {{ 'selected' if kural == '3' else '' }}>3 yanlış, 1 doğru</option><option value="4" {{ 'selected' if kural == '4' else '' }}>4 yanlış, 1 doğru</option></select></label></div>
+<div class="class-score-list">{% for s in group.ogrenciler %}<div class="class-score-row"><strong>{{ s.ad_soyad }} <small>No {{ s.ogr_no }}</small></strong><label>Doğru<input name="dogru_{{ s.id }}" type="number" min="0" max="500" inputmode="numeric" value="{{ sinif_form.get('dogru_' ~ s.id, '') if ayni else '' }}"></label><label>Yanlış<input name="yanlis_{{ s.id }}" type="number" min="0" max="500" inputmode="numeric" value="{{ sinif_form.get('yanlis_' ~ s.id, '') if ayni else '' }}"></label></div>{% else %}<p class="app-muted">Bu sınıfta öğrenci yok.</p>{% endfor %}</div>
 <div class="result-actions"><button class="app-primary" type="submit">Sınıf sonuçlarını kaydet</button></div></form>
 {% if group.denemeler %}<div class="class-saved"><h3>Bu derste bugüne kadar yapılan yaprak testler</h3>{% for kayit in group.denemeler if kayit.tur == 'ders' %}<form method="post" data-yaprak="{{ kayit.ders_listesi|join('|') }}" onsubmit='return confirm({{ (kayit.ad ~ " kaydı " ~ kayit.n ~ " öğrenciden silinsin mi? İşlem geçmişinden geri alabilirsiniz.")|tojson }})'><input type="hidden" name="islem" value="sinif_ders_sil"><input type="hidden" name="sinif_id" value="{{ group.sinif.id }}"><input type="hidden" name="ad" value="{{ kayit.ad }}"><input type="hidden" name="tarih" value="{{ kayit.tarih }}"><input type="hidden" name="tur" value="{{ kayit.tur }}"><span>{{ kayit.tarih }} · {{ kayit.ders_listesi|join(', ') }} · {{ kayit.ad }} · {{ kayit.n }} öğrenci</span><button class="app-button" type="submit">Sınıftan sil</button></form>{% endfor %}<p class="app-muted" data-yaprak-bos hidden>Bu derste henüz yaprak test yok.</p>{% set denemeler = group.denemeler|selectattr('tur', 'ne', 'ders')|list %}{% if denemeler %}<h3>Denemeler</h3>{% for kayit in denemeler %}<form method="post" onsubmit='return confirm({{ (kayit.ad ~ " kaydı " ~ kayit.n ~ " öğrenciden silinsin mi? İşlem geçmişinden geri alabilirsiniz.")|tojson }})'><input type="hidden" name="islem" value="sinif_ders_sil"><input type="hidden" name="sinif_id" value="{{ group.sinif.id }}"><input type="hidden" name="ad" value="{{ kayit.ad }}"><input type="hidden" name="tarih" value="{{ kayit.tarih }}"><input type="hidden" name="tur" value="{{ kayit.tur }}"><span>{{ kayit.tarih }} · {{ kayit.ad }} · {{ kayit.n }} öğrenci</span><button class="app-button" type="submit">Sınıftan sil</button></form>{% endfor %}{% endif %}</div>{% endif %}</section>
 <div class="result-student-grid">{% for s in group.ogrenciler %}<a class="app-button" href="{{ url_for('sonuclar',ogrenci=s.id) }}">{{ s.ad_soyad }} · bireysel</a>{% endfor %}</div></details>{% endfor %}
@@ -32,47 +31,6 @@ document.querySelectorAll("[data-class-exam]").forEach(function (kutu) {
   }
   if (secim) secim.addEventListener("change", uygula);
   uygula();
-});
-document.querySelectorAll("[data-answer-form]").forEach(function (form) {
-  var keyInput = form.querySelector("[data-answer-key]");
-  var countInput = form.querySelector("[data-question-count]");
-  var help = form.querySelector("[data-answer-help]");
-  function letters(text, isKey) {
-    var out = [];
-    for (var ch of String(text || "")) {
-      if (/[\s,;]/.test(ch)) continue;
-      var up = ch.toUpperCase();
-      if ("ABCDE".indexOf(up) >= 0) out.push(up);
-      else if (!isKey && "-._*Xx0".indexOf(ch) >= 0) out.push("");
-      else return null;
-    }
-    return out;
-  }
-  function summarize(input, key) {
-    var box = input.parentElement.querySelector("[data-answer-summary]");
-    if (!input.value.trim()) { box.textContent = ""; box.className = ""; return; }
-    var marks = letters(input.value, false);
-    if (!marks) { box.textContent = "Yalnız A–E harfleri, boş için -"; box.className = "is-error"; return; }
-    if (marks.length > key.length) { box.textContent = marks.length + " cevap, testte " + key.length + " soru var"; box.className = "is-error"; return; }
-    var d = 0, y = 0;
-    key.forEach(function (k, i) { if (marks[i]) { if (marks[i] === k) d += 1; else y += 1; } });
-    box.textContent = d + " doğru · " + y + " yanlış · " + (key.length - d - y) + " boş";
-    box.className = "";
-  }
-  function apply() {
-    var key = letters(keyInput.value, true) || [];
-    var on = key.length > 0;
-    form.classList.toggle("has-key", on);
-    help.hidden = !on;
-    countInput.readOnly = on;
-    if (on) countInput.value = key.length;
-    form.querySelectorAll("[data-answer-input]").forEach(function (input) { if (on) summarize(input, key); });
-  }
-  keyInput.addEventListener("input", apply);
-  form.addEventListener("input", function (event) {
-    if (event.target.matches("[data-answer-input]")) apply();
-  });
-  apply();
 });
 </script>
 {% else %}
