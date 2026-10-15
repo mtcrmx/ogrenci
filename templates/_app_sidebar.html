@@ -32,13 +32,16 @@
     {% endif %}
     {% if not rapor_only %}
     <a href="{{ url_for('dashboard', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'dashboard' else '' }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}><span aria-hidden="true">⌂</span>Ana sayfa</a>
-    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['haftalik_takip','onay_kutusu','lgs','sonuclar','islem_gecmisi','odev_duzenle'] %} open{% endif %}><summary>Takip</summary>
+    {% set lgs_menu = request.endpoint in ['lgs', 'sonuclar', 'deneme_analiz', 'test_sinif_analiz'] %}
+    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['haftalik_takip','onay_kutusu','lgs','sonuclar','deneme_analiz','test_sinif_analiz','islem_gecmisi','odev_duzenle'] %} open{% endif %}><summary>Takip</summary>
     {% for endpoint, label, icon in [('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦'), ('islem_gecmisi','İşlem geçmişim','↶')] %}
     {% set current = (request.endpoint == endpoint or (endpoint == 'islem_gecmisi' and request.endpoint == 'odev_duzenle')) and not (endpoint == 'lgs' and request.args.get('ekran') == 'evde') %}
     <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint == 'haftalik_takip' else url_for(endpoint) }}" class="{{ 'is-current' if current else '' }}"{% if current %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
-    {% if endpoint == 'lgs' and request.endpoint in ['lgs', 'sonuclar'] %}
+    {% if endpoint == 'lgs' and lgs_menu %}
     <a href="{{ url_for('lgs', ekran='evde') }}" class="app-nav-sub {{ 'is-current' if request.endpoint == 'lgs' and request.args.get('ekran') == 'evde' else '' }}"><span aria-hidden="true">✉</span>Evde Soru Testleri</a>
     <a href="{{ url_for('sonuclar') }}" class="app-nav-sub {{ 'is-current' if request.endpoint == 'sonuclar' else '' }}"><span aria-hidden="true">▤</span>Okulda Yaprak Test</a>
+    <a href="{{ url_for('deneme_analiz') }}" class="app-nav-sub {{ 'is-current' if request.endpoint == 'deneme_analiz' else '' }}"><span aria-hidden="true">◈</span>Deneme analizi</a>
+    <a href="{{ url_for('test_sinif_analiz') }}" class="app-nav-sub {{ 'is-current' if request.endpoint == 'test_sinif_analiz' else '' }}"><span aria-hidden="true">▦</span>Test ve sınıf analizi</a>
     {% endif %}
     {% endfor %}
     </details>
@@ -47,11 +50,9 @@
     <a href="{{ url_for('yayin') }}" target="_blank" rel="noopener"><span aria-hidden="true">▣</span>Okul yayın ekranı</a>
     {% if yayin_icerik_ekleyebilir() %}<a href="{{ url_for('yayin_yonetim') }}" class="{{ 'is-current' if request.endpoint == 'yayin_yonetim' else '' }}"><span aria-hidden="true">☷</span>{{ 'Yayın yönetimi' if yayin_yonetebilir() else 'Yayına içerik ekle' }}</a>{% endif %}
     </details>
-    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['analiz_merkezi','deneme_analiz','test_sinif_analiz','karne'] or (rapor_only and request.endpoint == 'ogretmen_kitap_okuma') %} open{% endif %}><summary>Raporlar</summary>
+    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['analiz_merkezi','karne'] or (rapor_only and request.endpoint == 'ogretmen_kitap_okuma') %} open{% endif %}><summary>Raporlar</summary>
     <a href="{{ url_for('analiz_merkezi', sinif_id=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'analiz_merkezi' else '' }}"><span aria-hidden="true">◒</span>Kitap/ödev analizi</a>
     {% if not rapor_only %}
-    <a href="{{ url_for('deneme_analiz') }}" class="{{ 'is-current' if request.endpoint == 'deneme_analiz' else '' }}"><span aria-hidden="true">◈</span>Deneme analizi</a>
-    <a href="{{ url_for('test_sinif_analiz') }}" class="{{ 'is-current' if request.endpoint == 'test_sinif_analiz' else '' }}"><span aria-hidden="true">▦</span>Test ve sınıf analizi</a>
     <a href="{{ url_for('karne', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'karne' else '' }}"><span aria-hidden="true">▣</span>Dönem karnesi</a>
     </details>
     <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['ogretmen_kitap_okuma','ogretmen_randevular','giris_raporu','ogrenci_ara'] %} open{% endif %}><summary>Diğer araçlar</summary>

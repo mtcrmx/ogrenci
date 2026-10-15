@@ -190,6 +190,22 @@ class Workflows(unittest.TestCase):
         self.assertNotIn('saved-key" open',liste)
         self.assertIn('data-key-slots',liste)
 
+    def test_exam_analysis_stays_under_lgs_and_skips_leaf_tests(self):
+        d.lgs_deneme_ekle(self.oid, 'Yaprak karışmasın', '2026-10-14', [dict(ders='Matematik', dogru=5, yanlis=1, bos=4)], ogretmen_id=self.teacher['id'], tur='ders')
+        d.lgs_deneme_ekle(self.oid, 'Gerçek deneme', '2026-10-14', [dict(ders='Matematik', dogru=8, yanlis=2, bos=10)], ogretmen_id=self.teacher['id'], tur='deneme')
+        sayfa = self.teacher_client.get('/deneme-analiz').get_data(as_text=True)
+        self.assertIn('Gerçek deneme', sayfa)
+        self.assertNotIn('Yaprak karışmasın', sayfa)
+        menu = self.teacher_client.get('/lgs').get_data(as_text=True)
+        self.assertLess(menu.index('</span>LGS</a>'), menu.index('Deneme analizi'))
+        self.assertLess(menu.index('Deneme analizi'), menu.index('>Raporlar<'))
+        self.assertIn('Test ve sınıf analizi', menu[menu.index('</span>LGS</a>'):menu.index('>Raporlar<')])
+        ogr = self.teacher_client.get('/lgs', query_string={'ogrenci': self.oid}).get_data(as_text=True)
+        self.assertNotIn('Ders ve deneme sonucu', ogr)
+        evde = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)
+        self.assertIn('data-key-slots', evde)
+        self.assertNotIn('textarea name="anahtar"', evde)
+
     def test_teacher_can_delete_and_restore_exam_results(self):
         students=d.sinif_ogrencileri(self.sid)[:2]
         self.assertGreaterEqual(len(students),2)

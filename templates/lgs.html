@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}LGS{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=6"><link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=7"><link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1">{% endblock %}
 {% block body %}
 <main class="lgs-page mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
   {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
@@ -49,16 +49,22 @@
   {% if ekran == 'evde' %}
   <section class="mt-5 rounded-3xl border border-slate-200 bg-white p-4">
     <h2 class="text-lg font-black">Evde Soru Testleri</h2>
-    <p class="mt-1 text-xs text-slate-600">PDF’i yükleyin, cevap anahtarını A B C D olarak yazın. Öğrenci soruları görür, işaretler ve bitirince sonucu burada görünür.</p>
-    <form method="post" enctype="multipart/form-data" class="mt-3 grid gap-3 sm:grid-cols-2">
+    <p class="mt-1 text-xs text-slate-600">PDF’i yükleyin. Soru sayısı kadar cevap kutusu açılır; anahtarı gizleyebilirsiniz. Öğrenci soruları görür, işaretler ve bitirince sonucu burada görünür.</p>
+    <form method="post" enctype="multipart/form-data" class="mt-3 grid gap-3 sm:grid-cols-2" data-optik-form>
       <input type="hidden" name="islem" value="optik_ekle">
       <label class="text-sm font-bold">Ad<input name="ad" required maxlength="80" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" placeholder="Kasım denemesi"></label>
       <label class="text-sm font-bold">Tür<select name="tur" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="yaprak">Yaprak test</option><option value="deneme" selected>Deneme</option></select></label>
       <label class="text-sm font-bold">Sınıf<select name="sinif_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="">Deneme: tüm 8. sınıflar</option>{% for g in gruplar %}<option value="{{ g.sinif.id }}">{{ g.sinif.sinif_adi }}</option>{% endfor %}</select></label>
       <label class="text-sm font-bold">Ders<select name="ders" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="">Deneme için boş</option>{% for ders in lgs_dersler %}<option>{{ ders }}</option>{% endfor %}</select></label>
       <label class="text-sm font-bold">Tarih<input type="date" name="tarih" value="{{ bugun }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"></label>
+      <label class="text-sm font-bold">Soru sayısı<input name="soru_sayisi" type="number" min="1" max="90" value="20" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" data-question-count></label>
       <label class="text-sm font-bold sm:col-span-2">Soru PDF<input type="file" name="pdf" accept="application/pdf" required class="mt-1 block w-full text-sm"></label>
-      <label class="text-sm font-bold sm:col-span-2">Cevap anahtarı<textarea name="anahtar" required rows="3" maxlength="400" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono" placeholder="ABCD ACDB ..."></textarea></label>
+      <div class="answer-key-box sm:col-span-2" data-key-box>
+        <div class="answer-key-head"><strong>Cevap anahtarı</strong><button type="button" class="app-button" data-key-toggle>Gizle</button></div>
+        <p class="app-muted">Her kutu bir soru. Soru sayısını değiştirince kutu sayısı da değişir.</p>
+        <div class="answer-key-slots" data-key-slots></div>
+        <input type="hidden" name="anahtar" data-key-value>
+      </div>
       <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white sm:col-span-2">Soruları gönder</button>
     </form>
     <div class="mt-5">
@@ -66,7 +72,7 @@
     {% for s in optik_sinavlar if s.tur == 'deneme' %}
     <article class="mt-4 rounded-2xl border border-slate-200 p-3">
       <h3 class="font-black">{{ s.tarih }} · {% if s.tur == 'yaprak' %}{{ s.sinif_adi or 'Sınıf' }} · {{ s.ders or 'Ders' }} · {% endif %}{{ s.ad }} · {{ s.soru_sayisi }} soru</h3>
-      <p class="mt-1 text-xs text-slate-500">Anahtar: {{ s.cevaplar|join('') }}</p>
+      <details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in s.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>
       <a class="mt-2 inline-block text-sm font-black text-indigo-800" href="{{ url_for('lgs_optik_pdf', sinav_id=s.id) }}">Soruları aç</a>
       <a class="mt-2 ml-3 inline-block text-sm font-black text-indigo-800" href="{{ url_for('test_sinif_analiz', sinav=s.id) }}">Sınıf analizi</a>
       <div class="mt-3 overflow-x-auto">
@@ -87,6 +93,61 @@
     {% endfor %}
     </div>
   </section>
+  <script>
+  document.querySelectorAll("[data-optik-form]").forEach(function (form) {
+    var countInput = form.querySelector("[data-question-count]");
+    var slots = form.querySelector("[data-key-slots]");
+    var hiddenKey = form.querySelector("[data-key-value]");
+    var toggle = form.querySelector("[data-key-toggle]");
+    var box = form.querySelector("[data-key-box]");
+    function draw() {
+      var n = Math.max(0, Math.min(90, parseInt(countInput.value, 10) || 0));
+      var mevcut = [];
+      slots.querySelectorAll("select").forEach(function (sec) { mevcut.push(sec.value); });
+      slots.replaceChildren();
+      for (var i = 0; i < n; i++) {
+        var lab = document.createElement("label");
+        lab.textContent = String(i + 1);
+        var secim = document.createElement("select");
+        secim.setAttribute("aria-label", (i + 1) + ". soru");
+        ["", "A", "B", "C", "D", "E"].forEach(function (harf) {
+          var opt = document.createElement("option");
+          opt.value = harf;
+          opt.textContent = harf || "–";
+          secim.appendChild(opt);
+        });
+        secim.value = mevcut[i] || "";
+        lab.appendChild(secim);
+        slots.appendChild(lab);
+      }
+      sync();
+    }
+    function sync() {
+      var harfler = [];
+      var eksik = false;
+      slots.querySelectorAll("select").forEach(function (sec) {
+        if (!sec.value) eksik = true;
+        else harfler.push(sec.value);
+      });
+      hiddenKey.value = eksik ? "" : harfler.join("");
+    }
+    countInput.addEventListener("input", draw);
+    slots.addEventListener("change", sync);
+    toggle.addEventListener("click", function () {
+      var gizli = box.classList.toggle("is-hidden");
+      toggle.textContent = gizli ? "Göster" : "Gizle";
+    });
+    form.addEventListener("submit", function (event) {
+      if (!hiddenKey.value) {
+        event.preventDefault();
+        box.classList.remove("is-hidden");
+        toggle.textContent = "Gizle";
+        alert("Her soru için bir şık seçin.");
+      }
+    });
+    draw();
+  });
+  </script>
   {% endif %}
   {% else %}
   {% if veli %}<header class="lgs-parent-heading"><div><h1>LGS takibi</h1><p class="app-muted">{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }}</p></div><small>{{ plan_tamam }}/{{ plan_toplam }} iş onaylı</small></header>{% else %}  <header class="rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-900 p-5 text-white shadow-sm">
@@ -557,8 +618,6 @@
     </label>
     <button class="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">Hedefi kaydet</button>
   </form>
-  <section class="app-card" style="margin-top:14px"><h2>Ders ve deneme sonucu</h2><p class="app-muted">Tek ders testi veya seçtiğiniz derslerle deneme girin; soru sayısını siz belirleyin.</p><a class="app-primary" href="{{ url_for('sonuclar',ogrenci=ogrenci.id) }}">Sonuç gir / düzenle</a> <a class="app-button" href="{{ url_for('islem_gecmisi') }}">İşlem geçmişi / geri al</a></section>
-  {% include '_ders_sonuclari.html' %}
   <div class="mt-3 space-y-2">
     {% for d in denemeler %}
     <article class="rounded-2xl border border-slate-200 bg-white p-4 text-sm">

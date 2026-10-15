@@ -2213,6 +2213,7 @@ def deneme_sinav_listesi() -> list[dict]:
         """
         SELECT ad, tarih, COUNT(*) AS adet
         FROM lgs_deneme
+        WHERE tur = 'deneme'
         GROUP BY ad, tarih
         ORDER BY tarih DESC, ad
         """

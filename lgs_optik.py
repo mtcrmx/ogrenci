@@ -8,7 +8,7 @@ from pathlib import Path
 
 import database as db
 
-SECENEKLER = frozenset("ABCD")
+SECENEKLER = frozenset("ABCDE")
 AZAMI_SORU = 90
 AZAMI_BOYUT = 20 * 1024 * 1024
 
@@ -57,7 +57,7 @@ def _init(con) -> None:
 
 
 def anahtar_oku(metin: str) -> list[str] | None:
-    harfler = re.findall(r"[A-Da-d]", metin or "")
+    harfler = re.findall(r"[A-Ea-e]", metin or "")
     if not 1 <= len(harfler) <= AZAMI_SORU:
         return None
     return [h.upper() for h in harfler]
