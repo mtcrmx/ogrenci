@@ -186,9 +186,8 @@ class Workflows(unittest.TestCase):
         birey=self.teacher_client.get('/sonuclar',query_string={'ogrenci':self.oid}).get_data(as_text=True)
         self.assertIn('class="q-strip"',birey)
         liste=self.teacher_client.get('/sonuclar',query_string={'sinif':self.sid}).get_data(as_text=True)
-        self.assertIn('<details class="saved-key"><summary>Cevap anahtarı</summary>',liste)
-        self.assertNotIn('saved-key" open',liste)
-        self.assertIn('data-key-slots',liste)
+        self.assertNotIn('Cevap anahtarı',liste)
+        self.assertNotIn('data-key-slots',liste)
 
     def test_exam_analysis_stays_under_lgs_and_skips_leaf_tests(self):
         d.lgs_deneme_ekle(self.oid, 'Yaprak karışmasın', '2026-10-14', [dict(ders='Matematik', dogru=5, yanlis=1, bos=4)], ogretmen_id=self.teacher['id'], tur='ders')
