@@ -87,6 +87,7 @@ from database import (
     lgs_program_isaretler, lgs_program_bildir, lgs_program_onayla,
     lgs_defter_getir, lgs_defter_kaydet, lgs_defter_ogretmen, lgs_defter_onayli_soru,
     deneme_sinav_listesi, deneme_sinav_ogrencileri, deneme_sinav_katalog,
+    deneme_gruplari, deneme_grup_sil,
     LGS_DERSLER, LGS_GUNLER, LGS_SORU_SAYISI,
     ogretmen_giris_raporu, ogretmen_giris_haftalari,
     kitap_odev_analiz,
@@ -3758,6 +3759,65 @@ def karne_pdf():
     donem, _haftalar, satirlar = _karne_paketi(donem, sinif_id=sinif_id)
     veri = pdf_donem_karnesi_bytes(satirlar, donem)
     return send_file(BytesIO(veri), as_attachment=True, download_name=f"donem-karnesi-{donem}.pdf", mimetype="application/pdf")
+
+
+def _sekiz_girilen_sinavlari_sil() -> dict:
+    """8/A ve 8/B için girilmiş deneme, yaprak test ve soru PDF'lerini siler."""
+    import lgs_optik
+    deneme = 0
+    for grup in deneme_gruplari(("8/A", "8/B")):
+        deneme += deneme_grup_sil(grup["ad"], grup["tarih"], grup["tur"], grup["sinif_adi"])
+    optik = 0
+    for sinav in lgs_optik.sinavlari_listele():
+        if lgs_optik.sinav_sil(sinav["id"]):
+            optik += 1
+    return {"deneme": deneme, "optik": optik}
+
+
+def _sekiz_sinav_temizligi_bir_kez() -> None:
+    """İstenen temizlik deploy sonrası bir kez çalışır, sonra tekrar etmez."""
+    anahtar = "sekiz_sinav_temizlik_20261015"
+    if admin_meta_get(anahtar) == "oldu":
+        return
+    _sekiz_girilen_sinavlari_sil()
+    admin_meta_set(anahtar, "oldu")
+
+
+@app.route("/yonetim/sinavlar", methods=["GET", "POST"])
+@giris_zorunlu
+def yonetim_sinavlar():
+    if not _giris_raporu_acik_mi():
+        abort(403)
+    import lgs_optik
+    if request.method == "POST":
+        islem = request.form.get("islem")
+        if islem == "deneme":
+            adet = deneme_grup_sil(
+                (request.form.get("ad") or "").strip(),
+                (request.form.get("tarih") or "")[:10],
+                request.form.get("tur") or "",
+                (request.form.get("sinif") or "").strip() or None,
+            )
+            flash(f"{adet} öğrencinin sınav kaydı silindi." if adet else "Silinecek kayıt bulunamadı.", "success" if adet else "warning")
+        elif islem == "optik":
+            if lgs_optik.sinav_sil(request.form.get("sinav_id", type=int) or 0):
+                flash("Soru testi ve sonuçları silindi.", "success")
+            else:
+                flash("Soru testi bulunamadı.", "warning")
+        elif islem == "sekiz":
+            if (request.form.get("onay") or "").strip() != "SIL":
+                flash("Tümünü silmek için kutuya SIL yazın.", "warning")
+            else:
+                sonuc = _sekiz_girilen_sinavlari_sil()
+                flash(f"8. sınıflar temizlendi: {sonuc['deneme']} sınav kaydı, {sonuc['optik']} soru testi.", "success")
+        else:
+            abort(400)
+        return redirect(url_for("yonetim_sinavlar"))
+    return render_template(
+        "yonetim_sinav.html",
+        gruplar=deneme_gruplari(),
+        optikler=lgs_optik.sinavlari_listele(),
+    )
 
 
 @app.route("/giris-raporu")
@@ -7476,6 +7536,7 @@ from sayfa_sifirlama import register_sayfa_sifirlama
 register_sayfa_sifirlama(app, giris_zorunlu)
 from school_broadcast import register_broadcast
 register_broadcast(app, giris_zorunlu)
+_sekiz_sinav_temizligi_bir_kez()
 
 if __name__ == "__main__":
     import socket

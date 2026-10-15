@@ -2206,6 +2206,48 @@ def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
     return denemeler
 
 
+def deneme_gruplari(sinif_adlari: tuple[str, ...] | None = None) -> list[dict]:
+    """Girilen yaprak test, deneme ve kurum sonuçları, sınıfına göre."""
+    con = _conn()
+    _lgs_init(con)
+    sql = """
+        SELECT d.ad, d.tarih, d.tur, s.sinif_adi, COUNT(DISTINCT d.id) AS adet
+        FROM lgs_deneme d
+        JOIN ogrenciler o ON o.id = d.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+    """
+    params: list = []
+    if sinif_adlari:
+        sql += f" WHERE s.sinif_adi IN ({','.join('?' for _ in sinif_adlari)})"
+        params.extend(sinif_adlari)
+    sql += " GROUP BY d.ad, d.tarih, d.tur, s.sinif_adi ORDER BY d.tarih DESC, s.sinif_adi, d.ad"
+    rows = [dict(r) for r in con.execute(sql, params)]
+    con.close()
+    return rows
+
+
+def deneme_grup_sil(ad: str, tarih: str, tur: str, sinif_adi: str | None = None) -> int:
+    con = _conn()
+    _lgs_init(con)
+    sql = """
+        SELECT d.id FROM lgs_deneme d
+        JOIN ogrenciler o ON o.id = d.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        WHERE d.ad=? AND d.tarih=? AND d.tur=?
+    """
+    params: list = [ad, tarih, tur]
+    if sinif_adi:
+        sql += " AND s.sinif_adi=?"
+        params.append(sinif_adi)
+    ids = [r[0] for r in con.execute(sql, params)]
+    for deneme_id in ids:
+        con.execute("DELETE FROM lgs_deneme_ders WHERE deneme_id=?", (deneme_id,))
+        con.execute("DELETE FROM lgs_deneme WHERE id=?", (deneme_id,))
+    con.commit()
+    con.close()
+    return len(ids)
+
+
 def deneme_sinav_listesi() -> list[dict]:
     con = _conn()
     _lgs_init(con)

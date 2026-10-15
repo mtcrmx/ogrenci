@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Yönetici paneli{% endblock %}
+{% block body %}
+<main class="page-content">
+  <header class="page-heading"><div><h1>Yönetici paneli</h1><p>Girilen yaprak test, deneme ve evde soru testlerini silin. Bu ekran yalnız Adem Akgül ve Metehan Cücen’e açıktır.</p></div></header>
+  {% for kategori, mesaj in get_flashed_messages(with_categories=true) %}
+  <p class="app-notice {{ 'app-notice--success' if kategori == 'success' else 'app-notice--error' }}" role="status">{{ mesaj }}</p>
+  {% endfor %}
+  <section class="app-card">
+    <h2>8. sınıfları temizle</h2>
+    <p class="app-muted">8/A ve 8/B için girilmiş bütün yaprak test, deneme, kurum denemesi ve soru PDF’leri silinir. Öğrenci listesi durur.</p>
+    <form method="post" onsubmit="return confirm('8. sınıfların girilmiş sınavları silinsin mi?')">
+      <input type="hidden" name="islem" value="sekiz">
+      <label>Onaylamak için SIL yazın<input name="onay" required autocomplete="off" placeholder="SIL"></label>
+      <button class="app-primary" type="submit">8. sınıfları temizle</button>
+    </form>
+  </section>
+  <section class="app-card">
+    <h2>Girilen sınavlar</h2>
+    {% for g in gruplar %}
+    <form method="post" class="app-row" style="justify-content:space-between;border-top:1px solid #e5dce8;padding:10px 0" onsubmit="return confirm('Bu kayıt silinsin mi?')">
+      <input type="hidden" name="islem" value="deneme">
+      <input type="hidden" name="ad" value="{{ g.ad }}">
+      <input type="hidden" name="tarih" value="{{ g.tarih }}">
+      <input type="hidden" name="tur" value="{{ g.tur }}">
+      <input type="hidden" name="sinif" value="{{ g.sinif_adi }}">
+      <span>{{ g.tarih }} · {{ g.sinif_adi }} · {{ 'Yaprak test' if g.tur == 'ders' else ('Kurum denemesi' if g.tur == 'kurum' else 'Deneme') }} · {{ g.ad }} · {{ g.adet }} öğrenci</span>
+      <button class="app-button" type="submit">Sil</button>
+    </form>
+    {% else %}
+    <p class="app-muted">Girilmiş sınav kaydı yok.</p>
+    {% endfor %}
+  </section>
+  <section class="app-card">
+    <h2>Evde soru testleri</h2>
+    {% for s in optikler %}
+    <form method="post" class="app-row" style="justify-content:space-between;border-top:1px solid #e5dce8;padding:10px 0" onsubmit="return confirm('Bu soru testi ve sonuçları silinsin mi?')">
+      <input type="hidden" name="islem" value="optik">
+      <input type="hidden" name="sinav_id" value="{{ s.id }}">
+      <span>{{ s.tarih }} · {{ s.sinif_adi or '8. sınıflar' }} · {{ s.ders or ('Yaprak' if s.tur == 'yaprak' else 'Deneme') }} · {{ s.ad }} · {{ s.soru_sayisi }} soru</span>
+      <button class="app-button" type="submit">Sil</button>
+    </form>
+    {% else %}
+    <p class="app-muted">Yüklü soru testi yok.</p>
+    {% endfor %}
+  </section>
+</main>
+{% endblock %}

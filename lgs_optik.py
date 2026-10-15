@@ -193,6 +193,22 @@ def sonuc_kaydet(sinav_id: int, ogrenci_id: int, isaretler: list[str]) -> dict:
     return {"ok": True, **puan}
 
 
+def sinav_sil(sinav_id: int) -> bool:
+    sinav = sinav_getir(sinav_id)
+    if not sinav:
+        return False
+    dosya = pdf_yolu(sinav)
+    con = db._conn()
+    _init(con)
+    con.execute("DELETE FROM lgs_optik_sonuc WHERE sinav_id=?", (int(sinav_id),))
+    con.execute("DELETE FROM lgs_optik_sinav WHERE id=?", (int(sinav_id),))
+    con.commit()
+    con.close()
+    if dosya:
+        dosya.unlink(missing_ok=True)
+    return True
+
+
 def cozen_ogrenciler(sinav_id: int) -> list[dict]:
     """Her bitiren öğrencinin soru soru doğru, yanlış ve boş dökümü."""
     sinav = sinav_getir(sinav_id)

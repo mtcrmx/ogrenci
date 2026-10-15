@@ -218,6 +218,34 @@ class Workflows(unittest.TestCase):
         self.assertIn('<h1>Sonuçlar</h1>', sonuc)
         self.assertNotIn('Sorular ve optik', sonuc)
 
+    def test_only_two_admins_can_delete_entered_exams(self):
+        d.lgs_deneme_ekle(self.oid, 'Silinecek yönetici denemesi', '2026-10-15', [dict(ders='Matematik', dogru=4, yanlis=1, bos=5)], ogretmen_id=self.teacher['id'], tur='deneme')
+        yasak = {'adem akgül', 'metehan cücen'}
+        yabanci = None
+        for aday in d.tum_ogretmenler():
+            if aday['ad_soyad'].casefold() in yasak or aday['yetki'] != 'tam':
+                continue
+            deneme = w.app.test_client()
+            with deneme.session_transaction() as s:
+                s.update(ogretmen_id=aday['id'], ogretmen_adi=aday['ad_soyad'], ogretmen_yetki='tam')
+            if deneme.get('/dashboard').status_code == 200:
+                yabanci = deneme
+                break
+        self.assertIsNotNone(yabanci)
+        self.assertEqual(yabanci.get('/yonetim/sinavlar').status_code, 403)
+        admin = next(r for r in d.tum_ogretmenler() if r['ad_soyad'] == 'METEHAN CÜCEN')
+        client = w.app.test_client()
+        with client.session_transaction() as s:
+            s.update(ogretmen_id=admin['id'], ogretmen_adi=admin['ad_soyad'], ogretmen_yetki='tam')
+        sayfa = client.get('/yonetim/sinavlar').get_data(as_text=True)
+        self.assertIn('Silinecek yönetici denemesi', sayfa)
+        self.assertIn('Yönetici paneli', sayfa)
+        client.post('/yonetim/sinavlar', data={'islem': 'deneme', 'ad': 'Silinecek yönetici denemesi', 'tarih': '2026-10-15', 'tur': 'deneme', 'sinif': '8/A'})
+        self.assertFalse(any(r['ad'] == 'Silinecek yönetici denemesi' for r in d.lgs_denemeler(self.oid, 50)))
+        d.lgs_deneme_ekle(self.oid, 'Toplu sekiz', '2026-10-15', [dict(ders='Türkçe', dogru=3, yanlis=1, bos=6)], ogretmen_id=self.teacher['id'], tur='ders')
+        client.post('/yonetim/sinavlar', data={'islem': 'sekiz', 'onay': 'SIL'})
+        self.assertFalse(any(r['ad'] == 'Toplu sekiz' for r in d.lgs_denemeler(self.oid, 50)))
+
     def test_teacher_can_delete_and_restore_exam_results(self):
         students=d.sinif_ogrencileri(self.sid)[:2]
         self.assertGreaterEqual(len(students),2)
