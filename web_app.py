@@ -4350,17 +4350,20 @@ def _test_dilim(netler: list[float], tavan: int) -> tuple[list[str], list[int]]:
 
 def _soru_istatistik(ogrenciler: list[dict], cevaplar: list[str]) -> list[dict]:
     toplam = len(ogrenciler)
+    siklar = ["A", "B", "C", "D"]
+    if "E" in cevaplar or any(s["verilen"] == "E" for o in ogrenciler for s in o["satirlar"]):
+        siklar.append("E")
     sorular = []
     for i, harf in enumerate(cevaplar):
         say = {"dogru": 0, "yanlis": 0, "bos": 0}
-        sec = {"A": 0, "B": 0, "C": 0, "D": 0, "bos": 0}
+        sec = {h: 0 for h in siklar} | {"bos": 0}
         for ogrenci in ogrenciler:
             satir = ogrenci["satirlar"][i]
             say[satir["durum"]] += 1
-            verilen = satir["verilen"] if satir["verilen"] in {"A", "B", "C", "D"} else "bos"
+            verilen = satir["verilen"] if satir["verilen"] in siklar else "bos"
             sec[verilen] += 1
         basari = round(say["dogru"] * 100 / toplam, 1) if toplam else 0
-        en = max(("A", "B", "C", "D", "bos"), key=lambda k: sec[k])
+        en = max(sec, key=lambda k: sec[k])
         sorular.append({
             "no": i + 1,
             "cevap": harf,
@@ -4374,6 +4377,36 @@ def _soru_istatistik(ogrenciler: list[dict], cevaplar: list[str]) -> list[dict]:
             "renk": "#1f9d62" if basari >= 70 else ("#d4a017" if basari >= 40 else "#d4536a"),
         })
     return sorular
+
+
+def _cevap_anahtari(ogrenciler: list[dict]) -> tuple[str, list[str]] | tuple[None, None]:
+    """The course and answer key most of these entered results were marked with."""
+    sayac: dict[tuple, int] = {}
+    for o in ogrenciler:
+        for d in o["dersler"]:
+            if d.get("anahtar"):
+                k = (d["ders"], tuple(d["anahtar"]))
+                sayac[k] = sayac.get(k, 0) + 1
+    if not sayac:
+        return None, None
+    ders, anahtar = max(sayac, key=sayac.get)
+    return ders, list(anahtar)
+
+
+def _cevapli_ogrenciler(ogrenciler: list[dict], ders: str, anahtar: list[str]) -> list[dict]:
+    cikti = []
+    for o in ogrenciler:
+        d = next((d for d in o["dersler"] if d["ders"] == ders and d.get("anahtar") == anahtar), None)
+        if d:
+            cikti.append({**o, "satirlar": d["sorular"]})
+    return cikti
+
+
+def _cevap_matrisi(ogrenciler: list[dict], ogrenci_id: int | None) -> list[dict]:
+    if ogrenci_id:
+        ogrenciler = [o for o in ogrenciler if int(o["id"]) == int(ogrenci_id)]
+    sirali = sorted(ogrenciler, key=lambda o: (o["sinif"], o["ad"]))
+    return [{k: o[k] for k in ("id", "ad", "no", "sinif", "dogru", "yanlis", "bos", "net", "satirlar")} for o in sirali]
 
 
 def _sinif_mevcut(adlar: set[str]) -> dict[str, int]:
@@ -4604,6 +4637,7 @@ def _test_analiz_baglam(
             sinav=sinav, sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
             sorular=sorular, zor=zor, siralama=siralama, grafik=grafik, baslik=baslik, alt=alt, sonuc=None,
             ders=ders_ad, dersler=list(LGS_DERSLER), gelisim=gelisim,
+            matris=_cevap_matrisi(kapsam, ogrenci_id), cevapli=len(kapsam),
         )
         return _analiz_veli_sirasi(paket, ogrenci_id)
 
@@ -4627,26 +4661,47 @@ def _test_analiz_baglam(
     dag_ad, dag_adet = _test_dilim([float(o["net"]) for o in kapsam], tavan)
     mevcut = _sinif_mevcut(set(sinif_adlari))
     beklenen = mevcut.get(sinif_ad, 0) if sinif_ad else sum(mevcut.values())
-    grafik = {
-        "soru": False,
-        "no": [d["ders"] for d in ders_ort["dersler"]],
-        "dogru": [d["dogru"] for d in ders_ort["dersler"]],
-        "yanlis": [d["yanlis"] for d in ders_ort["dersler"]],
-        "bos": [d["bos"] for d in ders_ort["dersler"]],
+    cevap_ders, anahtar = _cevap_anahtari(hepsi)
+    cevapli = _cevapli_ogrenciler(kapsam, cevap_ders, anahtar) if anahtar else []
+    sorular = _soru_istatistik(cevapli, anahtar) if cevapli else []
+    if sorular:
+        ben = next((o for o in cevapli if ogrenci_id and int(o["id"]) == int(ogrenci_id)), None)
+        if ben:
+            for soru, satir in zip(sorular, ben["satirlar"]):
+                soru["ben"] = satir["durum"]
+        grafik = {
+            "soru": True,
+            "no": [q["no"] for q in sorular],
+            "dogru": [q["dogru"] for q in sorular],
+            "yanlis": [q["yanlis"] for q in sorular],
+            "bos": [q["bos"] for q in sorular],
+        }
+    else:
+        grafik = {
+            "soru": False,
+            "no": [d["ders"] for d in ders_ort["dersler"]],
+            "dogru": [d["dogru"] for d in ders_ort["dersler"]],
+            "yanlis": [d["yanlis"] for d in ders_ort["dersler"]],
+            "bos": [d["bos"] for d in ders_ort["dersler"]],
+        }
+    grafik.update({
         "sinif_ad": [s["sinif"] for s in siniflar],
         "sinif_net": [s["net"] for s in siniflar],
         "dagilim_ad": dag_ad,
         "dagilim_adet": dag_adet,
         "dyb": [sum(o["dogru"] for o in kapsam), sum(o["yanlis"] for o in kapsam), sum(o["bos"] for o in kapsam)],
-    }
+    })
+    zor = [q for q in sorted(sorular, key=lambda q: (q["basari"], -q["yanlis"], q["no"])) if q["basari"] < 100][:8]
     tur_ad = {"ders": "Yaprak test", "deneme": "Deneme", "kurum": "Kurum denemesi"}.get(sonuc_tur, "Sonuç")
+    alt = (f"{tur_ad} · {sonuc_tarih} · {cevap_ders} · {len(anahtar)} soru" if sorular
+           else f"{tur_ad} · {sonuc_tarih} · cevap anahtarı girilmemiş, ders toplamları")
     paket = dict(
         bos=False, kaynak="sonuc", optikler=optikler, katalog=katalog, veli=bool(ogrenci_id),
         sinav=None, sonuc={"ad": sonuc_ad, "tarih": sonuc_tarih, "tur": sonuc_tur},
         sinif=sinif_ad, siniflar=siniflar, ort=ort, okul=okul, beklenen=beklenen or ort["adet"],
-        sorular=[], zor=[], siralama=siralama, grafik=grafik, baslik=sonuc_ad,
-        alt=f"{tur_ad} · {sonuc_tarih} · soru numarası yok, ders toplamları",
+        sorular=sorular, zor=zor, siralama=siralama, grafik=grafik, baslik=sonuc_ad, alt=alt,
         ders=ders_ad, dersler=list(LGS_DERSLER), gelisim=gelisim,
+        matris=_cevap_matrisi(cevapli, ogrenci_id), cevapli=len(cevapli),
     )
     return _analiz_veli_sirasi(paket, ogrenci_id)
 

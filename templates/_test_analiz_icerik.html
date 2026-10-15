@@ -15,6 +15,20 @@
   .ta-baslik > summary::before { content:"›"; display:inline-block; margin-right:8px; color:#8964ae; }
   .ta-baslik[open] > summary::before { transform:rotate(90deg); }
   .ta-baslik[open] > summary { margin-bottom:12px; }
+  .ta-matris-kutu { overflow:auto; max-height:70vh; border:1px solid #e2e8f0; border-radius:12px; }
+  .ta-matris { border-collapse:separate; border-spacing:0; font-size:12px; }
+  .ta-matris th, .ta-matris td { min-width:30px; height:30px; padding:2px 4px; text-align:center; border-bottom:1px solid #f1f5f9; font-weight:800; }
+  .ta-matris thead th { position:sticky; top:0; z-index:2; background:#f8fafc; color:#334155; line-height:1.1; }
+  .ta-matris thead th small { display:block; font-size:10px; color:#1f9d62; }
+  .ta-matris .ta-ad { position:sticky; left:0; z-index:1; min-width:170px; max-width:220px; text-align:left; background:#fff; padding:4px 10px; }
+  .ta-matris thead .ta-ad { z-index:3; background:#f8fafc; }
+  .ta-matris .ta-ad small { display:block; font-size:10px; font-weight:600; color:#94a3b8; }
+  .ta-matris tfoot td, .ta-matris tfoot th { background:#f8fafc; font-size:11px; }
+  .ta-matris .ta-top { background:#f8fafc; color:#334155; }
+  .ta-m { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:6px; font-weight:900; font-size:11px; }
+  .ta-m-d { background:#dcfce7; color:#166534; }
+  .ta-m-y { background:#ffe4e6; color:#be123c; }
+  .ta-m-b { background:#f1f5f9; color:#94a3b8; }
 </style>
 <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
   <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{% if ta.veli %}Sınıfın ve sen{% else %}Öğretmen · genel ve sınıf{% endif %}</p>
@@ -83,7 +97,10 @@
 </section>
 
 {% if ta.grafik.soru and ta.sorular %}
-<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
+{% if ta.kaynak == 'sonuc' and not ta.veli and ta.cevapli < ta.ort.adet %}
+<p class="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">Soru analizi cevapları girilen {{ ta.cevapli }} öğrenciden hesaplandı. {{ ta.ort.adet - ta.cevapli }} öğrencinin yalnız doğru/yanlış sayısı var.</p>
+{% endif %}
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4" open>
   <summary>Soru soru başarı</summary>
   <p class="mt-1 text-sm text-slate-500">Yeşil %70 ve üzeri, sarı %40–69, kırmızı %40’ın altı. Sayı, soru numarası.{% if ta.veli %} Kutunun altındaki işaret senin sonucun.{% endif %}</p>
   <div class="ta-isi mt-3" aria-label="Soru başarı ısısı">
@@ -96,6 +113,27 @@
   <summary>Her soruda doğru, yanlış, boş</summary>
   <div class="mt-3 overflow-x-auto"><canvas id="soru-dyb" style="min-width:{{ [640, ta.sorular|length * 28]|max }}px; height:280px"></canvas></div>
 </details>
+{% if ta.matris %}
+<details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4" open>
+  <summary>{% if ta.veli %}Hangi soruda ne yaptın{% else %}Öğrenci öğrenci: hangi soruda ne yaptı{% endif %}</summary>
+  <p class="text-sm text-slate-500"><span class="ta-m ta-m-d">✓</span> doğru · <span class="ta-m ta-m-y">B</span> yanlış (işaretlediği şık) · <span class="ta-m ta-m-b">–</span> boş. Üst satırda soru numarası ve doğru cevap.</p>
+  <div class="ta-matris-kutu mt-3">
+    <table class="ta-matris">
+      <thead><tr><th scope="col" class="ta-ad">Öğrenci</th>{% for q in ta.sorular %}<th scope="col" title="{{ q.no }}. soru · doğru cevap {{ q.cevap }} · %{{ q.basari }}">{{ q.no }}<small>{{ q.cevap }}</small></th>{% endfor %}<th scope="col">D</th><th scope="col">Y</th><th scope="col">B</th><th scope="col">Net</th></tr></thead>
+      <tbody>
+      {% for o in ta.matris %}
+      <tr><th scope="row" class="ta-ad">{{ o.ad }}{% if not ta.veli %}<small>{{ o.sinif }} · No {{ o.no }}</small>{% endif %}</th>
+        {% for s in o.satirlar %}<td class="ta-m-{{ 'd' if s.durum == 'dogru' else ('y' if s.durum == 'yanlis' else 'b') }}" title="{{ s.no }}. soru · {{ 'doğru' if s.durum == 'dogru' else ('yanlış: ' ~ s.verilen ~ ' işaretledi, doğrusu ' ~ s.dogru if s.durum == 'yanlis' else 'boş') }}">{{ '✓' if s.durum == 'dogru' else (s.verilen if s.durum == 'yanlis' else '–') }}</td>{% endfor %}
+        <td class="ta-top">{{ o.dogru }}</td><td class="ta-top">{{ o.yanlis }}</td><td class="ta-top">{{ o.bos }}</td><td class="ta-top">{{ o.net }}</td></tr>
+      {% endfor %}
+      </tbody>
+      {% if not ta.veli and ta.matris|length > 1 %}
+      <tfoot><tr><th scope="row" class="ta-ad">Doğru oranı</th>{% for q in ta.sorular %}<td style="color:{{ q.renk }}">%{{ q.basari|round|int }}</td>{% endfor %}<td colspan="4"></td></tr></tfoot>
+      {% endif %}
+    </table>
+  </div>
+</details>
+{% endif %}
 {% if ta.zor %}
 <details class="ta-baslik rounded-2xl border border-slate-200 bg-white p-4">
   <summary>En çok zorlayan sorular</summary>
@@ -105,8 +143,7 @@
       <div class="flex items-baseline justify-between gap-2"><h3 class="font-black">{{ q.no }}. soru</h3><span class="text-sm font-black" style="color:{{ q.renk }}">%{{ q.basari }}</span></div>
       <p class="text-xs text-slate-500">Doğru cevap {{ q.cevap }} · en çok işaret {{ q.en_cok }} ({{ q.en_adet }})</p>
       <div class="ta-sec">
-        {% for harf in ['A','B','C','D','bos'] %}
-        {% set adet = q.sec[harf] %}
+        {% for harf, adet in q.sec.items() %}
         {% set n = (q.dogru + q.yanlis + q.bos) or 1 %}
         <span><em>{{ 'Boş' if harf == 'bos' else harf }}</em><i><b class="{{ 'dogru' if harf == q.cevap else '' }}" style="width:{{ (adet * 100 / n)|round(1) }}%"></b></i><strong>{{ adet }}</strong></span>
         {% endfor %}

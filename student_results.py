@@ -1,5 +1,6 @@
 """Flexible per-student tests, exam editing and authorized student search."""
 from datetime import date
+import json
 import unicodedata
 from flask import abort, flash, jsonify, redirect, render_template, request, session, url_for
 import database as db
@@ -18,6 +19,25 @@ def school_courses():
 def normalize(text):
     text = str(text or '').replace('ı', 'i').replace('İ', 'I').casefold()
     return ' '.join(''.join(c for c in unicodedata.normalize('NFKD', text) if not unicodedata.combining(c)).split())
+
+
+BOS_ISARET = frozenset('-._*Xx0')
+
+
+def answer_letters(text, key=False):
+    """'AB-C D' → ['A','B','','C','D']. Spaces only separate; '-', '.', '_', '*', 'X', '0' mean blank."""
+    letters = []
+    for ch in str(text or ''):
+        if ch.isspace() or ch in ',;':
+            continue
+        up = ch.upper()
+        if up in db.CEVAP_SIKLARI:
+            letters.append(up)
+        elif ch in BOS_ISARET and not key:
+            letters.append('')
+        else:
+            raise ValueError(f"'{ch}' tanınmadı. {'Cevap anahtarında yalnız A–E harfleri' if key else 'Cevaplarda A–E harfleri, boş için -'} kullanın.")
+    return letters
 
 
 def institution_allowed():
@@ -158,7 +178,10 @@ def register_results(app, login_required, accessible):
         title = request.form.get('ad', '').strip()
         when = date.fromisoformat(request.form.get('tarih', '')).isoformat()
         course = request.form.get('ders', '').strip()
-        count = int(request.form.get('soru_sayisi', ''))
+        key = answer_letters(request.form.get('anahtar'), key=True)
+        if len(key) > 500:
+            raise ValueError('Cevap anahtarı en fazla 500 soru olabilir.')
+        count = len(key) if key else int(request.form.get('soru_sayisi', ''))
         penalty = int(request.form.get('yanlis_goturme', ''))
         courses = school_courses()
         if not title or course not in courses or not 1 <= count <= 500 or penalty not in (0, 3, 4):
@@ -166,6 +189,20 @@ def register_results(app, login_required, accessible):
         students = db.sinif_ogrencileri(sinif_id)
         hazir = []
         for student in students:
+            raw_cevap = (request.form.get(f"cevap_{student['id']}") or '').strip()
+            if key and raw_cevap:
+                try:
+                    marks = answer_letters(raw_cevap)
+                except ValueError as error:
+                    raise ValueError(f"{student['ad_soyad']}: {error}")
+                if len(marks) > count:
+                    raise ValueError(f"{student['ad_soyad']}: {len(marks)} cevap yazıldı, testte {count} soru var.")
+                marks += [''] * (count - len(marks))
+                rows = db.soru_durumlari(key, marks)
+                dogru = sum(r['durum'] == 'dogru' for r in rows)
+                yanlis = sum(r['durum'] == 'yanlis' for r in rows)
+                hazir.append((student, dogru, yanlis, marks))
+                continue
             raw_dogru = (request.form.get(f"dogru_{student['id']}") or '').strip()
             raw_yanlis = (request.form.get(f"yanlis_{student['id']}") or '').strip()
             if raw_dogru == '' and raw_yanlis == '':
@@ -174,13 +211,14 @@ def register_results(app, login_required, accessible):
             yanlis = int(raw_yanlis or 0)
             if min(dogru, yanlis) < 0 or dogru + yanlis > count:
                 raise ValueError(f"{student['ad_soyad']}: doğru ve yanlış toplamı {count} soruyu geçemez.")
-            hazir.append((student, dogru, yanlis))
+            hazir.append((student, dogru, yanlis, None))
         if not hazir:
-            raise ValueError('En az bir öğrencinin doğru veya yanlışını yazın. Boş satırlar kayda girmez.')
-        for student, dogru, yanlis in hazir:
+            raise ValueError('En az bir öğrencinin cevaplarını ya da doğru ve yanlışını yazın. Boş satırlar kayda girmez.')
+        for student, dogru, yanlis, marks in hazir:
             saved = db.lgs_deneme_ekle(
                 student['id'], title, when,
-                [dict(ders=course, soru_sayisi=count, dogru=dogru, yanlis=yanlis, bos=count - dogru - yanlis, yanlis_goturme=penalty)],
+                [dict(ders=course, soru_sayisi=count, dogru=dogru, yanlis=yanlis, bos=count - dogru - yanlis, yanlis_goturme=penalty,
+                      anahtar=key if marks else None, isaretler=marks)],
                 ogretmen_id=session['ogretmen_id'], tur='ders',
             )
             if not saved.get('ok'):
@@ -289,8 +327,11 @@ def register_results(app, login_required, accessible):
                     con.execute('DELETE FROM lgs_deneme_ders WHERE deneme_id=?', (edit_id,))
                     for row in rows:
                         net = round(row['dogru'] - (row['yanlis']/row['yanlis_goturme'] if row['yanlis_goturme'] else 0), 2)
-                        con.execute('INSERT INTO lgs_deneme_ders(deneme_id,ders,soru_sayisi,dogru,yanlis,bos,net,yanlis_goturme) VALUES(?,?,?,?,?,?,?,?)',
-                                    (edit_id, row['ders'], row['soru_sayisi'], row['dogru'], row['yanlis'], row['bos'], net, row['yanlis_goturme']))
+                        old = next((d for d in editing['dersler'] if d['ders'] == row['ders'] and d.get('anahtar')
+                                    and (d['soru_sayisi'], d['dogru'], d['yanlis']) == (row['soru_sayisi'], row['dogru'], row['yanlis'])), None)
+                        con.execute('INSERT INTO lgs_deneme_ders(deneme_id,ders,soru_sayisi,dogru,yanlis,bos,net,yanlis_goturme,anahtar,isaretler) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                                    (edit_id, row['ders'], row['soru_sayisi'], row['dogru'], row['yanlis'], row['bos'], net, row['yanlis_goturme'],
+                                     json.dumps(old['anahtar']) if old else None, json.dumps(old['isaretler']) if old else None))
                     con.commit()
                     con.close()
                 else:

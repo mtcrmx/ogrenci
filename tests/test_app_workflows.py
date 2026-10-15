@@ -154,6 +154,38 @@ class Workflows(unittest.TestCase):
         self.assertIn('Bireysel sonuç',birey)
         self.assertIn('name="dogru"',birey)
 
+    def test_class_exam_with_answer_key_shows_each_question(self):
+        others=[s for s in d.sinif_ogrencileri(self.sid) if s['id']!=self.oid][:2]
+        self.assertEqual(len(others),2)
+        b,c=others
+        payload={'islem':'sinif_ders','sinif_id':self.sid,'ad':'Cevaplı yaprak','tarih':'2026-10-14','ders':'Matematik',
+                 'soru_sayisi':'20','yanlis_goturme':'0','anahtar':'abcde',
+                 f'cevap_{self.oid}':'AB-DA',f'cevap_{b["id"]}':'ba',f'dogru_{c["id"]}':'2',f'yanlis_{c["id"]}':'1'}
+        bad=dict(payload,ad='Hatalı cevaplı yaprak',**{f'cevap_{b["id"]}':'AB?'})
+        self.assertIn('tanınmadı',self.teacher_client.post('/sonuclar',data=bad).get_data(as_text=True))
+        self.assertFalse(any(r['ad']=='Hatalı cevaplı yaprak' for r in d.lgs_denemeler(self.oid,200)))
+        self.assertIn('3 öğrenciye yazıldı',self.teacher_client.post('/sonuclar',data=payload,follow_redirects=True).get_data(as_text=True))
+        ben=next(r for r in d.lgs_denemeler(self.oid,200) if r['ad']=='Cevaplı yaprak')['dersler'][0]
+        self.assertEqual((ben['soru_sayisi'],ben['dogru'],ben['yanlis'],ben['bos']),(5,3,1,1))
+        self.assertEqual([s['durum'] for s in ben['sorular']],['dogru','dogru','bos','dogru','yanlis'])
+        self.assertEqual(ben['sorular'][4]['verilen'],'A')
+        diger=next(r for r in d.lgs_denemeler(b['id'],200) if r['ad']=='Cevaplı yaprak')['dersler'][0]
+        self.assertEqual((diger['dogru'],diger['yanlis'],diger['bos']),(0,2,3))
+        sayisal=next(r for r in d.lgs_denemeler(c['id'],200) if r['ad']=='Cevaplı yaprak')['dersler'][0]
+        self.assertEqual((sayisal['soru_sayisi'],sayisal['sorular']),(5,[]))
+        sorgu={'ad':'Cevaplı yaprak','tarih':'2026-10-14','tur':'ders'}
+        sayfa=self.teacher_client.get('/lgs/test-analiz',query_string=sorgu).get_data(as_text=True)
+        self.assertIn('Öğrenci öğrenci: hangi soruda ne yaptı',sayfa)
+        self.assertIn('cevapları girilen 2 öğrenciden',sayfa)
+        self.assertIn('yanlış: A işaretledi, doğrusu E',sayfa)
+        self.assertIn(b['ad_soyad'],sayfa)
+        self.assertNotIn('Ders başına ortalama',sayfa)
+        veli=self.parent.get('/veli/lgs',query_string={**sorgu,'bolum':'deneme'}).get_data(as_text=True)
+        self.assertIn('Hangi soruda ne yaptın',veli)
+        self.assertNotIn(b['ad_soyad'],veli)
+        birey=self.teacher_client.get('/sonuclar',query_string={'ogrenci':self.oid}).get_data(as_text=True)
+        self.assertIn('class="q-strip"',birey)
+
     def test_teacher_can_delete_and_restore_exam_results(self):
         students=d.sinif_ogrencileri(self.sid)[:2]
         self.assertGreaterEqual(len(students),2)

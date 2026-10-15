@@ -1368,7 +1368,7 @@ def _lgs_init(con: sqlite3.Connection) -> None:
         if ad not in deneme_kolon:
             con.execute(f'ALTER TABLE lgs_deneme ADD COLUMN {ad} {tip}')
     ders_kolon = {r[1] for r in con.execute('PRAGMA table_info(lgs_deneme_ders)')}
-    for ad, tip in [('soru_sayisi', 'INTEGER'), ('yanlis_goturme', 'INTEGER NOT NULL DEFAULT 3')]:
+    for ad, tip in [('soru_sayisi', 'INTEGER'), ('yanlis_goturme', 'INTEGER NOT NULL DEFAULT 3'), ('anahtar', 'TEXT'), ('isaretler', 'TEXT')]:
         if ad not in ders_kolon:
             con.execute(f'ALTER TABLE lgs_deneme_ders ADD COLUMN {ad} {tip}')
     con.commit()
@@ -2075,6 +2075,34 @@ def _lgs_toplam_net(satirlar: list[dict]) -> float:
     return round(toplam, 2)
 
 
+CEVAP_SIKLARI = ("A", "B", "C", "D", "E")
+
+
+def soru_durumlari(anahtar: list[str], isaretler: list[str]) -> list[dict]:
+    satirlar = []
+    for i, dogru_harf in enumerate(anahtar):
+        verilen = isaretler[i] if i < len(isaretler) and isaretler[i] in CEVAP_SIKLARI else ""
+        durum = "bos" if not verilen else ("dogru" if verilen == dogru_harf else "yanlis")
+        satirlar.append({"no": i + 1, "verilen": verilen, "dogru": dogru_harf, "durum": durum})
+    return satirlar
+
+
+def _ders_satiri(row) -> dict:
+    satir = dict(row)
+    try:
+        anahtar = json.loads(satir.get("anahtar") or "null")
+        isaretler = json.loads(satir.get("isaretler") or "null")
+    except ValueError:
+        anahtar = isaretler = None
+    if anahtar and isinstance(isaretler, list):
+        satir["anahtar"], satir["isaretler"] = anahtar, isaretler
+        satir["sorular"] = soru_durumlari(anahtar, isaretler)
+    else:
+        satir["anahtar"] = satir["isaretler"] = None
+        satir["sorular"] = []
+    return satir
+
+
 def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], puan: float | None = None, siki: bool = True, ogretmen_id: int | None = None, tur: str = 'kurum', kurum_yenile: bool = False) -> dict:
     ad = (ad or "").strip()
     if not ad:
@@ -2106,7 +2134,10 @@ def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], p
             return {'ok': False, 'hata': 'Soru sayısı veya net kuralı geçersiz.'}
         if d.get('net') is None:
             net = round(dogru - (yanlis / goturme if goturme else 0), 2)
-        temiz.append((ders, dogru, yanlis, bos, net, tavan, goturme))
+        anahtar = list(d.get('anahtar') or [])
+        isaretler = list(d.get('isaretler') or [])
+        cevap = (json.dumps(anahtar), json.dumps(isaretler)) if anahtar and len(anahtar) == len(isaretler) == int(tavan) else (None, None)
+        temiz.append((ders, dogru, yanlis, bos, net, tavan, goturme, *cevap))
     if not temiz:
         return {"ok": False, "hata": "En az bir derse doğru, yanlış veya boş yazın."}
     con = _conn()
@@ -2122,13 +2153,13 @@ def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], p
             (ogrenci_id, ad[:80], (tarih or "")[:10], puan, ogretmen_id, tur),
         )
         deneme_id = cur.lastrowid
-        for ders, dogru, yanlis, bos, net, tavan, goturme in temiz:
+        for ders, dogru, yanlis, bos, net, tavan, goturme, anahtar, isaretler in temiz:
             con.execute(
                 """
-                INSERT INTO lgs_deneme_ders (deneme_id, ders, dogru, yanlis, bos, net, soru_sayisi, yanlis_goturme)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO lgs_deneme_ders (deneme_id, ders, dogru, yanlis, bos, net, soru_sayisi, yanlis_goturme, anahtar, isaretler)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (deneme_id, ders, dogru, yanlis, bos, net, tavan, goturme),
+                (deneme_id, ders, dogru, yanlis, bos, net, tavan, goturme, anahtar, isaretler),
             )
         con.commit()
     except Exception:
@@ -2161,7 +2192,7 @@ def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
         (ogrenci_id, limit),
     ).fetchall()]
     for d in denemeler:
-        satirlar = [dict(r) for r in con.execute(
+        satirlar = [_ders_satiri(r) for r in con.execute(
             "SELECT * FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",
             (d["id"],),
         ).fetchall()]
@@ -2226,7 +2257,7 @@ def deneme_sinav_ogrencileri(ad: str, tarih: str, tur: str | None = None) -> lis
     sql += " ORDER BY s.sinif_adi, o.ad_soyad"
     denemeler = [dict(r) for r in con.execute(sql, params).fetchall()]
     for d in denemeler:
-        satirlar = [dict(r) for r in con.execute(
+        satirlar = [_ders_satiri(r) for r in con.execute(
             "SELECT * FROM lgs_deneme_ders WHERE deneme_id = ? ORDER BY id",
             (d["id"],),
         ).fetchall()]
