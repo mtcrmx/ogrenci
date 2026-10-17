@@ -7556,6 +7556,8 @@ from student_results import register_results, institution_allowed as kurum_denem
 register_results(app, giris_zorunlu, _ogretmen_ogrencisine_erisebilir)
 from change_history import register_history
 register_history(app, giris_zorunlu)
+from teacher_records import register as register_teacher_records
+register_teacher_records(app, giris_zorunlu)
 from ev_analiz import register as register_ev_analiz
 register_ev_analiz(app, _ogretmen_ogrencisine_erisebilir)
 from yaprak_analiz import register as register_yaprak_analiz

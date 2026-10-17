@@ -19,6 +19,9 @@ TABLES = {
     'lgs_deneme': 'Sınav sonucu', 'lgs_deneme_ders': 'Ders sonucu',
     'rozet_kayitlari': 'Rozet', 'sinif_rozet': 'Sınıf rozeti',
     'sinav_analiz_kayitlari': 'Sınav analizi',
+    'lgs_optik_sinav': 'Ev testi', 'lgs_optik_sonuc': 'Ev testi sonucu',
+    'ogretmen_notlari': 'Öğretmen notu', 'bilgilendirmeler': 'Duyuru',
+    'odev_sonuclari': 'Ödev sonucu',
 }
 
 
@@ -88,6 +91,8 @@ def undo(con, action_id, teacher_id):
             raise PermissionError('İşlem bulunamadı veya size ait değil.')
         if action['geri_alindi']:
             raise ValueError('Bu işlem zaten geri alındı.')
+        if action['yol'].startswith('/kayitlarim/'):
+            raise ValueError('Bu düzenleme veya silmeyi Kayıtlarım ekranındaki geçmişten geri alın.')
         rows = con.execute('SELECT * FROM ogretmen_islem_satir WHERE islem_id=? ORDER BY id DESC',
                            (action_id,)).fetchall()
         for entry in rows:
@@ -104,9 +109,9 @@ def undo(con, action_id, teacher_id):
                 raise ValueError('Bu kayda daha sonra başka bir değişiklik yapılmış. Önce en son işlemi geri alın; mevcut veriler korunuyor.')
             if before is None:
                 # Prevent a newer child row from being silently deleted by CASCADE.
-                if table in ('odevler', 'lgs_deneme'):
-                    child, fk = ('odev_tamamlayanlar', 'odev_id') if table == 'odevler' else ('lgs_deneme_ders', 'deneme_id')
-                    if con.execute(f'SELECT 1 FROM "{child}" WHERE "{fk}"=? LIMIT 1', (key['id'],)).fetchone():
+                children={'odevler':[('odev_tamamlayanlar','odev_id'),('odev_sonuclari','odev_id')], 'lgs_deneme':[('lgs_deneme_ders','deneme_id')], 'lgs_optik_sinav':[('lgs_optik_sonuc','sinav_id')]}
+                for child,fk in children.get(table,[]):
+                    if con.execute(f'SELECT 1 FROM "{child}" WHERE "{fk}"=? LIMIT 1',(key['id'],)).fetchone():
                         raise ValueError('Bu kayda sonradan sonuç/onay eklenmiş. Önce ilgili işlemi geri alın.')
                 con.execute(f'DELETE FROM "{table}" WHERE {where}', tuple(key.values()))
             elif current is None:
@@ -146,6 +151,7 @@ def register_history(app, login_required):
         con = db._conn()
         actions = [dict(r) for r in con.execute('SELECT * FROM ogretmen_islem WHERE ogretmen_id=? ORDER BY zaman DESC,rowid DESC LIMIT 100', (session['ogretmen_id'],))]
         for action in actions:
+            action['managed']=action['yol'].startswith('/kayitlarim/')
             entries = [dict(r) for r in con.execute('SELECT * FROM ogretmen_islem_satir WHERE islem_id=? ORDER BY id', (action['id'],))]
             action['baslik'] = ' · '.join(dict.fromkeys(TABLES.get(e['tablo'], 'Değişiklik') for e in entries if e['tablo'] not in ('gelisim_puan', 'lig', 'lig_mac_tablo', 'lgs_deneme_ders')))
             action['ayrinti'] = []
@@ -178,6 +184,9 @@ def register_history(app, login_required):
                         action['ayrinti'].append(student[0])
                 if entry['tablo'] == 'lgs_deneme' and entry['sonraki']:
                     action['duzenle_url'] = url_for('sonuclar', ogrenci=oid, duzenle=data['id'])
+                elif entry['tablo'] in ('ogretmen_notlari','lgs_optik_sinav','bilgilendirmeler') and entry['sonraki']:
+                    kind={'ogretmen_notlari':'not','lgs_optik_sinav':'ev-testi','bilgilendirmeler':'duyuru'}[entry['tablo']]
+                    action['duzenle_url']=url_for('teacher_record_edit',kind=kind,rid=data['id'])
                 elif entry['tablo'] == 'odevler' and entry['sonraki']:
                     action['duzenle_url'] = url_for('odev_duzenle', odev_id=data['id'])
                 elif entry['tablo'] in ('haftalik_takip', 'haftalik_odev_bilgi'):

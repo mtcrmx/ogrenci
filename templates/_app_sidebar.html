@@ -26,15 +26,15 @@
   <nav class="app-nav" aria-label="Ana menü">
     {% if rehber_only %}
     <h2>Rehberlik servisi</h2>
-    {% for endpoint, label, icon in [('rehberlik_panel','Genel bakış','⌂'), ('rehberlik_ajanda','Görüşme ajandası','◷'), ('rehberlik_takip','Öğrenci takibi','◎'), ('rehberlik_lgs','LGS takip merkezi','◈'), ('rehberlik_ogretmenler','Öğretmen çalışmaları','▤'), ('rehberlik_gorusmeler','Veli talepleri','✉'), ('rehberlik_etkinlikler','Sınıf çalışmaları','◇'), ('rehberlik_kutuphane','İçerik kütüphanesi','▧'), ('rehberlik_yeni','İçerik paylaş','＋'), ('rehberlik_ozet','Hizmet özeti','▥')] %}
+    {% for endpoint, label, icon in [('rehberlik_panel','Genel bakış','⌂'), ('rehberlik_ajanda','Görüşme ajandası','◷'), ('rehberlik_takip','Öğrenci takibi','◎'), ('rehberlik_lgs','LGS takip merkezi','◈'), ('rehberlik_ogretmenler','Öğretmen çalışmaları','▤'), ('rehberlik_gorusmeler','Veli talepleri','✉'), ('rehberlik_etkinlikler','Sınıf çalışmaları','◇'), ('rehberlik_kutuphane','İçerik kütüphanesi','▧'), ('rehberlik_yeni','İçerik paylaş','＋'), ('rehberlik_ozet','Hizmet özeti','▥'), ('teacher_records','Kayıtlarım · Düzenle / Sil','✎')] %}
     <a href="{{ url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}"><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
     {% endfor %}
     {% endif %}
     {% if not rapor_only %}
     <a href="{{ url_for('dashboard', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'dashboard' else '' }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}><span aria-hidden="true">⌂</span>Ana sayfa</a>
     {% set lgs_menu = request.endpoint in ['lgs', 'sonuclar', 'deneme_analiz', 'test_sinif_analiz'] %}
-    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['haftalik_takip','onay_kutusu','lgs','sonuclar','deneme_analiz','test_sinif_analiz','islem_gecmisi','odev_duzenle'] %} open{% endif %}><summary>Takip</summary>
-    {% for endpoint, label, icon in [('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦'), ('islem_gecmisi','İşlem geçmişim','↶')] %}
+    <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['haftalik_takip','onay_kutusu','lgs','sonuclar','deneme_analiz','test_sinif_analiz','islem_gecmisi','odev_duzenle','teacher_records','teacher_record_edit'] %} open{% endif %}><summary>Takip</summary>
+    {% for endpoint, label, icon in [('haftalik_takip','Kitap ve ödev','▤'), ('onay_kutusu','Onay kutusu','✓'), ('lgs','LGS','✦'), ('teacher_records','Kayıtlarım · Düzenle / Sil','✎'), ('islem_gecmisi','İşlem geçmişim','↶')] %}
     {% set current = (request.endpoint == endpoint or (endpoint == 'islem_gecmisi' and request.endpoint == 'odev_duzenle')) and not (endpoint == 'lgs' and request.args.get('ekran') == 'evde') %}
     <a href="{{ url_for(endpoint, sinif=nav_sinif_id) if endpoint == 'haftalik_takip' else url_for(endpoint) }}" class="{{ 'is-current' if current else '' }}"{% if current %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
     {% if endpoint == 'lgs' and lgs_menu %}

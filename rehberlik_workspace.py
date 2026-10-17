@@ -317,10 +317,10 @@ def register_workspace(app, auth, roster_fn, meetings, library):
         # Only descriptive academic fields are projected; never expose raw audit JSON or private notes.
         changes=query('''SELECT a.id,a.zaman,a.geri_alindi,a.ogretmen_id,t.ad_soyad AS teacher,r.tablo,r.onceki,r.sonraki
           FROM ogretmen_islem a JOIN ogretmenler t ON t.id=a.ogretmen_id JOIN ogretmen_islem_satir r ON r.islem_id=a.id
-          WHERE substr(a.zaman,1,10)>=? AND substr(a.zaman,1,10)<=? AND r.tablo IN ('lgs_deneme','haftalik_odev_bilgi','haftalik_takip','odevler')
+          WHERE substr(a.zaman,1,10)>=? AND substr(a.zaman,1,10)<=? AND r.tablo IN ('lgs_deneme','lgs_optik_sinav','haftalik_odev_bilgi','haftalik_takip','odevler')
           ORDER BY a.zaman DESC,r.id DESC''',(start,end))
         roster={r['id']:r for r in roster_fn()};classes={c['id']:c['sinif_adi'] for c in db.aktif_sube_siniflari()};feed=[];seen=set()
-        labels={'lgs_deneme':'Sınav sonucu','haftalik_odev_bilgi':'Sınıf ödevi','haftalik_takip':'Kitap / ödev takibi','odevler':'Ödev'}
+        labels={'lgs_deneme':'Sınav sonucu','lgs_optik_sinav':'Ev testi','haftalik_odev_bilgi':'Sınıf ödevi','haftalik_takip':'Kitap / ödev takibi','odevler':'Ödev'}
         for r in changes:
             if teacher and r['ogretmen_id']!=teacher:continue
             before=json.loads(r['onceki'] or '{}');after=json.loads(r['sonraki'] or '{}')
