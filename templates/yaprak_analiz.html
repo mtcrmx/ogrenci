@@ -23,6 +23,7 @@
 </div>
 </header>
 <div class="ea-toolbar">
+{% if teacher %}<a class="ea-button" href="{{ url_for('kamera_test.index') }}">Test hazırla / Kamera ile oku →</a>{% endif %}
 <a class="ea-button secondary" href="{{ url_for('sonuclar') if teacher else url_for('veli_panel') }}">{{ 'Okulda Yaprak Test →' if teacher else 'Veli paneli →' }}</a>
 <a href="{{ url_for('ev_analiz.index') }}">Evde test analizi →</a>
 </div>
@@ -68,6 +69,7 @@
 <div>
 <span class="ea-eyebrow">{{ course }} / {{ classroom or 'TÜM SINIFLAR' }}</span>
 <h2>{{ exam.ad }}</h2>
+{% if exam.camera_exam %}<a class="ea-button secondary" href="{{ url_for('ev_analiz.index',test=exam.camera_exam) }}">Soru bazlı cevapları incele →</a>{% endif %}
 </div>
 <span class="ea-chip">{{ exam.count }} soru · {{ exam.tarih }} · {{ exam.rule ~ ' yanlış 1 doğruyu götürür' if exam.rule else 'Yanlış doğruları götürmez' }}</span>
 </div>

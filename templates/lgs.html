@@ -427,6 +427,8 @@
     {% else %}
     <p class="mt-4 text-sm font-black">Doğru {{ optik_secili.sonuc.dogru }} · Yanlış {{ optik_secili.sonuc.yanlis }} · Boş {{ optik_secili.sonuc.bos }} · Net {{ optik_secili.sonuc.net }}</p>
     {% endif %}
+    {% elif optik_secili.kaynak == 'kamera' %}
+    <p class="mt-4 text-sm text-slate-600">Bu test okulda kâğıt üzerinde çözülür. Öğretmen optiği okuttuğunda sonuçlarınız burada görünecek.</p>
     {% elif veli %}
     <form method="post" action="{{ url_for('veli_lgs') }}" class="mt-4">
       <input type="hidden" name="islem" value="optik_bitir">

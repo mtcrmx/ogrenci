@@ -5,6 +5,7 @@ from hashlib import sha256
 from statistics import mean
 from flask import Blueprint, abort, redirect, render_template, request, session, url_for
 import database as db
+import lgs_optik as optik
 
 bp = Blueprint('yaprak_analiz', __name__)
 
@@ -22,8 +23,9 @@ def group_records(rows):
         r['soru_sayisi']=count
         r['rate']=round(100*r['dogru']/count,1)
         key=(r['ad'],r['tarih'],r['ders'],count,r['yanlis_goturme'])
+        if r.get('camera_exam'): key=(*key,'kamera',r['camera_exam'])
         ident=sha256(repr(key).encode()).hexdigest()[:20]
-        group=groups.setdefault(ident,dict(id=ident,ad=r['ad'],tarih=r['tarih'],ders=r['ders'],count=count,rule=r['yanlis_goturme'],rows=[]))
+        group=groups.setdefault(ident,dict(id=ident,ad=r['ad'],tarih=r['tarih'],ders=r['ders'],count=count,rule=r['yanlis_goturme'],camera_exam=r.get('camera_exam'),rows=[]))
         # Old duplicate entries: keep the latest saved course row per student.
         group['rows']=[p for p in group['rows'] if p['ogrenci_id']!=r['ogrenci_id']]+[r]
     return sorted(groups.values(),key=lambda g:(g['tarih'],g['ad'],g['id']),reverse=True)
@@ -37,7 +39,7 @@ def index():
     teacher=session.get('ogretmen_id')
     oid=None if teacher else session.get('veli_ogrenci_id')
     if not teacher and not oid: return redirect(url_for('veli_giris'))
-    con=db._conn();db._lgs_init(con)
+    con=db._conn();db._lgs_init(con);optik._init(con)
     roster=[dict(r) for r in con.execute('SELECT o.id,o.ad_soyad,o.ogr_no,o.sinif_id,s.sinif_adi FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id')]
     child=next((r for r in roster if r['id']==oid),None)
     if oid and not child: con.close();abort(403)
@@ -50,6 +52,11 @@ def index():
         FROM lgs_deneme d JOIN lgs_deneme_ders dd ON dd.deneme_id=d.id
         JOIN ogrenciler o ON o.id=d.ogrenci_id JOIN siniflar s ON s.id=o.sinif_id
         WHERE d.tur='ders' ORDER BY dd.id''') if r['ogrenci_id'] in allowed]
+    rows += [dict(r) for r in con.execute('''SELECT e.id AS camera_exam,e.ad,e.tarih,e.ders,e.soru_sayisi,
+        r.ogrenci_id,r.dogru,r.yanlis,r.bos,r.net,3 AS yanlis_goturme,
+        o.ad_soyad,o.ogr_no,o.sinif_id,s.sinif_adi FROM lgs_optik_sinav e
+        JOIN lgs_optik_sonuc r ON r.sinav_id=e.id JOIN ogrenciler o ON o.id=r.ogrenci_id
+        JOIN siniflar s ON s.id=o.sinif_id WHERE e.kaynak='kamera' ORDER BY r.id''') if r['ogrenci_id'] in allowed]
     con.close()
     groups=group_records(rows)
     if child: groups=[g for g in groups if any(r['ogrenci_id']==oid for r in g['rows'])]

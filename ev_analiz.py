@@ -32,7 +32,7 @@ def connection():
 
 def visible(exam, student):
     # Existing home tests are available to their class (or both eighth grades).
-    return student.get('sinif_adi') in {'8/A', '8/B'} and (not exam.get('sinif_id') or int(exam['sinif_id']) == int(student['sinif_id']))
+    return (exam.get('kaynak')=='kamera' or student.get('sinif_adi') in {'8/A', '8/B'}) and (not exam.get('sinif_id') or int(exam['sinif_id']) == int(student['sinif_id']))
 
 def student_row(oid):
     con = db._conn()

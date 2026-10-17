@@ -2,6 +2,7 @@
 {% block title %}{{ 'Okulda Yaprak Test' if not veli and not ogrenci else 'Ders ve deneme sonuçları' }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=7">{% endblock %}
 {% block body %}<main class="page-content">
+{% if not veli and not ogrenci %}<a class="app-button" href="{{ url_for('kamera_test.index') }}">Dosyadan test hazırla / Kamera ile oku →</a>{% endif %}
 <header class="page-heading"><div><h1>{{ 'Okulda Yaprak Test' if not veli and not ogrenci else 'Ders ve deneme sonuçları' }}</h1><p>{% if ogrenci %}{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no }}{% else %}Öğrenci seçin veya üstteki alandan ad / okul numarasıyla arayın.{% endif %}</p></div>{% if not veli %}<a class="app-button" href="{{ url_for('islem_gecmisi') }}">İşlem geçmişi / geri al</a>{% endif %}</header>
 <a class="app-button" style="margin:12px 0" href="{{ url_for('yaprak_analiz.index') }}">Okul yaprak testi analizi →</a>
 {% for message in get_flashed_messages() %}<p class="app-notice" role="status">{{ message }}</p>{% endfor %}

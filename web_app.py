@@ -4962,7 +4962,7 @@ def _lgs_ekran(veli: bool):
             sinav_id = request.form.get("sinav_id", type=int) or 0
             sinav = lgs_optik.sinav_getir(sinav_id)
             from ev_analiz import visible as ev_test_visible
-            if not sinav or not ev_test_visible(sinav, ogr):
+            if not sinav or sinav.get('kaynak') == 'kamera' or not ev_test_visible(sinav, ogr):
                 abort(403)
             isaret = []
             if sinav:
@@ -7562,6 +7562,8 @@ from ev_analiz import register as register_ev_analiz
 register_ev_analiz(app, _ogretmen_ogrencisine_erisebilir)
 from yaprak_analiz import register as register_yaprak_analiz
 register_yaprak_analiz(app, _ogretmen_ogrencisine_erisebilir)
+from kamera_test import register as register_kamera_test
+register_kamera_test(app, _ogretmen_ogrencisine_erisebilir)
 from sayfa_sifirlama import register_sayfa_sifirlama
 register_sayfa_sifirlama(app, giris_zorunlu)
 from school_broadcast import register_broadcast

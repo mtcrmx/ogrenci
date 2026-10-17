@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Evde test · Analiz merkezi{% endblock %}
+{% block title %}Test · Analiz merkezi{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='ev_analiz.css') }}">{% endblock %}
 {% macro fields(action, section='overview') %}<input type="hidden" name="csrf" value="{{ csrf }}">
 <input type="hidden" name="test" value="{{ exam.id }}">
@@ -9,7 +9,7 @@
 <main class="ea" data-initial="{{ tab }}">
 <header class="ea-hero">
 <div>
-<span class="ea-eyebrow">AKADEMİPUAN / EVDE ÖĞRENME</span>
+<span class="ea-eyebrow">AKADEMİPUAN / {{ 'OKULDA YAPRAK TEST' if exam and exam.kaynak=='kamera' else 'EVDE ÖĞRENME' }}</span>
 <h1>{{ 'Test ve sınıf analizi' if teacher else 'Çocuğunuzun öğrenme yolculuğu' }}</h1>
 <p>{{ 'Cevapları keşfedin. Zorlanılan soruları bulun. Birlikte ilerleyin.' if teacher else student.ad_soyad ~ ' · ' ~ student.sinif_adi ~ ' · Yalnızca çocuğunuza ait bilgiler' }}</p>
 <div class="ea-tags">
@@ -28,7 +28,7 @@
 {% if not teacher %}<nav class="ea-toolbar" aria-label="Geri dönüş"><a class="ea-button secondary" href="{{ url_for('veli_panel') }}">Veli paneli →</a><a href="{{ url_for('veli_analizler') }}">Tüm analizler →</a></nav>{% endif %}
 <div class="ea-toolbar">
 <form method="get">
-<label>Evde soru testi<select name="test" onchange="this.form.submit()">
+<label>İncelenen test<select name="test" onchange="this.form.submit()">
 <option value="">Test seçin</option>{% for e in exams %}<option value="{{ e.id }}" {{ 'selected' if exam and e.id==exam.id }}>{{ e.tarih }} · {{ e.ad }}</option>{% endfor %}
 </select>
 </label>{% if teacher %}<label>Sınıf<select name="class" onchange="this.form.submit()">

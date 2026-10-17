@@ -193,6 +193,10 @@ def register(app,login_required):
                     values=validated(spec,request.form)
                     if kind=='ev-testi':
                         answers=json.loads(values['cevaplar']);results=[e['before'] for e in entries if e['table']=='lgs_optik_sonuc']
+                        if row.get('kaynak')=='kamera':
+                            camera=con.execute('SELECT choices FROM kamera_sinav WHERE sinav_id=?',(rid,)).fetchone()
+                            if camera and any(a not in camera['choices'] for a in answers):raise ValueError('Cevap anahtarı basılı optikteki seçeneklerle uyumlu olmalı.')
+                            if len(answers)!=row['soru_sayisi']:raise ValueError('Basılmış kamera testinde soru sayısı değiştirilemez. Yeni bir test oluşturun.')
                         if results and len(answers)!=row['soru_sayisi']:raise ValueError('Öğrenci yanıtları varken soru sayısı değiştirilemez. Aynı sayıda sorunun cevaplarını düzeltebilirsiniz.')
                         values['soru_sayisi']=len(answers)
                         for result in results:

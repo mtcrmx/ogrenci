@@ -54,6 +54,8 @@ def _init(con) -> None:
         con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN ders TEXT NOT NULL DEFAULT ''")
     if "sinif_id" not in kolon:
         con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN sinif_id INTEGER")
+    if "kaynak" not in kolon:
+        con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN kaynak TEXT NOT NULL DEFAULT 'ev'")
 
 
 def anahtar_oku(metin: str) -> list[str] | None:
