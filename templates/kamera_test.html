@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
-{% block title %}Yaprak test · Kamera{% endblock %}
+{% block title %}LGS · Okulda Yaprak Test{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='kamera_test.css') }}">{% endblock %}
 {% block body %}
+<a class="app-button" style="margin:12px" href="{{ url_for('yaprak_analiz.combined') }}">Evde · Okulda · Deneme — Ayrı ve birleşik analiz →</a>
 <main class="page-content kt">
+<nav class="kt-actions" aria-label="LGS bölümleri"><a href="{{ url_for('lgs') }}">← LGS paneli</a><a href="{{ url_for('yaprak_analiz.index') }}">Yaprak test analizleri →</a></nav>
 {% for category,message in get_flashed_messages(with_categories=true) %}<p class="kt-notice" role="status">{{ message }}</p>{% endfor %}
-<header class="kt-hero"><div><span class="kt-eyebrow">SINIFTA ÇÖZ · KAMERAYLA OKU</span><h1>Yaprak test atölyesi</h1><p>Dosyadan kitapçığa, kâğıttan öğrenci analizine.</p></div><span class="kt-symbol" aria-hidden="true">▦</span></header>
+<header class="kt-hero"><div><span class="kt-eyebrow">LGS · SINIFTA ÇÖZ · KAMERAYLA OKU</span><h1>Okulda Yaprak Test</h1><p>Dosyadan kitapçığa, kâğıttan öğrenci analizine.</p></div><span class="kt-symbol" aria-hidden="true">▦</span></header>
 <nav class="kt-steps" aria-label="Test hazırlama adımları"><span class="{{ 'active' if mode=='index' }}">01 · Dosyaları yükle</span><span class="{{ 'active' if mode=='draft' }}">02 · Anahtarı onayla</span><span class="{{ 'active' if mode=='detail' }}">03 · Yazdır ve oku</span></nav>
 {% if mode!='index' %}<a href="{{ url_for('kamera_test.index') }}">← Testlerime dön</a>{% endif %}
 {% if mode=='index' %}

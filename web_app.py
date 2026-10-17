@@ -428,7 +428,7 @@ def _ui_sinif_sec(siniflar, aday=None):
 def _ekran_duzeni_context():
     endpoint = request.endpoint or ""
     # Veli routes take precedence when both role sessions exist in this browser.
-    veli = (endpoint.startswith("veli_") or endpoint in {'ev_analiz.index', 'yaprak_analiz.index'}) and bool(session.get("veli_ogrenci_id"))
+    veli = (endpoint.startswith("veli_") or endpoint in {'ev_analiz.index', 'yaprak_analiz.index', 'yaprak_analiz.combined'}) and bool(session.get("veli_ogrenci_id"))
     rol = "veli" if veli else ("ogretmen" if session.get("ogretmen_id") else "")
     siniflar = ogretmen_siniflari(session["ogretmen_id"]) if rol == "ogretmen" else []
     if rol == "ogretmen" and endpoint in {"dashboard", "karne", "sonuclar", "lgs"}:

@@ -237,6 +237,8 @@ def register_results(app, login_required, accessible):
     def sonuclar():
         full_teacher()
         oid = request.values.get('ogrenci', type=int)
+        if not oid and request.method == 'GET':
+            return redirect(url_for('kamera_test.index'))
         if not oid:
             sinif_form = None
             if request.method == 'POST':
