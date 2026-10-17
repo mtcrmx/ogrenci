@@ -149,7 +149,7 @@ def combined():
         r['exam_key'] = ('legacy',r['ogretmen_id'],r['ad'],r['tarih'],r['tur'])
         r['detail'] = url_for('yaprak_analiz.index',ders=r['ders']) if r['source']=='okul' else (url_for('deneme_analiz') if teacher else url_for('veli_lgs',bolum='deneme'))
         rows.append(r)
-    for row in con.execute('SELECT e.id AS exam_id,e.ad,e.tarih,e.tur,e.kaynak,e.ders,e.soru_sayisi,r.ogrenci_id,r.dogru,r.yanlis,r.bos,r.net FROM lgs_optik_sinav e JOIN lgs_optik_sonuc r ON r.sinav_id=e.id ORDER BY r.id'):
+    for row in con.execute('SELECT e.id AS exam_id,e.ad,e.tarih,e.tur,e.kaynak,e.ders,e.soru_sayisi,e.cevaplar,r.isaretler,r.ogrenci_id,r.dogru,r.yanlis,r.bos,r.net FROM lgs_optik_sinav e JOIN lgs_optik_sonuc r ON r.sinav_id=e.id ORDER BY r.id'):
         r = dict(row)
         if r['ogrenci_id'] not in allowed: continue
         r['source'] = 'okul' if r['kaynak']=='kamera' else ('deneme' if r['tur']=='deneme' else 'ev')
@@ -188,6 +188,8 @@ def combined():
     history = [dict(ad=rs[0]['ad'],date=rs[0]['tarih'],course=rs[0]['ders'],source=SOURCE_NAMES[rs[0]['source']],detail=rs[0]['detail'],**combined_stats(rs)) for rs in grouped.values()]
     history.sort(key=lambda r:(r['date'],r['ad']),reverse=True)
     people = [dict(name=p['ad_soyad'],classroom=p['sinif_adi'],**combined_stats([r for r in rows if r['ogrenci_id']==p['id']])) for p in roster if any(r['ogrenci_id']==p['id'] for r in rows)]
-    return render_template('birlesik_analiz.html',teacher=bool(teacher),sources=SOURCE_NAMES,source=source,
+    from lgs_kazanim import outcome_summary
+    outcomes=outcome_summary(rows)
+    return render_template('birlesik_analiz.html',outcomes=outcomes,teacher=bool(teacher),sources=SOURCE_NAMES,source=source,
         classes=sorted({r['sinif_adi'] for r in roster}),classroom=classroom,roster=roster,student=student,
         courses=courses,course=course,start=start,end=end,stats=combined_stats(rows),breakdown=breakdown,history=history,people=people)

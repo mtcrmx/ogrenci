@@ -6,6 +6,7 @@
 <input type="hidden" name="action" value="{{ action }}">
 <input type="hidden" name="tab" value="{{ section }}">{% endmacro %}
 {% block body %}
+{% if can_edit and exam %}<a class="app-button" href="{{ url_for('lgs_kazanim.edit',eid=exam.id) }}">Sorulara konu ve kazanım ata →</a>{% endif %}
 <a class="app-button" style="margin:12px" href="{{ url_for('yaprak_analiz.combined') }}">Evde · Okulda · Deneme — Ayrı ve birleşik analiz →</a>
 <main class="ea" data-initial="{{ tab }}">
 <header class="ea-hero">

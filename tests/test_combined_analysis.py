@@ -38,6 +38,23 @@ class CombinedAnalysis(unittest.TestCase):
                 self.assertNotIn('Yaprak test · Kamera',page)
                 self.assertEqual(client.get('/lgs/birlesik-analiz?ders=Fixture+Course').status_code,200)
                 self.assertEqual(contexts[-1]['stats']['total'],40)
+                from lgs_kazanim import catalog,fingerprint
+                self.assertEqual(len(catalog()['items']),326)
+                self.assertEqual(client.get('/lgs/kazanimlar').status_code,200)
+                self.assertEqual(client.get('/lgs/kazanimlar/'+str(ids[0])).status_code,200)
+                with client.session_transaction() as session:csrf=session['kazanim_csrf']
+                payload={'csrf':csrf,'fingerprint':fingerprint(optik.sinav_getir(ids[0])),'q_1':catalog()['items'][0]['id'],'q_3':catalog()['items'][0]['id']}
+                self.assertEqual(client.post('/lgs/kazanimlar/'+str(ids[0]),data=payload).status_code,302)
+                self.assertEqual(client.get('/lgs/birlesik-analiz?ders=Fixture+Course').status_code,200)
+                self.assertEqual(contexts[-1]['outcomes']['tagged'],4)
+                self.assertEqual(contexts[-1]['outcomes']['rows'][0]['rate'],50)
+                self.assertEqual(client.post('/lgs/kazanimlar/'+str(ids[0]),data=dict(payload,q_1='not-a-real-code')).status_code,400)
+                self.assertEqual(client.post('/lgs/kazanimlar/'+str(ids[0]),data=dict(payload,fingerprint='stale')).status_code,409)
+                with client.session_transaction() as session:session.clear();session['veli_ogrenci_id']=children[0]['id']
+                self.assertEqual(client.get('/lgs/birlesik-analiz?ders=Fixture+Course').status_code,200)
+                self.assertEqual(contexts[-1]['outcomes']['tagged'],2)
+                self.assertEqual(client.post('/lgs/kazanimlar/'+str(ids[0]),data=payload).status_code,302)
+
             finally:template_rendered.disconnect(capture,w.app)
         finally:
             for eid in ids:optik.sinav_sil(eid)

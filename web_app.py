@@ -7564,6 +7564,8 @@ from yaprak_analiz import register as register_yaprak_analiz
 register_yaprak_analiz(app, _ogretmen_ogrencisine_erisebilir)
 from kamera_test import register as register_kamera_test
 register_kamera_test(app, _ogretmen_ogrencisine_erisebilir)
+from lgs_kazanim import bp as lgs_kazanim_bp
+app.register_blueprint(lgs_kazanim_bp)
 from sayfa_sifirlama import register_sayfa_sifirlama
 register_sayfa_sifirlama(app, giris_zorunlu)
 from school_broadcast import register_broadcast
