@@ -2,11 +2,17 @@
 {% block title %}LGS{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=7"><link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1">{% endblock %}
 {% block body %}
-<a class="app-button" style="margin:12px" href="{{ url_for('yaprak_analiz.combined') }}">Evde · Okulda · Deneme — Ayrı ve birleşik analiz →</a>
+{% if veli or ogrenci or ekran == 'evde' %}<a class="app-button" style="margin:12px" href="{{ url_for('yaprak_analiz.combined') }}">Birleşik analiz →</a>{% endif %}
 <main class="lgs-page mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
-  <a class="app-button" style="margin:12px 0" href="{{ url_for('ev_analiz.index') }}">Soru analizi · Çalışma grupları · Yardım {{ "· Haftalık özet" if veli else "" }} →</a>
+  {% if veli or ogrenci or ekran == 'evde' %}<a class="app-button" style="margin:12px 0" href="{{ url_for('ev_analiz.index') }}">Soru analizi · Çalışma grupları · Yardım {{ "· Haftalık özet" if veli else "" }} →</a>{% endif %}
   {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
-  {% if not veli %}<a class="app-button" style="margin:12px 0" href="{{ url_for('kamera_test.index') }}">Okulda Yaprak Test · Dosyadan hazırla ve kamerayla oku →</a>{% endif %}
+
+  {% if not veli and not ogrenci and ekran != 'evde' %}<nav class="lgs-quick-nav" aria-label="LGS hızlı erişim">
+<a href="{{ url_for('lgs',ekran='evde') }}"><strong>Evde soru testleri</strong><small>Öğrencilere test gönderin, çözümleri izleyin.</small></a>
+<a href="{{ url_for('kamera_test.index') }}"><strong>Okulda yaprak test</strong><small>Belge yükleyin, yazdırın, kamerayla okuyun.</small></a>
+<a href="{{ url_for('deneme_analiz') }}"><strong>Deneme analizi</strong><small>Deneme sonuçlarını ve gelişimi inceleyin.</small></a>
+<a href="{{ url_for('yaprak_analiz.combined') }}"><strong>Birleşik analiz</strong><small>Ev, okul ve denemeyi birlikte karşılaştırın.</small></a>
+</nav>{% endif %}
   {% if not ogrenci %}
   {% if ekran == 'evde' %}
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
@@ -17,7 +23,7 @@
   {% else %}
   <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
     <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS</p>
-    <h1 class="mt-1 text-2xl font-black">Öğrenci seç</h1>
+    <h1 class="mt-1 text-2xl font-black">LGS takip merkezi</h1>
         <p class="mt-1 text-sm text-slate-300">Yalnızca 8. sınıflar. Deneme ve öğrenci takibi buradan yürür.</p>
   </header>
   {% endif %}

@@ -304,3 +304,31 @@ body.ui-theme.layout-page [aria-invalid=true] { border-color:#b94854!important;o
  .app-shell { display:block; }.app-workspace { background:white; }
  .no-print { display:none!important; }
 }
+
+/* Consistent navigation and restrained motion across teacher/parent workspaces. */
+.app-nav-group{border:1px solid transparent;border-radius:16px;padding:3px;margin-top:5px}
+.app-nav-group[open]{background:#ffffff38;border-color:#cdbade}
+.app-nav-group>summary{font-size:12px;letter-spacing:.02em;text-transform:none;min-height:46px;padding:12px;color:#503b65}
+.app-nav-group[open]>summary{font-weight:900;color:#4c2873}
+.app-nav a{position:relative;transition:background .18s ease,transform .18s ease,box-shadow .18s ease;line-height:1.4}
+.app-nav a.is-current{box-shadow:inset 3px 0 #8b6ad4,0 3px 12px #674a8712;background:#fffaf7;font-weight:900}
+@media(hover:hover){.app-nav a:hover{transform:translateX(3px)}.app-button:hover,.kt-button:hover{transform:translateY(-2px)}}
+.app-nav-group[open]>a{animation:nav-reveal .22s ease-out both}
+.app-nav-group[open]>a:nth-of-type(2){animation-delay:25ms}.app-nav-group[open]>a:nth-of-type(3){animation-delay:50ms}.app-nav-group[open]>a:nth-of-type(4){animation-delay:75ms}
+@keyframes nav-reveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes panel-reveal{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+.app-workspace>main,.app-workspace>.page-content{animation:panel-reveal .28s ease-out}
+.app-button,.kt-button{transition:transform .18s ease,box-shadow .18s ease}
+.app-workspace details:not(.app-nav-group)>summary{cursor:pointer;line-height:1.5}
+.app-workspace details[open]>:not(summary){animation:nav-reveal .2s ease-out}
+[role="dialog"][aria-modal="true"]>div,dialog[open]{animation:panel-reveal .22s ease-out}
+dialog{max-width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 40px);overflow:auto;border:1px solid #d8c8e5;border-radius:20px;padding:24px;box-shadow:0 24px 80px #34234330}
+dialog::backdrop{background:#30233f66;backdrop-filter:blur(4px)}
+.app-search-results{animation:panel-reveal .18s ease-out}
+.lgs-quick-nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;margin:16px 0}
+.lgs-quick-nav a{padding:16px;border-radius:16px;background:#fffaf7;border:1px solid #ddcee9;text-decoration:none;color:#503568;transition:transform .18s,box-shadow .18s}
+.lgs-quick-nav strong{display:block;font-size:14px;margin-bottom:5px}.lgs-quick-nav small{display:block;font-size:12px;line-height:1.6;color:#746480}
+.lgs-quick-nav a:hover{transform:translateY(-3px);box-shadow:0 8px 20px #5c387515}
+@media(max-width:760px){.app-nav a{min-height:46px}.lgs-quick-nav{grid-template-columns:1fr 1fr}.lgs-quick-nav a{padding:13px}.app-sidebar{transition:transform .25s cubic-bezier(.2,.8,.2,1)} }
+@media(max-width:360px){.lgs-quick-nav{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.app-nav a,.app-button,.kt-button,.app-sidebar,.lgs-quick-nav a{transition:none!important}.app-nav-group[open]>a,.app-workspace>main,.app-workspace>.page-content,.app-workspace details[open]>:not(summary),[role="dialog"][aria-modal="true"]>div,dialog[open],.app-search-results{animation:none!important}}
