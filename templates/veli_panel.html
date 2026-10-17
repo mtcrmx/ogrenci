@@ -169,7 +169,7 @@
 </script>
 {% endif %}
 </div><div class="parent-section" data-parent-section="raporlar" id="raporlar" hidden>
-<section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2><div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a><a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a></div></section>
+<section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2><a class="app-button" href="{{ url_for('yaprak_analiz.index') }}">Okul yaprak testi analizi →</a><div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a><a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a></div></section>
 <details class="app-card app-details"><summary>Rozet koleksiyonu</summary>{% include '_rozet_koleksiyonu.html' %}</details>
     {% if kitap_kazanimlari %}<a class="app-button" href="#kitap-kazanimlari">Onaylanan kitapların özetleri ve rozetleri →</a>{% endif %}
 

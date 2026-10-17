@@ -35,7 +35,7 @@
 </select>
 </label>{% endif %}
 </form>
-<a class="ea-button secondary" href="{{ url_for('lgs',ekran='evde') if teacher else url_for('veli_lgs',bolum='soru') }}">{{ '+ Evde test ver' if teacher else 'Testlerimi aç →' }}</a>{% if teacher %}<a href="{{ url_for('test_sinif_analiz',kaynak='eski') }}">Diğer test sonuçları</a>{% endif %}
+<a class="ea-button secondary" href="{{ url_for('lgs',ekran='evde') if teacher else url_for('veli_lgs',bolum='soru') }}">{{ '+ Evde test ver' if teacher else 'Testlerimi aç →' }}</a>{% if teacher %}<a href="{{ url_for('yaprak_analiz.index') }}">Okul yaprak testi analizi →</a><a href="{{ url_for('test_sinif_analiz',kaynak='eski') }}">Diğer test sonuçları</a>{% endif %}
 </div>
 <nav class="ea-tabs" aria-label="Analiz bölümleri">{% for key,label in [('overview','Genel bakış'),('questions','Soru analizi'),('matrix','Cevap haritası'),('groups','Çalışma grupları'),('help','Yardım istekleri')] %}<button type="button" data-tab="{{ key }}" aria-pressed="false">{{ label }}{% if key=='help' %} <small>{{ help_rows|rejectattr('yanit')|list|length }}</small>{% endif %}
 </button>{% endfor %}

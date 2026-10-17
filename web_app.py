@@ -7539,6 +7539,8 @@ from change_history import register_history
 register_history(app, giris_zorunlu)
 from ev_analiz import register as register_ev_analiz
 register_ev_analiz(app, _ogretmen_ogrencisine_erisebilir)
+from yaprak_analiz import register as register_yaprak_analiz
+register_yaprak_analiz(app, _ogretmen_ogrencisine_erisebilir)
 from sayfa_sifirlama import register_sayfa_sifirlama
 register_sayfa_sifirlama(app, giris_zorunlu)
 from school_broadcast import register_broadcast

@@ -1,0 +1,38 @@
+.ya-filters{display:flex;gap:14px;flex-wrap:wrap;align-items:end}
+.ya-filters label{flex:1;min-width:140px}
+.ya-personal{display:flex;justify-content:space-between;align-items:center;gap:20px;background:linear-gradient(110deg,#eef6ee,#f4ecfc)}
+.ya-score{display:flex;flex-direction:column;gap:8px}
+.ya-score strong{font-size:40px;color:#6e4b96;font-weight:900}
+.ya-score span,.ya-score small{font-size:12px}
+.ya-legend{display:flex;gap:20px;font-size:12px;color:#9972bf;font-weight:800}
+.ya-legend span:nth-child(2){color:#439e86}
+.ya-chart{overflow:auto}
+.ya-chart svg{display:block;width:100%;min-width:500px;max-height:350px}
+.ya-chart polyline{stroke-dasharray:1800;stroke-dashoffset:0;animation:ya-line 1.3s ease-out}
+.ya-chart circle{animation:ea-enter .6s ease-out}
+.ya-table-wrap{overflow:auto}
+.ya-table{width:100%;border-collapse:collapse;font-size:13px;text-align:left}
+.ya-table th,.ya-table td{padding:14px 12px;border-bottom:1px solid #eee5f3;white-space:nowrap}
+.ya-table thead th{color:#7b638d;background:#f6effb;font-size:11px}
+.ya-table small{display:block;font-size:10px;color:#87768f;margin-top:5px}
+.ya-table a{color:#8358aa;font-weight:750}
+.ya-table tbody tr:hover{background:#faf6fd}
+.ya details summary{cursor:pointer;font-weight:750;padding:12px 0;font-size:13px}
+.ya-bucket{display:flex;align-items:center;gap:10px;width:100%;padding:13px 0;text-align:left;font-size:12px}
+.ya-bucket>span{width:80px}
+.ya-bucket>strong{width:80px;text-align:right}
+.ya-bucket>i{flex:1;background:#f0e8f7;height:15px;border-radius:20px;overflow:hidden}
+.ya-bucket b{display:block;width:var(--value);height:100%;border-radius:20px;background:linear-gradient(90deg,#d7b9e6,#9e80c2);animation:ea-fill .8s ease-out}
+.ya-bucket[aria-pressed=true]{color:#73459c;font-weight:900}
+.ya-bucket[aria-pressed=true]>i{outline:2px solid #ae8cc9}
+.ya .ea-stats strong{font-size:30px}
+@keyframes ya-line{from{stroke-dashoffset:1800}
+to{stroke-dashoffset:0}
+}
+@media(max-width:700px){.ya-personal{display:block}
+.ya-score{margin-top:15px}
+.ya .ea-stats strong{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){.ya *{animation:none!important}
+}
+

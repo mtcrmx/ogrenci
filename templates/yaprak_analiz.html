@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% block title %}Okul yaprak testi analizi{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static',filename='ev_analiz.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='yaprak_analiz.css') }}">
+{% endblock %}
+{% block body %}
+<main class="ea ya">
+<header class="ea-hero">
+<div>
+<span class="ea-eyebrow">OKULDA ÖĞRENME / YAPRAK TESTLER</span>
+<h1>Sonuçlardan gelişime</h1>
+<p>{{ 'Sınıfın genel durumunu ve öğrencilerin ilerleyişini keşfedin.' if teacher else child.ad_soyad ~ ' · ' ~ child.sinif_adi ~ ' · Kendi sonuçları ve sınıf ortalaması' }}</p>
+<div class="ea-tags">
+<span>✓ Doğru · Yanlış · Boş</span>
+<span>↗ Testler boyunca gelişim</span>
+</div>
+</div>
+<div class="ea-orbit" aria-hidden="true">
+<span>✦</span>
+<b>%</b>
+<i>↗</i>
+</div>
+</header>
+<div class="ea-toolbar">
+<a class="ea-button secondary" href="{{ url_for('sonuclar') if teacher else url_for('veli_panel') }}">{{ 'Okulda Yaprak Test →' if teacher else 'Veli paneli →' }}</a>
+<a href="{{ url_for('ev_analiz.index') }}">Evde test analizi →</a>
+</div>
+<form class="ea-card ya-filters" method="get">
+{% if teacher %}<label>Sınıf<select name="sinif">
+<option value="">Tüm sınıflar</option>{% for c in classes %}<option {{ 'selected' if c==classroom }}>{{ c }}</option>{% endfor %}
+</select>
+</label>{% endif %}
+
+<label>Ders<select name="ders">{% for c in courses %}<option {{ 'selected' if c==course }}>{{ c }}</option>{% else %}<option value="">Henüz ders kaydı yok</option>{% endfor %}
+</select>
+</label>
+<label>Başlangıç<input type="date" name="baslangic" value="{{ start }}">
+</label>
+<label>Bitiş<input type="date" name="bitis" value="{{ end }}">
+</label>
+<button class="ea-button">Filtrele</button>
+</form>
+{% if not exam %}<section class="ea-empty">
+<h2>Bu seçimde yaprak test sonucu yok.</h2>
+<p>Okulda Yaprak Test bölümündeki doğru–yanlış kayıtları burada analiz edilir. Tarih veya ders filtrenizi değiştirebilirsiniz.</p>
+</section>{% else %}
+<form method="get" class="ea-toolbar">
+<input type="hidden" name="sinif" value="{{ classroom }}">
+<input type="hidden" name="ders" value="{{ course }}">
+<input type="hidden" name="baslangic" value="{{ start }}">
+<input type="hidden" name="bitis" value="{{ end }}">
+<label>İncelenen test<select name="test" onchange="this.form.submit()">{% for e in exams %}<option value="{{ e.id }}" {{ 'selected' if e.id==exam.id }}>{{ e.tarih }} · {{ e.ad }} · {{ e.count }} soru</option>{% endfor %}
+</select>
+</label>
+{% if teacher %}<label>Gelişimini karşılaştır<select name="ogrenci" onchange="this.form.submit()">
+<option value="">Sınıf ortalaması</option>{% for r in roster if not classroom or r.sinif_adi==classroom %}<option value="{{ r.id }}" {{ 'selected' if r.id==selected_student }}>{{ r.ad_soyad }} · {{ r.sinif_adi }}</option>{% endfor %}
+</select>
+</label>{% endif %}
+
+<noscript>
+<button class="ea-button">Göster</button>
+</noscript>
+</form>
+<div class="ea-section-title">
+<div>
+<span class="ea-eyebrow">{{ course }} / {{ classroom or 'TÜM SINIFLAR' }}</span>
+<h2>{{ exam.ad }}</h2>
+</div>
+<span class="ea-chip">{{ exam.count }} soru · {{ exam.tarih }} · {{ exam.rule ~ ' yanlış 1 doğruyu götürür' if exam.rule else 'Yanlış doğruları götürmez' }}</span>
+</div>
+<div class="ea-stats">
+<article>
+<span>Sonucu girilen</span>
+<strong>{{ summary.n }}</strong>
+<small>Ortalama bu öğrencilerden hesaplandı</small>
+</article>
+<article class="mint">
+<span>Sınıf doğru yüzdesi</span>
+<strong>%{{ summary.rate }}</strong>
+<small>{{ summary.dogru }} doğru ortalaması</small>
+</article>
+<article class="peach">
+<span>Sınıf yanlış / boş ortalaması</span>
+<strong>{{ summary.yanlis }} / {{ summary.bos }}</strong>
+<small>Yanlış / boş</small>
+</article>
+<article class="sand">
+<span>Sınıf net ortalaması</span>
+<strong>{{ summary.net }}</strong>
+<small>Bu testin net kuralına göre</small>
+</article>
+</div>
+{% if own %}<section class="ea-card ya-personal">
+<div>
+<span class="ea-eyebrow">{{ 'SEÇİLEN ÖĞRENCİ' if teacher else 'ÇOCUĞUNUZUN SONUCU' }}</span>
+<h2>{{ own.ad_soyad }}</h2>
+<p>{{ own.dogru }} doğru · {{ own.yanlis }} yanlış · {{ own.bos }} boş · {{ own.net }} net</p>
+</div>
+<div class="ya-score">
+<strong>%{{ own.rate }}</strong>
+<span>Sınıf ortalamasından {{ '%+.1f'|format(own.gap) }} yüzde puan</span>{% if own.delta is not none %}<small>{{ own.previous_date }} tarihli aynı ders testine göre {{ '%+.1f'|format(own.delta) }} yüzde puan</small>{% else %}<small>Önceki tarihli aynı ders testi yok.</small>{% endif %}
+</div>
+</section>{% elif selected_student %}<p class="ea-notice">Seçilen öğrencinin bu testte sonucu yok. Gelişim grafiğinde yalnız kayıtlı testleri gösterilir.</p>{% endif %}
+
+<section class="ea-card">
+<div class="ea-section-title">
+<div>
+<span class="ea-eyebrow">ZAMAN İÇİNDE</span>
+<h2>{{ course }} gelişimi</h2>
+</div>
+<div class="ya-legend">
+<span>● Sınıf ortalaması</span>{% if selected_student %}<span>● {{ 'Seçilen öğrenci' if teacher else 'Çocuğunuz' }}</span>{% endif %}
+</div>
+</div>
+<div class="ya-chart">
+<svg viewBox="0 0 700 215" role="img" aria-label="Testler boyunca doğru yüzdesi; ayrıntılı değerler alttaki tabloda.">
+{% for value in [0,25,50,75,100] %}<line x1="35" x2="680" y1="{{ 185-value*1.6 }}" y2="{{ 185-value*1.6 }}" stroke="#e8dfef" stroke-dasharray="4 5"/>
+<text x="0" y="{{ 189-value*1.6 }}" fill="#786985" font-size="10">{{ value }}%</text>{% endfor %}
+
+<polyline points="{{ points }}" fill="none" stroke="#9972bf" stroke-width="3" stroke-linejoin="round"/>
+{% for t in trend %}<circle cx="{{ t.x }}" cy="{{ t.y }}" r="5" fill="#9972bf">
+<title>{{ t.ad }} · {{ t.date }} · Sınıf %{{ t.class_rate }}</title>
+</circle>{% if t.own_y is not none %}<circle cx="{{ t.x }}" cy="{{ t.own_y }}" r="6" fill="#439e86" stroke="white" stroke-width="2">
+<title>{{ t.ad }} · Öğrenci %{{ t.own_rate }}</title>
+</circle>{% endif %}
+<text x="{{ t.x }}" y="207" text-anchor="middle" font-size="10" fill="#786985">{{ loop.index }}</text>{% endfor %}
+
+</svg>
+</div>
+<p>Numaralar aşağıdaki test sırasını gösterir. Farklar yüzde puandır; testlerin zorluğu ve katılan öğrenciler değişebilir. Aynı gün yapılan testler için önce–sonra sırası varsayılmaz.</p>
+<details>
+<summary>Grafikteki değerleri göster</summary>
+<div class="ya-table-wrap">
+<table class="ya-table">
+<thead>
+<tr>
+<th>Test</th>
+<th>Tarih</th>
+<th>Sınıf</th>{% if selected_student %}<th>Öğrenci</th>{% endif %}
+</tr>
+</thead>
+<tbody>{% for t in trend %}<tr>
+<td>{{ loop.index }}. {{ t.ad }}</td>
+<td>{{ t.date }}</td>
+<td>%{{ t.class_rate }}</td>{% if selected_student %}<td>{{ '%' ~ t.own_rate if t.own_rate is not none else 'Sonuç yok' }}</td>{% endif %}
+</tr>{% endfor %}
+</tbody>
+</table>
+</div>
+</details>
+</section>
+{% if teacher %}<div class="ea-grid">
+<section class="ea-card">
+<span class="ea-eyebrow">SINIFIN DAĞILIMI</span>
+<h2>Doğru yüzdesi aralıkları</h2>
+<p>Bir aralığa basarak öğrenci tablosunu filtreleyin.</p>{% for b in buckets %}<button type="button" class="ya-bucket" data-low="{{ b.low }}" data-high="{{ b.high }}">
+<span>{{ b.label }}</span>
+<i>
+<b style="--value:{{ b.width }}%">
+</b>
+</i>
+<strong>{{ b.n }} öğrenci</strong>
+</button>{% endfor %}
+<button class="ea-text-button" id="ya-reset" type="button">Tüm öğrencileri göster</button>
+</section>
+<section class="ea-card">
+<span class="ea-eyebrow">ŞUBELER YAN YANA</span>
+<h2>Test karşılaştırması</h2>{% for b in branches %}<div class="ea-topic">
+<div>
+<strong>{{ b.name }} · {{ b.n }} sonuç</strong>
+<span>%{{ b.rate }}</span>
+</div>
+<progress value="{{ b.rate }}" max="100">%{{ b.rate }}</progress>
+<p>{{ b.net }} net · {{ b.dogru }} doğru ortalaması</p>
+</div>{% endfor %}
+<p>Aynı ad, tarih, ders, soru sayısı ve net kuralıyla kaydedilen sonuçlar birlikte gösterilir. Şubelerin aynı soruları çözdüğünü kontrol ederek yorumlayın.</p>
+</section>
+</div>
+<section class="ea-card" id="ya-students">
+<div class="ea-section-title">
+<h2>Öğrenci sonuçları</h2>
+<label>Öğrenci ara<input type="search" id="ya-search" placeholder="Ad veya okul numarası">
+</label>
+</div>
+<p id="ya-count" role="status">{{ people|length }} sonuç</p>
+<div class="ya-table-wrap">
+<table class="ya-table" id="ya-results">
+<thead>
+<tr>
+<th>Öğrenci</th>
+<th>Sınıf</th>
+<th>Doğru</th>
+<th>Yanlış</th>
+<th>Boş</th>
+<th>Net</th>
+<th>Doğru %</th>
+<th>Sınıftan fark</th>
+<th>Önceki testten fark</th>
+</tr>
+</thead>
+<tbody>{% for p in people %}<tr data-rate="{{ p.rate }}" data-search="{{ p.ad_soyad }} {{ p.ogr_no }}">
+<th scope="row">{{ p.ad_soyad }}<small>No {{ p.ogr_no }}</small>
+</th>
+<td>{{ p.sinif_adi }}</td>
+<td>{{ p.dogru }}</td>
+<td>{{ p.yanlis }}</td>
+<td>{{ p.bos }}</td>
+<td>{{ p.net }}</td>
+<td>
+<b>%{{ p.rate }}</b>
+</td>
+<td>{{ '%+.1f'|format(p.gap) }} yp</td>
+<td>{% if p.delta is not none %}{{ '%+.1f'|format(p.delta) }} yp<small>{{ p.previous_date }}</small>{% else %}—{% endif %}
+</td>
+</tr>{% endfor %}
+</tbody>
+</table>
+</div>
+<p>yp: yüzde puan. Gelişim farkı önceki tarihli aynı ders testine göredir.</p>
+{% if missing %}<details>
+<summary>{{ missing|length }} öğrencide sonuç kaydı yok</summary>
+<p>Bu liste katılmama durumunu göstermez; sonuçları ortalamaya dahil edilmez.</p>
+<div class="ea-answer-people">{% for p in missing %}<span>{{ p.ad_soyad }} · {{ p.sinif_adi }}</span>{% endfor %}
+</div>
+</details>{% endif %}
+</section>{% endif %}
+
+<section class="ea-card">
+<span class="ea-eyebrow">SEÇİLİ DÖNEM</span>
+<h2>Test geçmişi</h2>
+<div class="ya-table-wrap">
+<table class="ya-table">
+<thead>
+<tr>
+<th>Test</th>
+<th>Tarih</th>
+<th>Soru</th>
+<th>Sonuç sayısı</th>
+<th>Sınıf doğru %</th>
+<th>Sınıf net</th>{% if selected_student %}<th>Öğrenci doğru %</th>
+<th>Öğrenci net</th>{% endif %}
+</tr>
+</thead>
+<tbody>{% for h in history %}<tr>
+<td>
+<a href="{{ url_for('yaprak_analiz.index',test=h.id,ders=course,sinif=classroom,baslangic=start,bitis=end,ogrenci=selected_student or none) }}">{{ h.ad }} →</a>
+</td>
+<td>{{ h.date }}</td>
+<td>{{ h.count }}</td>
+<td>{{ h.n }}</td>
+<td>%{{ h.rate }}</td>
+<td>{{ h.net }}</td>{% if selected_student %}<td>{{ "%" ~ h.own_rate if h.own_rate is not none else "Sonuç yok" }}</td>
+<td>{{ h.own_net if h.own_net is not none else "—" }}</td>{% endif %}
+</tr>{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+{% endif %}
+
+</main>
+<script src="{{ url_for('static',filename='yaprak_analiz.js') }}" defer>
+</script>
+{% endblock %}
