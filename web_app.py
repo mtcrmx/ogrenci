@@ -7549,6 +7549,9 @@ def api_admin_yedek_geri_yukle(yedek_id: int):
 
 from rehberlik import register_rehberlik
 register_rehberlik(app)
+from rehberlik_workspace import register_workspace
+from rehberlik import auth as rehber_auth, students as rehber_students, meetings as rehber_meetings, library as rehber_library
+register_workspace(app, rehber_auth, rehber_students, rehber_meetings, rehber_library)
 from student_results import register_results, institution_allowed as kurum_deneme_yetkili_mi, course_analysis
 register_results(app, giris_zorunlu, _ogretmen_ogrencisine_erisebilir)
 from change_history import register_history

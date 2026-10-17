@@ -276,6 +276,12 @@ def register_rehberlik(app):
     @app.route('/rehberlik')
     @auth('rehber')
     def rehberlik_panel():
+        from rehberlik_workspace import dashboard_data
+        return page('workspace_panel', **dashboard_data(session['ogretmen_id'], meetings, library))
+
+    @app.route('/rehberlik/kutuphane')
+    @auth('rehber')
+    def rehberlik_kutuphane():
         items = library()
         requests = meetings()
         return page('panel', items=items, requests=requests,

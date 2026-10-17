@@ -1,0 +1,6 @@
+{% extends 'rehberlik/layout.html' %}
+{% macro token() %}<input type="hidden" name="csrf" value="{{ rehber_csrf() }}">{% endmacro %}
+{% macro student_select(roster, selected='') %}<div><label for="student-search">Öğrenci listesini ara</label><input id="student-search" type="search" data-student-search placeholder="Ad veya numara"><label for="student-choice">Öğrenci</label><select id="student-choice" name="student_id" required data-student-select><option value="">Öğrenci seçin</option>{% for s in roster %}<option value="{{ s.id }}" {{ 'selected' if selected|string==s.id|string }}>{{ s.sinif_adi }} · {{ s.ogr_no }} · {{ s.ad_soyad }}</option>{% endfor %}</select></div>{% endmacro %}
+{% block guidance %}<div class="gw">
+{% block workspace %}{% endblock %}
+</div>{% endblock %}
