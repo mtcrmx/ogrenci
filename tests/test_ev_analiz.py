@@ -7,6 +7,8 @@ from datetime import date
 sandbox=tempfile.TemporaryDirectory(prefix='ev-analiz-tests-')
 os.environ['OGR_TAKIP_DB_PATH']=str(Path(sandbox.name)/'school.db')
 import web_app as w
+from secure_test_client import install
+install(w.app)
 import database as db
 import lgs_optik as optik
 import ev_analiz as ea

@@ -126,3 +126,8 @@ to{height:var(--value)}
 @media(prefers-reduced-motion:reduce){.ea *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
 
+@media(max-width:750px){
+  .ea-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:8px}
+  .ea-tabs button{min-width:0;min-height:44px;white-space:normal}
+}
+

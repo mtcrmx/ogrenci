@@ -1528,12 +1528,10 @@ def pdf_donem_karnesi_bytes(satirlar: list[dict], donem: int) -> bytes:
         story.append(Paragraph("Bu dönem için kayıt yok.", stil))
     for s in satirlar:
         story.append(Paragraph(html_escape(f"{s['ad_soyad']} · {s['sinif_adi']} · No {s['ogr_no']}"), bas))
-        story.append(Paragraph(
-            html_escape(
-                f"Okudu {s['okudu']} hafta · okumadı {s['okumadi']} · ödev tam {s['tam']} · eksik {s['eksik']} · yok {s['yok']}"
-            ),
-            stil,
-        ))
+        if not str(s.get('sinif_adi') or '').startswith('8/'):
+            reading = f"Okudu {s['okudu']} hafta · okumadı {s['okumadi']}" if s['okudu'] + s['okumadi'] else 'Kitap okuma: Henüz değerlendirilmedi.'
+            homework = f"Ödev tam {s['tam']} · eksik {s['eksik']} · yok {s['yok']}" if s['tam'] + s['eksik'] + s['yok'] else 'Ödev: Henüz değerlendirilmedi.'
+            story.append(Paragraph(html_escape(reading + ' · ' + homework), stil))
         if str(s.get("sinif_adi") or "").startswith("8/"):
             hedef = s.get("hedef") or "yazılmadı"
             net = s.get("hedef_net") or "yok"

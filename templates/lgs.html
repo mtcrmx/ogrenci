@@ -658,7 +658,9 @@
     <details class="app-card app-details">
       <summary>{{ baslik }}</summary>
       {% if kod == 'yaprak' %}{% include '_yaprak_gelisim.html' %}{% endif %}
-      {% for sinav in optik_sinavlar if sinav.analiz and sinav.tur == kod %}
+      {% set tamamlanan = optik_sinavlar|selectattr('analiz')|selectattr('tur','equalto',kod)|list %}
+{% if not tamamlanan and not (yapraklar if kod == 'yaprak' else denemeler) %}<p class="app-muted">Henüz analiz edilecek sonuç kaydı yok. Sonuç kaydedildiğinde burada görünecek.</p>{% endif %}
+{% for sinav in optik_sinavlar if sinav.analiz and sinav.tur == kod %}
       {% include '_soru_grafik.html' %}
       {% endfor %}
       {% for kayit in (yapraklar if kod == 'yaprak' else denemeler) %}

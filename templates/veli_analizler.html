@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Analizler{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-4xl p-4 space-y-4">
+<header class="app-card"><h1 class="text-2xl font-black">Analizler</h1><p>{{ nav_student.ad_soyad }} · {{ nav_student.sinif_adi }}</p><p>Test türünü seçin; sonuçları ve sonraki çalışma adımlarını birlikte inceleyin.</p></header>
+<section class="grid gap-4 md:grid-cols-3" aria-label="Analiz türleri">
+{% if nav_student.sinif_adi.startswith('8/') %}<article class="app-card"><h2 class="font-black">Evde test</h2><p>İşaretlenen seçenekler, yanlış ve boş sorular, yardım istekleri.</p><a class="app-button" href="{{ url_for('ev_analiz.index') }}">Evde test analizini aç →</a><a class="app-button" href="{{ url_for('ev_analiz.index', tab='weekly') }}">Haftalık özet →</a></article>{% endif %}
+<article class="app-card"><h2 class="font-black">Okul yaprak testi</h2><p>Doğru, yanlış, boş sayıları ve testler boyunca gelişim.</p><a class="app-button" href="{{ url_for('yaprak_analiz.index') }}">Okul testlerini incele →</a></article>
+<article class="app-card"><h2 class="font-black">Deneme</h2><p>Derslere göre netler ve denemeler arasındaki değişim.</p><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizini aç →</a></article>
+</section>
+<p class="app-muted">Sonuç bulunmayan alanlar başarı veya başarısızlık olarak değerlendirilmez.</p>
+</main>
+{% endblock %}

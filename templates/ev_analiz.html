@@ -25,6 +25,7 @@
 </header>
 {% for category,message in get_flashed_messages(with_categories=true) %}<p class="ea-notice" role="status">{{ message }}</p>{% endfor %}
 
+{% if not teacher %}<nav class="ea-toolbar" aria-label="Geri dönüş"><a class="ea-button secondary" href="{{ url_for('veli_panel') }}">Veli paneli →</a><a href="{{ url_for('veli_analizler') }}">Tüm analizler →</a></nav>{% endif %}
 <div class="ea-toolbar">
 <form method="get">
 <label>Evde soru testi<select name="test" onchange="this.form.submit()">
@@ -212,7 +213,7 @@
 <div class="ea-section-title">
 <div>
 <span class="ea-eyebrow">BİRLİKTE İLERLEYELİM</span>
-<h2>Çalışma grupları</h2>
+<h2>Çalışma grupları</h2><p>Buradaki testler çalışma listesine eklenir. Daha önce tamamlanan testler yeniden cevaplanamaz; yeni uygulama için öğretmen ayrı bir test vermelidir.</p>
 </div>
 </div>{% if teacher and exam %}<form method="post" class="ea-card ea-form" id="ea-group-form">{{ fields('group','groups') }}<h3>Yeni destek grubu</h3>
 <p>Soru analizinden önerilen öğrencileri seçebilir veya üyeleri kendiniz belirleyebilirsiniz. Gruplar öğretmenin seçtiği üyelerle kaydedilir.</p>
@@ -226,7 +227,7 @@
 <div class="ea-grid">{% for g in groups %}<article class="ea-card">
 <span class="ea-eyebrow">DESTEK ÇALIŞMASI</span>
 <h3>{{ g.ad }}</h3>{% if teacher %}<p>{{ g.members|map(attribute='ad_soyad')|join(', ') }}</p>{% endif %}
-{% for t in g.tests %}<a class="ea-assignment" href="{{ url_for('ev_analiz.index',test=t.id) if teacher else url_for('veli_lgs',bolum='soru',sinav=t.id) }}">{{ t.ad }} →</a>{% else %}<p>Henüz test atanmadı.</p>{% endfor %}
+{% for t in g.tests %}<a class="ea-assignment" href="{{ url_for('ev_analiz.index',test=t.id) if teacher else url_for('veli_lgs',bolum='soru',sinav=t.id) }}">{{ t.ad }} →</a>{% else %}<p>Henüz çalışma listesine test eklenmedi.</p>{% endfor %}
 {% if teacher and exam %}<form method="post" class="ea-form">{{ fields('assign','groups') }}<input type="hidden" name="group" value="{{ g.id }}">
 <label>Evde soru testi<select name="target" required>{% for e in exams %}<option value="{{ e.id }}">{{ e.ad }}</option>{% endfor %}
 </select>

@@ -228,7 +228,7 @@ def register_results(app, login_required, accessible):
             )
             if not saved.get('ok'):
                 raise ValueError(saved.get('hata') or f"{student['ad_soyad']} kaydedilemedi.")
-            db.veli_haber_ekle(student['id'], f'{title}: sonuç kaydedildi. Ders analizinizi inceleyebilirsiniz.')
+            db.veli_haber_ekle(student['id'], f'{title}: sonuç kaydedildi. Ders analizinizi inceleyebilirsiniz.', sonuc_id=saved['id'])
         flash(f'{title}: {len(hazir)} öğrenciye yazıldı. Boş bırakılan satırlar kayda girmedi.', 'success')
         return redirect(url_for('sonuclar', sinif=sinif_id))
 
@@ -343,7 +343,7 @@ def register_results(app, login_required, accessible):
                     saved = db.lgs_deneme_ekle(oid, title, when, rows, ogretmen_id=session['ogretmen_id'], tur=kind)
                     if not saved['ok']:
                         raise ValueError(saved['hata'])
-                db.veli_haber_ekle(oid, f'{title}: sonuç {"güncellendi" if editing else "kaydedildi"}. Ders analizinizi inceleyebilirsiniz.')
+                db.veli_haber_ekle(oid, f'{title}: sonuç {"güncellendi" if editing else "kaydedildi"}. Ders analizinizi inceleyebilirsiniz.', sonuc_id=edit_id if editing else saved['id'])
                 flash('Sonuç güncellendi.' if editing else 'Sonuç kaydedildi ve öğrenci analizine eklendi.', 'success')
                 return redirect(url_for('sonuclar', ogrenci=oid))
             except (ValueError, TypeError) as error:
@@ -362,4 +362,9 @@ def register_results(app, login_required, accessible):
         if not student:
             abort(404)
         records = db.lgs_denemeler(oid, 200)
+        requested = request.args.get('sonuc', type=int)
+        if requested:
+            records = [r for r in records if r['id'] == requested]
+            if not records:
+                flash('Bu sonuç artık mevcut değil veya bu öğrenciye ait değil.', 'warning')
         return render_template('sonuclar.html', ogrenci=dict(student), kayitlar=records, analiz=course_analysis(records, True), veli=True)

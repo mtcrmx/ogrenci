@@ -3,6 +3,8 @@ from pathlib import Path
 sandbox=tempfile.TemporaryDirectory(prefix='yaprak-analysis-')
 os.environ['OGR_TAKIP_DB_PATH']=str(Path(sandbox.name)/'school.db')
 import web_app as w
+from secure_test_client import install
+install(w.app)
 import database as db
 from yaprak_analiz import group_records,summarize
 
@@ -43,7 +45,7 @@ class LeafAnalysis(unittest.TestCase):
  def test_date_filters_and_empty(self):
   c=self.client();r=c.get('/okul-yaprak-analiz?bitis=2026-10-02');text=r.get_data(as_text=True)
   self.assertIn('İlk test',text);self.assertNotIn('Son test',text)
-  self.assertIn('Bu seçimde yaprak test sonucu yok',c.get('/okul-yaprak-analiz?baslangic=2030-01-01').get_data(as_text=True))
+  self.assertIn('Bu filtrelere uyan yaprak test sonucu yok',c.get('/okul-yaprak-analiz?baslangic=2030-01-01').get_data(as_text=True))
   self.assertEqual(c.get('/okul-yaprak-analiz?baslangic=bozuk').status_code,400)
   self.assertEqual(c.get('/okul-yaprak-analiz?baslangic=2030-01-01&bitis=2020-01-01').status_code,400)
  def test_parent_cannot_choose_other_child(self):

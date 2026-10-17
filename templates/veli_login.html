@@ -17,10 +17,10 @@
     <form method="POST" class="school-entry-form" aria-labelledby="parent-entry-title">
       <div class="entry-account"><span>VELİ PANELİ</span><span>2026–2027</span></div>
       <h2 id="parent-entry-title">Veli girişi</h2>
-      <p class="entry-intro">Öğrencinizin gelişimine yakından eşlik edin. Öğrenci numarası ve veli şifresiyle devam edin.</p>
+      <p class="entry-intro">Öğrencinizin gelişimine yakından eşlik edin. Öğrenci numarası ve okulun size verdiği kişisel veli giriş koduyla devam edin.</p>
       {% if hata %}<div class="entry-error" role="alert">{{ hata }}</div>{% endif %}
       <label><span>Öğrenci numarası</span><input type="number" name="ogr_no" required inputmode="numeric" placeholder="Örn: 105" autocomplete="username"></label>
-      <label><span>Veli şifresi</span><input type="password" name="sifre" required autocomplete="current-password" placeholder="Veli şifrenizi girin"></label>
+      <label><span>Kişisel giriş kodu</span><input type="password" name="sifre" required autocomplete="current-password" placeholder="Kişisel giriş kodunuzu girin"></label>
       <button type="submit" class="entry-submit">Giriş yap <span aria-hidden="true">→</span></button>
       <div class="entry-form-footer"><a href="{{ url_for('login') }}">Ana girişe dön</a><span>AkademiPuan · Okul ve aile</span></div>
     </form>

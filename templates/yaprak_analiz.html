@@ -42,8 +42,10 @@
 <button class="ea-button">Filtrele</button>
 </form>
 {% if not exam %}<section class="ea-empty">
-<h2>Bu seçimde yaprak test sonucu yok.</h2>
-<p>Okulda Yaprak Test bölümündeki doğru–yanlış kayıtları burada analiz edilir. Tarih veya ders filtrenizi değiştirebilirsiniz.</p>
+{% if courses %}<h2>Bu filtrelere uyan yaprak test sonucu yok.</h2>
+<p>Tarih veya ders seçiminizi değiştirebilirsiniz.</p><a class="ea-button" href="{{ url_for('yaprak_analiz.index') }}">Filtreleri temizle</a>
+{% else %}<h2>Henüz yaprak test sonucu kaydedilmedi.</h2>
+<p>{{ 'Okulda Yaprak Test bölümünden ilk sonucu ekleyebilirsiniz.' if teacher else 'Öğretmen çocuğunuzun sonucunu kaydettiğinde burada görünecek.' }}</p>{% endif %}
 </section>{% else %}
 <form method="get" class="ea-toolbar">
 <input type="hidden" name="sinif" value="{{ classroom }}">

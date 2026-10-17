@@ -123,15 +123,18 @@ _ODEV_FOTO_KLASORU = os.path.join(_BASE, "yuklemeler", "odev")
 app = Flask(__name__,
             template_folder=os.path.join(_BASE, "templates"),
             static_folder=os.path.join(_BASE, "static"))
-app.secret_key = os.environ.get("SECRET_KEY", "erenler-cumhuriyet-2025-gizli")
-app.permanent_session_lifetime = timedelta(days=365)
+app.permanent_session_lifetime = timedelta(hours=12)
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
+                  SESSION_COOKIE_SECURE=bool(os.environ.get('RENDER')))
 
 SIFIR_PAROLA = "1234"
-ADMIN_SIFRE  = "ECadmin"
 OGRENCI_SIFRE = os.environ.get("OGRENCI_SIFRE", "ogrenci")
-VELI_SIFRE = os.environ.get("VELI_SIFRE", "veli")
 
 initialize_db()
+import account_security
+from request_security import install as install_request_security
+app.secret_key = account_security.signing_key()
+install_request_security(app)
 
 
 def _tarih_araligi_duzelt(bas: str, bit: str) -> tuple[str, str]:
@@ -428,7 +431,7 @@ def _ui_sinif_sec(siniflar, aday=None):
 def _ekran_duzeni_context():
     endpoint = request.endpoint or ""
     # Veli routes take precedence when both role sessions exist in this browser.
-    veli = endpoint.startswith("veli_") and bool(session.get("veli_ogrenci_id"))
+    veli = (endpoint.startswith("veli_") or endpoint in {'ev_analiz.index', 'yaprak_analiz.index'}) and bool(session.get("veli_ogrenci_id"))
     rol = "veli" if veli else ("ogretmen" if session.get("ogretmen_id") else "")
     siniflar = ogretmen_siniflari(session["ogretmen_id"]) if rol == "ogretmen" else []
     if rol == "ogretmen" and endpoint in {"dashboard", "karne", "sonuclar", "lgs"}:
@@ -812,6 +815,9 @@ def login():
         sifre = request.form.get("sifre", "").strip()
         secili = ad
 
+        if not account_security.login_permitted('teacher', ad.casefold(), request.remote_addr or ''):
+            return render_template('login.html', ogretmenler=ogretmenler, hata='Çok fazla giriş denemesi. 15 dakika sonra tekrar deneyin.', secili=secili), 429
+
         if not ad:
             hata = "Lutfen adinizi secin."
         elif not sifre:
@@ -820,9 +826,11 @@ def login():
             hata = "Hatali sifre! Sifreniz icin okul yonetimine basvurun."
         else:
             oid = ogretmen_id_bul(ad)
+            account_security.login_succeeded('teacher', ad.casefold(), request.remote_addr or '')
             _veli_oturumu_kapat()
             session.clear()
             session["ogretmen_id"] = oid
+            session['teacher_auth_version'] = account_security.teacher_version(oid)
             session["ogretmen_adi"] = ad
             session["ogretmen_yetki"] = ogretmen_yetki_al(oid)
             if session.get("ogretmen_yetki") == "rehber":
@@ -2483,20 +2491,20 @@ def veli_giris():
     if request.method == "POST":
         sifre = request.form.get("sifre", "").strip()
         ogr_no = request.form.get("ogr_no", type=int)
-        if sifre != VELI_SIFRE:
-            hata = "Veli sifresi hatali."
-        elif not ogr_no:
-            hata = "Lutfen ogrenci numarasini girin."
+        if not account_security.login_permitted('parent', str(ogr_no), request.remote_addr or ''):
+            return render_template('veli_login.html', hata='Çok fazla giriş denemesi. 15 dakika sonra tekrar deneyin.'), 429
+        ogrenci = _ogrenci_no_ile_bul(ogr_no) if ogr_no else None
+        version = account_security.verify_parent(ogrenci['id'] if ogrenci else None, sifre)
+        if not version:
+            hata = "Öğrenci numarası veya kişisel veli giriş kodu hatalı. Kodunuz için okul yönetimine başvurun."
         else:
-            ogrenci = _ogrenci_no_ile_bul(ogr_no)
-            if not ogrenci:
-                hata = "Bu numarayla ogrenci bulunamadi."
-            else:
-                _veli_oturumu_kapat()
-                session.clear()
-                session.permanent = True
-                session["veli_ogrenci_id"] = ogrenci["id"]
-                return redirect(url_for("veli_panel"))
+            account_security.login_succeeded('parent', str(ogr_no), request.remote_addr or '')
+            _veli_oturumu_kapat()
+            session.clear()
+            session.permanent = True
+            session["veli_ogrenci_id"] = ogrenci["id"]
+            session['veli_auth_version'] = version
+            return redirect(url_for("veli_panel"))
     return render_template("veli_login.html", hata=hata)
 
 
@@ -2614,7 +2622,11 @@ def veli_panel():
         kitap_satir += f" {hafta['kitap_sayfa']}" + (f"/{katalog_sayfa}" if katalog_sayfa else "") + " sayfa"
     sabah = f"Bugün {gunler_tr[bugun.weekday()]}. Kitap: {kitap_satir}. Ödev: {ders_adi or 'yazılmadı'}. {is_metni}".strip()
     duzen = veli_duzen(int(ogrenci_id))
-    if duzen["fark"] > 0:
+    if lgs_acik:
+        duzen_metin = f"{len(denemeler)} deneme kaydı var. Ayrıntıları Analizler bölümünden inceleyebilirsiniz." if denemeler else "Gelişim değerlendirmesi için henüz yeterli deneme kaydı yok. Evde ve okul testleri Analizler bölümünde ayrı gösterilir."
+    elif not duzen['bu_ay_kayit'] or not duzen['gecen_ay_kayit']:
+        duzen_metin = "Aylar arasında gelişim değerlendirmesi yapmak için henüz yeterli ödev kaydı yok."
+    elif duzen["fark"] > 0:
         duzen_metin = f"Bu ay {duzen['bu_ay']} hafta tam ödev, geçen ay {duzen['gecen_ay']}. {duzen['fark']} hafta daha düzenli."
     elif duzen["fark"] < 0:
         duzen_metin = f"Bu ay {duzen['bu_ay']} hafta tam ödev, geçen ay {duzen['gecen_ay']}."
@@ -2909,20 +2921,31 @@ def kitap_odev_rapor():
 
 
 @app.route("/admin/sifreler", methods=["GET", "POST"])
+@giris_zorunlu
 def admin_sifreler():
-    hata, liste = None, None
-    if request.method == "POST":
-        if request.form.get("admin_sifre") == ADMIN_SIFRE:
-            liste = tum_sifre_listesi()
+    if not account_security.admin_allowed(session.get('ogretmen_id')):
+        abort(403)
+    from database import _conn
+    issued = None
+    con = _conn()
+    if request.method == 'POST':
+        if request.form.get('kind') == 'teacher':
+            teacher_id = request.form.get('teacher_id', type=int)
+            teacher = con.execute('SELECT ad_soyad FROM ogretmenler WHERE id=?', (teacher_id,)).fetchone()
+            if not teacher:
+                con.close(); abort(400)
+            issued = dict(name=teacher['ad_soyad'], number='', code=account_security.issue_teacher_code(teacher_id))
+            if teacher_id == session['ogretmen_id']:
+                session['teacher_auth_version'] = account_security.teacher_version(teacher_id)
         else:
-            hata = "Yonetici sifresi hatali."
-    son_yedek = admin_meta_get("son_yedek_hatirlatma", "")
-    return render_template(
-        "admin_sifreler.html",
-        liste=liste,
-        hata=hata,
-        son_yedek=son_yedek,
-    )
+            student_id = request.form.get('student_id', type=int)
+            student = con.execute('SELECT ad_soyad, ogr_no FROM ogrenciler WHERE id=?', (student_id,)).fetchone()
+            if not student:
+                con.close(); abort(400)
+            issued = dict(name=student['ad_soyad'], number=student['ogr_no'], code=account_security.issue_parent_code(student_id))
+    students = [dict(r) for r in con.execute('SELECT o.id,o.ad_soyad,o.ogr_no,s.sinif_adi, c.student_id IS NOT NULL AS provisioned FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id LEFT JOIN parent_credentials c ON c.student_id=o.id ORDER BY s.sinif_adi,o.ad_soyad')]
+    con.close()
+    return render_template('admin_sifreler.html', students=students, teachers=tum_ogretmenler(), issued=issued)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -3711,9 +3734,14 @@ def _karne_excel(satirlar, donem: int):
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="0F2744")
     for s in satirlar:
+        lgs = s['sinif_adi'].startswith('8/')
+        reading = not lgs and s['okudu'] + s['okumadi'] > 0
+        homework = not lgs and s['tam'] + s['eksik'] + s['yok'] > 0
+        empty = 'Bu sınıfta takip edilmiyor' if lgs else 'Henüz değerlendirilmedi'
         ws.append([
-            s["ad_soyad"], s["ogr_no"], s["sinif_adi"], s["okudu"], s["okumadi"],
-            s["tam"], s["eksik"], s["yok"], s["hedef_net"] or "", s["hedef"], s["denemeler"],
+            s["ad_soyad"], s["ogr_no"], s["sinif_adi"], s['okudu'] if reading else empty, s['okumadi'] if reading else empty,
+            s['tam'] if homework else empty, s['eksik'] if homework else empty, s['yok'] if homework else empty,
+            s["hedef_net"] or "", s["hedef"], s["denemeler"],
         ])
     bio = BytesIO()
     wb.save(bio)
@@ -4818,6 +4846,13 @@ def veli_lgs():
     if not session.get("veli_ogrenci_id"):
         return redirect(url_for("veli_giris"))
     return _lgs_ekran(veli=True)
+
+
+@app.route('/veli/analizler')
+def veli_analizler():
+    if not session.get('veli_ogrenci_id'):
+        return redirect(url_for('veli_giris'))
+    return render_template('veli_analizler.html')
 
 
 def _lgs_optik_ekle():
@@ -7472,10 +7507,10 @@ def ogretmen_denetim():
 
 
 @app.route("/admin/yedek-onay", methods=["POST"])
+@giris_zorunlu
 def admin_yedek_onay():
-    if request.form.get("admin_sifre") != ADMIN_SIFRE:
-        flash("Yönetici şifresi hatalı.", "error")
-        return redirect(url_for("admin_sifreler"))
+    if not account_security.admin_allowed(session.get('ogretmen_id')):
+        abort(403)
     admin_meta_set(
         "son_yedek_hatirlatma",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

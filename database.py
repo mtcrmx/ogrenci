@@ -1053,6 +1053,8 @@ def initialize_db():
     _ders_programini_senkronize(con)
     _okuma_kitaplarini_senkronize(con)
     _lgs_init(con)
+    from account_security import migrate
+    migrate(con)
     con.close()
 
 
@@ -2709,9 +2711,10 @@ def son_bilgilendirme(hedef: str | None) -> dict | None:
 
 
 def _sifre_uret() -> dict[str, str]:
-    """Alfabetik sırayla EC100'den başlayan şifre haritası döndürür."""
+    """New accounts require administrator provisioning, never predictable codes."""
+    import secrets
     sirali = sorted(_OGRETMEN_SINIF.keys())
-    return {ad: f"EC{100 + i}" for i, ad in enumerate(sirali)}
+    return {ad: secrets.token_urlsafe(24) for ad in sirali}
 
 
 def _sifreleri_ata(con: sqlite3.Connection):
@@ -2720,7 +2723,7 @@ def _sifreleri_ata(con: sqlite3.Connection):
     cur = con.cursor()
     for ad, sifre in sifre_map.items():
         cur.execute(
-            "UPDATE ogretmenler SET sifre = ? WHERE ad_soyad = ?",
+            "UPDATE ogretmenler SET sifre = ? WHERE ad_soyad = ? AND sifre = ''",
             (sifre, ad)
         )
     con.commit()
@@ -2768,11 +2771,8 @@ def _seed(con: sqlite3.Connection):
 
 
 def _bos_sifre_uret(con: sqlite3.Connection) -> str:
-    mevcut = {str(r[0]) for r in con.execute("SELECT sifre FROM ogretmenler")}
-    n = 100
-    while f"EC{n}" in mevcut:
-        n += 1
-    return f"EC{n}"
+    import secrets
+    return secrets.token_urlsafe(18)
 
 
 def _ogretmen_kadrosunu_senkronize(con: sqlite3.Connection) -> None:
@@ -2979,7 +2979,7 @@ def tum_ogretmenler() -> list[dict]:
     con = _conn()
     _yardimci_tablolar_init(con)
     rows = [dict(r) for r in con.execute("""
-        SELECT id, ad_soyad, sifre, COALESCE(yetki, 'tam') AS yetki
+        SELECT id, ad_soyad, COALESCE(yetki, 'tam') AS yetki
         FROM ogretmenler ORDER BY ad_soyad
     """).fetchall()]
     con.close()
@@ -2987,13 +2987,8 @@ def tum_ogretmenler() -> list[dict]:
 
 
 def tum_sifre_listesi() -> list[dict]:
-    """Tüm öğretmen adlarını ve şifrelerini döndürür (yönetici listesi)."""
-    con = _conn()
-    rows = [dict(r) for r in con.execute(
-        "SELECT ad_soyad, sifre FROM ogretmenler ORDER BY sifre"
-    ).fetchall()]
-    con.close()
-    return [r for r in rows if r["ad_soyad"] not in _AYRILAN_OGRETMENLER]
+    """Compatibility: credentials must never be returned to a list view."""
+    return tum_ogretmenler()
 
 
 def ogretmen_dogrula(ad_soyad: str, sifre: str) -> bool:
@@ -3001,12 +2996,12 @@ def ogretmen_dogrula(ad_soyad: str, sifre: str) -> bool:
     if (ad_soyad or "").strip() in _AYRILAN_OGRETMENLER:
         return False
     con = _conn()
-    row = con.execute(
-        "SELECT id FROM ogretmenler WHERE ad_soyad = ? AND sifre = ?",
-        (ad_soyad, sifre)
-    ).fetchone()
+    row = con.execute("SELECT sifre FROM ogretmenler WHERE ad_soyad = ?", (ad_soyad,)).fetchone()
     con.close()
-    return row is not None
+    from werkzeug.security import check_password_hash
+    from account_security import _DUMMY_HASH
+    valid = check_password_hash(row['sifre'] if row else _DUMMY_HASH, sifre)
+    return bool(row and valid)
 
 
 def ogretmen_id_bul(ad_soyad: str):
@@ -5674,6 +5669,8 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
         )
     """)
     haber_kolon = {r[1] for r in con.execute("PRAGMA table_info(veli_haber)").fetchall()}
+    if 'sonuc_id' not in haber_kolon:
+        con.execute('ALTER TABLE veli_haber ADD COLUMN sonuc_id INTEGER')
     if "tur" not in haber_kolon:
         con.execute("ALTER TABLE veli_haber ADD COLUMN tur TEXT NOT NULL DEFAULT 'duyuru'")
     if "goruldu" not in haber_kolon:
@@ -6077,14 +6074,14 @@ def haftalik_takip_isaretle(
     return {"ok": True, "alan": alan, "deger": deger}
 
 
-def veli_haber_ekle(ogrenci_id: int, metin: str, tur: str = "duyuru") -> None:
+def veli_haber_ekle(ogrenci_id: int, metin: str, tur: str = "duyuru", sonuc_id: int | None = None) -> None:
     con = _conn()
     _haftalik_takip_init(con)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     tur = tur if tur in {"uyari", "olumlu", "duyuru", "odev"} else "duyuru"
     con.execute(
-        "INSERT INTO veli_haber (ogrenci_id, metin, zaman, tur, goruldu) VALUES (?, ?, ?, ?, 0)",
-        (int(ogrenci_id), (metin or "")[:240], now, tur),
+        "INSERT INTO veli_haber (ogrenci_id, metin, zaman, tur, goruldu, sonuc_id) VALUES (?, ?, ?, ?, 0, ?)",
+        (int(ogrenci_id), (metin or "")[:240], now, tur, sonuc_id),
     )
     con.commit()
     con.close()
@@ -6116,7 +6113,7 @@ def veli_haber_bekleyen(ogrenci_id: int) -> list[dict]:
     _haftalik_takip_init(con)
     rows = [dict(r) for r in con.execute(
         """
-        SELECT id, metin, zaman, tur
+        SELECT id, metin, zaman, tur, sonuc_id
         FROM veli_haber
         WHERE ogrenci_id = ? AND goruldu = 0
         ORDER BY id DESC
@@ -6132,7 +6129,7 @@ def veli_haber_liste(ogrenci_id: int) -> list[dict]:
     con = _conn()
     _haftalik_takip_init(con)
     rows = [dict(r) for r in con.execute(
-        "SELECT id, metin, zaman, tur, goruldu FROM veli_haber WHERE ogrenci_id = ? ORDER BY id DESC LIMIT 50",
+        "SELECT id, metin, zaman, tur, goruldu, sonuc_id FROM veli_haber WHERE ogrenci_id = ? ORDER BY id DESC LIMIT 50",
         (int(ogrenci_id),),
     ).fetchall()]
     con.close()
@@ -6161,7 +6158,7 @@ def veli_haber_yeni(ogrenci_id: int, son_id: int) -> list[dict]:
     con = _conn()
     _haftalik_takip_init(con)
     rows = [dict(r) for r in con.execute(
-        "SELECT id, metin, zaman, tur FROM veli_haber WHERE ogrenci_id = ? AND id > ? ORDER BY id",
+        "SELECT id, metin, zaman, tur, sonuc_id FROM veli_haber WHERE ogrenci_id = ? AND id > ? ORDER BY id",
         (ogrenci_id, max(0, int(son_id or 0))),
     ).fetchall()]
     con.close()
@@ -6322,7 +6319,9 @@ def veli_duzen(ogrenci_id: int) -> dict:
     for r in rows:
         if r["kitap_okuma"] == "okudu" and r["kitap_adi"] and r["kitap_adi"] not in okunan:
             okunan.append(r["kitap_adi"])
-    return {"seri": seri, "bu_ay": bu_ay, "gecen_ay": gecen, "fark": bu_ay - gecen, "okunan": okunan}
+    return {"seri": seri, "bu_ay": bu_ay, "gecen_ay": gecen, "fark": bu_ay - gecen, "okunan": okunan,
+            "bu_ay_kayit": sum(1 for r in rows if (r['hafta_basi'] or '').startswith(bu) and r['odev_durum'] in ('tam', 'eksik', 'yok')),
+            "gecen_ay_kayit": sum(1 for r in rows if (r['hafta_basi'] or '').startswith(gecen_ay) and r['odev_durum'] in ('tam', 'eksik', 'yok'))}
 
 
 def haftalik_odev_bildir(ogrenci_id: int, hafta_basi: str, yaptim: bool) -> dict:
