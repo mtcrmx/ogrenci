@@ -323,14 +323,18 @@ def register_workspace(app, auth, roster_fn, meetings, library):
         labels={'lgs_deneme':'Sınav sonucu','haftalik_odev_bilgi':'Sınıf ödevi','haftalik_takip':'Kitap / ödev takibi','odevler':'Ödev'}
         for r in changes:
             if teacher and r['ogretmen_id']!=teacher:continue
-            data=json.loads(r['sonraki'] or r['onceki'] or '{}');student=roster.get(data.get('ogrenci_id'),{})
+            before=json.loads(r['onceki'] or '{}');after=json.loads(r['sonraki'] or '{}')
+            data=after or before;student=roster.get(data.get('ogrenci_id'),{})
             name=student.get('sinif_adi') or classes.get(data.get('sinif_id'),'')
             if classroom and name!=classroom:continue
-            key=(r['id'],r['tablo'],name)
+            key=(r['id'],r['tablo'],name,data.get('ogrenci_id'))
             if key in seen:continue
             seen.add(key)
-            feed.append(dict(day=r['zaman'],teacher=r['teacher'],classroom=name,label=labels[r['tablo']],
-                title=data.get('ad') or data.get('baslik') or data.get('ders') or labels[r['tablo']],
+            fields={'kitap_adi':'Kitap','kitap_okuma':'Okuma','kitap_getirme':'Kitap getirme','odev_durum':'Ödev durumu','odev_ders':'Ders','ders':'Ders','ders_adi':'Ders','tema_adi':'Konu','hafta_basi':'Hafta'}
+            values={'okudu':'Okudu','okumadi':'Okumadı','getirdi':'Getirdi','getirmedi':'Getirmedi','tam':'Tam','eksik':'Eksik','yapmadi':'Yapmadı'}
+            detail=' · '.join(label+': '+values.get(str(data.get(field)),str(data.get(field))) for field,label in fields.items() if data.get(field) not in (None,'') and (not before or not after or before.get(field)!=after.get(field)))
+            feed.append(dict(day=r['zaman'],teacher=r['teacher'],classroom=name,label=labels[r['tablo']],student=student.get('ad_soyad',''),detail=detail,
+                title=data.get('ad') or data.get('baslik') or data.get('kitap_adi') or data.get('ders') or data.get('ders_adi') or labels[r['tablo']],
                 action='Eklendi' if not r['onceki'] else 'Silindi' if not r['sonraki'] else 'Güncellendi',undone=r['geri_alindi']))
         return page('ogretmenler',exams=exams,records=records,feed=feed[:200],truncated=len(feed)>200,teachers=db.tum_ogretmenler(),
             classes=db.aktif_sube_siniflari(),start=start,end=end,selected_teacher=teacher,classroom=classroom)

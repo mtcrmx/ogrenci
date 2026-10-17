@@ -106,4 +106,20 @@ class CounselorWorkspace(unittest.TestCase):
         self.assertIn('Etkinlik katılımı (tekil kişi değil),20',csv)
         self.assertNotIn('Weekly planning',csv)
 
+    def test_teacher_changes_show_academic_fields_not_raw_notes(self):
+        import json
+        from uuid import uuid4
+        action=uuid4().hex
+        data=dict(ogrenci_id=self.student['id'],kitap_adi='Example book',kitap_okuma='okudu',odev_not='DO-NOT-EXPOSE-RAW-NOTE')
+        con=d._conn()
+        with con:
+            con.execute('INSERT INTO ogretmen_islem(id,ogretmen_id,yol,zaman) VALUES(?,?,?,?)',(action,self.teacher['id'],'/test','2032-01-01 09:00'))
+            con.execute('INSERT INTO ogretmen_islem_satir(islem_id,tablo,anahtar,sonraki) VALUES(?,?,?,?)',(action,'haftalik_takip','test',json.dumps(data)))
+        con.close()
+        html=self.client.get('/rehberlik/ogretmenler?baslangic=2032-01-01&bitis=2032-01-02').get_data(as_text=True)
+        self.assertIn('Okuma: Okudu',html)
+        self.assertIn(self.student['ad_soyad'],html)
+        self.assertIn('Example book',html)
+        self.assertNotIn('DO-NOT-EXPOSE-RAW-NOTE',html)
+
 if __name__=='__main__':unittest.main()
