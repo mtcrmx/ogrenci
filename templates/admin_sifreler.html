@@ -1,10 +1,84 @@
-{% extends 'base.html' %}
-{% block title %}Hesap erişimi{% endblock %}
+{% extends "base.html" %}
+{% block title %}Şifre Listesi{% endblock %}
+
 {% block body %}
-<main class="mx-auto max-w-3xl p-4 space-y-4">
-<header class="app-card"><h1 class="text-2xl font-black">Hesap erişimi</h1><p>Veliye özel giriş kodu oluşturun veya öğretmen parolasını sıfırlayın. Mevcut parolalar görüntülenemez.</p></header>
-{% if issued %}<section class="app-card" role="status"><h2>{{ issued.name }}{% if issued.number %} · No {{ issued.number }}{% endif %}</h2><p>Yeni giriş kodu yalnızca bu ekranda bir kez gösterilir. İlgili kişiye güvenli biçimde teslim edin.</p><p class="text-2xl font-mono" style="overflow-wrap:anywhere">{{ issued.code }}</p><p>Önceki kod ve oturumlar geçersiz oldu.</p><a class="app-button" href="{{ url_for('admin_sifreler') }}">Kodu kapat</a></section>{% endif %}
-<section class="app-card"><h2 class="font-black">Veli giriş kodu</h2><p>Öğrenci numarası ve öğrenciye özel kod birlikte kullanılır.</p><form method="post"><input type="hidden" name="kind" value="parent"><label>Öğrenci<select name="student_id" required class="w-full border rounded p-3"><option value="">Öğrenci seçin</option>{% for s in students %}<option value="{{ s.id }}">{{ s.sinif_adi }} · {{ s.ogr_no }} · {{ s.ad_soyad }} — {{ 'Kod oluşturulmuş; yenile' if s.provisioned else 'Henüz kod yok' }}</option>{% endfor %}</select></label><button class="app-button" type="submit">Yeni veli kodu oluştur</button></form></section>
-<section class="app-card"><h2 class="font-black">Öğretmen parolasını sıfırla</h2><form method="post"><input type="hidden" name="kind" value="teacher"><label>Öğretmen<select name="teacher_id" required class="w-full border rounded p-3"><option value="">Öğretmen seçin</option>{% for t in teachers %}<option value="{{ t.id }}">{{ t.ad_soyad }}</option>{% endfor %}</select></label><button class="app-button" type="submit">Yeni öğretmen parolası oluştur</button></form></section>
-</main>
+<div class="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-10">
+  <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
+
+    <div class="bg-okul-800 px-6 py-4 text-white font-bold text-center">
+      🔑 Yönetici — Öğretmen Şifre Listesi
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="mx-4 mt-4 rounded-lg px-3 py-2 text-sm {% if cat=='success' %}bg-emerald-50 text-emerald-900{% else %}bg-red-50 text-red-800{% endif %}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="px-6 pt-4 pb-2 border-b border-slate-100 bg-amber-50 text-xs text-amber-950">
+      <p class="font-bold mb-1">Veritabanı yedeği</p>
+      <p class="mb-2">sqlite dosyanızı düzenli kopyalayın. Yedek aldığınızda kayıt için:</p>
+      {% if son_yedek %}<p class="text-[11px] mb-2">Son onay: {{ son_yedek }}</p>{% endif %}
+      <form method="POST" action="{{ url_for('admin_yedek_onay') }}" class="flex flex-wrap gap-2 items-center">
+        <input type="password" name="admin_sifre" placeholder="Yönetici şifresi" class="rounded border px-2 py-1 text-xs font-mono flex-1 min-w-[120px]">
+        <button type="submit" class="bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Yedek aldım</button>
+      </form>
+      <p class="mt-2 text-[10px] text-amber-900/80">Öğretmen yetkisi: veritabanında <code class="bg-white/60 px-1 rounded">UPDATE ogretmenler SET yetki='rapor'</code> ile yalnızca rapor erişimi verilebilir.</p>
+    </div>
+
+    {% if not liste %}
+    <!-- Doğrulama formu -->
+    <form method="POST" class="p-6 space-y-4">
+      {% if hata %}
+      <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+        ❌ {{ hata }}
+      </div>
+      {% endif %}
+      <p class="text-sm text-slate-600 text-center">
+        Şifre listesini görmek için yönetici şifresini girin.
+      </p>
+      <input type="password" name="admin_sifre" placeholder="Yönetici Şifresi"
+             class="w-full border border-slate-300 rounded-xl px-4 py-3
+                    font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button type="submit"
+              class="w-full bg-okul-800 hover:bg-okul-700 text-white
+                     font-bold py-3 rounded-xl transition">
+        Görüntüle
+      </button>
+      <div class="text-center">
+        <a href="{{ url_for('login') }}" class="text-xs text-slate-400 hover:text-slate-600">
+          ← Giriş sayfasına dön
+        </a>
+      </div>
+    </form>
+
+    {% else %}
+    <!-- Şifre listesi -->
+    <div class="p-4">
+      <p class="text-xs text-slate-500 text-center mb-3">
+        Bu listeyi yazdırıp öğretmenlere dağıtabilirsiniz.
+      </p>
+      <div class="space-y-1">
+        {% for k in liste %}
+        <div class="flex items-center gap-3 px-3 py-2 rounded-lg
+                    {% if loop.index % 2 == 0 %}bg-slate-50{% else %}bg-white{% endif %}">
+          <span class="bg-blue-600 text-white text-xs font-mono font-bold
+                       px-3 py-1 rounded-lg w-16 text-center">{{ k.sifre }}</span>
+          <span class="text-sm text-slate-800 font-medium">{{ k.ad_soyad }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="mt-4 text-center">
+        <a href="{{ url_for('login') }}"
+           class="bg-okul-800 text-white text-sm px-6 py-2 rounded-xl hover:bg-okul-700">
+          ← Giriş Sayfası
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
 {% endblock %}

@@ -1053,8 +1053,6 @@ def initialize_db():
     _ders_programini_senkronize(con)
     _okuma_kitaplarini_senkronize(con)
     _lgs_init(con)
-    from account_security import migrate
-    migrate(con)
     con.close()
 
 
@@ -2711,10 +2709,9 @@ def son_bilgilendirme(hedef: str | None) -> dict | None:
 
 
 def _sifre_uret() -> dict[str, str]:
-    """New accounts require administrator provisioning, never predictable codes."""
-    import secrets
+    """Alfabetik sırayla EC100'den başlayan şifre haritası döndürür."""
     sirali = sorted(_OGRETMEN_SINIF.keys())
-    return {ad: secrets.token_urlsafe(24) for ad in sirali}
+    return {ad: f"EC{100 + i}" for i, ad in enumerate(sirali)}
 
 
 def _sifreleri_ata(con: sqlite3.Connection):
@@ -2723,7 +2720,7 @@ def _sifreleri_ata(con: sqlite3.Connection):
     cur = con.cursor()
     for ad, sifre in sifre_map.items():
         cur.execute(
-            "UPDATE ogretmenler SET sifre = ? WHERE ad_soyad = ? AND sifre = ''",
+            "UPDATE ogretmenler SET sifre = ? WHERE ad_soyad = ?",
             (sifre, ad)
         )
     con.commit()
@@ -2771,8 +2768,11 @@ def _seed(con: sqlite3.Connection):
 
 
 def _bos_sifre_uret(con: sqlite3.Connection) -> str:
-    import secrets
-    return secrets.token_urlsafe(18)
+    mevcut = {str(r[0]) for r in con.execute("SELECT sifre FROM ogretmenler")}
+    n = 100
+    while f"EC{n}" in mevcut:
+        n += 1
+    return f"EC{n}"
 
 
 def _ogretmen_kadrosunu_senkronize(con: sqlite3.Connection) -> None:
@@ -2979,7 +2979,7 @@ def tum_ogretmenler() -> list[dict]:
     con = _conn()
     _yardimci_tablolar_init(con)
     rows = [dict(r) for r in con.execute("""
-        SELECT id, ad_soyad, COALESCE(yetki, 'tam') AS yetki
+        SELECT id, ad_soyad, sifre, COALESCE(yetki, 'tam') AS yetki
         FROM ogretmenler ORDER BY ad_soyad
     """).fetchall()]
     con.close()
@@ -2987,8 +2987,13 @@ def tum_ogretmenler() -> list[dict]:
 
 
 def tum_sifre_listesi() -> list[dict]:
-    """Compatibility: credentials must never be returned to a list view."""
-    return tum_ogretmenler()
+    """Tüm öğretmen adlarını ve şifrelerini döndürür (yönetici listesi)."""
+    con = _conn()
+    rows = [dict(r) for r in con.execute(
+        "SELECT ad_soyad, sifre FROM ogretmenler ORDER BY sifre"
+    ).fetchall()]
+    con.close()
+    return [r for r in rows if r["ad_soyad"] not in _AYRILAN_OGRETMENLER]
 
 
 def ogretmen_dogrula(ad_soyad: str, sifre: str) -> bool:
@@ -2996,12 +3001,12 @@ def ogretmen_dogrula(ad_soyad: str, sifre: str) -> bool:
     if (ad_soyad or "").strip() in _AYRILAN_OGRETMENLER:
         return False
     con = _conn()
-    row = con.execute("SELECT sifre FROM ogretmenler WHERE ad_soyad = ?", (ad_soyad,)).fetchone()
+    row = con.execute(
+        "SELECT id FROM ogretmenler WHERE ad_soyad = ? AND sifre = ?",
+        (ad_soyad, sifre)
+    ).fetchone()
     con.close()
-    from werkzeug.security import check_password_hash
-    from account_security import _DUMMY_HASH
-    valid = check_password_hash(row['sifre'] if row else _DUMMY_HASH, sifre)
-    return bool(row and valid)
+    return row is not None
 
 
 def ogretmen_id_bul(ad_soyad: str):

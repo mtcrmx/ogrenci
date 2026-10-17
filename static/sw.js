@@ -1,9 +1,10 @@
 self.addEventListener("install", event => {
+  event.waitUntil(caches.open("ogrenci-takip-v3").then(cache => cache.addAll(["/login"])));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(caches.delete('ogrenci-takip-v3').then(() => self.clients.claim()));
+  event.waitUntil(self.clients.claim());
 });
 
 function haberGoster(veri) {

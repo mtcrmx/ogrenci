@@ -3,8 +3,6 @@ from pathlib import Path
 sandbox=tempfile.TemporaryDirectory(prefix='yaprak-analysis-')
 os.environ['OGR_TAKIP_DB_PATH']=str(Path(sandbox.name)/'school.db')
 import web_app as w
-from secure_test_client import install
-install(w.app)
 import database as db
 from yaprak_analiz import group_records,summarize
 

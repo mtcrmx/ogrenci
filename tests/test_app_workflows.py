@@ -13,8 +13,6 @@ _database = tempfile.TemporaryDirectory(prefix="akademipuan-tests-")
 os.environ["OGR_TAKIP_DB_PATH"] = str(Path(_database.name) / "test.db")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import web_app as w
-from secure_test_client import install
-install(w.app)
 import database as d
 
 w.app.config.update(TESTING=True)
@@ -417,7 +415,7 @@ class Workflows(unittest.TestCase):
         self.assertEqual(teachers[0]['yetki'],'rehber')
         self.assertEqual(len(d.ogretmen_siniflari(teachers[0]['id'])),8)
         client=w.app.test_client()
-        r=client.post('/login',data={'ad_soyad':teachers[0]['ad_soyad'],'sifre':w.account_security.issue_teacher_code(teachers[0]['id'])})
+        r=client.post('/login',data={'ad_soyad':teachers[0]['ad_soyad'],'sifre':teachers[0]['sifre']})
         self.assertEqual(r.status_code,302)
         self.assertEqual(r.location,'/rehberlik')
 
@@ -548,12 +546,12 @@ class Workflows(unittest.TestCase):
             self.assertTrue(r.data.startswith(b'%PDF') if url.endswith('.pdf') else r.data.startswith(b'PK'),url)
 
     def test_login_role_switch(self):
-        r=self.teacher_client.post('/veli/giris',data={'ogr_no':self.student['ogr_no'],'sifre':w.account_security.issue_parent_code(self.oid)})
+        r=self.teacher_client.post('/veli/giris',data={'ogr_no':self.student['ogr_no'],'sifre':w.VELI_SIFRE})
         self.assertEqual(r.status_code,302)
         with self.teacher_client.session_transaction() as s:
             self.assertEqual(s['veli_ogrenci_id'],self.oid)
             self.assertNotIn('ogretmen_id',s)
-        r=self.teacher_client.post('/login',data={'ad_soyad':self.teacher['ad_soyad'],'sifre':w.account_security.issue_teacher_code(self.teacher['id'])})
+        r=self.teacher_client.post('/login',data={'ad_soyad':self.teacher['ad_soyad'],'sifre':self.teacher['sifre']})
         self.assertEqual(r.status_code,302)
         with self.teacher_client.session_transaction() as s:
             self.assertEqual(s['ogretmen_id'],self.teacher['id'])

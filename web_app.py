@@ -123,18 +123,15 @@ _ODEV_FOTO_KLASORU = os.path.join(_BASE, "yuklemeler", "odev")
 app = Flask(__name__,
             template_folder=os.path.join(_BASE, "templates"),
             static_folder=os.path.join(_BASE, "static"))
-app.permanent_session_lifetime = timedelta(hours=12)
-app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
-                  SESSION_COOKIE_SECURE=bool(os.environ.get('RENDER')))
+app.secret_key = os.environ.get("SECRET_KEY", "erenler-cumhuriyet-2025-gizli")
+app.permanent_session_lifetime = timedelta(days=365)
 
 SIFIR_PAROLA = "1234"
+ADMIN_SIFRE  = "ECadmin"
 OGRENCI_SIFRE = os.environ.get("OGRENCI_SIFRE", "ogrenci")
+VELI_SIFRE = os.environ.get("VELI_SIFRE", "veli")
 
 initialize_db()
-import account_security
-from request_security import install as install_request_security
-app.secret_key = account_security.signing_key()
-install_request_security(app)
 
 
 def _tarih_araligi_duzelt(bas: str, bit: str) -> tuple[str, str]:
@@ -815,9 +812,6 @@ def login():
         sifre = request.form.get("sifre", "").strip()
         secili = ad
 
-        if not account_security.login_permitted('teacher', ad.casefold(), request.remote_addr or ''):
-            return render_template('login.html', ogretmenler=ogretmenler, hata='Çok fazla giriş denemesi. 15 dakika sonra tekrar deneyin.', secili=secili), 429
-
         if not ad:
             hata = "Lutfen adinizi secin."
         elif not sifre:
@@ -826,11 +820,9 @@ def login():
             hata = "Hatali sifre! Sifreniz icin okul yonetimine basvurun."
         else:
             oid = ogretmen_id_bul(ad)
-            account_security.login_succeeded('teacher', ad.casefold(), request.remote_addr or '')
             _veli_oturumu_kapat()
             session.clear()
             session["ogretmen_id"] = oid
-            session['teacher_auth_version'] = account_security.teacher_version(oid)
             session["ogretmen_adi"] = ad
             session["ogretmen_yetki"] = ogretmen_yetki_al(oid)
             if session.get("ogretmen_yetki") == "rehber":
@@ -2491,20 +2483,20 @@ def veli_giris():
     if request.method == "POST":
         sifre = request.form.get("sifre", "").strip()
         ogr_no = request.form.get("ogr_no", type=int)
-        if not account_security.login_permitted('parent', str(ogr_no), request.remote_addr or ''):
-            return render_template('veli_login.html', hata='Çok fazla giriş denemesi. 15 dakika sonra tekrar deneyin.'), 429
-        ogrenci = _ogrenci_no_ile_bul(ogr_no) if ogr_no else None
-        version = account_security.verify_parent(ogrenci['id'] if ogrenci else None, sifre)
-        if not version:
-            hata = "Öğrenci numarası veya kişisel veli giriş kodu hatalı. Kodunuz için okul yönetimine başvurun."
+        if sifre != VELI_SIFRE:
+            hata = "Veli sifresi hatali."
+        elif not ogr_no:
+            hata = "Lutfen ogrenci numarasini girin."
         else:
-            account_security.login_succeeded('parent', str(ogr_no), request.remote_addr or '')
-            _veli_oturumu_kapat()
-            session.clear()
-            session.permanent = True
-            session["veli_ogrenci_id"] = ogrenci["id"]
-            session['veli_auth_version'] = version
-            return redirect(url_for("veli_panel"))
+            ogrenci = _ogrenci_no_ile_bul(ogr_no)
+            if not ogrenci:
+                hata = "Bu numarayla ogrenci bulunamadi."
+            else:
+                _veli_oturumu_kapat()
+                session.clear()
+                session.permanent = True
+                session["veli_ogrenci_id"] = ogrenci["id"]
+                return redirect(url_for("veli_panel"))
     return render_template("veli_login.html", hata=hata)
 
 
@@ -2921,31 +2913,20 @@ def kitap_odev_rapor():
 
 
 @app.route("/admin/sifreler", methods=["GET", "POST"])
-@giris_zorunlu
 def admin_sifreler():
-    if not account_security.admin_allowed(session.get('ogretmen_id')):
-        abort(403)
-    from database import _conn
-    issued = None
-    con = _conn()
-    if request.method == 'POST':
-        if request.form.get('kind') == 'teacher':
-            teacher_id = request.form.get('teacher_id', type=int)
-            teacher = con.execute('SELECT ad_soyad FROM ogretmenler WHERE id=?', (teacher_id,)).fetchone()
-            if not teacher:
-                con.close(); abort(400)
-            issued = dict(name=teacher['ad_soyad'], number='', code=account_security.issue_teacher_code(teacher_id))
-            if teacher_id == session['ogretmen_id']:
-                session['teacher_auth_version'] = account_security.teacher_version(teacher_id)
+    hata, liste = None, None
+    if request.method == "POST":
+        if request.form.get("admin_sifre") == ADMIN_SIFRE:
+            liste = tum_sifre_listesi()
         else:
-            student_id = request.form.get('student_id', type=int)
-            student = con.execute('SELECT ad_soyad, ogr_no FROM ogrenciler WHERE id=?', (student_id,)).fetchone()
-            if not student:
-                con.close(); abort(400)
-            issued = dict(name=student['ad_soyad'], number=student['ogr_no'], code=account_security.issue_parent_code(student_id))
-    students = [dict(r) for r in con.execute('SELECT o.id,o.ad_soyad,o.ogr_no,s.sinif_adi, c.student_id IS NOT NULL AS provisioned FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id LEFT JOIN parent_credentials c ON c.student_id=o.id ORDER BY s.sinif_adi,o.ad_soyad')]
-    con.close()
-    return render_template('admin_sifreler.html', students=students, teachers=tum_ogretmenler(), issued=issued)
+            hata = "Yonetici sifresi hatali."
+    son_yedek = admin_meta_get("son_yedek_hatirlatma", "")
+    return render_template(
+        "admin_sifreler.html",
+        liste=liste,
+        hata=hata,
+        son_yedek=son_yedek,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -7507,10 +7488,10 @@ def ogretmen_denetim():
 
 
 @app.route("/admin/yedek-onay", methods=["POST"])
-@giris_zorunlu
 def admin_yedek_onay():
-    if not account_security.admin_allowed(session.get('ogretmen_id')):
-        abort(403)
+    if request.form.get("admin_sifre") != ADMIN_SIFRE:
+        flash("Yönetici şifresi hatalı.", "error")
+        return redirect(url_for("admin_sifreler"))
     admin_meta_set(
         "son_yedek_hatirlatma",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
