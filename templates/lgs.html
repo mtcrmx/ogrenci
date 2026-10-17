@@ -3,6 +3,7 @@
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=7"><link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1">{% endblock %}
 {% block body %}
 <main class="lgs-page mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
+  <a class="app-button" style="margin:12px 0" href="{{ url_for('ev_analiz.index') }}">Soru analizi · Çalışma grupları · Yardım {{ "· Haftalık özet" if veli else "" }} →</a>
   {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
   {% if not ogrenci %}
   {% if ekran == 'evde' %}

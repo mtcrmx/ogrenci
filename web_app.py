@@ -4780,6 +4780,8 @@ def _analiz_veli_sirasi(paket: dict, ogrenci_id: int | None) -> dict:
 @app.route("/lgs/test-analiz")
 @giris_zorunlu
 def test_sinif_analiz():
+    if request.args.get("kaynak") != "eski" and not any(k in request.args for k in ("sinav", "sinif", "ad", "ders", "tur")):
+        return redirect(url_for("ev_analiz.index"))
     return render_template("test_sinif_analiz.html", ta=_test_analiz_baglam(
         request.args.get("sinif"),
         request.args.get("sinav", type=int),
@@ -4943,6 +4945,9 @@ def _lgs_ekran(veli: bool):
         elif veli and islem == "optik_bitir":
             sinav_id = request.form.get("sinav_id", type=int) or 0
             sinav = lgs_optik.sinav_getir(sinav_id)
+            from ev_analiz import visible as ev_test_visible
+            if not sinav or not ev_test_visible(sinav, ogr):
+                abort(403)
             isaret = []
             if sinav:
                 isaret = [((request.form.get(f"c{i}") or "").strip().upper()) for i in range(len(sinav["cevaplar"]))]
@@ -7532,6 +7537,8 @@ from student_results import register_results, institution_allowed as kurum_denem
 register_results(app, giris_zorunlu, _ogretmen_ogrencisine_erisebilir)
 from change_history import register_history
 register_history(app, giris_zorunlu)
+from ev_analiz import register as register_ev_analiz
+register_ev_analiz(app, _ogretmen_ogrencisine_erisebilir)
 from sayfa_sifirlama import register_sayfa_sifirlama
 register_sayfa_sifirlama(app, giris_zorunlu)
 from school_broadcast import register_broadcast
