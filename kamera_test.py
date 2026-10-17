@@ -138,7 +138,8 @@ def prepare():
     (optik.klasor()/(ident+'.pdf')).write_bytes(pdf)
     if key_pdf: (optik.klasor()/(ident+'-key.pdf')).write_bytes(key_pdf)
     payload=dict(name=name,count=count,choices=choices,class_id=sid,course=request.form.get('course','').strip()[:40],
-                 answers=answers,warnings=warnings,text=text[:20000],pages=pages,key_pdf=bool(key_pdf))
+                 answers=answers,warnings=warnings,text=text[:20000],pages=pages,key_pdf=bool(key_pdf),
+                 key_pages=min(len(PdfReader(BytesIO(key_pdf)).pages),5) if key_pdf else 0)
     con=connect();con.execute('INSERT INTO kamera_taslak(id,owner,data) VALUES(?,?,?)',(ident,session['ogretmen_id'],json.dumps(payload)));con.commit();con.close()
     return redirect(url_for('.draft',ident=ident))
 
@@ -180,6 +181,19 @@ def draft_file(ident,kind):
     data=draft_owned(ident)
     if kind not in ('questions','key') or (kind=='key' and not data['key_pdf']): abort(404)
     return send_file(optik.klasor()/(ident+('-key' if kind=='key' else '')+'.pdf'),mimetype='application/pdf')
+
+
+@bp.get('/taslak/<ident>/onizleme/<int:page>')
+def key_preview(ident,page):
+    data=draft_owned(ident)
+    if not data['key_pdf'] or not 1<=page<=data.get('key_pages',1): abort(404)
+    import pypdfium2 as pdfium
+    with pdfium.PdfDocument(str(optik.klasor()/(ident+'-key.pdf'))) as pdf:
+        if page>len(pdf): abort(404)
+        bitmap=pdf[page-1].render(scale=1.5)
+        image=bitmap.to_pil();out=BytesIO();image.save(out,format='PNG');bitmap.close()
+    out.seek(0)
+    return send_file(out,mimetype='image/png')
 
 
 @bp.get('/<int:eid>')

@@ -110,6 +110,9 @@ class CameraWorkflow(unittest.TestCase):
         r=self.c.post('/yaprak-kamera/hazirla',data=dict(csrf=self.csrf,count='4',choices='ABCD',class_id=str(self.student['sinif_id']),name='Uploaded test',course='Fen',questions=(BytesIO(pdf()),'test.pdf'),key=(BytesIO(pdf('1 A 2 B 3 C 4 D')),'key.pdf')))
         self.assertEqual(r.status_code,302);path=r.location
         self.assertIn('Anahtarı onayla',self.c.get(path).get_data(as_text=True))
+        preview=self.c.get(path+'/onizleme/1')
+        self.assertEqual(preview.status_code,200);self.assertEqual(preview.mimetype,'image/png')
+        self.assertEqual(self.c.get(path+'/onizleme/9').status_code,404)
         self.assertEqual(self.c.post(path,data=dict(csrf=self.csrf)).status_code,200)
         r=self.c.post(path,data=dict(csrf=self.csrf,q1='A',q2='B',q3='C',q4='D',confirmed='yes'))
         self.assertEqual(r.status_code,302);self.assertEqual(self.c.get(r.location).status_code,200)
