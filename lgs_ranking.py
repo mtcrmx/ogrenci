@@ -102,7 +102,7 @@ def build(con, args, own_id=None, today=None):
 def register(app):
     @app.context_processor
     def ranking_context():
-        if request.endpoint not in {'lgs', 'veli_lgs'}:
+        if request.endpoint not in {'lgs', 'veli_lgs', 'rehberlik_lgs'}:
             return {}
         parent = request.endpoint == 'veli_lgs'
         own_id = session.get('veli_ogrenci_id') if parent else None
@@ -127,6 +127,6 @@ def register(app):
 
     @app.after_request
     def ranking_cache(response):
-        if request.endpoint in {'lgs', 'veli_lgs'}:
+        if request.endpoint in {'lgs', 'veli_lgs', 'rehberlik_lgs'}:
             response.headers['Cache-Control'] = 'private, no-store'
         return response

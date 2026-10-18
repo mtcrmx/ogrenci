@@ -10,6 +10,7 @@
     {% if not sekiz %}<a href="{{ url_for('veli_panel') }}#hafta" data-parent-nav="hafta"><span aria-hidden="true">▤</span>Ödev ve kitap</a>{% endif %}
     {% if sekiz %}
     <details class="app-nav-group" open><summary>LGS</summary>
+      <a href="{{ url_for('veli_lgs',sr_olcut='test',_anchor='lgs-siralama') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' and request.args.get('sr_olcut') else '' }}"><span aria-hidden="true">▥</span>Sıralama</a>
       <a href="{{ url_for('veli_lgs', bolum='soru') }}" class="{{ 'is-current' if request.endpoint == 'veli_lgs' and request.args.get('bolum') not in ['deneme','sonuc'] else '' }}"><span aria-hidden="true">✦</span>Sorular</a>
       <a href="{{ url_for('yaprak_analiz.combined') }}">◈ Ayrı ve birleşik analiz</a>
       <a href="{{ url_for('veli_analizler') }}" class="{{ 'is-current' if request.endpoint in ['veli_analizler','ev_analiz.index','yaprak_analiz.index'] else '' }}"><span aria-hidden="true">◈</span>Analizler</a>
@@ -29,14 +30,17 @@
     <h2>Rehberlik servisi</h2>
     {% for endpoint, label, icon in [('rehberlik_panel','Genel bakış','⌂'), ('rehberlik_ajanda','Görüşme ajandası','◷'), ('rehberlik_takip','Öğrenci takibi','◎'), ('rehberlik_lgs','LGS takip merkezi','◈'), ('rehberlik_ogretmenler','Öğretmen çalışmaları','▤'), ('rehberlik_gorusmeler','Veli talepleri','✉'), ('rehberlik_etkinlikler','Sınıf çalışmaları','◇'), ('rehberlik_kutuphane','İçerik kütüphanesi','▧'), ('rehberlik_yeni','İçerik paylaş','＋'), ('rehberlik_ozet','Hizmet özeti','▥'), ('teacher_records','Kayıtlarım · Düzenle / Sil','✎')] %}
     <a href="{{ url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint == endpoint else '' }}"><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
+    {% if endpoint == 'rehberlik_lgs' %}<a href="{{ url_for('rehberlik_lgs',sr_olcut='test',_anchor='lgs-siralama') }}" class="{{ 'is-current' if request.endpoint == 'rehberlik_lgs' and request.args.get('sr_olcut') else '' }}"><span aria-hidden="true">▥</span>Sıralama</a>{% endif %}
     {% endfor %}
     {% endif %}
+    {% if rapor_only and not rehber_only %}<details class="app-nav-group" open><summary>LGS merkezi</summary><a href="{{ url_for('lgs',sr_olcut='test',_anchor='lgs-siralama') }}" class="{{ 'is-current' if request.endpoint == 'lgs' and request.args.get('sr_olcut') else '' }}"><span aria-hidden="true">▥</span>Sıralama</a></details>{% endif %}
     {% if not rapor_only %}
     <a href="{{ url_for('dashboard', sinif=nav_sinif_id) }}" class="{{ 'is-current' if request.endpoint == 'dashboard' else '' }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}><span aria-hidden="true">⌂</span>Ana sayfa</a>
     {% set lgs_menu = request.endpoint in ['lgs', 'sonuclar', 'deneme_analiz', 'test_sinif_analiz', 'yaprak_analiz.index', 'yaprak_analiz.combined', 'ev_analiz.index'] or request.endpoint.startswith(('kamera_test.', 'lgs_kazanim.')) %}
     <details class="app-nav-group" name="app-nav-group"{% if request.endpoint in ['haftalik_takip','onay_kutusu'] %} open{% endif %}><summary>Günlük takip</summary>
     {% for endpoint,label,icon in [('haftalik_takip','Ödev ve kitap takibi','▤'),('onay_kutusu','Bekleyen onaylar','✓')] %}<a href="{{ url_for(endpoint) }}" class="{{ 'is-current' if request.endpoint==endpoint }}"><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>{% endfor %}</details>
     <details class="app-nav-group" name="app-nav-group"{% if lgs_menu %} open{% endif %}><summary>LGS merkezi</summary>
+    <a href="{{ url_for('lgs',sr_olcut='test',_anchor='lgs-siralama') }}" class="{{ 'is-current' if request.endpoint == 'lgs' and request.args.get('sr_olcut') else '' }}"><span aria-hidden="true">▥</span>Sıralama</a>
     {% for endpoint,label,icon in [('lgs','Öğrenci takibi','✦'),('kamera_test.index','Okulda yaprak test','▤'),('deneme_analiz','Deneme analizi','◈'),('test_sinif_analiz','Soru ve sınıf analizi','▦'),('yaprak_analiz.combined','Birleşik analiz','◈'),('lgs_kazanim.index','Soru kazanımları','▤')] %}
     {% set active = (request.endpoint==endpoint and not (endpoint=='lgs' and request.args.get('ekran')=='evde')) or (endpoint=='kamera_test.index' and request.endpoint.startswith('kamera_test.')) or (endpoint=='lgs_kazanim.index' and request.endpoint.startswith('lgs_kazanim.')) %}
     <a href="{{ url_for(endpoint) }}" class="{{ 'is-current' if active }}"{% if active %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
