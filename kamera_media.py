@@ -117,13 +117,32 @@ def merge_documents(documents):
 def ocr_engine():
     from rapidocr_onnxruntime import RapidOCR
     return RapidOCR(text_score=0.5, intra_op_num_threads=2, inter_op_num_threads=1,
-                    det_limit_type='max', det_limit_side_len=960)
+                    max_side_len=1600, det_limit_type='max', det_limit_side_len=1600)
 
 
 def ocr_image(im):
     import numpy as np
+    from PIL import ImageChops
+    # Read overlapping strips rather than a full high-resolution page tensor.
+    # Keep the original glyph size while bounding inference memory on the host.
+    rows = []
     with OCR_LOCK:
-        rows, _ = ocr_engine()(np.array(im)[:, :, ::-1])
+        for top in range(0, im.height, 750):
+            strip = im.crop((0, top, im.width, min(top + 900, im.height))).convert('RGB')
+            ink = ImageChops.difference(strip, Image.new('RGB', strip.size, 'white')).convert('L')
+            bounds = ink.point(lambda value: 255 if value > 45 else 0).getbbox()
+            if not bounds:
+                continue
+            left = max(0, bounds[0]-16); upper = max(0, bounds[1]-16)
+            strip = strip.crop((left, upper, min(strip.width,bounds[2]+16), min(strip.height,bounds[3]+16)))
+            detected, _ = ocr_engine()(np.array(strip)[:, :, ::-1])
+            for box, text, confidence in detected or []:
+                box = [[x+left, y+top+upper] for x,y in box]
+                cy = sum(p[1] for p in box)/4; cx = sum(p[0] for p in box)/4
+                if any(re.sub(r'\s+','',text) == re.sub(r'\s+','',old[1]) and abs(cy-sum(p[1] for p in old[0])/4)<12
+                       and abs(cx-sum(p[0] for p in old[0])/4)<12 for old in rows):
+                    continue
+                rows.append((box,text,confidence))
     # Reconstruct spatial lines so a number and answer in separate OCR boxes stay together.
     lines = []
     for box, text, confidence in sorted(rows or [], key=lambda r: min(p[1] for p in r[0])):
