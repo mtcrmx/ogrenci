@@ -111,7 +111,7 @@
     <div class="vp-communication">
       <section class="vp-card" id="notlar" aria-labelledby="vp-notes-heading">
         <div class="vp-section-head"><div><p class="vp-eyebrow">İLETİŞİM</p><h2 id="vp-notes-heading">Öğretmen notları</h2></div></div>
-        {% for n in notlar %}<article class="vp-note {{ 'vp-note--warning' if n.tur == 'uyari' else ('vp-note--positive' if n.tur == 'olumlu' else 'vp-note--other') }}"><p class="vp-eyebrow">{{ 'Uyarı' if n.tur == 'uyari' else ('Olumlu davranış' if n.tur == 'olumlu' else 'Duyuru') }}</p><p>{{ n.not_metni }}</p><p class="vp-muted">{{ n.ogretmen }} · {{ (n.tarih or '')[:16] }}</p></article>{% else %}<p class="vp-muted">Henüz not yok.</p>{% endfor %}
+        <div id="parent-current-notes">{% include '_veli_notlar.html' %}</div>
       </section>
       <section class="vp-card" id="gorusme" aria-labelledby="vp-meeting-heading">
         <div class="vp-section-head"><div><p class="vp-eyebrow">ÖĞRETMENLE GÖRÜŞ</p><h2 id="vp-meeting-heading">Görüşme talebi</h2></div></div>
@@ -330,6 +330,7 @@
   const feed = document.getElementById("parent-message-feed");
   const kapat = document.getElementById("veli-uyari-kapat");
   const initial = {{ haberler|tojson }};
+  let messageSnapshot=JSON.stringify(initial);
   const seen = new Set(initial.map(h => [h.tur,h.metin,(h.zaman || '').slice(0,16)].join('|')));
   const storageKey = "veli-haber-son-{{ ogrenci.id }}";
   let son = initial.reduce((n,h) => Math.max(n, Number(h.id)), 0);
@@ -371,6 +372,19 @@
       son = Math.max(son, h.id);
     });
     if (haber.length && uyariEkle(haber) && !native && document.visibilityState === "visible") cal();
+    if (Array.isArray(veri.guncel)) {
+      const active=veri.guncel;
+      const snapshot=JSON.stringify(active);
+      if(snapshot!==messageSnapshot){
+        messageSnapshot=snapshot;
+        feed?.replaceChildren(...active.map(h=>messageLi(h,Boolean(h.goruldu))));
+        if(active.length) liste.replaceChildren(messageLi(active[0],Boolean(active[0].goruldu)));
+        else {const empty=document.createElement('li');empty.textContent='Henüz öğretmen mesajı yok.';liste.replaceChildren(empty);}
+      }
+      unread=active.some(h=>!h.goruldu);gordum.hidden=!unread;
+      const notes=document.getElementById('parent-current-notes');
+      if(notes && typeof veri.notlar_html==='string' && notes.innerHTML.trim()!==veri.notlar_html.trim()) notes.innerHTML=veri.notlar_html;
+    }
     try { localStorage.setItem(storageKey, String(son)); } catch {}
   }
   let checking=false;

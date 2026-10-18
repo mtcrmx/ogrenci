@@ -5676,6 +5676,10 @@ def _haftalik_takip_init(con: sqlite3.Connection) -> None:
     haber_kolon = {r[1] for r in con.execute("PRAGMA table_info(veli_haber)").fetchall()}
     if 'sonuc_id' not in haber_kolon:
         con.execute('ALTER TABLE veli_haber ADD COLUMN sonuc_id INTEGER')
+    if 'kaynak_tur' not in haber_kolon:
+        con.execute("ALTER TABLE veli_haber ADD COLUMN kaynak_tur TEXT")
+    if 'kaynak_id' not in haber_kolon:
+        con.execute("ALTER TABLE veli_haber ADD COLUMN kaynak_id INTEGER")
     if "tur" not in haber_kolon:
         con.execute("ALTER TABLE veli_haber ADD COLUMN tur TEXT NOT NULL DEFAULT 'duyuru'")
     if "goruldu" not in haber_kolon:
@@ -6079,14 +6083,14 @@ def haftalik_takip_isaretle(
     return {"ok": True, "alan": alan, "deger": deger}
 
 
-def veli_haber_ekle(ogrenci_id: int, metin: str, tur: str = "duyuru", sonuc_id: int | None = None) -> None:
+def veli_haber_ekle(ogrenci_id: int, metin: str, tur: str = "duyuru", sonuc_id: int | None = None, kaynak_tur: str | None = None, kaynak_id: int | None = None) -> None:
     con = _conn()
     _haftalik_takip_init(con)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     tur = tur if tur in {"uyari", "olumlu", "duyuru", "odev"} else "duyuru"
     con.execute(
-        "INSERT INTO veli_haber (ogrenci_id, metin, zaman, tur, goruldu, sonuc_id) VALUES (?, ?, ?, ?, 0, ?)",
-        (int(ogrenci_id), (metin or "")[:240], now, tur, sonuc_id),
+        "INSERT INTO veli_haber (ogrenci_id, metin, zaman, tur, goruldu, sonuc_id, kaynak_tur, kaynak_id) VALUES (?, ?, ?, ?, 0, ?, ?, ?)",
+        (int(ogrenci_id), (metin or "")[:240], now, tur, sonuc_id, kaynak_tur, kaynak_id),
     )
     con.commit()
     con.close()
@@ -6118,25 +6122,28 @@ def veli_haber_bekleyen(ogrenci_id: int) -> list[dict]:
     _haftalik_takip_init(con)
     rows = [dict(r) for r in con.execute(
         """
-        SELECT id, metin, zaman, tur, sonuc_id
+        SELECT *
         FROM veli_haber
         WHERE ogrenci_id = ? AND goruldu = 0
         ORDER BY id DESC
-        LIMIT 20
         """,
         (int(ogrenci_id),),
     ).fetchall()]
+    from veli_haber_visibility import current
+    rows = current(con, int(ogrenci_id), rows)
     con.close()
-    return rows
+    return rows[:20]
 
 
 def veli_haber_liste(ogrenci_id: int) -> list[dict]:
     con = _conn()
     _haftalik_takip_init(con)
     rows = [dict(r) for r in con.execute(
-        "SELECT id, metin, zaman, tur, goruldu, sonuc_id FROM veli_haber WHERE ogrenci_id = ? ORDER BY id DESC LIMIT 50",
+        "SELECT * FROM veli_haber WHERE ogrenci_id = ? ORDER BY id DESC",
         (int(ogrenci_id),),
     ).fetchall()]
+    from veli_haber_visibility import current
+    rows = current(con, int(ogrenci_id), rows)
     con.close()
     # Multiple identical notifications in the same minute form one visible event.
     gorulen, sonuc = set(), []
@@ -6145,7 +6152,7 @@ def veli_haber_liste(ogrenci_id: int) -> list[dict]:
         if anahtar not in gorulen:
             sonuc.append(row)
             gorulen.add(anahtar)
-    return sonuc
+    return sonuc[:50]
 
 
 def veli_haber_goruldu(ogrenci_id: int, son_id: int | None = None) -> None:
@@ -6163,9 +6170,11 @@ def veli_haber_yeni(ogrenci_id: int, son_id: int) -> list[dict]:
     con = _conn()
     _haftalik_takip_init(con)
     rows = [dict(r) for r in con.execute(
-        "SELECT id, metin, zaman, tur, sonuc_id FROM veli_haber WHERE ogrenci_id = ? AND id > ? ORDER BY id",
+        "SELECT * FROM veli_haber WHERE ogrenci_id = ? AND id > ? ORDER BY id",
         (ogrenci_id, max(0, int(son_id or 0))),
     ).fetchall()]
+    from veli_haber_visibility import current
+    rows = current(con, int(ogrenci_id), rows)
     con.close()
     return rows
 
@@ -7563,12 +7572,13 @@ def ogretmen_notu_ekle(
         datetime.now().strftime("%Y-%m-%d %H:%M"),
         tur,
     ))
+    note_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
     con.commit()
     con.close()
     if veliye_acik:
         etiket = {"uyari": "Uyarı", "olumlu": "Olumlu not", "duyuru": "Duyuru"}.get(tur, "Öğretmen notu")
         haber_tur = tur if tur in {"uyari", "olumlu", "duyuru"} else "duyuru"
-        veli_haber_ekle(int(ogrenci_id), f"{etiket}: {not_metni}", haber_tur)
+        veli_haber_ekle(int(ogrenci_id), f"{etiket}: {not_metni}", haber_tur, kaynak_tur="not", kaynak_id=note_id)
     return {"ok": True}
 
 

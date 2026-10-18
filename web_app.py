@@ -2680,7 +2680,11 @@ def veli_haber():
     if not oid:
         return jsonify({"ok": False}), 401
     son = request.args.get("son", type=int) or 0
-    return jsonify({"ok": True, "haber": veli_haber_yeni(int(oid), son)})
+    response = jsonify({"ok": True, "haber": veli_haber_yeni(int(oid), son),
+                        "guncel": veli_haber_liste(int(oid)),
+                        "notlar_html": render_template('_veli_notlar.html', notlar=ogretmen_notlari_veli_ozeti(int(oid), 8))})
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @app.route("/veli/cihaz-anahtar")
