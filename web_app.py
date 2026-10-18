@@ -317,7 +317,7 @@ def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
     ana_ekranlar = {
         "ogretmen": {
             "dashboard", "haftalik_takip", "onay_kutusu", "karne",
-            "analiz_merkezi", "lgs", "deneme_analiz",
+            "analiz_merkezi", "lgs", "deneme_analiz", "rehberlik_lgs",
         },
         "ogrenci": {"ogrenci_gorunum"},
         "veli": {"veli_panel", "veli_lgs"},
@@ -326,11 +326,17 @@ def _bilgilendirme_ana_ekran_mi(hedef: str) -> bool:
 
 
 def _alan_tanitimi_verisi(hedef: str) -> dict | None:
+    if hedef == "ogretmen" and session.get("ogretmen_yetki") == "rehber":
+        return {'baslik': 'LGS sıralama yardımcısı', 'alt': 'Rehberlik hesabında sıralama ve filtreler.', 'adimlar': [{'etiket': 'Sıralama nerede?', 'metin': 'Rehberlik menüsünde LGS takip merkezinin altındaki Sıralama bağlantısına tıklayın. Tablo açılır. Öğrenci isimleri rehberlik hesabında açık görünür.'}, {'etiket': 'Ölçüt ve sıralama yönü', 'metin': 'Test, çözülen soru, doğru, yanlış, boş, başarı yüzdesi, aktif gün, en uzun çalışma serisi ve ders çeşitliliğine göre sıralayın. Doğru / Yanlış başlığına ilk tıklama en çok doğruyu, ikinci tıklama en çok yanlışı üste getirir. Artan / Azalan seçimi ve Uygula ile yönü değiştirin.'}, {'etiket': 'Filtreler ve gizlilik', 'metin': 'Sınıf, ders, dönem (tüm zamanlar, bu hafta, bu ay) ve en az çözülen soru filtresini seçip Uygula’ya basın. Öğretmenler isimleri açık görür. Veliler kendi çocuklarının adını görür; diğer öğrenciler anonimdir.'}, {'etiket': 'Sıralama nasıl hesaplanır?', 'metin': 'Sıralama, tamamlanan ev ve okul yaprak testlerini kapsar; denemeler dahil değildir. Doğru sayısından yanlış düşülmez. Çözülen soru = doğru + yanlış; başarı yüzdesi = doğru / (doğru + yanlış + boş). Eşit değerler aynı sıradadır; başarıdaki çizgi henüz sonuç olmadığını gösterir.'}]}
     veriler = {
         "ogretmen": {
             "baslik": "Öğretmen paneli",
             "alt": "Kitap, ödev, onay ve 8. sınıf LGS bu menüden yürür.",
             "adimlar": [
+                {"etiket": "Sıralama nerede?", "metin": "Soldaki LGS merkezi → Sıralama bağlantısına tıklayın. Tablo açılır; Sıralama başlığına tekrar tıklayarak kapatabilirsiniz. Telefonda önce menüyü açın."},
+                {"etiket": "Ölçüt ve sıralama yönü", "metin": "Test, çözülen soru, doğru, yanlış, boş, başarı yüzdesi, aktif gün, en uzun çalışma serisi ve ders çeşitliliğine göre sıralayın. Doğru / Yanlış başlığına ilk tıklama en çok doğruyu, ikinci tıklama en çok yanlışı üste getirir. Artan / Azalan seçimi ve Uygula ile yönü değiştirin."},
+                {"etiket": "Filtreler ve gizlilik", "metin": "Sınıf, ders, dönem (tüm zamanlar, bu hafta, bu ay) ve en az çözülen soru filtresini seçip Uygula’ya basın. Öğretmenler isimleri açık görür. Veliler kendi çocuklarının adını görür; diğer öğrenciler anonimdir."},
+                {"etiket": "Sıralama nasıl hesaplanır?", "metin": "Sıralama, tamamlanan ev ve okul yaprak testlerini kapsar; denemeler dahil değildir. Doğru sayısından yanlış düşülmez. Çözülen soru = doğru + yanlış; başarı yüzdesi = doğru / (doğru + yanlış + boş). Eşit değerler aynı sıradadır; başarıdaki çizgi henüz sonuç olmadığını gösterir."},
                 {"etiket": "Panel", "metin": "Sınıfı seçin. Öğrenci kartında bu haftanın kitabı, ödevi ve öğretmen notu durur."},
                 {"etiket": "Kitap / Ödev", "metin": "Haftalık kitap okuma, kitabı getirme ve ödev durumunu siz işaretlersiniz. Sınıf ödevini bir kez yazınca bütün sınıfa düşer."},
                 {"etiket": "Onay", "metin": "Bekleyen onaylarda tamamlanan testleri de görürsünüz. Test belgesini ve öğrencinin soru soru cevaplarını açın, inceledim kutusunu işaretleyip onaylayın. Sonuçlar onay öncesinde de analizlerde görünür."},
