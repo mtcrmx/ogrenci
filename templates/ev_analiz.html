@@ -146,7 +146,7 @@
 <span>＋</span>
 </summary>
 <div class="ea-question-body">
-<a class="ea-text-button" target="_blank" rel="noopener" href="{{ url_for('lgs_optik_pdf',sinav_id=exam.id) }}">Soru PDF’ini aç ↗</a>{% if q.key %}<p>
+<a class="ea-text-button" target="_blank" rel="noopener" href="{{ url_for('lgs_soru_goruntule',sinav_id=exam.id) }}">Soru PDF’ini aç ↗</a>{% if q.key %}<p>
 <strong>Doğru cevap: {{ q.key }}</strong>
 </p>{% for option in q.options %}
 {% if teacher %}<details class="ea-option-detail"><summary aria-label="{{ q.no }}. soru, {{ option.letter or 'Boş' }}: {{ option.count }} öğrenci; isimleri göster">{% endif %}

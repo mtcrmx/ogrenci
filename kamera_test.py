@@ -218,6 +218,20 @@ def key_preview(ident,page):
     return send_file(out,mimetype='image/png')
 
 
+@bp.get('/taslak/<ident>/sorular')
+def questions_view(ident):
+    from question_viewer import view
+    data=draft_owned(ident)
+    return view(optik.klasor()/(ident+'.pdf'),data['name'],lambda page:url_for('.question_page',ident=ident,page=page))
+
+
+@bp.get('/taslak/<ident>/soru-sayfasi/<int:page>')
+def question_page(ident,page):
+    from question_viewer import page_image
+    draft_owned(ident)
+    return page_image(optik.klasor()/(ident+'.pdf'),page)
+
+
 @bp.get('/<int:eid>')
 def detail(eid):
     exam=exam_owned(eid);people=roster(exam['sinif_id'])

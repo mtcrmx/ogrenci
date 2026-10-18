@@ -88,7 +88,7 @@
     <article class="mt-4 rounded-2xl border border-slate-200 p-3">
       <h3 class="font-black">{{ s.tarih }} · {% if s.tur == 'yaprak' %}{{ s.sinif_adi or 'Sınıf' }} · {{ s.ders or 'Ders' }} · {% endif %}{{ s.ad }} · {{ s.soru_sayisi }} soru</h3>
       {% if s.ogretmen_id==session.get('ogretmen_id') %}<div class="result-actions"><a class="app-button" href="{{ url_for('teacher_record_edit',kind='ev-testi',rid=s.id) }}">Düzenle</a><a class="app-button" href="{{ url_for('teacher_record_edit',kind='ev-testi',rid=s.id) }}#sil">Sil</a></div>{% endif %}<details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in s.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>
-      <a class="mt-2 inline-block text-sm font-black text-indigo-800" href="{{ url_for('lgs_optik_pdf', sinav_id=s.id) }}">Soruları aç</a>
+      <a class="mt-2 inline-block text-sm font-black text-indigo-800" href="{{ url_for('lgs_soru_goruntule', sinav_id=s.id) }}">Soruları aç</a>
       <a class="mt-2 ml-3 inline-block text-sm font-black text-indigo-800" href="{{ url_for('test_sinif_analiz', sinav=s.id) }}">Sınıf analizi</a>
       <div class="mt-3 overflow-x-auto">
         <table class="w-full min-w-[520px] text-left text-sm">
@@ -471,7 +471,7 @@
     <p class="mt-3 text-sm text-slate-600">Görmek istediğin sınavı seç.</p>
     {% else %}
     <p class="mt-3 text-sm font-bold">{{ optik_secili.ad }} · {{ optik_secili.tarih }} · {{ optik_secili.soru_sayisi }} soru</p>
-    <iframe class="mt-3 h-[70vh] w-full rounded-2xl border border-slate-200" src="{{ url_for('lgs_optik_pdf', sinav_id=optik_secili.id) }}" title="{{ optik_secili.ad }} soruları"></iframe>
+    <iframe class="mt-3 h-[70vh] w-full rounded-2xl border border-slate-200" src="{{ url_for('lgs_soru_goruntule', sinav_id=optik_secili.id) }}" title="{{ optik_secili.ad }} soruları"></iframe>
     {% if optik_secili.sonuc %}
     {% if optik_secili.analiz %}
     {% with sinav=optik_secili %}{% include '_soru_grafik.html' %}{% endwith %}

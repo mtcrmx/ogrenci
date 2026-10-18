@@ -4930,6 +4930,11 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
 
 @app.route("/lgs/optik/<int:sinav_id>/pdf")
 def lgs_optik_pdf(sinav_id):
+    sinav, yol = _lgs_soru_belgesi(sinav_id)
+    return send_file(yol, mimetype="application/pdf", download_name=f"{sinav['ad']}.pdf", as_attachment=False)
+
+
+def _lgs_soru_belgesi(sinav_id):
     sinav = lgs_optik.sinav_getir(sinav_id)
     if not sinav:
         abort(404)
@@ -4946,7 +4951,21 @@ def lgs_optik_pdf(sinav_id):
     yol = lgs_optik.pdf_yolu(sinav)
     if not yol:
         abort(404)
-    return send_file(yol, mimetype="application/pdf", download_name=f"{sinav['ad']}.pdf", as_attachment=False)
+    return sinav, yol
+
+
+@app.get('/lgs/optik/<int:sinav_id>/goruntule')
+def lgs_soru_goruntule(sinav_id):
+    from question_viewer import view
+    sinav, yol = _lgs_soru_belgesi(sinav_id)
+    return view(yol, sinav['ad'], lambda page: url_for('lgs_soru_sayfa', sinav_id=sinav_id, page=page))
+
+
+@app.get('/lgs/optik/<int:sinav_id>/sayfa/<int:page>')
+def lgs_soru_sayfa(sinav_id,page):
+    from question_viewer import page_image
+    _, yol = _lgs_soru_belgesi(sinav_id)
+    return page_image(yol,page)
 
 
 def _lgs_ekran(veli: bool):

@@ -7,7 +7,7 @@
 <p>{{ record.ad_soyad }} · {{ record.sinif_adi }} · No {{ record.ogr_no }}</p>
 <p>{{ record.ders }} · Teslim: {{ record.zaman }}</p>
 <p class="my-4 font-bold">{{ score.dogru }} doğru · {{ score.yanlis }} yanlış · {{ score.bos }} boş · {{ score.net }} net</p>
-<a class="app-button" href="{{ url_for('lgs_optik_pdf', sinav_id=record.sinav_id) }}" target="_blank" rel="noopener">Test belgesini aç ↗</a>
+<a class="app-button" href="{{ url_for('lgs_soru_goruntule', sinav_id=record.sinav_id) }}" target="_blank" rel="noopener">Test belgesini aç ↗</a>
 <p class="my-3">Soruları belgeden, öğrencinin işaretlerini aşağıdaki dökümden inceleyin. Onay düşük veya yüksek puanı değil, teslimin öğretmen tarafından kontrol edildiğini belirtir. Sonuçlar onaydan önce de analizlerde görünür.</p>
 <div style="overflow-x:auto"><table class="w-full text-left"><thead><tr><th>Soru</th><th>Öğrencinin cevabı</th><th>Doğru cevap</th><th>Sonuç</th></tr></thead><tbody>
 {% for q in score.satirlar %}<tr class="border-b"><td class="py-3">{{ q.no }}</td><td>{{ q.verilen or 'Boş' }}</td><td>{{ q.dogru }}</td><td>{{ {'dogru':'Doğru','yanlis':'Yanlış','bos':'Boş'}[q.durum] }}</td></tr>{% endfor %}
