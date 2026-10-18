@@ -39,6 +39,15 @@ def veli_cihaz_ogrenci(token: str) -> int | None:
         (hashlib.sha256(token.encode("utf-8")).hexdigest(), aktif_sinir),
     ).fetchone()
     con.close()
+    from veli_auth import enabled, connect
+    if row and enabled():
+        con = connect()
+        try:
+            credential = con.execute('SELECT password_hash FROM veli_credentials WHERE ogrenci_id=?', (row['ogrenci_id'],)).fetchone()
+        finally:
+            con.close()
+        if not credential or not credential['password_hash']:
+            return None
     return int(row["ogrenci_id"]) if row else None
 
 

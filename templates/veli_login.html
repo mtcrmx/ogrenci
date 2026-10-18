@@ -17,7 +17,7 @@
     <form method="POST" class="school-entry-form" aria-labelledby="parent-entry-title">
       <div class="entry-account"><span>VELİ PANELİ</span><span>2026–2027</span></div>
       <h2 id="parent-entry-title">Veli girişi</h2>
-      <p class="entry-intro">Öğrencinizin gelişimine yakından eşlik edin. Öğrenci numarası ve veli şifresiyle devam edin.</p>
+      <p class="entry-intro">Öğrencinizin gelişimine yakından eşlik edin. İlk girişte öğrenci numarası ve okulun verdiği ortak şifreyle devam edin; ardından kendi şifrenizi belirleyin. Daha önce şifre belirlediyseniz kişisel şifrenizi kullanın.</p>
       {% if hata %}<div class="entry-error" role="alert">{{ hata }}</div>{% endif %}
       <label><span>Öğrenci numarası</span><input type="number" name="ogr_no" required inputmode="numeric" placeholder="Örn: 105" autocomplete="username"></label>
       <label><span>Veli şifresi</span><input type="password" name="sifre" required autocomplete="current-password" placeholder="Veli şifrenizi girin"></label>

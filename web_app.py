@@ -2496,6 +2496,7 @@ def veli_giris():
                 return redirect(url_for('veli_sifre_belirle'))
             session.permanent = True
             session['veli_ogrenci_id'] = ogrenci['id']
+            session['veli_auth_version'] = ticket
             return redirect(url_for('veli_panel'))
         return render_template('veli_login.html', hata='Numara veya şifre hatalı. Çok sayıda deneme yaptıysanız 15 dakika sonra tekrar deneyin.')
     if request.method == "POST":

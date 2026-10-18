@@ -1,4 +1,4 @@
-"""Staged parent credentials. Enable only after private code distribution."""
+"""Parent first-login password enrollment and personal sign-in."""
 import hashlib
 import os
 import secrets
@@ -10,7 +10,7 @@ import database as db
 
 
 def enabled():
-    return os.environ.get('VELI_KISISEL_SIFRE', '0') == '1'
+    return os.environ.get('VELI_KISISEL_SIFRE', '1') == '1'
 
 
 def connect():
@@ -20,6 +20,8 @@ def connect():
         password_hash TEXT, code_hash TEXT, code_until REAL,
         ticket_hash TEXT, ticket_until REAL,
         failures INTEGER NOT NULL DEFAULT 0, blocked_until REAL NOT NULL DEFAULT 0)''')
+    if 'auth_version' not in {r[1] for r in con.execute('PRAGMA table_info(veli_credentials)')}:
+        con.execute('ALTER TABLE veli_credentials ADD COLUMN auth_version TEXT')
     return con
 
 
@@ -53,8 +55,10 @@ def authenticate(oid, password):
                 return None, None
             if row['password_hash'] and check_password_hash(row['password_hash'], password):
                 con.execute('UPDATE veli_credentials SET failures=0,blocked_until=0 WHERE ogrenci_id=?', (oid,))
-                return 'login', None
-            if row['code_hash'] and (row['code_until'] or 0) > now and check_password_hash(row['code_hash'], password):
+                return 'login', row['auth_version']
+            first_login = not row['password_hash'] and secrets.compare_digest(password.encode(), os.environ.get('VELI_SIFRE', 'veli').encode())
+            recovery = row['code_hash'] and (row['code_until'] or 0) > now and check_password_hash(row['code_hash'], password)
+            if first_login or recovery:
                 ticket = secrets.token_urlsafe(32)
                 con.execute('UPDATE veli_credentials SET ticket_hash=?,ticket_until=?,failures=0,blocked_until=0 WHERE ogrenci_id=?',
                             (hashlib.sha256(ticket.encode()).hexdigest(), now+600, oid))
@@ -68,6 +72,22 @@ def authenticate(oid, password):
 
 
 def register(app):
+    @app.before_request
+    def require_personal_parent_session():
+        if request.endpoint in {'veli_giris', 'veli_sifre_belirle', 'static'}:
+            return None
+        oid = session.get('veli_ogrenci_id')
+        if not enabled() or not oid or session.get('ogretmen_id'):
+            return None
+        con = connect()
+        try:
+            row = con.execute('SELECT password_hash,auth_version FROM veli_credentials WHERE ogrenci_id=?', (oid,)).fetchone()
+        finally:
+            con.close()
+        if not row or not row['password_hash'] or not row['auth_version'] or session.get('veli_auth_version') != row['auth_version']:
+            session.clear()
+            return redirect(url_for('veli_giris'))
+
     @app.route('/veli/sifre-belirle', methods=['GET', 'POST'])
     def veli_sifre_belirle():
         pending = session.get('veli_setup')
@@ -94,17 +114,21 @@ def register(app):
                     error = 'Geçici giriş kodundan farklı bir şifre belirleyin.'
                 else:
                     hashed = generate_password_hash(password)
+                    version = secrets.token_urlsafe(24)
                     with con:
                         changed = con.execute('''UPDATE veli_credentials SET password_hash=?,code_hash=NULL,
                             code_until=NULL,ticket_hash=NULL,ticket_until=NULL,failures=0,blocked_until=0
-                            WHERE ogrenci_id=? AND ticket_hash=? AND ticket_until>?''',
-                            (hashed, pending['oid'], digest, time.time())).rowcount
+                            ,auth_version=? WHERE ogrenci_id=? AND ticket_hash=? AND ticket_until>?''',
+                            (hashed, version, pending['oid'], digest, time.time())).rowcount
+                        if changed and con.execute("SELECT 1 FROM sqlite_master WHERE name='veli_cihaz'").fetchone():
+                            con.execute('DELETE FROM veli_cihaz WHERE ogrenci_id=?', (pending['oid'],))
                     if not changed:
                         session.pop('veli_setup', None)
                         return redirect(url_for('veli_giris'))
                     session.clear()
                     session.permanent = True
                     session['veli_ogrenci_id'] = pending['oid']
+                    session['veli_auth_version'] = version
                     return redirect(url_for('veli_panel'))
             return render_template('veli_sifre_belirle.html', hata=error)
         finally:

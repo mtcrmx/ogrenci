@@ -48,3 +48,31 @@ class ParentCredentials(unittest.TestCase):
         with self.client.session_transaction() as s:csrf=s['veli_setup_csrf']
         auth.issue_code(self.student['id'])
         self.assertEqual(self.client.post('/veli/sifre-belirle',data={'csrf':csrf,'password':'long enough password','confirm':'long enough password'}).location,'/veli/giris')
+
+    def test_shared_password_only_enrolls_once_and_old_sessions_are_rejected(self):
+        oid=self.student['id']
+        old=w.app.test_client()
+        with old.session_transaction() as s:s['veli_ogrenci_id']=oid
+        self.assertEqual(old.get('/veli').location,'/veli/giris')
+        self.assertEqual(self.login(w.VELI_SIFRE).location,'/veli/sifre-belirle')
+        self.client.get('/veli/sifre-belirle')
+        with self.client.session_transaction() as s:csrf=s['veli_setup_csrf']
+        password='Velinin kişisel şifresi'
+        response=self.client.post('/veli/sifre-belirle',data={'csrf':csrf,'password':password,'confirm':password})
+        self.assertEqual(response.location,'/veli')
+        self.assertEqual(self.client.get('/veli').status_code,200)
+        with self.client.session_transaction() as s:s.clear()
+        self.assertEqual(self.login(w.VELI_SIFRE).status_code,200)
+        with self.client.session_transaction() as s:self.assertNotIn('veli_setup',s)
+        self.assertEqual(self.login(password).location,'/veli')
+        self.assertEqual(self.client.get('/veli').status_code,200)
+
+    def test_expired_setup_and_device_tokens(self):
+        from veli_cihaz import veli_cihaz_kaydet,veli_cihaz_ogrenci
+        oid=self.student['id']
+        veli_cihaz_kaydet(oid,'old-device-fixture')
+        self.assertIsNone(veli_cihaz_ogrenci('old-device-fixture'))
+        self.login(w.VELI_SIFRE)
+        con=auth.connect()
+        con.execute('UPDATE veli_credentials SET ticket_until=0 WHERE ogrenci_id=?',(oid,));con.commit();con.close()
+        self.assertEqual(self.client.get('/veli/sifre-belirle').location,'/veli/giris')
