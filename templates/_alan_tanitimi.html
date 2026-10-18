@@ -52,6 +52,16 @@
 </button>
 
 <style>
+  body #alan-tanitimi-ac {
+    position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom,0px));
+    background:#4c1d95 !important; color:#fff !important; opacity:1;
+    background-image:none !important; border:2px solid #fff !important;
+    font-size:15px; font-weight:800; line-height:1.4; min-height:48px;
+    padding:12px 20px; border-radius:999px; text-shadow:none;
+    box-shadow:0 4px 18px #24103940; z-index:9997;
+  }
+  body #alan-tanitimi-ac:hover { background:#3b1479 !important; }
+  body #alan-tanitimi-ac:focus-visible { outline:3px solid #f59e0b; outline-offset:3px; }
   @keyframes alanTanitimGiris {
     from { opacity: 0; transform: translateY(18px) scale(.96); }
     to { opacity: 1; transform: translateY(0) scale(1); }
@@ -75,6 +85,8 @@
   const panel = document.getElementById("alan-tanitimi");
   const opener = document.getElementById("alan-tanitimi-ac");
   if (!panel || !opener) return;
+  // Keep floating help outside containers that transform or clip their children.
+  document.body.append(panel, opener);
 
   const steps = {{ tanitim.adimlar|tojson }};
   const key = "alan-tanitimi-okundu-{{ tanitim_hedef }}-v2";

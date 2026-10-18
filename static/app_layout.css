@@ -163,8 +163,8 @@ body.ui-theme.layout-page .vp-inner-card { border-radius:12px; padding:12px; bac
 body.ui-theme.layout-page .vp-gain summary,body.ui-theme.layout-page .vp-read-books summary { min-height:44px; }
 body.ui-theme.layout-page .vp-gain,body.ui-theme.layout-page .vp-book-preview { margin-top:12px; }
 body.ui-theme.layout-page #bilgilendirme-modal,body.ui-theme.layout-page #odev-bildirimi-modal { position:static; inset:auto; margin:16px 24px; padding:0; background:none; justify-content:start; }
-body.ui-theme.layout-page #alan-tanitimi { position:static; margin:16px 24px; width:auto; max-width:none; }
-body.ui-theme.layout-page #alan-tanitimi-ac { position:static; margin:12px 24px; }
+body.ui-theme.layout-page #alan-tanitimi { position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom,0px)); margin:0; width:calc(100vw - 32px); max-width:448px; max-height:calc(100dvh - 32px); overflow-y:auto; z-index:9998; }
+body.ui-theme.layout-page #alan-tanitimi-ac { position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom,0px)); margin:0; z-index:9997; }
 body.ui-theme.layout-page #alan-tanitimi.aktif { animation:none; }
 @media(max-width:1000px) {
   .app-shell { grid-template-columns:196px minmax(0,1fr); }
@@ -223,7 +223,7 @@ body.ui-theme.layout-page #alan-tanitimi.aktif { animation:none; }
   body.ui-theme.layout-page .vp-status-card { display:flex; align-items:center; justify-content:space-between; gap:8px; }
   body.ui-theme.layout-page .vp-status-card p { margin:0; }
   body.ui-theme.layout-page .vp-overview,body.ui-theme.layout-page .vp-communication,body.ui-theme.layout-page .vp-week-grid { grid-template-columns:1fr; }
-  body.ui-theme.layout-page #bilgilendirme-modal,body.ui-theme.layout-page #odev-bildirimi-modal,body.ui-theme.layout-page #alan-tanitimi { margin:12px; }
+  body.ui-theme.layout-page #bilgilendirme-modal,body.ui-theme.layout-page #odev-bildirimi-modal { margin:12px; }
   body.ui-theme.layout-page .save-bar { position:sticky; bottom:8px; z-index:20; box-shadow:0 3px 12px #54406020; }
 }
 @media(prefers-reduced-motion:reduce) { .app-sidebar { transition:none; } }
