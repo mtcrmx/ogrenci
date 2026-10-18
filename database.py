@@ -6084,6 +6084,9 @@ def haftalik_takip_isaretle(
 
 
 def veli_haber_ekle(ogrenci_id: int, metin: str, tur: str = "duyuru", sonuc_id: int | None = None, kaynak_tur: str | None = None, kaynak_id: int | None = None) -> None:
+    from veli_haber_visibility import is_internal_operation
+    if is_internal_operation(metin):
+        return
     con = _conn()
     _haftalik_takip_init(con)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -6098,6 +6101,9 @@ def veli_haber_ekle(ogrenci_id: int, metin: str, tur: str = "duyuru", sonuc_id: 
 
 
 def veli_haber_sinifa(sinif_id: int, metin: str, tur: str = "odev") -> None:
+    from veli_haber_visibility import is_internal_operation
+    if is_internal_operation(metin):
+        return
     con = _conn()
     _haftalik_takip_init(con)
     ids = [int(r["id"]) for r in con.execute(

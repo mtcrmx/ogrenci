@@ -3,6 +3,19 @@ import re
 from datetime import date, timedelta
 
 
+def is_internal_operation(text):
+    """Teacher housekeeping changes data silently, without a parent message."""
+    text = ' '.join((text or '').split())
+    return text in {
+        'Öğretmen önceki kaydını geri aldı. Öğrenci ekranındaki bilgiler güncellendi.',
+        'Öğretmen bugünkü LGS programını onayladı.',
+        'Öğretmen çalışma defterini gördü.',
+    } or bool(re.fullmatch(
+        r'.+: sonuç silindi\.|.+: sonuç güncellendi\. Ders analizinizi inceleyebilirsiniz\.|Ödev güncellendi: .+',
+        text,
+    ))
+
+
 def current(con, oid, rows):
     tables={r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     def query(table, sql):
@@ -19,6 +32,7 @@ def current(con, oid, rows):
     kept=[]
     for row in rows:
         text=normalize(row['metin'])
+        if is_internal_operation(text):continue
         if row.get('sonuc_id') is not None:
             if row['sonuc_id'] not in ids:continue
         else:
