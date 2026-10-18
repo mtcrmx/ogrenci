@@ -71,6 +71,12 @@
       <div class="answer-key-box sm:col-span-2" data-key-box>
         <div class="answer-key-head"><strong>Cevap anahtarı</strong><button type="button" class="app-button" data-key-toggle>Gizle</button></div>
         <p class="app-muted">Her kutu bir soru. Soru sayısını değiştirince kutu sayısı da değişir.</p>
+        <label class="block text-sm font-bold">Cevap anahtarı belgesi (soru PDF’inden ayrı)
+          <input type="file" accept=".pdf,.docx,.jpg,.jpeg,.png" data-key-file class="mt-2 block w-full">
+        </label>
+        <button type="button" class="app-button mt-2" data-key-read>Belgeden cevapları oku</button>
+        <p class="text-sm mt-2" role="status" aria-live="polite" data-key-status>PDF, DOCX, JPEG veya PNG seçin. Belge seçilince cevaplar otomatik okunur; soru sayısını önce doğru girin.</p>
+        <label class="block text-sm mt-2" data-key-confirm-label hidden><input type="checkbox" data-key-confirm> Okunan cevapları belgeyle karşılaştırdım.</label>
         <div class="answer-key-slots" data-key-slots></div>
         <input type="hidden" name="anahtar" data-key-value>
       </div>
@@ -109,6 +115,37 @@
     var hiddenKey = form.querySelector("[data-key-value]");
     var toggle = form.querySelector("[data-key-toggle]");
     var box = form.querySelector("[data-key-box]");
+    var fileInput = form.querySelector('[data-key-file]');
+    var readButton = form.querySelector('[data-key-read]');
+    var status = form.querySelector('[data-key-status]');
+    var confirm = form.querySelector('[data-key-confirm]');
+    var confirmLabel = form.querySelector('[data-key-confirm-label]');
+    var reading = false, readVersion = 0;
+    async function readKey() {
+      var file = fileInput.files[0], count = Number(countInput.value);
+      if (!file) { status.textContent='Cevap anahtarı belgesini seçin.'; return; }
+      if (!Number.isInteger(count) || count<1 || count>90) {status.textContent='Önce 1–90 arasında soru sayısı girin.';return;}
+      if (file.size>20*1024*1024) {status.textContent='Cevap anahtarı en fazla 20 MB olabilir.';return;}
+      var version=++readVersion;
+      reading=true;readButton.disabled=true;
+      confirm.checked=false;confirmLabel.hidden=false;
+      status.textContent='Cevap anahtarı okunuyor… Taranmış PDF’lerde bu işlem biraz sürebilir.';
+      var data=new FormData();data.append('key',file);data.append('count',String(count));data.append('csrf',{{ home_key_csrf|tojson }});
+      try {
+        var response=await fetch({{ url_for('kamera_test.read_home_key')|tojson }},{method:'POST',body:data,credentials:'same-origin'});
+        var result=await response.json().catch(()=>({error:'Oturum veya sunucu yanıtı alınamadı. Sayfayı yenilemeden önce girdiğiniz bilgileri koruyun ve tekrar deneyin.'}));
+        if(version!==readVersion || count!==Number(countInput.value) || file!==fileInput.files[0]) return;
+        if(!response.ok || !Array.isArray(result.answers)) throw new Error(result.error || 'Belge okunamadı.');
+        draw();
+        slots.querySelectorAll('select').forEach((select,i)=>{select.value=result.answers[i] || '';});sync();
+        box.classList.remove('is-hidden');toggle.textContent='Gizle';
+        status.textContent=result.read+'/'+count+' cevap aktarıldı. '+(result.ocr?'Görselden okundu; belgeyle karşılaştırın. ':'')+(result.warnings || []).join(' ');
+      } catch(error) {
+        if(version===readVersion) status.textContent=error.message+' Mevcut kutular değiştirilmedi.';
+      } finally {if(version===readVersion){reading=false;readButton.disabled=false;}}
+    }
+    fileInput.addEventListener('change',readKey);
+    readButton.addEventListener('click',readKey);
     function draw() {
       var n = Math.max(0, Math.min(90, parseInt(countInput.value, 10) || 0));
       var mevcut = [];
@@ -140,13 +177,15 @@
       });
       hiddenKey.value = eksik ? "" : harfler.join("");
     }
-    countInput.addEventListener("input", draw);
+    countInput.addEventListener("input", function(){draw();if(fileInput.files.length){readVersion++;reading=false;readButton.disabled=false;confirm.checked=false;status.textContent='Soru sayısı değişti. Belgeden cevapları oku düğmesine yeniden basın.';}});
     slots.addEventListener("change", sync);
     toggle.addEventListener("click", function () {
       var gizli = box.classList.toggle("is-hidden");
       toggle.textContent = gizli ? "Göster" : "Gizle";
     });
     form.addEventListener("submit", function (event) {
+      if(reading){event.preventDefault();status.textContent='Cevap anahtarının okunmasını bekleyin.';return;}
+      if(fileInput.files.length && !confirm.checked){event.preventDefault();box.classList.remove('is-hidden');toggle.textContent='Gizle';status.textContent='Okunan cevapları belgeyle karşılaştırıp onay kutusunu işaretleyin.';return;}
       if (!hiddenKey.value) {
         event.preventDefault();
         box.classList.remove("is-hidden");

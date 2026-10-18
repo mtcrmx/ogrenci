@@ -4852,6 +4852,10 @@ def _lgs_optik_ekle():
     if not anahtar:
         flash("Cevap anahtarına her soru için A, B, C veya D yazın. En fazla 90 soru.", "warning")
         return redirect(url_for("lgs", ekran="evde"))
+    count=request.form.get('soru_sayisi',type=int)
+    if count is not None and (not 1<=count<=90 or len(anahtar)!=count):
+        flash('Cevap sayısı soru sayısıyla aynı olmalı. Eksik cevapları kontrol edin.', 'warning')
+        return redirect(url_for('lgs',ekran='evde'))
     if not dosya or not (dosya.filename or "").lower().endswith(".pdf"):
         flash("Soruların PDF dosyasını seçin.", "warning")
         return redirect(url_for("lgs", ekran="evde"))

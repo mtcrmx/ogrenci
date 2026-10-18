@@ -43,6 +43,9 @@ def connect():
 def register(app, accessible):
     bp.accessible=accessible
     app.register_blueprint(bp)
+    @app.context_processor
+    def home_key_upload_context():
+        return {'home_key_csrf':csrf() if session.get('ogretmen_id') else ''}
 
 
 def csrf():
@@ -68,7 +71,7 @@ def private_response(response):
 
 @bp.errorhandler(ValueError)
 def bad_input(exc):
-    if request.path.endswith(('/tara','/kaydet')):
+    if request.path.endswith(('/tara','/kaydet','/anahtar-oku')):
         return jsonify(error=str(exc)),400
     flash(str(exc),'error')
     return redirect(url_for('.index'))
@@ -95,6 +98,23 @@ def read_upload(upload):
     data=upload.read(20*1024*1024+1)
     if not data or len(data)>20*1024*1024: raise ValueError('Her dosya 20 MB veya daha küçük olmalı.')
     return data,Path(upload.filename).suffix.lower()
+
+
+@bp.post('/anahtar-oku')
+def read_home_key():
+    count=request.form.get('count',type=int)
+    if not count or not 1<=count<=90:
+        raise ValueError('Önce 1–90 arasında soru sayısı girin.')
+    data,suffix=read_upload(request.files.get('key'))
+    try:
+        text,ocr=media.extract_key_text(data,suffix)
+        answers,warnings=media.parse_key(text,count,'ABCDE')
+    except ValueError:
+        raise
+    except Exception:
+        current_app.logger.exception('Home answer key extraction failed')
+        return jsonify(error='Cevap anahtarı okunamadı. Daha net bir PDF veya görsel deneyin. Girdiğiniz test bilgileri korunuyor.'),422
+    return jsonify(answers=answers,warnings=warnings,ocr=ocr,read=sum(bool(a) for a in answers))
 
 
 @bp.get('')
