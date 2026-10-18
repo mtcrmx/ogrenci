@@ -108,6 +108,10 @@
     {% endfor %}
     </div>
   </section>
+  <style>
+    body.ui-theme [data-key-slots] label { width:64px; }
+    body.ui-theme [data-key-slots] select { width:64px; min-width:64px; padding:8px 20px 8px 8px!important; font-size:16px!important; font-weight:800; color:#342747!important; }
+  </style>
   <script>
   document.querySelectorAll("[data-optik-form]").forEach(function (form) {
     var countInput = form.querySelector("[data-question-count]");
