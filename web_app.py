@@ -7609,6 +7609,8 @@ def api_admin_yedek_geri_yukle(yedek_id: int):
 # Baslama
 # ══════════════════════════════════════════════════════════════════════════
 
+from yonetici import register as register_yonetici
+register_yonetici(app)
 from veli_auth import register as register_veli_auth
 register_veli_auth(app)
 from rehberlik import register_rehberlik

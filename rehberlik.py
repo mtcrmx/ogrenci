@@ -258,6 +258,8 @@ def register_rehberlik(app):
         if session.get('ogretmen_id') and not request.path.startswith('/veli') and counselor():
             session['ogretmen_yetki'] = 'rehber'
             ep = request.endpoint or ''
+            if ep == 'yonetici_login':
+                return None
             if ep.startswith('rehberlik_') or ep in {'teacher_records', 'teacher_record_edit', 'teacher_record_restore', 'static', 'login', 'logout', 'manifest', 'manifest_veli', 'service_worker', 'favicon', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_yonetim'}:
                 return None
             if request.method == 'GET' and ep in READ_REPORTS:
@@ -465,7 +467,9 @@ def register_rehberlik(app):
                 flash('Geri bildiriminiz Alperen hocaya iletildi.', 'success')
                 return redirect(url_for('veli_rehberlik_detay', cid=cid))
             with con:
-                con.execute("UPDATE rehber_alici SET acildi=CASE WHEN acildi='' THEN ? ELSE acildi END WHERE icerik_id=? AND ogrenci_id=?", (now(),cid,oid))
+                from yonetici import active as admin_preview
+                if not admin_preview():
+                    con.execute("UPDATE rehber_alici SET acildi=CASE WHEN acildi='' THEN ? ELSE acildi END WHERE icerik_id=? AND ogrenci_id=?", (now(),cid,oid))
         finally:
             con.close()
         return page('detay', item=item, parents=[], parent=True)

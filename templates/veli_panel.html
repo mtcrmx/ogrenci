@@ -22,6 +22,7 @@
 <script src="{{ url_for('static', filename='veli_akis.js') }}?v=20261018a" defer></script>
 </head>
 <body class="ui-theme veli-ekran veli-clay-page layout-page">
+{% include '_yonetici_banner.html' %}
 <a class="app-skip" href="#app-content">İçeriğe geç</a><div class="app-shell">{% include '_app_sidebar.html' %}<div class="app-workspace" id="app-content">{% include '_app_toolbar.html' %}
 <main class="vp-main" id="veli-icerik"><header class="vp-toolbar"><div><h1 id="parent-page-title">Ana sayfa</h1><p class="app-muted">{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }}</p></div></header>
 {% with mesajlar = get_flashed_messages(with_categories=true) %}{% if mesajlar %}<div class="parent-feedback" role="status">{% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--error' if kategori in ['warning','error'] else 'app-notice--success' }}">{{ mesaj }}</p>{% endfor %}</div>{% endif %}{% endwith %}

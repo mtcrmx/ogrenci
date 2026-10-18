@@ -74,7 +74,10 @@ def authenticate(oid, password):
 def register(app):
     @app.before_request
     def require_personal_parent_session():
-        if request.endpoint in {'veli_giris', 'veli_sifre_belirle', 'static'}:
+        from yonetici import active
+        if active():
+            return None
+        if request.endpoint in {'veli_giris', 'veli_sifre_belirle', 'yonetici_login', 'static'}:
             return None
         oid = session.get('veli_ogrenci_id')
         if not enabled() or not oid or session.get('ogretmen_id'):
