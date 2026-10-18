@@ -3,7 +3,7 @@
 {% block body %}
 <main class="mx-auto max-w-4xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
   <header class="rounded-2xl bg-slate-900 p-5 text-white">
-    <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">Bu hafta</p>
+    <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">Öğretmen incelemesi</p>
     <h1 class="mt-1 text-2xl font-black">Onay kutusu</h1>
     <p class="mt-1 text-sm text-slate-300">Öğrencinin yaptım demesi burada bekler. Tam, eksik, yok veya LGS onayı sizden sonra kesinleşir.</p>
     {% if geciken %}
@@ -11,6 +11,19 @@
     {% endif %}
   </header>
   {% with messages=get_flashed_messages(with_categories=true) %}{% for cat,message in messages %}<p class="app-notice {{ 'app-notice--success' if cat == 'success' else 'app-notice--error' }}" role="status">{{ message }}</p>{% endfor %}{% endwith %}
+
+  <section class="mt-4 space-y-2">
+    <h2 class="font-black">Tamamlanan testler · {{ testler|length }}</h2>
+    <p class="text-sm text-slate-600">Verdiğiniz ev testleri, okulda yaprak testler ve soru bazlı denemeler. Tüm tarihlerdeki bekleyen teslimler burada görünür. Önce içeriği açıp inceleyin, ardından onaylayın.</p>
+    {% for t in testler %}
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+      <h3 class="font-black">{{ t.ad }} · {{ t.ad_soyad }}</h3>
+      <p>{{ t.sinif_adi }} · No {{ t.ogr_no }} · {{ t.ders }} · {{ t.zaman }}</p>
+      <p>{{ 'Okulda yaprak test' if t.kaynak == 'kamera' else 'Deneme' if t.tur == 'deneme' else 'Evde test' }} · {{ t.dogru }} doğru / {{ t.yanlis }} yanlış / {{ t.bos }} boş</p>
+      <a class="app-button mt-2" href="{{ url_for('test_onay.review',rid=t.id) }}">İçeriği incele ve onayla →</a>
+    </article>
+    {% else %}<p class="text-sm text-slate-500">İncelemeniz gereken tamamlanmış test yok.</p>{% endfor %}
+  </section>
 
   <section class="mt-4 space-y-2">
     <h2 class="font-black">Ödev · {{ odevler|length }}</h2>

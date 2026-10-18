@@ -63,7 +63,7 @@
     </details>{% endif %}
   </nav>
   {% endif %}
-  <div class="app-sidebar-footer"><h2>Hesap</h2><button type="button" data-renk-ac>Renk paleti</button>
+  <div class="app-sidebar-footer"><a href="{{ url_for('test_onay.help_page') }}">? Yardım ve kullanım kılavuzu</a><h2>Hesap</h2><button type="button" data-renk-ac>Renk paleti</button>
   {% if ui_role == 'ogretmen' and not rehber_only %}<details><summary>Öğretmen görseli</summary>{% for tipi, ad in [('kadin','Kadın öğretmen'),('erkek','Erkek öğretmen')] %}<form method="post" action="{{ url_for('profil_gorsel') }}"><input type="hidden" name="gorsel_tipi" value="{{ tipi }}"><input type="hidden" name="sinif" value="{{ nav_sinif_id or '' }}"><button>{{ ad }}</button></form>{% endfor %}</details>{% endif %}
   <a href="{{ url_for('veli_cikis' if ui_role == 'veli' else 'logout') }}">Çıkış yap</a></div>
 </aside>

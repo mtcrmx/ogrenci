@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Testi incele ve onayla{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-4xl p-4 pb-24">
+<a class="app-button" href="{{ url_for('onay_kutusu') }}">← Onay kutusu</a>
+<h1 class="mt-4 text-2xl font-black">{{ record.ad }}</h1>
+<p>{{ record.ad_soyad }} · {{ record.sinif_adi }} · No {{ record.ogr_no }}</p>
+<p>{{ record.ders }} · Teslim: {{ record.zaman }}</p>
+<p class="my-4 font-bold">{{ score.dogru }} doğru · {{ score.yanlis }} yanlış · {{ score.bos }} boş · {{ score.net }} net</p>
+<a class="app-button" href="{{ url_for('lgs_optik_pdf', sinav_id=record.sinav_id) }}" target="_blank" rel="noopener">Test belgesini aç ↗</a>
+<p class="my-3">Soruları belgeden, öğrencinin işaretlerini aşağıdaki dökümden inceleyin. Onay düşük veya yüksek puanı değil, teslimin öğretmen tarafından kontrol edildiğini belirtir. Sonuçlar onaydan önce de analizlerde görünür.</p>
+<div style="overflow-x:auto"><table class="w-full text-left"><thead><tr><th>Soru</th><th>Öğrencinin cevabı</th><th>Doğru cevap</th><th>Sonuç</th></tr></thead><tbody>
+{% for q in score.satirlar %}<tr class="border-b"><td class="py-3">{{ q.no }}</td><td>{{ q.verilen or 'Boş' }}</td><td>{{ q.dogru }}</td><td>{{ {'dogru':'Doğru','yanlis':'Yanlış','bos':'Boş'}[q.durum] }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% if record.approved %}<p class="app-notice app-notice--success">Bu sürüm onaylandı.</p>{% else %}
+<form method="post" class="mt-5 rounded-2xl border bg-white p-4">
+<input type="hidden" name="csrf" value="{{ session.test_review_csrf }}"><input type="hidden" name="revision" value="{{ record.revision }}">
+<label class="block mb-4"><input type="checkbox" required> Test içeriğini ve öğrencinin cevaplarını inceledim.</label>
+<button class="app-button" type="submit">İnceledim, onayla</button>
+<a class="app-button" href="{{ url_for('onay_kutusu') }}">Onaylamadan geri dön</a>
+</form>{% endif %}
+</main>{% endblock %}

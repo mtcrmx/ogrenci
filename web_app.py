@@ -333,10 +333,11 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
             "adimlar": [
                 {"etiket": "Panel", "metin": "Sınıfı seçin. Öğrenci kartında bu haftanın kitabı, ödevi ve öğretmen notu durur."},
                 {"etiket": "Kitap / Ödev", "metin": "Haftalık kitap okuma, kitabı getirme ve ödev durumunu siz işaretlersiniz. Sınıf ödevini bir kez yazınca bütün sınıfa düşer."},
-                {"etiket": "Onay", "metin": "Öğrenci veya veli yaptım derse kayıt burada bekler. Ödev, LGS programı ve çalışma defteri siz onaylamadan tamam sayılmaz."},
+                {"etiket": "Onay", "metin": "Bekleyen onaylarda tamamlanan testleri de görürsünüz. Test belgesini ve öğrencinin soru soru cevaplarını açın, inceledim kutusunu işaretleyip onaylayın. Sonuçlar onay öncesinde de analizlerde görünür."},
                 {"etiket": "Karne", "metin": "Dönem özeti kitap, ödev ve LGS netini gösterir. Excel ve PDF alınır."},
                 {"etiket": "Analiz", "metin": "Kitap ve ödev raporunu sınıf ya da tek öğrenci için açın."},
-                {"etiket": "LGS", "metin": "Yalnız 8/A ve 8/B. Tempoyu seçin: Alışma, Sıkı veya Tempo. Aylık kutuları siz işaretlersiniz. Denemeyi kendiniz girer ya da kurum listesinin PDF’inden alırsınız."},
+                {"etiket": "LGS", "metin": "LGS merkezinde evde test, okulda yaprak test, deneme ve birleşik analiz bulunur. Okul testini belge olarak yükleyin, optik eklenmiş çıktıyı dağıtın ve cevapları kamerayla okuyup kontrol ederek kaydedin."},
+                {"etiket": "Kazanımlar", "metin": "Soru kazanımları ekranında testi seçin; sorulara ders, konu ve kazanım atayın. Toplu atama ile bir soru aralığını eşleştirebilirsiniz. Kaydettikten sonra kazanım başarısını birleşik analizde izleyin."},
                 {"etiket": "Deneme", "metin": "Bireysel ve genel grafik buradadır. Veli yalnız kendi çocuğunun adını görür."},
             ],
         },
@@ -349,9 +350,11 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
         },
         "veli": {
             "baslik": "Veli ekranına hoş geldiniz",
-            "alt": "Yalnızca öğrencinizin tik kayıtlarını ve nedenlerini görüntüleyebilirsiniz.",
+            "alt": "Öğrencinizin kayıtlarını, testlerini ve analizlerini takip edin.",
             "adimlar": [
                 {"etiket": "Tik geçmişi", "metin": "Her satırda tik tarihi, öğretmenin seçtiği davranış nedeni (kriter) ve kaydı işleyen öğretmen adı yer alır."},
+                {"etiket": "Test teslimi", "metin": "LGS alanında öğrencinizin testini açın, cevapları kontrol ederek bitirin. Teslim otomatik puanlanır ve testi veren öğretmenin incelemesine gider."},
+                {"etiket": "Analiz ve yardım", "metin": "Ayrı ve birleşik analizlerle öğrencinizin sonuçlarını takip edin. Zorlandığı soru için soru analizinden yardım isteği bırakın. Ayrıntılı kullanım kılavuzuna menüdeki Yardım bağlantısından ulaşın."},
             ],
         },
     }
@@ -3681,6 +3684,8 @@ def onay_kutusu():
                 veli_haber_ekle(oid, "Öğretmen çalışma defterini gördü.")
         return redirect(url_for("onay_kutusu"))
     kutu = onay_bekleyenler(hafta)
+    from test_onay import pending
+    kutu['testler'] = pending(session['ogretmen_id'])
     return render_template("onay_kutusu.html", hafta=hafta, **kutu)
 
 
@@ -7566,6 +7571,8 @@ from kamera_test import register as register_kamera_test
 register_kamera_test(app, _ogretmen_ogrencisine_erisebilir)
 from lgs_kazanim import bp as lgs_kazanim_bp
 app.register_blueprint(lgs_kazanim_bp)
+from test_onay import bp as test_onay_bp
+app.register_blueprint(test_onay_bp)
 from sayfa_sifirlama import register_sayfa_sifirlama
 register_sayfa_sifirlama(app, giris_zorunlu)
 from school_broadcast import register_broadcast
