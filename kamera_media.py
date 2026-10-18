@@ -116,7 +116,8 @@ def merge_documents(documents):
 @lru_cache(maxsize=1)
 def ocr_engine():
     from rapidocr_onnxruntime import RapidOCR
-    return RapidOCR(text_score=0.5, intra_op_num_threads=2, inter_op_num_threads=1)
+    return RapidOCR(text_score=0.5, intra_op_num_threads=2, inter_op_num_threads=1,
+                    det_limit_type='max', det_limit_side_len=960)
 
 
 def ocr_image(im):
