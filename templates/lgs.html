@@ -6,6 +6,7 @@
 <main class="lgs-page mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
   {% if veli or ogrenci or ekran == 'evde' %}<a class="app-button" style="margin:12px 0" href="{{ url_for('ev_analiz.index') }}">Soru analizi · Çalışma grupları · Yardım {{ "· Haftalık özet" if veli else "" }} →</a>{% endif %}
   {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
+  {% include '_lgs_ranking.html' %}
 
   {% if not veli and not ogrenci and ekran != 'evde' %}<nav class="lgs-quick-nav" aria-label="LGS hızlı erişim">
 <a href="{{ url_for('lgs',ekran='evde') }}"><strong>Evde soru testleri</strong><small>Öğrencilere test gönderin, çözümleri izleyin.</small></a>

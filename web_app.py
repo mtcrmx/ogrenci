@@ -265,7 +265,7 @@ def giris_zorunlu(fn):
             session["ogretmen_yetki"] = ogretmen_yetki_al(session["ogretmen_id"])
         if session.get("ogretmen_yetki") == "rapor":
             ep = request.endpoint
-            if ep and ep not in _RAPOR_SADECE_ROTALAR:
+            if ep and ep not in _RAPOR_SADECE_ROTALAR and not (ep == 'lgs' and request.method == 'GET'):
                 flash(
                     "Bu bölüm için tam öğretmen yetkisi gerekir. Size yalnızca raporlar açık.",
                     "warning",
@@ -4212,6 +4212,8 @@ def _lgs_ogrenci(ogrenci_id: int) -> dict:
 @app.route("/lgs", methods=["GET", "POST"])
 @giris_zorunlu
 def lgs():
+    if session.get('ogretmen_yetki') == 'rapor':
+        return render_template('lgs_ranking_page.html')
     return _lgs_ekran(veli=False)
 
 
@@ -7626,6 +7628,8 @@ from teacher_records import register as register_teacher_records
 register_teacher_records(app, giris_zorunlu)
 from ev_analiz import register as register_ev_analiz
 register_ev_analiz(app, _ogretmen_ogrencisine_erisebilir)
+from lgs_ranking import register as register_lgs_ranking
+register_lgs_ranking(app)
 from yaprak_analiz import register as register_yaprak_analiz
 register_yaprak_analiz(app, _ogretmen_ogrencisine_erisebilir)
 from kamera_test import register as register_kamera_test
