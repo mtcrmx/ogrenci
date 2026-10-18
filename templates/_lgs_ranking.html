@@ -1,10 +1,12 @@
 {% if lgs_ranking %}{% set r = lgs_ranking %}
+<link rel="stylesheet" href="{{ url_for('static',filename='ranking_mobile.css') }}?v=1">
 <details id="lgs-siralama" class="mt-4 rounded-2xl border border-slate-200 bg-white p-4"{% if request.args.get('sr_olcut') or request.args.get('sr_yon') %} open{% endif %}>
   <summary class="cursor-pointer text-lg font-black" style="padding:4px 0">Sıralama</summary>
   <div class="mt-3">
   <p class="text-xs text-slate-600">Evde ve okulda tamamlanan yaprak testler. Yanlışlar doğruları götürmez. Denemeler dahil değildir.</p>
   {% if r.parent %}<p class="mt-1 text-xs text-slate-600">Kendi öğrencinizin adı görünür; diğer öğrencilerin kimlikleri gizlidir.</p>{% endif %}
-  <form method="get" action="#lgs-siralama" class="mt-3 flex flex-wrap items-end gap-3">
+  <details class="ranking-filters"><summary>Filtreler · {{ r.metrics[r.metric] }} · {{ 'Artan' if r.direction == 'artan' else 'Azalan' }}</summary>
+  <form method="get" action="#lgs-siralama" class="ranking-filter-form mt-3">
     {% for k,v in r.preserved.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
     <label>Ölçüt<select name="sr_olcut" class="block rounded border p-2">{% for k,v in r.metrics.items() %}<option value="{{ k }}" {{ 'selected' if r.metric == k else '' }}>{{ v }}</option>{% endfor %}</select></label>
     <label>Sıralama yönü<select name="sr_yon" class="block rounded border p-2"><option value="azalan" {{ 'selected' if r.direction == 'azalan' else '' }}>Azalan · en yüksek önce</option><option value="artan" {{ 'selected' if r.direction == 'artan' else '' }}>Artan · en düşük önce</option></select></label>
@@ -14,9 +16,11 @@
     <label>En az çözülen soru<input type="number" name="sr_min" min="0" max="100000" value="{{ r.minimum }}" class="block w-28 rounded border p-2"></label>
     <button class="rounded bg-slate-900 px-4 py-2 text-white">Uygula</button>
   </form>
-  <p class="my-3 text-sm" aria-live="polite"><strong>{{ r.metrics[r.metric] }} · {{ 'Artan' if r.direction == 'artan' else 'Azalan' }}</strong> — Doğru / Yanlış başlığına her tıklamada ölçüt değişir.</p>
-  <div style="overflow-x:auto;max-height:520px">
-    <table style="border-collapse:separate;border-spacing:0;min-width:950px;width:100%;text-align:left">
+  </details>
+  <p class="ranking-status" aria-live="polite"><strong>{{ r.metrics[r.metric] }} · {{ 'Artan' if r.direction == 'artan' else 'Azalan' }}</strong> <span>Doğru / Yanlış başlığıyla ölçütü değiştirin.</span></p>
+  <p class="ranking-hint">Diğer ölçütler için tabloyu sağa kaydırın. Öğrenci adları solda sabit kalır.</p>
+  <div class="ranking-scroll" tabindex="0" role="region" aria-label="Öğrenci sıralaması, diğer sütunlar için yatay kaydırın">
+    <table class="ranking-table" style="border-collapse:separate;border-spacing:0;text-align:left">
       <caption class="sr-only">{{ r.metrics[r.metric] }} ölçütüne göre öğrenci sıralaması</caption>
       <thead><tr><th scope="col" style="padding:10px">Sıra</th><th scope="col" style="position:sticky;left:0;background:white;padding:10px">Öğrenci</th>
       {% for k,v in r.metrics.items() %}<th scope="col" style="padding:10px;white-space:nowrap" aria-sort="{{ ('ascending' if r.direction == 'artan' else 'descending') if r.metric == k else 'none' }}"><a href="{{ r.link(k) }}">{{ ('Yanlış / Doğru' if r.metric == 'yanlis' else 'Doğru / Yanlış') if k == 'dogru' else v }}{% if r.metric == k %} {{ '↑' if r.direction == 'artan' else '↓' }}{% endif %}</a></th>{% endfor %}
