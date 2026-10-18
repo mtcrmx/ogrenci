@@ -2631,8 +2631,10 @@ def veli_panel():
     if lgs_acik and kocluk and kocluk.get("hedef_net") and kocluk.get("son"):
         hikaye = (hikaye + f" Hedef {kocluk['hedef_net']} net, kalan {kocluk['kalan']}.").strip()
     hafta["odev_foto"] = bool(kayit.get("odev_foto"))
+    from veli_akis import build as veli_akis_build
     return render_template(
         "veli_panel.html",
+        akis=veli_akis_build(o),
         ogrenci=o,
         avatar=_avatar(o),
         hafta=hafta,
@@ -2658,6 +2660,18 @@ def veli_panel():
         gorusme_talepleri=randevu_ogrenci_listesi(int(ogrenci_id)),
         bugun_odev=_odev_bildirimi_verisi("veli"),
     )
+
+
+@app.route("/veli/akis")
+def veli_akis_fragment():
+    oid = session.get('veli_ogrenci_id')
+    student = _ogrenci_bul(int(oid)) if oid else None
+    if not student:
+        return '', 401
+    from veli_akis import build
+    response = app.make_response(render_template('_veli_akis.html', akis=build(student)))
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @app.route("/veli/haber")

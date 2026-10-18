@@ -18,44 +18,25 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='kitap_hazine.css') }}?v=20261001a">
   <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
 <link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20261001logo">
+<link rel="stylesheet" href="{{ url_for('static', filename='veli_akis.css') }}?v=20261018a">
+<script src="{{ url_for('static', filename='veli_akis.js') }}?v=20261018a" defer></script>
 </head>
 <body class="ui-theme veli-ekran veli-clay-page layout-page">
 <a class="app-skip" href="#app-content">İçeriğe geç</a><div class="app-shell">{% include '_app_sidebar.html' %}<div class="app-workspace" id="app-content">{% include '_app_toolbar.html' %}
 <main class="vp-main" id="veli-icerik"><header class="vp-toolbar"><div><h1 id="parent-page-title">Ana sayfa</h1><p class="app-muted">{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }}</p></div></header>
 {% with mesajlar = get_flashed_messages(with_categories=true) %}{% if mesajlar %}<div class="parent-feedback" role="status">{% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--error' if kategori in ['warning','error'] else 'app-notice--success' }}">{{ mesaj }}</p>{% endfor %}</div>{% endif %}{% endwith %}
 <div class="parent-section" data-parent-section="genel" id="genel">
-{% if rehber_yeni %}<section class="app-card"><div class="app-row" style="justify-content:space-between"><h2>Rehberlik servisinden</h2><a class="app-button" href="{{ url_for('veli_rehberlik') }}">Tüm içerikler →</a></div>{% for item in rehber_yeni %}<p style="margin-top:12px"><a href="{{ url_for('veli_rehberlik_detay',cid=item.id) }}"><strong>{{ item.baslik }}</strong></a><span class="app-muted"> · {{ item.kategori }}{{ ' · Yeni' if not item.acildi else '' }}</span></p>{% endfor %}</section>{% endif %}
-{% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
-<section class="app-card parent-today"><h2>Bugünkü işler</h2>
-{% if not lgs_acik %}
-{% if odev_ogr.odev_not or odev.aciklama %}<p><strong>{{ odev_ogr.odev_ders or odev.ders or 'Ödev' }}:</strong> {{ odev_ogr.odev_not or odev.aciklama }}</p>{% endif %}
-{% if bugun_odev and bugun_odev.odev %}<p><strong>{{ bugun_odev.odev.baslik }}</strong> · {{ bugun_odev.odev.ders }}</p><p>{{ bugun_odev.odev.aciklama }}</p><p class="app-muted">Son tarih: {{ bugun_odev.odev.son_tarih or 'Belirtilmedi' }}</p>{% endif %}
-{% if hafta.kitap_adi %}<p><strong>Kitap:</strong> {{ hafta.kitap_adi }}{% if hafta.kitap_sayfa %} · {{ hafta.kitap_sayfa }} sayfa{% endif %}</p>{% endif %}
-{% endif %}
-{% if program_bugun %}<p><strong>LGS programı:</strong> {{ program_bugun }}</p>{% endif %}
-{% if lgs_acik %}<p>Sorular ve optik LGS ekranında.</p>{% endif %}
-{% if not lgs_acik and not (odev_ogr.odev_not or odev.aciklama or hafta.kitap_adi or program_bugun or bugun_odev) %}<p class="app-muted">Bugün için görev tanımlanmadı.</p>{% elif lgs_acik and not program_bugun %}<p class="app-muted">Bugünkü program henüz işaretlenmedi.</p>{% endif %}
-{% if not lgs_acik %}
-{% if hafta.odev_kod in ['eksik','yok'] %}<p class="app-notice"><strong>{{ hafta.odev_durum }}:</strong> {{ hafta.odev_karar_not or 'Öğretmen eksik bölüm veya son tarih belirtmedi. Ayrıntıyı Mesajlar bölümünden sorabilirsiniz.' }}</p>{% elif hafta.odev_bildirim == 'yaptim' and not hafta.odev_kod %}<p class="app-notice">Tamamlandı bildirimi alındı. Öğretmen onayı bekleniyor.</p>{% endif %}
-{% if hafta.odev_foto %}<details class="app-details"><summary>Ödev fotoğrafı</summary><img class="vp-homework-photo" src="{{ url_for('veli_odev_foto') }}" alt="Öğretmenin eklediği ödev fotoğrafı"></details>{% endif %}
-<div class="app-row" style="margin-top:12px">{% if not hafta.odev_kod and hafta.odev_bildirim != 'yaptim' and (odev_ogr.odev_not or odev.aciklama) %}<form method="post" action="{{ url_for('veli_odev_bildir') }}"><input type="hidden" name="yaptim" value="1"><button class="app-primary">Çocuğum tamamladı</button></form>{% endif %}<a class="app-button" href="#hafta">Ödev ve kitap ayrıntısı →</a></div>
-{% else %}
-<div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_lgs', bolum='soru') }}">Sorular ve optik →</a><a class="app-button" href="{{ url_for('veli_analizler') }}">Analizler →</a><a class="app-button" href="{{ url_for('veli_lgs', bolum='sonuc') }}">Ders ve deneme sonuçları →</a><a class="app-button" href="{{ url_for('ev_analiz.index', tab='weekly') }}">Haftalık test özeti →</a></div>
-{% endif %}
+<section class="app-card" id="parent-activity" aria-labelledby="parent-activity-title">
+<div class="pa-header"><div><h2 id="parent-activity-title">Öğretmenden gelenler</h2><p id="parent-activity-status" role="status">Güncel · Yeni bilgiler otomatik görünür</p></div><button type="button" id="parent-refresh">Yenile ↻</button></div>
+<div class="pa-filters" aria-label="Kayıtları filtrele"><button type="button" data-feed-filter="all" aria-pressed="true">Tümü</button><button type="button" data-feed-filter="gorev" aria-pressed="false">Ödev ve testler</button><button type="button" data-feed-filter="sonuc" aria-pressed="false">Sonuçlar</button><button type="button" data-feed-filter="mesaj" aria-pressed="false">Mesajlar</button></div>
+<div id="parent-activity-content">{% include '_veli_akis.html' %}</div>
+<p id="parent-filter-empty" class="pa-empty" hidden>Bu bölümde henüz kayıt yok.</p>
+<button type="button" id="parent-activity-more" class="app-button pa-more" hidden>Diğer kayıtları göster</button>
 </section>
-{% if not lgs_acik %}
-    <section class="vp-status" aria-label="Bu haftanın durumları">
-      <article class="vp-status-card vp-status-card--lilac"><span class="vp-status-icon" aria-hidden="true">▣</span><p>Kitap okuma</p><strong>{{ hafta.kitap_okuma }}</strong></article>
-      <article class="vp-status-card vp-status-card--pink"><span class="vp-status-icon" aria-hidden="true">▤</span><p>Kitabı getirme</p><strong>{{ hafta.kitap_getirme }}</strong></article>
-      <article class="vp-status-card vp-status-card--peach"><span class="vp-status-icon" aria-hidden="true">✓</span><p>Ödev durumu</p><strong>{{ hafta.odev_durum }}</strong></article>
-    </section>
-{% endif %}
-
-<section class="app-card parent-latest" id="veli-uyari" aria-labelledby="veli-uyari-baslik">
-<h2 id="veli-uyari-baslik">Son öğretmen mesajı</h2>
-<ul id="veli-uyari-liste">{% if haberler %}{% set h=haberler[0] %}<li data-id="{{ h.id }}" data-key="{{ h.tur }}|{{ h.metin }}|{{ h.zaman[:16] }}"><time>{{ h.zaman }}</time><p>{{ h.metin }}</p>{% if h.sonuc_id %}<a class="app-button" href="{{ url_for('veli_sonuclar', sonuc=h.sonuc_id) }}">İlgili sonucu aç →</a>{% endif %}</li>{% elif notlar %}<li><time>{{ notlar[0].tarih }} · {{ notlar[0].ogretmen }}</time><p>{{ notlar[0].not_metni }}</p></li>{% else %}<li class="app-muted">Henüz öğretmen mesajı yok.</li>{% endif %}</ul>
-<div class="app-row"><button type="button" class="app-button" id="veli-uyari-gordum"{% if not bekleyen_haber %} hidden{% endif %}>Gördüm</button><button type="button" class="app-button" id="veli-uyari-kapat">Şimdi kapat</button><a class="app-button" href="#mesajlar">Tüm mesajlar</a><span id="haber-okundu" class="app-muted" role="status"></span></div>
-</section>    <div class="vp-overview vp-overview--secondary">
+<div class="pa-shortcuts">{% if lgs_acik %}<a class="app-button" href="{{ url_for('veli_lgs',bolum='soru') }}">Evde testleri aç →</a><a class="app-button" href="{{ url_for('veli_analizler') }}">Tüm analizler →</a>{% else %}<a class="app-button" href="#hafta">Ödev ve kitap takibi →</a>{% endif %}<a class="app-button" href="#mesajlar">Öğretmenle iletişim →</a></div>
+{% if program_bugun %}<section class="app-card"><h2>Bugünkü çalışma programı</h2><p>{{ program_bugun }}</p><a class="app-button" href="{{ url_for('veli_lgs') }}">Programı aç →</a></section>{% endif %}
+{% if rehber_yeni %}<section class="app-card"><div class="app-row" style="justify-content:space-between"><h2>Rehberlik servisinden</h2><a class="app-button" href="{{ url_for('veli_rehberlik') }}">Tüm içerikler →</a></div>{% for item in rehber_yeni %}<p style="margin-top:12px"><a href="{{ url_for('veli_rehberlik_detay',cid=item.id) }}"><strong>{{ item.baslik }}</strong></a><span class="app-muted"> · {{ item.kategori }}{{ ' · Yeni' if not item.acildi else '' }}</span></p>{% endfor %}</section>{% endif %}
+    <details class="app-card app-details"><summary>Gelişim özeti</summary><div class="vp-overview vp-overview--secondary">
       <section class="vp-card vp-card--mint">
         <div class="vp-card-heading"><span class="vp-card-badge" aria-hidden="true">★</span><div><p class="vp-eyebrow">Gelişim</p><h2>Kendi temposu</h2></div></div>
         <p class="vp-card-lead">{{ duzen_metin }}</p>
@@ -73,6 +54,8 @@
     </div>
 
 
+</details>
+{% if lgs_sayac %}<details class="app-card app-details"><summary>LGS’ye kalan süre</summary>{% include '_lgs_sayac.html' %}</details>{% endif %}
 </div>{% if lgs_acik %}<div class="parent-section" data-parent-section="hafta" id="parent-homework" hidden><section class="vp-card" id="hafta"><h2>Sorular ve optik</h2><p class="vp-muted">8. sınıflarda ödev ve kitap takibi kapandı. Sorular LGS ekranında açılır, cevaplar optiğe işaretlenir.</p><a class="app-button" href="{{ url_for('veli_lgs', bolum='soru') }}">Sorulara git</a></section></div>{% else %}<div class="parent-section" data-parent-section="hafta" id="parent-homework" hidden>    <section class="vp-card vp-week-card" id="hafta" aria-labelledby="vp-week-heading">
       <div class="vp-section-head"><div><p class="vp-eyebrow">HAFTALIK TAKİP</p><h2 id="vp-week-heading">Ödev ve kitaplar</h2></div><span class="vp-section-deco" aria-hidden="true">✦</span></div>
       <a class="app-button" style="margin-bottom:12px" href="{{ url_for('veli_kitap_okuma') }}">Verilen kitaplar / bitirdiğimizi bildir</a>
@@ -82,6 +65,7 @@
         {% if odev_ogr.odev_ders or odev_ogr.odev_not %}<div class="vp-inner-card vp-inner-card--wide"><p class="vp-eyebrow">Bu öğrenciye özel</p><h3>{{ odev_ogr.odev_ders or 'Ders' }}</h3><p class="vp-muted">{{ odev_ogr.odev_not }}</p></div>{% endif %}
       </div>
       <div class="vp-decision">
+        {% if hafta.odev_foto %}<details class="app-details"><summary>Ödev fotoğrafı</summary><img class="vp-homework-photo" src="{{ url_for('veli_odev_foto') }}" alt="Öğretmenin eklediği ödev fotoğrafı"></details>{% endif %}
         {% if hafta.odev_kod %}
         <p class="vp-decision-title">Öğretmen kararı: {{ hafta.odev_durum }}{% if hafta.ogretmen_adi %} · {{ hafta.ogretmen_adi }}{% endif %}</p>
         {% if hafta.odev_karar_not %}<p class="vp-muted">{{ hafta.odev_karar_not }}</p>{% endif %}
@@ -118,6 +102,11 @@
 
 
 </div>{% endif %}<div class="parent-section" data-parent-section="mesajlar" id="mesajlar" hidden>
+<section class="app-card parent-latest" id="veli-uyari" aria-labelledby="veli-uyari-baslik">
+<h2 id="veli-uyari-baslik">Son öğretmen mesajı</h2>
+<ul id="veli-uyari-liste">{% if haberler %}{% set h=haberler[0] %}<li data-id="{{ h.id }}" data-key="{{ h.tur }}|{{ h.metin }}|{{ h.zaman[:16] }}"><time>{{ h.zaman }}</time><p>{{ h.metin }}</p>{% if h.sonuc_id %}<a class="app-button" href="{{ url_for('veli_sonuclar', sonuc=h.sonuc_id) }}">İlgili sonucu aç →</a>{% endif %}</li>{% elif notlar %}<li><time>{{ notlar[0].tarih }} · {{ notlar[0].ogretmen }}</time><p>{{ notlar[0].not_metni }}</p></li>{% else %}<li class="app-muted">Henüz öğretmen mesajı yok.</li>{% endif %}</ul>
+<div class="app-row"><button type="button" class="app-button" id="veli-uyari-gordum"{% if not bekleyen_haber %} hidden{% endif %}>Gördüm</button><button type="button" class="app-button" id="veli-uyari-kapat">Şimdi kapat</button><a class="app-button" href="#mesajlar">Tüm mesajlar</a><span id="haber-okundu" class="app-muted" role="status"></span></div>
+</section>
 <details class="app-card app-details"><summary>Bildirim geçmişi</summary><ul class="parent-feed" id="parent-message-feed">{% for h in haberler %}<li data-id="{{ h.id }}" data-key="{{ h.tur }}|{{ h.metin }}|{{ h.zaman[:16] }}"><time>{{ h.zaman }} · {{ 'Okundu' if h.goruldu else 'Yeni' }}</time><p>{{ h.metin }}</p>{% if h.sonuc_id %}<a class="app-button" href="{{ url_for('veli_sonuclar', sonuc=h.sonuc_id) }}">İlgili sonucu aç →</a>{% endif %}</li>{% else %}<li data-empty>Henüz bildirim yok.</li>{% endfor %}</ul></details>
     <div class="vp-communication">
       <section class="vp-card" id="notlar" aria-labelledby="vp-notes-heading">

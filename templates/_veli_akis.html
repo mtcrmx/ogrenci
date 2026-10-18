@@ -1,0 +1,15 @@
+<div class="pa-summary" aria-label="Güncel durum">
+  <div><span>Yapılması beklenen</span><strong>{{ akis.pending }}</strong><small>Listelenen ödev ve ev testleri</small></div>
+  <div><span>Yeni bildirim</span><strong>{{ akis.unread }}</strong><small>Mesajlar bölümünden okunabilir</small></div>
+  <div><span>Sonuç kaydı</span><strong>{{ akis.results }}</strong><small>Listelenen test ve denemeler</small></div>
+</div>
+<div class="pa-items">
+{% for item in akis['items'] %}
+<article class="pa-item" data-kind="{{ item.kind }}" data-item-key="{{ item.key }}">
+  <span class="pa-icon pa-icon--{{ item.kind }}" aria-hidden="true">{{ {'gorev':'▤','sonuc':'✓','mesaj':'✉'}[item.kind] }}</span>
+  <div class="pa-content"><div class="pa-meta"><span>{{ {'gorev':'Görev','sonuc':'Sonuç','mesaj':'Mesaj'}[item.kind] }}</span><time>{{ item.stamp[:16] }}</time>{% if item.teacher %}<span>{{ item.teacher }}</span>{% endif %}</div>
+  <h3>{{ item.title }}</h3><p>{{ item.body }}</p>
+  <div class="pa-actions">{% if item.status %}<span class="pa-state {{ 'pa-state--pending' if item.pending }}">{{ item.status }}</span>{% endif %}{% if item.href %}<a href="{{ item.href }}">{{ item.action }} <span aria-hidden="true">→</span></a>{% endif %}</div></div>
+</article>
+{% else %}<div class="pa-empty"><strong>Henüz paylaşım yok</strong><p>Öğretmen çocuğunuz için bilgi girdiğinde burada görünecek.</p></div>{% endfor %}
+</div>
