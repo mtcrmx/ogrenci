@@ -2483,6 +2483,21 @@ def _veli_oturumu_kapat():
 @app.route("/veli/giris", methods=["GET", "POST"])
 def veli_giris():
     hata = None
+    import veli_auth
+    if veli_auth.enabled() and request.method == 'POST':
+        ogrenci = _ogrenci_no_ile_bul(request.form.get('ogr_no', type=int))
+        password = request.form.get('sifre', '')
+        state, ticket = veli_auth.authenticate(ogrenci['id'], password) if ogrenci and 0 < len(password) <= 128 else (None, None)
+        if state:
+            _veli_oturumu_kapat()
+            session.clear()
+            if state == 'setup':
+                session['veli_setup'] = {'oid': ogrenci['id'], 'ticket': ticket}
+                return redirect(url_for('veli_sifre_belirle'))
+            session.permanent = True
+            session['veli_ogrenci_id'] = ogrenci['id']
+            return redirect(url_for('veli_panel'))
+        return render_template('veli_login.html', hata='Numara veya şifre hatalı. Çok sayıda deneme yaptıysanız 15 dakika sonra tekrar deneyin.')
     if request.method == "POST":
         sifre = request.form.get("sifre", "").strip()
         ogr_no = request.form.get("ogr_no", type=int)
@@ -7593,6 +7608,8 @@ def api_admin_yedek_geri_yukle(yedek_id: int):
 # Baslama
 # ══════════════════════════════════════════════════════════════════════════
 
+from veli_auth import register as register_veli_auth
+register_veli_auth(app)
 from rehberlik import register_rehberlik
 register_rehberlik(app)
 from rehberlik_workspace import register_workspace
