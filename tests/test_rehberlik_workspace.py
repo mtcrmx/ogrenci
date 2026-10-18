@@ -28,6 +28,21 @@ class CounselorWorkspace(unittest.TestCase):
                 self.assertEqual(r.status_code,200)
                 self.assertIn('no-store',r.headers['Cache-Control'])
 
+    def test_detailed_academic_analysis_is_read_only(self):
+        import lgs_optik as optik
+        exam=optik.sinav_ekle('Rehber analiz testi','2026-10-18','test.pdf',['A','B'],self.teacher['id'],'yaprak','Matematik',self.student['sinif_id'])
+        optik.sonuc_kaydet(exam,self.student['id'],['A','D'])
+        for path in ('/evde-analiz?test='+str(exam),'/okul-yaprak-analiz','/lgs/birlesik-analiz','/deneme-analiz','/lgs/test-analiz?kaynak=eski'):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code,200)
+        html=self.client.get('/evde-analiz?test='+str(exam)).get_data(as_text=True)
+        self.assertIn(self.student['ad_soyad'],html)
+        self.assertIn('Kazanım haritası',html)
+        self.assertNotIn('id="ea-group-form"',html)
+        self.assertNotIn('Açıklamayı kaydet',html)
+        self.assertEqual(self.client.post('/evde-analiz',data={'test':exam,'action':'meta'}).status_code,403)
+        self.assertIn('/lgs/birlesik-analiz',self.client.get('/rehberlik/lgs').get_data(as_text=True))
+
     def test_private_notes_and_owner_isolation(self):
         path=self.make_case()
         self.assertEqual(self.post(path,action='note',body='PRIVATE-NOTE-EXAMPLE').status_code,302)

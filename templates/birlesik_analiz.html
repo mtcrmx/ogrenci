@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}LGS · Birleşik analiz{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='kamera_test.css') }}"><style>.ba-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}.ba-scroll{overflow:auto}.ba-table{width:100%;border-collapse:collapse;min-width:640px}.ba-table th,.ba-table td{text-align:left;padding:12px;border-bottom:1px solid #e2e8f0}.ba-rate{height:9px;background:#e2e8f0;border-radius:9px;overflow:hidden;margin:8px 0}.ba-rate span{display:block;height:100%;background:#0d9488;animation:ba-in .6s ease-out;transform-origin:left}@keyframes ba-in{from{transform:scaleX(0)}to{transform:scaleX(1)}}@media(prefers-reduced-motion:reduce){.ba-rate span{animation:none}}</style>{% endblock %}
-{% block body %}<main class="page-content kt">
+{% block body %}{% if session.get('ogretmen_yetki')=='rehber' %}<div class="page-content"><a class="app-button" href="{{ url_for('rehberlik_lgs') }}">← Rehberlik LGS takip merkezi</a></div>{% endif %}<main class="page-content kt">
 <header class="kt-hero"><div><span class="kt-eyebrow">LGS · TÜM ÇALIŞMALAR BİR ARADA</span><h1>Ayrı ve birleşik analiz</h1><p>Evde testler, okulda yaprak testler ve denemeler.</p></div></header>
 <form method="get" class="kt-card kt-form">
 <label>Test türü<select name="tur"><option value="tumu">Tümü · Birleşik</option>{% for key,name in sources.items() %}<option value="{{ key }}" {{ 'selected' if source==key }}>{{ name }}</option>{% endfor %}</select></label>

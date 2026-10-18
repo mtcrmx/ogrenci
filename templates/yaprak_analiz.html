@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{{ url_for('static',filename='ev_analiz.css') }}">
 <link rel="stylesheet" href="{{ url_for('static',filename='yaprak_analiz.css') }}">
 {% endblock %}
-{% block body %}
+{% block body %}{% if session.get('ogretmen_yetki')=='rehber' %}<div class="page-content"><a class="app-button" href="{{ url_for('rehberlik_lgs') }}">← Rehberlik LGS takip merkezi</a></div>{% endif %}
 <a class="app-button" style="margin:12px" href="{{ url_for('yaprak_analiz.combined') }}">Evde · Okulda · Deneme — Ayrı ve birleşik analiz →</a>
 <main class="ea ya">
 <header class="ea-hero">

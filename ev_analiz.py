@@ -202,9 +202,9 @@ def index():
     targets=[e for e in exams if teacher and e.get('ogretmen_id')==teacher and e.get('kaynak')!='kamera' and (not exam or e['id']!=exam['id'])]
     con.close()
     totals={k:sum(p[k] for p in people) for k in ['dogru','yanlis','bos']}
-    return render_template('ev_analiz.html',teacher=bool(teacher),student=student,exams=exams,exam=exam,
+    return render_template('ev_analiz.html',teacher=bool(teacher),read_only=bool(teacher and db.ogretmen_yetki_al(teacher)=='rehber'),student=student,exams=exams,exam=exam,
       people=people,questions=questions,topics=topics,totals=totals,help_rows=help_rows,groups=groups,outcome_matrix=outcome_matrix,targets=targets,
       csrf=csrf,classes=classes,selected_class=selected_class,completed=completed,
-      can_edit=bool(teacher and exam and exam.get('ogretmen_id')==teacher),
+      can_edit=bool(teacher and db.ogretmen_yetki_al(teacher)!='rehber' and exam and exam.get('ogretmen_id')==teacher),
       weekly=weekly,weekly_topics=dict(weekly_topics),trend=sorted(trend,key=lambda x:x['date']),pending=pending,week=start.isoformat(),week_end=(end-timedelta(days=1)).isoformat(),
       tab=request.args.get('tab','overview'))

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Deneme analizi{% endblock %}
-{% block body %}
+{% block body %}{% if session.get('ogretmen_yetki')=='rehber' %}<div class="page-content"><a class="app-button" href="{{ url_for('rehberlik_lgs') }}">← Rehberlik LGS takip merkezi</a></div>{% endif %}
 <main class="mx-auto max-w-6xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
   <style>
     @keyframes deneme-belir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
