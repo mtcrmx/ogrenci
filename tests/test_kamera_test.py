@@ -33,6 +33,20 @@ def marked_form(exam,student,token,marks,extra=None,choices='ABCD'):
 
 
 class KeyParsing(unittest.TestCase):
+    def test_table_labels_vertical_cells_and_unicode_separators(self):
+        for text in ['Soru No: 1 2 3 4\nCevap: A B D C',
+                     '1\n2\n3\n4\nA\nB\nD\nC',
+                     '1\nA\n2\nB\n3\nD\n4\nC',
+                     '1–A 2—B 3:(D) 4-C']:
+            self.assertEqual(media.parse_key(text,4,'ABCD')[0],list('ABDC'),text)
+
+    def test_pdf_footer_does_not_skip_ocr(self):
+        with patch.object(media,'ocr_image',return_value='1 A 2 B 3 C 4 D') as ocr:
+            text,used=media.extract_key_text(pdf('2026 - Page 1'),'.pdf')
+            self.assertTrue(used)
+            ocr.assert_called_once()
+            self.assertEqual(media.parse_key(text,4,'ABCD')[0],list('ABCD'))
+
     def test_numbered_table_missing_duplicate_invalid(self):
         self.assertEqual(media.parse_key('CEVAP ANAHTARI\n1-C 2.A 3: D 4 B',4,'ABCD')[0],list('CADB'))
         self.assertEqual(media.parse_key('1 2 3 4\nA B D C',4,'ABCD')[0],list('ABDC'))
@@ -109,7 +123,9 @@ class CameraWorkflow(unittest.TestCase):
     def test_prepare_confirm_ownership_and_print(self):
         r=self.c.post('/yaprak-kamera/hazirla',data=dict(csrf=self.csrf,count='4',choices='ABCD',class_id=str(self.student['sinif_id']),name='Uploaded test',course='Fen',questions=(BytesIO(pdf()),'test.pdf'),key=(BytesIO(pdf('1 A 2 B 3 C 4 D')),'key.pdf')))
         self.assertEqual(r.status_code,302);path=r.location
-        self.assertIn('Anahtarı onayla',self.c.get(path).get_data(as_text=True))
+        draft_html=self.c.get(path).get_data(as_text=True)
+        self.assertIn('Anahtarı onayla',draft_html)
+        self.assertIn('4 / 4 cevap belgeden okundu',draft_html)
         preview=self.c.get(path+'/onizleme/1')
         self.assertEqual(preview.status_code,200);self.assertEqual(preview.mimetype,'image/png')
         self.assertEqual(self.c.get(path+'/onizleme/9').status_code,404)

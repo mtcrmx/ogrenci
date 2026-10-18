@@ -151,9 +151,11 @@ def prepare():
             if ocr: warnings.insert(0,'Görselden okunan cevapları belgeyle karşılaştırın. Belirsiz cevaplar boş bırakıldı.')
             try: key_pdf=media.convert_document(data,suffix)
             except ValueError: warnings.append('Belge önizlemesi oluşturulamadı. Orijinal belgenizle cevapları karşılaştırın.')
+        except ValueError as exc:
+            warnings=[str(exc)]
         except Exception as exc:
             current_app.logger.warning('Answer extraction failed: %s',type(exc).__name__)
-            warnings=['Cevap anahtarı otomatik okunamadı. Aşağıdaki alanları belgenizle karşılaştırarak doldurun.']
+            warnings=['Cevap anahtarı okuma servisi bu belgeyi işleyemedi. Daha net bir PDF/görsel deneyin veya belgeyi destek için paylaşın.']
     ident=secrets.token_hex(16)
     (optik.klasor()/(ident+'.pdf')).write_bytes(pdf)
     if key_pdf: (optik.klasor()/(ident+'-key.pdf')).write_bytes(key_pdf)

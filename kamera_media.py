@@ -163,9 +163,11 @@ def extract_key_text(data, suffix):
     with pdfium.PdfDocument(data) as pdf:
         for i, page in enumerate(reader.pages):
             text = page.extract_text(extraction_mode='layout') or ''
-            if len(re.findall(r'\d', text)) < 2:
+            # A scanned key can still have a text footer/year. Digits alone do
+            # not mean the actual answer table was extracted successfully.
+            if not any(parse_key(text, 90, 'ABCDE')[0]):
                 used_ocr = True
-                rendered = pdf[i].render(scale=2)
+                rendered = pdf[i].render(scale=3)
                 text = ocr_image(rendered.to_pil())
                 rendered.close()
             result.append(text)
@@ -175,6 +177,8 @@ def extract_key_text(data, suffix):
 def parse_key(text, count, choices):
     """Only numbered pairs or explicit two-row tables, never arbitrary letters in prose."""
     text = text.upper().replace('İ', 'I')
+    for dash in ('–','—','−','‑'):
+        text=text.replace(dash,'-')
     found = {}; conflicts = set(); warnings = []
     def add(number, answer):
         if not 1 <= number <= count:
@@ -183,8 +187,23 @@ def parse_key(text, count, choices):
             conflicts.add(number)
         found[number] = answer if answer in choices else ''
     lines = [r.strip() for r in text.splitlines() if r.strip()]
+    # Table row labels are not answer content. Keep all other prose intact.
+    lines=[re.sub(r'^(?:SORU(?:\s*(?:NO(?:SU)?|NUMARASI))?|CEVAP(?:LAR[I]?|\s*ANAHTARI)?)\s*[:|]?\s*(?=[\dA-E])','',line) for line in lines]
+    consumed=set()
+    # PDFs sometimes serialize a two-column table as one cell per line.
+    for i,line in enumerate(lines):
+        if i in consumed:continue
+        if re.fullmatch(r'[1-9]\d?[.)\-:]?',line):
+            j=i
+            while j<len(lines) and re.fullmatch(r'[1-9]\d?[.)\-:]?',lines[j]):j+=1
+            n=j-i
+            answers=lines[j:j+n]
+            if len(answers)==n and all(re.fullmatch(r'[A-E]',a) for a in answers):
+                for number,answer in zip(lines[i:j],answers):add(int(re.search(r'\d+',number)[0]),answer)
+                consumed.update(range(i,j+n))
     for i, line in enumerate(lines):
-        pairs=list(re.finditer(r'(?<![\w])([1-9]\d?)\s*[.\-:)=|]?\s*([A-E])(?![\w])', line))
+        if i in consumed:continue
+        pairs=list(re.finditer(r'(?<![\w])([1-9]\d?)\s*[.\-:)=|]?\s*\(?([A-E])\)?(?![\w])', line))
         for j,pair in enumerate(pairs):
             tail=line[pair.end():pairs[j+1].start() if j+1<len(pairs) else len(line)]
             ambiguous=bool(re.match(r'\s*[/,;(]?\s*[A-E]\b',tail))
