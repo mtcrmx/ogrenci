@@ -192,6 +192,9 @@ def register(app,login_required):
                 elif action=='save' and not spec.get('native'):
                     values=validated(spec,request.form)
                     if kind=='ev-testi':
+                        if row.get('kaynak')!='kamera' and values['tarih']!=row['tarih']:
+                            from home_test_window import validate_schedule_date
+                            values['tarih']=validate_schedule_date(values['tarih'])
                         answers=json.loads(values['cevaplar']);results=[e['before'] for e in entries if e['table']=='lgs_optik_sonuc']
                         if row.get('kaynak')=='kamera':
                             camera=con.execute('SELECT choices FROM kamera_sinav WHERE sinav_id=?',(rid,)).fetchone()

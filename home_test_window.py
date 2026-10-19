@@ -48,3 +48,14 @@ def parent_exam(exam):
         if exam.get('sonuc'):
             exam['sonuc']={k:exam['sonuc'][k] for k in ('dogru','yanlis','bos','net')}
     return exam
+
+
+def validate_schedule_date(value):
+    """Require an explicit solve date whose 19:00–21:00 window has not ended."""
+    try:
+        day = date.fromisoformat(value or '')
+    except (ValueError, TypeError):
+        raise ValueError('Öğrencilerin testi çözeceği tarihi seçin. Yükleme tarihi otomatik kullanılmaz.')
+    if datetime.combine(day, time(21), TURKEY) <= now():
+        raise ValueError('Seçilen tarihin çözüm süresi bitmiş. Henüz bitmemiş bir çözüm tarihi seçin.')
+    return day.isoformat()

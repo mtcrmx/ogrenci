@@ -4892,11 +4892,10 @@ def _lgs_optik_ekle():
     dosya = request.files.get("pdf")
     anahtar = lgs_optik.anahtar_oku(request.form.get("anahtar") or "")
     ad = (request.form.get("ad") or "").strip()
-    tarih = (request.form.get("tarih") or test_window.now().date().isoformat())[:10]
     try:
-        date.fromisoformat(tarih)
-    except ValueError:
-        flash("Geçerli bir test tarihi seçin. Sorular bu tarihte 19.00–21.00 arasında açılır.", "warning")
+        tarih = test_window.validate_schedule_date(request.form.get("tarih"))
+    except ValueError as exc:
+        flash(str(exc), "warning")
         return redirect(url_for("lgs", ekran="evde"))
     if not ad:
         flash("Sınav adı yazın.", "warning")
@@ -4934,7 +4933,7 @@ def _lgs_optik_ekle():
     ad_dosya = uuid4().hex + ".pdf"
     (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
     lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), tur, ders, sinif_id)
-    flash(f"{ad}: {len(anahtar)} soruluk {'yaprak test' if tur == 'yaprak' else 'deneme'} açıldı.", "success")
+    flash(f"{ad}: {len(anahtar)} soruluk {'yaprak test' if tur == 'yaprak' else 'deneme'} {tarih} günü 19.00–21.00 için kaydedildi. Cevap anahtarı {tarih} 21.00’de açılacak.", "success")
     return redirect(url_for("lgs", ekran="evde"))
 
 
@@ -5212,7 +5211,7 @@ def _lgs_ekran(veli: bool):
                 ay_harita[int(ogrenci_satir["id"])] = lgs_ay_durum(int(ogrenci_satir["id"]))
         return render_template(
             "lgs.html", gruplar=gruplar, ogrenci=None, veli=False, tempo_adlari=TEMPO_AD,
-            aylar=LGS_AYLAR, ay_harita=ay_harita, optik_sinavlar=_lgs_optik_paketi()[0], bugun=date.today().isoformat(),
+            aylar=LGS_AYLAR, ay_harita=ay_harita, optik_sinavlar=_lgs_optik_paketi()[0], bugun=test_window.now().date().isoformat(),
             lgs_dersler=LGS_DERSLER,
             ekran="evde" if request.args.get("ekran") == "evde" else "",
         )
@@ -5288,7 +5287,7 @@ def _lgs_ekran(veli: bool):
         kocluk=kocluk,
         grafik_etiket=[d["ad"] for d in grafik],
         grafik_net=[d["net"] for d in grafik],
-        bugun=date.today().isoformat(),
+        bugun=test_window.now().date().isoformat(),
         tempo=tempo,
         tempo_ad=TEMPO_AD.get(tempo, ""),
         tempo_hafta_sonu=profil.get("tempo_hafta_sonu") or tempo,

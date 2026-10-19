@@ -38,6 +38,33 @@ class HomeWindowTests(unittest.TestCase):
     def submit(self):
         return self.client.post('/veli/lgs',data=dict(islem='optik_bitir',bolum='soru',sinav_id=self.exam,c0='A',c1='A',c2='C',c3=''))
 
+    def test_explicit_solve_date_required(self):
+        with self.at('17:33:00'):
+            for value in (None, '', 'bad', '2026-10-18', '2026-10-19junk'):
+                with self.assertRaises(ValueError):window.validate_schedule_date(value)
+            self.assertEqual(window.validate_schedule_date('2026-10-19'),'2026-10-19')
+            self.assertEqual(window.validate_schedule_date('2026-10-20'),'2026-10-20')
+            for value in ('', '2026-10-18'):
+                with w.app.test_request_context('/lgs',method='POST',data={'tarih':value}):
+                    with patch.object(optik,'sinav_ekle') as create:
+                        self.assertEqual(w._lgs_optik_ekle().status_code,302)
+                        create.assert_not_called()
+        with self.at('21:00:00'):
+            with self.assertRaises(ValueError):window.validate_schedule_date('2026-10-19')
+
+    def test_reschedule_hides_previously_released_key(self):
+        con=db._conn()
+        con.execute('UPDATE lgs_optik_sinav SET tarih=? WHERE id=?',('2026-10-18',self.exam));con.commit();con.close()
+        with self.at('17:33:00'):
+            page=self.client.get(f'/veli/lgs?sinav={self.exam}').text
+            self.assertIn('<summary>Cevap anahtarı</summary>',page)
+            con=db._conn()
+            con.execute('UPDATE lgs_optik_sinav SET tarih=? WHERE id=?',('2026-10-19',self.exam));con.commit();con.close()
+            page=self.client.get(f'/veli/lgs?sinav={self.exam}').text
+            self.assertNotIn('<summary>Cevap anahtarı</summary>',page)
+            self.assertEqual(self.client.get(f'/evde-analiz?test={self.exam}').status_code,404)
+            self.assertEqual(self.client.get(f'/lgs/optik/{self.exam}/pdf').status_code,403)
+
     def test_boundaries_and_timezone(self):
         e=optik.sinav_getir(self.exam)
         for time,opened,released in [('18:59:59',False,False),('19:00:00',True,False),('20:59:59',True,False),('21:00:00',False,True)]:
