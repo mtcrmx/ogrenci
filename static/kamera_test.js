@@ -47,15 +47,35 @@
     $('scan-review').hidden=true;current=null;
     if(navigator.vibrate) navigator.vibrate(100);
   }
+  async function preparePhoto(blob) {
+    // Limit upload size, while retaining about 7 pixels/mm on an A4 sheet.
+    if (!window.createImageBitmap) return blob;
+    let bitmap;
+    try {
+      bitmap=await createImageBitmap(blob, {imageOrientation:'from-image'});
+      const scale=Math.min(1,2200/Math.max(bitmap.width,bitmap.height));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+      const context=canvas.getContext('2d');
+      context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);
+      context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      const encoded=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.9));
+      return encoded && encoded.size<blob.size ? encoded : blob;
+    } catch (_) { return blob; }
+    finally { if(bitmap) bitmap.close(); }
+  }
   async function scan(blob) {
     if(busy) return;lock(true);current=null;$('scan-review').hidden=true;
-    status('Optik okunuyor; öğrenci ve cevaplar kontrol ediliyor…');
+    const started=performance.now();
+    status('Fotoğraf hazırlanıyor…');
     try {
-      const data=new FormData();data.set('image',blob,'scan.jpg');
+      const photo=await preparePhoto(blob);
+      status('Optik okunuyor; öğrenci ve cevaplar kontrol ediliyor…');
+      const data=new FormData();data.set('image',photo,'scan.jpg');
       const result=await post('tara',data);showReview(result);
       if(!result.uncertain.length && !result.existing) await save(false);
       else status('Okuma tamamlandı. Kaydetmeden önce aşağıdaki alanları kontrol edin.');
-    } catch(e) {status(e.message,true);} finally {lock(false);$('scan-photo').value='';}
+    } catch(e) {status(e.message,true);} finally {lock(false);$('scan-photo').value='';$('scan-status').textContent+=` (${((performance.now()-started)/1000).toFixed(1)} sn)`;}
   }
   $('start-camera').addEventListener('click',async()=>{
     try {

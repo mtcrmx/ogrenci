@@ -295,7 +295,14 @@ def read_form(data, count, choices):
     import numpy as np
     im=image_open(data); frame=cv2.cvtColor(np.array(im),cv2.COLOR_RGB2GRAY)
     detector=cv2.aruco.ArucoDetector(cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
-    corners,ids,_=detector.detectMarkers(frame)
+    # Search a smaller image first; keep the original for answer sampling.
+    ratio=min(1.0,1800/max(frame.shape))
+    detection=cv2.resize(frame,None,fx=ratio,fy=ratio,interpolation=cv2.INTER_AREA) if ratio<1 else frame
+    corners,ids,_=detector.detectMarkers(detection)
+    if ratio<1 and ids is not None and all(list(ids.flatten()).count(i)==1 for i in range(4)):
+        corners=[corner/ratio for corner in corners]
+    elif ratio<1:
+        corners,ids,_=detector.detectMarkers(frame)
     if ids is None or any(list(ids.flatten()).count(i)!=1 for i in range(4)):
         raise ValueError('Dört köşe işareti okunamadı. Sayfanın tamamını gösterin; ışığı ve netliği kontrol edin.')
     locations={int(i):corner[0].mean(axis=0) for i,corner in zip(ids.flatten(),corners)}

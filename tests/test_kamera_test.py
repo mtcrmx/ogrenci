@@ -81,6 +81,23 @@ class KeyParsing(unittest.TestCase):
         self.assertEqual(result['answers'],marks);self.assertEqual(result['uncertain'],[])
 
 
+class CompressedPhoto(unittest.TestCase):
+    def test_upload_size_rotation_and_shadow(self):
+        exam=dict(ad='Upload test',soru_sayisi=90)
+        student=dict(ad_soyad='Example Student',sinif_adi='8/A',ogr_no=100)
+        marks=list('ABCDE'*18);marks[7]=''
+        im=marked_form(exam,student,'compressed-photo',marks,choices='ABCDE')
+        scale=2200/max(im.shape[:2])
+        im=cv2.resize(im,None,fx=scale,fy=scale,interpolation=cv2.INTER_AREA)
+        shade=np.linspace(.65,1,im.shape[1])[None,:,None]
+        im=np.uint8(im*shade)
+        im=cv2.rotate(im,cv2.ROTATE_90_CLOCKWISE)
+        _,jpg=cv2.imencode('.jpg',im,[cv2.IMWRITE_JPEG_QUALITY,90])
+        result=media.read_form(jpg.tobytes(),90,'ABCDE')
+        self.assertEqual(result['answers'],marks)
+        self.assertEqual(result['uncertain'],[])
+
+
 class CameraWorkflow(unittest.TestCase):
     def setUp(self):
         self.t=next(t for t in d.tum_ogretmenler() if t['yetki']=='tam')
@@ -143,7 +160,13 @@ class CameraWorkflow(unittest.TestCase):
         self.assertEqual(self.save(again.json).status_code,409)
         self.assertEqual(self.save(again.json,replace='yes',reviewed='yes').status_code,200)
         parent=w.app.test_client()
-        with parent.session_transaction() as s:s['veli_ogrenci_id']=self.student['id']
+        import veli_auth
+        con=veli_auth.connect()
+        con.execute('INSERT OR REPLACE INTO veli_credentials(ogrenci_id,password_hash,auth_version) VALUES(?,?,?)',(self.student['id'],'test-fixture','camera-test-version'))
+        con.commit();con.close()
+        with parent.session_transaction() as s:
+            s['veli_ogrenci_id']=self.student['id']
+            s['veli_auth_version']='camera-test-version'
         response=parent.get(f'/evde-analiz?test={self.eid}')
         self.assertEqual(response.status_code,200)
         school=parent.get('/okul-yaprak-analiz').get_data(as_text=True)
