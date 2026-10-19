@@ -82,7 +82,7 @@
 </article>
 <article class="mint">
 <span>Sınıf doğru yüzdesi</span>
-<strong>%{{ summary.rate }}</strong>
+<strong>{{ '%' ~ summary.rate if summary.rate is not none else '—' }}</strong>
 <small>{{ summary.dogru }} doğru ortalaması</small>
 </article>
 <article class="peach">
@@ -124,9 +124,9 @@
 <text x="0" y="{{ 189-value*1.6 }}" fill="#786985" font-size="10">{{ value }}%</text>{% endfor %}
 
 <polyline points="{{ points }}" fill="none" stroke="#9972bf" stroke-width="3" stroke-linejoin="round"/>
-{% for t in trend %}<circle cx="{{ t.x }}" cy="{{ t.y }}" r="5" fill="#9972bf">
+{% for t in trend %}{% if t.y is not none %}<circle cx="{{ t.x }}" cy="{{ t.y }}" r="5" fill="#9972bf">
 <title>{{ t.ad }} · {{ t.date }} · Sınıf %{{ t.class_rate }}</title>
-</circle>{% if t.own_y is not none %}<circle cx="{{ t.x }}" cy="{{ t.own_y }}" r="6" fill="#439e86" stroke="white" stroke-width="2">
+</circle>{% endif %}{% if t.own_y is not none %}<circle cx="{{ t.x }}" cy="{{ t.own_y }}" r="6" fill="#439e86" stroke="white" stroke-width="2">
 <title>{{ t.ad }} · Öğrenci %{{ t.own_rate }}</title>
 </circle>{% endif %}
 <text x="{{ t.x }}" y="207" text-anchor="middle" font-size="10" fill="#786985">{{ loop.index }}</text>{% endfor %}

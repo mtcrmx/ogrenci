@@ -6,6 +6,7 @@ from flask import Blueprint, abort, render_template, request, session, redirect,
 import database as db
 import lgs_optik as optik
 import home_test_window as test_window
+import metrik
 
 bp = Blueprint('ev_analiz', __name__)
 
@@ -60,7 +61,7 @@ def aggregate(exam, people, metadata):
             elif answer != key: wrong.append(person['id'])
         meta = metadata.get(i, {})
         questions.append(dict(no=i, key=key, counts=counts, correct=counts[key], wrong=wrong, blank=blank,
-            rate=round(counts[key]*100/len(people)) if people else None,
+            rate=metrik.oran(counts[key], len(people)),
             konu=meta.get('konu',''), cozum=meta.get('cozum','')))
     return questions
 
@@ -179,25 +180,25 @@ def index():
         for e in exams:
             result=optik.sonuc_getir(e['id'],oid)
             if result:
-                entry=dict(id=e['id'],ad=e['ad'],date=result['zaman'][:10],dogru=result['dogru'],yanlis=result['yanlis'],bos=result['bos'],rate=round(result['dogru']*100/max(e['soru_sayisi'],1)))
+                entry=dict(id=e['id'],ad=e['ad'],date=result['zaman'][:10],dogru=result['dogru'],yanlis=result['yanlis'],bos=result['bos'],rate=metrik.oran(result['dogru'],e['soru_sayisi']))
                 trend.append(entry)
                 if start.isoformat()<=entry['date']<end.isoformat():
                     weekly.append(entry)
                     labels={r['no']:r['konu'] for r in con.execute('SELECT no,konu FROM ev_soru_meta WHERE sinav_id=?',(e['id'],))}
-                    for a in optik.puan_hesapla(e['cevaplar'],result['isaretler'])['satirlar']:
+                    for a in optik.puan_hesapla(e['cevaplar'],result['isaretler'],e.get('yanlis_goturme',3))['satirlar']:
                         weekly_topics[labels.get(a['no']) or 'Konu tanımlanmamış'][a['durum']]+=1
             else: pending+=1
     if teacher:
         for e in exams:
             cohort=[p for p in optik.cozen_ogrenciler(e['id']) if bp.can_access(teacher,p['id']) and (not selected_class or p['sinif']==selected_class)]
             if cohort:
-                trend.append(dict(id=e['id'],ad=e['ad'],date=e['tarih'],rate=round(sum(p['dogru'] for p in cohort)*100/(len(cohort)*max(e['soru_sayisi'],1)))))
+                trend.append(dict(id=e['id'],ad=e['ad'],date=e['tarih'],rate=metrik.oran(sum(p['dogru'] for p in cohort),len(cohort)*e['soru_sayisi'])))
     topic_map=defaultdict(lambda:dict(correct=0,total=0,members=set()))
     for q in questions:
         name=q['konu'] or 'Konu tanımlanmamış'
         topic_map[name]['correct']+=q['correct']; topic_map[name]['total']+=len(people)
         topic_map[name]['members'].update(q['wrong']+q['blank'])
-    topics=[dict(name=name,rate=round(v['correct']*100/v['total']) if v['total'] else 0,members=sorted(v['members'])) for name,v in topic_map.items()]
+    topics=[dict(name=name,rate=metrik.oran(v['correct'],v['total']),members=sorted(v['members'])) for name,v in topic_map.items()]
     from analysis_support import matrix
     outcome_matrix=matrix(exam,people,teacher,bp.can_access,selected_class)
     targets=[e for e in exams if teacher and e.get('ogretmen_id')==teacher and e.get('kaynak')!='kamera' and (not exam or e['id']!=exam['id'])]

@@ -132,7 +132,8 @@ def _lgs_ogrenci(satir: str) -> dict | None:
         dogru, yanlis = int(round(dogru_f)), int(round(yanlis_f))
         if dogru < 0 or yanlis < 0 or dogru + yanlis > tavan:
             return None
-        if abs(round(dogru - yanlis / 3, 2) - net) > 0.05:
+        from metrik import net as metrik_net
+        if abs(metrik_net(dogru, yanlis) - net) > 0.05:
             return None
         dersler.append({
             "ders": ders,

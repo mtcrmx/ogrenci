@@ -7,13 +7,22 @@ from flask import Blueprint, abort, redirect, render_template, request, session,
 import database as db
 import lgs_optik as optik
 import home_test_window as test_window
+import metrik
 
 bp = Blueprint('yaprak_analiz', __name__)
 
 def summarize(rows):
     if not rows:
-        return dict(n=0,dogru=0,yanlis=0,bos=0,net=0,rate=0)
-    return dict(n=len(rows), **{k:round(mean(r[k] for r in rows),1) for k in ('dogru','yanlis','bos','net','rate')})
+        return dict(n=0,dogru=0,yanlis=0,bos=0,net=0,rate=None)
+    toplam = metrik.topla(rows)
+    return dict(
+        n=toplam['n'],
+        dogru=toplam['dogru'],
+        yanlis=toplam['yanlis'],
+        bos=toplam['bos'],
+        net=toplam['net'],
+        rate=toplam['rate'],
+    )
 
 def group_records(rows):
     groups={}
@@ -22,7 +31,7 @@ def group_records(rows):
         count=r['soru_sayisi'] or (r['dogru']+r['yanlis']+r['bos'])
         if count<=0: continue
         r['soru_sayisi']=count
-        r['rate']=round(100*r['dogru']/count,1)
+        r['rate']=metrik.oran(r['dogru'],count)
         key=(r['ad'],r['tarih'],r['ders'],count,r['yanlis_goturme'])
         if r.get('camera_exam'): key=(*key,'kamera',r['camera_exam'])
         ident=sha256(repr(key).encode()).hexdigest()[:20]
@@ -87,8 +96,8 @@ def index():
             prior=next((p for g,p in previous if p),None)
             r['delta']=round(r['rate']-prior['rate'],1) if prior else None
             r['previous_date']=next((g['tarih'] for g,p in previous if p),None)
-            r['gap']=round(r['rate']-summary['rate'],1)
-        people=sorted(class_rows,key=lambda r:(-r['rate'],r['ad_soyad'])) if teacher else ([own] if own else [])
+            r['gap']=round(r['rate']-summary['rate'],1) if summary['rate'] is not None and r['rate'] is not None else None
+        people=sorted(class_rows,key=lambda r:(-(r['rate'] or 0),r['ad_soyad'])) if teacher else ([own] if own else [])
         participating={r['ogrenci_id'] for r in class_rows}
         included_classes={r['sinif_adi'] for r in class_rows}
         missing=[r for r in roster if (r['sinif_adi']==classroom if classroom else r['sinif_adi'] in included_classes) and r['id'] not in participating] if teacher else []
@@ -103,17 +112,18 @@ def index():
         trend.append(dict(ad=g['ad'],date=g['tarih'],class_rate=stats['rate'],own_rate=individual['rate'] if individual else None))
         history.append(dict(id=g['id'],ad=g['ad'],date=g['tarih'],count=g['count'],own_rate=individual['rate'] if individual else None,own_net=individual['net'] if individual else None,**stats))
     for i,t in enumerate(trend):
-        t['x']=35+(i*630/max(len(trend)-1,1));t['y']=185-t['class_rate']*1.6
+        t['x']=35+(i*630/max(len(trend)-1,1))
+        t['y']=185-t['class_rate']*1.6 if t['class_rate'] is not None else None
         t['own_y']=185-t['own_rate']*1.6 if t['own_rate'] is not None else None
     buckets=[]
     for low,high in [(0,25),(25,50),(50,75),(75,101)]:
-        entries=[r for r in class_rows if low<=r['rate']<high]
+        entries=[r for r in class_rows if r['rate'] is not None and low<=r['rate']<high]
         buckets.append(dict(low=low,high=high,label=f'%{low}–<{high}' if high!=101 else '%75–100',n=len(entries),width=round(100*len(entries)/max(len(class_rows),1))))
     return render_template('yaprak_analiz.html',teacher=bool(teacher),child=child,exam=exam,exams=filtered,courses=courses,course=course,
         classroom=classroom,classes=sorted({r['sinif_adi'] for r in roster}),start=start,end=end,summary=summary,own=own,
         people=people,missing=missing,branches=branches,trend=trend,history=list(reversed(history)),buckets=buckets,
         selected_student=selected_student,roster=roster if teacher else [],
-        points=' '.join(f'{t["x"]},{t["y"]}' for t in trend))
+        points=' '.join(f'{t["x"]},{t["y"]}' for t in trend if t['y'] is not None))
 
 
 SOURCE_NAMES = {'ev': 'Evde test', 'okul': 'Okulda yaprak test', 'deneme': 'Deneme'}
@@ -126,7 +136,7 @@ def combined_stats(rows):
                 students=len({r['ogrenci_id'] for r in rows}), total=total,
                 correct=correct, wrong=sum(r['yanlis'] for r in rows),
                 blank=sum(r['bos'] for r in rows),
-                rate=round(100*correct/total, 1) if total else 0)
+                rate=metrik.oran(correct, total))
 
 
 @bp.get('/lgs/birlesik-analiz')

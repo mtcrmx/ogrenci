@@ -4,6 +4,7 @@ from datetime import datetime
 from flask import abort
 import database as db
 import lgs_optik as optik
+import metrik
 
 def init(con):
     con.executescript('''
@@ -36,7 +37,7 @@ def cells(person, mapping):
         cell['correct']+=q['durum']=='dogru'
         cell['questions'].append(q)
     for cell in result.values():
-        cell['rate']=round(100*cell['correct']/cell['total']) if cell['total'] else None
+        cell['rate']=metrik.oran(cell['correct'],cell['total'])
     return result
 
 def matrix(exam, people, teacher, can_access, selected_class):
@@ -102,5 +103,5 @@ def progress(con, group, teacher, oid, can_access):
         for key,before in scores.items():
             a=after.get(key,{})
             rows.append(dict(name=name[0],outcome=entries.get(key,{}).get('code',key),before=before,after=a,
-                delta=a['rate']-before['rate'] if a.get('rate') is not None and before['rate'] is not None else None))
+                delta=round(a['rate']-before['rate'],1) if a.get('rate') is not None and before['rate'] is not None else None))
     return dict(rows=rows,created=plan['created'],outcomes=[entries.get(k,{}).get('code',k) for k in sorted(ids)])

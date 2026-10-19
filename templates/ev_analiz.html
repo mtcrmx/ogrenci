@@ -101,9 +101,9 @@
 <h3>Konu ve kazanımlar</h3>{% for t in topics %}<div class="ea-topic">
 <div>
 <strong>{{ t.name }}</strong>
-<span>%{{ t.rate }}</span>
+<span>{{ '%' ~ t.rate if t.rate is not none else '—' }}</span>
 </div>
-<progress value="{{ t.rate }}" max="100">%{{ t.rate }}</progress>{% if teacher and not read_only and t.members and t.name!='Konu tanımlanmamış' %}<button type="button" class="ea-text-button" data-members="{{ t.members|join(',') }}" data-group-name="{{ t.name }} tekrar grubu">{{ t.members|length }} öğrenciyle grup hazırla →</button>{% endif %}
+<progress value="{{ t.rate or 0 }}" max="100">{{ '%' ~ t.rate if t.rate is not none else '—' }}</progress>{% if teacher and not read_only and t.members and t.name!='Konu tanımlanmamış' %}<button type="button" class="ea-text-button" data-members="{{ t.members|join(',') }}" data-group-name="{{ t.name }} tekrar grubu">{{ t.members|length }} öğrenciyle grup hazırla →</button>{% endif %}
 </div>{% endfor %}
 <p>Konu bilgileri öğretmen tarafından tanımlanır; eksik etiketlerden konu çıkarımı yapılmaz.</p>
 </article>

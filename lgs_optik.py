@@ -72,6 +72,10 @@ def _init(con) -> None:
         con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN sinif_id INTEGER")
     if "kaynak" not in kolon:
         con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN kaynak TEXT NOT NULL DEFAULT 'ev'")
+    if "yanlis_goturme" not in kolon:
+        con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN yanlis_goturme INTEGER DEFAULT 3")
+    if "secenekler" not in kolon:
+        con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN secenekler TEXT DEFAULT 'ABCD'")
 
 
 def anahtar_oku(metin: str) -> list[str] | None:
@@ -81,7 +85,9 @@ def anahtar_oku(metin: str) -> list[str] | None:
     return [h.upper() for h in harfler]
 
 
-def puan_hesapla(anahtar: list[str], isaretler: list[str]) -> dict:
+def puan_hesapla(anahtar: list[str], isaretler: list[str], goturme: int | None = None) -> dict:
+    from metrik import VARSAYILAN_GOTURME, net as metrik_net
+    g = VARSAYILAN_GOTURME if goturme is None else int(goturme)
     dogru = yanlis = bos = 0
     satirlar = []
     for i, dogru_harf in enumerate(anahtar):
@@ -101,12 +107,23 @@ def puan_hesapla(anahtar: list[str], isaretler: list[str]) -> dict:
         "dogru": dogru,
         "yanlis": yanlis,
         "bos": bos,
-        "net": round(dogru - yanlis / 3, 2),
+        "net": metrik_net(dogru, yanlis, g),
         "satirlar": satirlar,
     }
 
 
-def sinav_ekle(ad: str, tarih: str, pdf_adi: str, anahtar: list[str], ogretmen_id: int | None, tur: str = "deneme", ders: str = "", sinif_id: int | None = None) -> int:
+def sinav_ekle(
+    ad: str,
+    tarih: str,
+    pdf_adi: str,
+    anahtar: list[str],
+    ogretmen_id: int | None,
+    tur: str = "deneme",
+    ders: str = "",
+    sinif_id: int | None = None,
+    yanlis_goturme: int = 3,
+    secenekler: str = "ABCD",
+) -> int:
     if tur not in ("yaprak", "deneme"):
         tur = "deneme"
     con = db._conn()
@@ -114,10 +131,23 @@ def sinav_ekle(ad: str, tarih: str, pdf_adi: str, anahtar: list[str], ogretmen_i
     simdi = datetime.now().strftime("%Y-%m-%d %H:%M")
     cur = con.execute(
         """
-        INSERT INTO lgs_optik_sinav (ad, tarih, pdf_dosya, cevaplar, soru_sayisi, ogretmen_id, olusturma, tur, ders, sinif_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO lgs_optik_sinav (ad, tarih, pdf_dosya, cevaplar, soru_sayisi, ogretmen_id, olusturma, tur, ders, sinif_id, yanlis_goturme, secenekler)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        ((ad or "LGS soruları")[:80], (tarih or "")[:10], pdf_adi, json.dumps(anahtar), len(anahtar), ogretmen_id, simdi, tur, (ders or "")[:40], sinif_id),
+        (
+            (ad or "LGS soruları")[:80],
+            (tarih or "")[:10],
+            pdf_adi,
+            json.dumps(anahtar),
+            len(anahtar),
+            ogretmen_id,
+            simdi,
+            tur,
+            (ders or "")[:40],
+            sinif_id,
+            int(yanlis_goturme if yanlis_goturme is not None else 3),
+            (secenekler or "ABCD")[:10],
+        ),
     )
     con.commit()
     sinav_id = int(cur.lastrowid)
@@ -193,7 +223,7 @@ def sonuc_kaydet(sinav_id: int, ogrenci_id: int, isaretler: list[str]) -> dict:
     if len(temiz) < len(sinav["cevaplar"]):
         temiz += [""] * (len(sinav["cevaplar"]) - len(temiz))
     temiz = temiz[: len(sinav["cevaplar"])]
-    puan = puan_hesapla(sinav["cevaplar"], temiz)
+    puan = puan_hesapla(sinav["cevaplar"], temiz, sinav.get("yanlis_goturme", 3))
     con = db._conn()
     _init(con)
     con.execute(
@@ -243,7 +273,7 @@ def cozen_ogrenciler(sinav_id: int) -> list[dict]:
         isaret = row["isaretler"]
         if isinstance(isaret, str):
             isaret = json.loads(isaret)
-        puan = puan_hesapla(sinav["cevaplar"], isaret)
+        puan = puan_hesapla(sinav["cevaplar"], isaret, sinav.get("yanlis_goturme", 3))
         cikti.append({
             "id": row["ogrenci_id"],
             "ad": row["ad_soyad"],

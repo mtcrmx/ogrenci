@@ -328,8 +328,9 @@ def register_results(app, login_required, accessible):
                         raise ValueError('Bu sonuç siz düzenlerken değişti. Güncel kaydı tekrar açın.')
                     con.execute('UPDATE lgs_deneme SET ad=?,tarih=?,tur=?,surum=surum+1 WHERE id=?', (title[:80], when, kind, edit_id))
                     con.execute('DELETE FROM lgs_deneme_ders WHERE deneme_id=?', (edit_id,))
+                    from metrik import net as metrik_net
                     for row in rows:
-                        net = round(row['dogru'] - (row['yanlis']/row['yanlis_goturme'] if row['yanlis_goturme'] else 0), 2)
+                        net = metrik_net(row['dogru'], row['yanlis'], row['yanlis_goturme'])
                         old = next((d for d in editing['dersler'] if d['ders'] == row['ders'] and d.get('anahtar')
                                     and (d['soru_sayisi'], d['dogru'], d['yanlis']) == (row['soru_sayisi'], row['dogru'], row['yanlis'])), None)
                         con.execute('INSERT INTO lgs_deneme_ders(deneme_id,ders,soru_sayisi,dogru,yanlis,bos,net,yanlis_goturme,anahtar,isaretler) VALUES(?,?,?,?,?,?,?,?,?,?)',

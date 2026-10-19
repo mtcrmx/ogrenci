@@ -2066,18 +2066,20 @@ def lgs_defter_onayli_soru(ogrenci_id: int, hafta_basi: str) -> int:
     return int(toplam["soru"] or 0)
 
 
-def _lgs_net(dogru: int, yanlis: int) -> float:
-    return round(max(0, int(dogru)) - max(0, int(yanlis)) / 3, 2)
+def _lgs_net(dogru: int, yanlis: int, goturme: int = 3) -> float:
+    from metrik import net as metrik_net
+    return metrik_net(max(0, int(dogru)), max(0, int(yanlis)), goturme)
 
 
 def _lgs_toplam_net(satirlar: list[dict]) -> float:
+    from metrik import VARSAYILAN_GOTURME, net as metrik_net
     toplam = 0.0
     for s in satirlar:
         kayitli = float(s["net"] or 0)
-        goturme = s.get('yanlis_goturme', 3)
+        goturme = s.get('yanlis_goturme', VARSAYILAN_GOTURME)
         hesaplanan = max(0, int(s["dogru"] or 0)) - (max(0, int(s["yanlis"] or 0)) / goturme if goturme else 0)
         # Preserve explicitly imported net values; undo rounding only for calculated rows.
-        toplam += hesaplanan if abs(kayitli - round(hesaplanan, 2)) < 0.00001 else kayitli
+        toplam += hesaplanan if abs(kayitli - metrik_net(s.get("dogru"), s.get("yanlis"), goturme)) < 0.00001 else kayitli
     return round(toplam, 2)
 
 
@@ -2130,17 +2132,16 @@ def lgs_deneme_ekle(ogrenci_id: int, ad: str, tarih: str, dersler: list[dict], p
                 "ok": False,
                 "hata": f"{ders} en fazla {tavan} soru. Doğru, yanlış ve boş toplamı bunu geçemez.",
             }
+        from metrik import VARSAYILAN_GOTURME, net as metrik_net
+        goturme = int(d.get('yanlis_goturme', VARSAYILAN_GOTURME))
+        if goturme not in (0, 3, 4) or not 1 <= int(tavan) <= 500:
+            return {'ok': False, 'hata': 'Soru sayısı veya net kuralı geçersiz.'}
         if d.get("net") is None:
             if dogru + yanlis + bos == 0:
                 continue
-            net = _lgs_net(dogru, yanlis)
+            net = metrik_net(dogru, yanlis, goturme)
         else:
             net = round(float(d.get("net")), 2)
-        goturme = int(d.get('yanlis_goturme', 3))
-        if goturme not in (0, 3, 4) or not 1 <= int(tavan) <= 500:
-            return {'ok': False, 'hata': 'Soru sayısı veya net kuralı geçersiz.'}
-        if d.get('net') is None:
-            net = round(dogru - (yanlis / goturme if goturme else 0), 2)
         anahtar = list(d.get('anahtar') or [])
         isaretler = list(d.get('isaretler') or [])
         if anahtar and len(anahtar) == int(tavan) and all(h in CEVAP_SIKLARI for h in anahtar):
