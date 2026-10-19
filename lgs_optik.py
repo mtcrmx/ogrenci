@@ -8,6 +8,24 @@ from pathlib import Path
 
 import database as db
 import home_test_window as test_window
+from flask import has_request_context, session, g
+
+
+def teacher_can_view(exam):
+    """Home test ownership; parent visibility is handled by existing class/time rules."""
+    if not has_request_context() or not session.get('ogretmen_id'):
+        return True
+    if exam.get('kaynak')=='kamera':
+        return True
+    actor=session['ogretmen_id']
+    if not hasattr(g,'home_test_manager'):
+        con=db._conn()
+        try:
+            row=con.execute('SELECT ad_soyad FROM ogretmenler WHERE id=?',(actor,)).fetchone()
+            g.home_test_manager=bool(row and row[0] in {'METEHAN CÜCEN','ADEM AKGÜL','ALPEREN MURAT LEBLEBİCİ'})
+        finally:con.close()
+    return g.home_test_manager or exam.get('ogretmen_id')==actor
+
 
 SECENEKLER = frozenset("ABCDE")
 AZAMI_SORU = 90
@@ -122,6 +140,7 @@ def sinavlari_listele() -> list[dict]:
         """
     )]
     con.close()
+    rows=[row for row in rows if teacher_can_view(row)]
     for row in rows:
         row["cevaplar"] = json.loads(row["cevaplar"])
     return rows
@@ -135,6 +154,8 @@ def sinav_getir(sinav_id: int) -> dict | None:
     if not row:
         return None
     kayit = dict(row)
+    if not teacher_can_view(kayit):
+        return None
     kayit["cevaplar"] = json.loads(kayit["cevaplar"])
     return kayit
 
@@ -148,6 +169,7 @@ def pdf_yolu(sinav: dict) -> Path | None:
 
 
 def sonuc_getir(sinav_id: int, ogrenci_id: int) -> dict | None:
+    if not sinav_getir(sinav_id): return None
     con = db._conn()
     _init(con)
     row = con.execute(
@@ -240,6 +262,7 @@ def cozen_ogrenciler(sinav_id: int) -> list[dict]:
 
 
 def sinav_sonuclari(sinav_id: int) -> list[dict]:
+    if not sinav_getir(sinav_id): return []
     con = db._conn()
     _init(con)
     rows = [

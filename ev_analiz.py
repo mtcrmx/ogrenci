@@ -167,7 +167,7 @@ def index():
     groups=[dict(r) for r in con.execute('SELECT * FROM ev_grup WHERE ogretmen_id=? ORDER BY id DESC',(teacher,))] if teacher else [dict(r) for r in con.execute('SELECT g.* FROM ev_grup g JOIN ev_grup_uye u ON u.grup_id=g.id WHERE u.ogrenci_id=?',(oid,))]
     for g in groups:
         g['members']=[dict(r) for r in con.execute('SELECT o.id,o.ad_soyad FROM ev_grup_uye u JOIN ogrenciler o ON o.id=u.ogrenci_id WHERE u.grup_id=?',(g['id'],))] if teacher else []
-        g['tests']=[dict(r) for r in con.execute('SELECT e.id,e.ad FROM ev_grup_test t JOIN lgs_optik_sinav e ON e.id=t.sinav_id WHERE t.grup_id=?',(g['id'],))]
+        g['tests']=[dict(r) for r in con.execute('SELECT e.id,e.ad,e.ogretmen_id,e.kaynak FROM ev_grup_test t JOIN lgs_optik_sinav e ON e.id=t.sinav_id WHERE t.grup_id=?',(g['id'],)) if optik.teacher_can_view(dict(r))]
         from analysis_support import progress
         g['progress']=progress(con,g,teacher,oid,bp.can_access)
     weekly=[]; trend=[]; pending=0; weekly_topics=defaultdict(lambda: {'dogru':0,'yanlis':0,'bos':0})

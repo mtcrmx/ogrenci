@@ -150,8 +150,9 @@ def combined():
         r['exam_key'] = ('legacy',r['ogretmen_id'],r['ad'],r['tarih'],r['tur'])
         r['detail'] = url_for('yaprak_analiz.index',ders=r['ders']) if r['source']=='okul' else (url_for('deneme_analiz') if teacher else url_for('veli_lgs',bolum='deneme'))
         rows.append(r)
-    for row in con.execute('SELECT e.id AS exam_id,e.ad,e.tarih,e.tur,e.kaynak,e.ders,e.soru_sayisi,e.cevaplar,r.isaretler,r.ogrenci_id,r.dogru,r.yanlis,r.bos,r.net FROM lgs_optik_sinav e JOIN lgs_optik_sonuc r ON r.sinav_id=e.id ORDER BY r.id'):
+    for row in con.execute('SELECT e.id AS exam_id,e.ogretmen_id,e.ad,e.tarih,e.tur,e.kaynak,e.ders,e.soru_sayisi,e.cevaplar,r.isaretler,r.ogrenci_id,r.dogru,r.yanlis,r.bos,r.net FROM lgs_optik_sinav e JOIN lgs_optik_sonuc r ON r.sinav_id=e.id ORDER BY r.id'):
         r = dict(row)
+        if not optik.teacher_can_view(r): continue
         if r['ogrenci_id'] not in allowed: continue
         r['source'] = 'okul' if r['kaynak']=='kamera' else ('deneme' if r['tur']=='deneme' else 'ev')
         r['exam_key'] = ('optik',r['exam_id'])
