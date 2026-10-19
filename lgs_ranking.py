@@ -19,8 +19,10 @@ def build(con, args, own_id=None, today=None):
         period = 'tum'
     start = {'tum': date.min, 'hafta': today-timedelta(days=today.weekday()),
              'ay': today.replace(day=1)}[period]
+    cols = {r[1] for r in con.execute("PRAGMA table_info(siniflar)").fetchall()}
+    sekiz_kosul = "COALESCE(s.seviye, CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER)) = 8" if "seviye" in cols else "s.sinif_adi LIKE '8/%'"
     students = [dict(r) for r in con.execute(
-        "SELECT o.id,o.ad_soyad,s.sinif_adi FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi IN ('8/A','8/B') ORDER BY o.id")]
+        f"SELECT o.id,o.ad_soyad,s.sinif_adi FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE {sekiz_kosul} ORDER BY o.id")]
     if own_id is not None and not any(s['id'] == own_id for s in students):
         return None
     classes = sorted({s['sinif_adi'] for s in students})

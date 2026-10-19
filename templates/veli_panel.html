@@ -135,7 +135,7 @@
         </div>
         <p class="vp-muted" id="haber-durum" hidden></p>
         <div class="vp-inline-actions"><button type="button" id="haber-ayar" hidden>Ayarları aç</button><button type="button" id="haber-deneme">Deneme bildirimi gönder</button></div>
-</details>{% if (ogrenci.sinif_adi or '').startswith(('5/','6/','7/')) %}
+</details>{% if sinif_seviyesi(ogrenci) in (5, 6, 7) %}
 <div id="kulup-duyuru" class="duyuru" role="dialog" aria-modal="true" aria-label="Çocuk Kulübü duyurusu" hidden>
   <div class="duyuru-kutu">
     <img src="{{ url_for('static', filename='cocuk-kulubu.jpg') }}?v=20260930b" alt="Çocuk Kulübü açılıyor. 5, 6 ve 7. sınıflar başvurabilir.">
@@ -159,8 +159,8 @@
 </script>
 {% endif %}
 </div><div class="parent-section" data-parent-section="raporlar" id="raporlar" hidden>
-<section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2><a class="app-button" href="{{ url_for('yaprak_analiz.index') }}">Okul yaprak testi analizi →</a><div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a><a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a></div></section>
-<details class="app-card app-details"><summary>Rozet koleksiyonu</summary>{% include '_rozet_koleksiyonu.html' %}</details>
+<section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2><a class="app-button" href="{{ url_for('yaprak_analiz.index') }}">Okul yaprak testi analizi →</a><div class="app-row" style="margin-top:12px"><a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a>{% if 'kitap_odev_rapor' in aktif_moduller(ogrenci) %}<a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a>{% endif %}{% if 'deneme' in aktif_moduller(ogrenci) %}<a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a>{% endif %}</div></section>
+{% if 'rozet' in aktif_moduller(ogrenci) %}<details class="app-card app-details"><summary>Rozet koleksiyonu</summary>{% include '_rozet_koleksiyonu.html' %}</details>{% endif %}
     {% if kitap_kazanimlari %}<a class="app-button" href="#kitap-kazanimlari">Onaylanan kitapların özetleri ve rozetleri →</a>{% endif %}
 
 </div></main></div></div>

@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from datetime import date
+from datetime import date, timedelta
 sandbox=tempfile.TemporaryDirectory(prefix='ev-analiz-tests-')
 os.environ.setdefault('OGR_TAKIP_DB_PATH',str(Path(sandbox.name)/'school.db'))
 import web_app as w
@@ -20,7 +20,7 @@ class HomeAnalysis(unittest.TestCase):
         cls.students=[dict(r) for r in con.execute("SELECT o.*,s.sinif_adi FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='8/A' LIMIT 2")]
         cls.other=dict(con.execute("SELECT o.*,s.sinif_adi FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='8/B' LIMIT 1").fetchone())
         con.close()
-        cls.exam=optik.sinav_ekle('Analiz test kaydı',date.today().isoformat(),'test.pdf',['A','B','C'],cls.teacher['id'],'yaprak','Matematik',cls.students[0]['sinif_id'])
+        cls.exam=optik.sinav_ekle('Analiz test kaydı',(date.today()-timedelta(days=1)).isoformat(),'test.pdf',['A','B','C'],cls.teacher['id'],'yaprak','Matematik',cls.students[0]['sinif_id'])
         optik.sonuc_kaydet(cls.exam,cls.students[0]['id'],['A','D',''])
         optik.sonuc_kaydet(cls.exam,cls.students[1]['id'],['B','B','C'])
     def client(self,student=None,teacher=False):
@@ -62,7 +62,7 @@ class HomeAnalysis(unittest.TestCase):
         outsider=self.client(self.other)
         self.assertEqual(outsider.get('/evde-analiz',query_string={'test':self.exam}).status_code,404)
         self.assertEqual(outsider.post('/veli/lgs',data={'islem':'optik_bitir','sinav_id':self.exam}).status_code,403)
-        fresh=optik.sinav_ekle('Henüz çözülmedi',date.today().isoformat(),'test.pdf',['E','D'],self.teacher['id'],'yaprak','Matematik',self.students[0]['sinif_id'])
+        fresh=optik.sinav_ekle('Henüz çözülmedi',(date.today()-timedelta(days=1)).isoformat(),'test.pdf',['E','D'],self.teacher['id'],'yaprak','Matematik',self.students[0]['sinif_id'])
         html=self.client().get('/evde-analiz',query_string={'test':fresh}).get_data(as_text=True)
         self.assertNotIn('Doğru cevap:',html)
         self.assertIn('Bu testi henüz tamamlamadınız.',html)

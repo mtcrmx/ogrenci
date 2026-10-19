@@ -14,11 +14,15 @@
     {% for o in sonuclar %}
     <article class="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
       <h2 class="font-black">{{ o.ad_soyad }} <span class="text-slate-500">{{ o.sinif_adi }} · No {{ o.ogr_no }}</span></h2>
+      {% if 'kitap' in aktif_moduller(o) %}
       <p class="mt-1">Kitap: {{ o.kitap_adi or 'seçilmedi' }} · ödev: {{ o.odev_durum or ('yaptım dedi' if o.odev_bildirim == 'yaptim' else 'işaret yok') }}</p>
+      {% endif %}
       <p class="mt-1">Son deneme: {{ o.son_deneme or 'yok' }}{% if o.son_net is not none %} · {{ o.son_net }} net{% endif %}</p>
       <div class="mt-2 flex gap-2">
+        {% if 'haftalik_takip' in aktif_moduller(o) %}
         <a class="rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white" href="{{ url_for('haftalik_takip', sinif=o.sinif_id) }}">Ödev</a>
-        {% if o.sinif_adi.startswith('8/') %}
+        {% endif %}
+        {% if 'lgs' in aktif_moduller(o) %}
         <a class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white" href="{{ url_for('lgs', ogrenci=o.id) }}">LGS</a>
         {% endif %}
       </div>

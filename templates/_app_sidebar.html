@@ -5,7 +5,7 @@
   {% if ui_role == 'veli' %}
   <p class="app-account">{{ nav_student.ad_soyad if nav_student else ogrenci.ad_soyad }}<small>{{ nav_student.sinif_adi if nav_student else ogrenci.sinif_adi }}</small></p>
   <nav class="app-nav" aria-label="Ana menü">
-    {% set sekiz = (nav_student and nav_student.sinif_adi.startswith('8/')) or lgs_acik|default(false) %}
+    {% set sekiz = (nav_student and sinif_seviyesi(nav_student) == 8) or lgs_acik|default(false) %}
     <a href="{{ url_for('veli_panel') }}#genel" data-parent-nav="genel"><span aria-hidden="true">⌂</span>Ana sayfa</a>
     {% if not sekiz %}<a href="{{ url_for('veli_panel') }}#hafta" data-parent-nav="hafta"><span aria-hidden="true">▤</span>Ödev ve kitap</a>{% endif %}
     {% if sekiz %}

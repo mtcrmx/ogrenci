@@ -36,18 +36,20 @@ def private(response):
 
 @bp.get('')
 def index():
-    exams=[e for e in optik.sinavlari_listele() if e.get('ogretmen_id')==session['ogretmen_id'] and (not e.get('sinif_id') or (e.get('sinif_adi') or '').startswith('8/'))]
+    from moduller import seviye as sinif_seviyesi
+    exams=[e for e in optik.sinavlari_listele() if e.get('ogretmen_id')==session['ogretmen_id'] and (not e.get('sinif_id') or sinif_seviyesi(e.get('sinif_adi')) == 8)]
     return render_template('lgs_kazanim.html',exam=None,exams=exams,catalog=catalog())
 
 @bp.route('/<int:eid>',methods=['GET','POST'])
 def edit(eid):
+    from moduller import seviye as sinif_seviyesi
     exam=optik.sinav_getir(eid)
     if not exam:abort(404)
     if exam.get('ogretmen_id')!=session['ogretmen_id']:abort(403)
     con=connect()
     if exam.get('sinif_id'):
         row=con.execute('SELECT sinif_adi FROM siniflar WHERE id=?',(exam['sinif_id'],)).fetchone()
-        if not row or not row[0].startswith('8/'):con.close();abort(400)
+        if not row or sinif_seviyesi(row[0]) != 8:con.close();abort(400)
     entries={r['id']:r for r in catalog()['items']}
     saved={r['no']:r['kazanim_id'] for r in con.execute('SELECT * FROM lgs_soru_kazanim WHERE sinav_id=?',(eid,))}
     if request.method=='POST':

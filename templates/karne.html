@@ -27,11 +27,11 @@
     {% for s in satirlar %}
     <article class="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
       <h2 class="font-black">{{ s.ad_soyad }} <span class="font-bold text-slate-500">{{ s.sinif_adi }} · No {{ s.ogr_no }}</span></h2>
-      {% if not s.sinif_adi.startswith('8/') %}
+      {% if sinif_seviyesi(s) != 8 %}
       <p class="mt-1">{% if s.okudu + s.okumadi %}Okudu {{ s.okudu }} · okumadı {{ s.okumadi }}{% else %}Kitap okuma: Henüz değerlendirilmedi.{% endif %}</p>
       <p class="mt-1">{% if s.tam + s.eksik + s.yok %}Ödev tam {{ s.tam }} · eksik {{ s.eksik }} · yok {{ s.yok }}{% else %}Ödev: Henüz değerlendirilmedi.{% endif %}</p>
       {% endif %}
-      {% if s.sinif_adi.startswith('8/') %}
+      {% if sinif_seviyesi(s) == 8 %}
       <p class="mt-1 text-slate-600">Hedef: {{ s.hedef or 'yazılmadı' }}{% if s.hedef_net %} · {{ s.hedef_net }} net{% endif %}</p>
       <p class="mt-1 text-slate-600">{{ s.denemeler or 'Deneme yok.' }}</p>
       {% endif %}

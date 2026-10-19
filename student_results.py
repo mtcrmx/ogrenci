@@ -78,7 +78,8 @@ def register_results(app, login_required, accessible):
         scope = request.args.get('kapsam')
         results = []
         for classroom in classes:
-            if scope == 'lgs' and not classroom['sinif_adi'].startswith('8/'):
+            from moduller import seviye as sinif_seviyesi
+            if scope == 'lgs' and sinif_seviyesi(classroom) != 8:
                 continue
             for student in db.sinif_ogrencileri(classroom['id']):
                 name = normalize(student['ad_soyad'])

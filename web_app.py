@@ -174,6 +174,7 @@ def _ogretmen_ogrencisine_erisebilir(ogretmen_id: int, ogrenci_id: int) -> bool:
 
 
 from yetki import mudur_adi, register_yetki, yetkili, yetkili_idleri
+from moduller import aktif_moduller, modul_gerekli, modul_var_mi, register_moduller, seviye as sinif_seviyesi
 
 
 def _giris_raporu_acik_mi() -> bool:
@@ -445,7 +446,9 @@ def _ekran_duzeni_context():
     if rol == "ogretmen" and not siniflar:
         siniflar = aktif_sube_siniflari()
     if rol == 'ogretmen' and endpoint == 'lgs':
-        siniflar = [s for s in siniflar if s['sinif_adi'].startswith('8/')]
+        siniflar = [s for s in siniflar if sinif_seviyesi(s) == 8]
+    elif rol == 'ogretmen' and endpoint == 'haftalik_takip':
+        siniflar = [s for s in siniflar if 'haftalik_takip' in aktif_moduller(s)]
     secili = _ui_sinif_sec(siniflar, request.args.get("sinif_id", type=int) or request.args.get("sinif", type=int)) if siniflar else None
     if rol == 'ogretmen' and endpoint in ('lgs', 'sonuclar') and request.args.get('ogrenci', type=int):
         selected_student = _ogrenci_bul(request.args.get('ogrenci', type=int))
@@ -457,9 +460,12 @@ def _ekran_duzeni_context():
         from rehberlik import library
         rehber_yeni = library(int(session['veli_ogrenci_id']))[:3]
     sayac_goster = endpoint in {"lgs", "veli_lgs"} or (
-        endpoint == "veli_panel" and ogrenci and (ogrenci.get("sinif_adi") or "").startswith("8/")
+        endpoint == "veli_panel" and ogrenci and sinif_seviyesi(ogrenci) == 8
     )
+    secili_kaynak = ogrenci if veli else (secili or (siniflar[0] if siniflar else None))
+    moduller_kumesi = aktif_moduller(secili_kaynak) if secili_kaynak else set()
     return {"ui_role": rol, "nav_siniflar": siniflar, "nav_sinif_id": secili, "nav_student": ogrenci, "rehber_yeni": rehber_yeni,
+            "aktif_moduller_kumesi": moduller_kumesi, "lgs_acik": "lgs" in moduller_kumesi,
             "lgs_sayac": lgs_sayac_verisi() if sayac_goster else None}
 
 
@@ -593,13 +599,15 @@ def _ogrenci_bul(ogrenci_id: int) -> dict | None:
 def _ogrenci_no_ile_bul(ogr_no: int) -> dict | None:
     from database import _conn as _db
     con = _db()
-    rows = con.execute("""
+    cols = {r[1] for r in con.execute("PRAGMA table_info(siniflar)").fetchall()}
+    seviye_kosul = "COALESCE(s.seviye, CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER)) IN (5,6,7,8)" if "seviye" in cols else "CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER) IN (5,6,7,8)"
+    rows = con.execute(f"""
         SELECT o.id, o.ad_soyad, o.ogr_no, o.sinif_id, s.sinif_adi,
                COUNT(t.id) AS tik_sayisi
         FROM ogrenciler o
         JOIN siniflar s ON s.id = o.sinif_id
         LEFT JOIN tik_kayitlari t ON t.ogrenci_id = o.id
-        WHERE o.ogr_no = ? AND s.sinif_adi IN ('5/A','5/B','6/A','6/B','7/A','7/B','8/A','8/B')
+        WHERE o.ogr_no = ? AND ({seviye_kosul})
         GROUP BY o.id
     """, (ogr_no,)).fetchall()
     con.close()
@@ -1611,7 +1619,7 @@ def veli_karne():
     return render_template(
         "karne.html", siniflar=[], sinif_id=None, donem=donem, satirlar=satirlar,
         veli=True, ogretmen_degerlendirme=ogretmen_notlari_veli_ozeti(int(oid), 1),
-        sonraki_is=sonraki_is, sonraki_hedef=lgs_profil(int(oid)).get("hedef", "") if ogrenci["sinif_adi"].startswith("8/") else "",
+        sonraki_is=sonraki_is, sonraki_hedef=lgs_profil(int(oid)).get("hedef", "") if sinif_seviyesi(ogrenci) == 8 else "",
     )
 
 
@@ -2587,7 +2595,7 @@ def veli_panel():
     surpriz_kitaplar = _veli_surpriz_kitaplar(int(ogrenci_id), kitap_kazanimlari)
     notlar = ogretmen_notlari_veli_ozeti(int(ogrenci_id), 8)
     odev = haftalik_odev_bilgi_getir(int(o["sinif_id"]), hafta_basi)
-    lgs_acik = (o.get("sinif_adi") or "") in {"8/A", "8/B"}
+    lgs_acik = "lgs" in aktif_moduller(o)
     if lgs_acik:
         gorevler = lgs_gorevler(int(ogrenci_id), hafta_basi)
         bugun_gorev = [g for g in gorevler if int(g["gun"]) == bugun.weekday()]
@@ -2795,6 +2803,7 @@ def veli_yok():
 
 
 @app.route("/veli/belge")
+@modul_gerekli("kitap")
 def veli_belge():
     oid = session.get("veli_ogrenci_id")
     if not oid:
@@ -2888,10 +2897,10 @@ def veli_odev_bildir():
     if not oid:
         return redirect(url_for("veli_giris"))
     ogr = _ogrenci_bul(int(oid))
-    if not ogr or ogr.get("sinif_adi") not in {"5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"}:
+    if not ogr or sinif_seviyesi(ogr) not in (5, 6, 7, 8):
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
-    if str(ogr.get("sinif_adi") or "").startswith("8/"):
+    if "odev" not in aktif_moduller(ogr):
         flash("8. sınıflarda ödev bildirimi kapalı. Cevaplar LGS optiğine işaretlenir.", "warning")
         return redirect(url_for("veli_lgs"))
     bugun = date.today()
@@ -2901,15 +2910,19 @@ def veli_odev_bildir():
 
 
 @app.route("/veli/rapor")
+@app.route("/veli/kitap-odev-rapor")
+@modul_gerekli("kitap_odev_rapor")
 def veli_kitap_odev_rapor():
     """Veli yalnızca oturumundaki öğrencinin raporunu görür. Adresteki numara yok sayılır."""
     oid = session.get("veli_ogrenci_id")
     if not oid:
         return redirect(url_for("veli_giris"))
     o = _ogrenci_bul(int(oid))
-    if not o or o.get("sinif_adi") not in {"5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"}:
+    if not o or sinif_seviyesi(o) not in (5, 6, 7, 8):
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
+    if "kitap_odev_rapor" not in aktif_moduller(o):
+        return redirect(url_for("veli_lgs"))
     return render_template(
         "kitap_odev_rapor.html",
         analiz=kitap_odev_analiz(ogrenci_id=int(oid)),
@@ -2920,7 +2933,9 @@ def veli_kitap_odev_rapor():
 
 
 @app.route("/rapor/kitap-odev")
+@app.route("/kitap-odev-rapor")
 @giris_zorunlu
+@modul_gerekli("kitap_odev_rapor")
 def kitap_odev_rapor():
     ogrenci_id = request.args.get("ogrenci", type=int)
     sinif_id = request.args.get("sinif", type=int)
@@ -2928,6 +2943,8 @@ def kitap_odev_rapor():
         if not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], ogrenci_id):
             abort(403)
         o = _ogrenci_bul(ogrenci_id)
+        if o and "kitap_odev_rapor" not in aktif_moduller(o):
+            return redirect(url_for("lgs", ogrenci=ogrenci_id))
         return render_template(
             "kitap_odev_rapor.html",
             analiz=kitap_odev_analiz(ogrenci_id=ogrenci_id),
@@ -2937,6 +2954,8 @@ def kitap_odev_rapor():
         )
     if not sinif_id or not _ogretmen_sinifinda_mi(session["ogretmen_id"], sinif_id):
         abort(403)
+    if "kitap_odev_rapor" not in aktif_moduller(sinif_id):
+        return redirect(url_for("lgs"))
     sinif_adi = next((s["sinif_adi"] for s in ogretmen_siniflari(session["ogretmen_id"]) if int(s["id"]) == int(sinif_id)), "Sınıf")
     return render_template(
         "kitap_odev_rapor.html",
@@ -3474,11 +3493,16 @@ def _secili_hafta(haftalar: list[dict], istenen: str | None) -> str:
 @app.route("/haftalik-takip")
 @giris_zorunlu
 def haftalik_takip():
-    siniflar = ogretmen_siniflari(session["ogretmen_id"])
-    if not siniflar:
-        siniflar = aktif_sube_siniflari()
-    aktif_id = _ui_sinif_sec(siniflar, request.args.get("sinif", type=int)) or 0
-    aktif = next((s for s in siniflar if s["id"] == aktif_id), siniflar[0] if siniflar else None)
+    tum_siniflar = ogretmen_siniflari(session["ogretmen_id"])
+    if not tum_siniflar:
+        tum_siniflar = aktif_sube_siniflari()
+    istek_sinif_id = request.args.get("sinif", type=int) or request.args.get("sinif_id", type=int)
+    siniflar = [s for s in tum_siniflar if "haftalik_takip" in aktif_moduller(s)]
+    if istek_sinif_id and any(int(s["id"]) == istek_sinif_id for s in tum_siniflar):
+        aktif = next(s for s in tum_siniflar if int(s["id"]) == istek_sinif_id)
+    else:
+        aktif_id = _ui_sinif_sec(siniflar, istek_sinif_id) or 0
+        aktif = next((s for s in siniflar if s["id"] == aktif_id), siniflar[0] if siniflar else None)
     donem = request.args.get("donem", type=int) or session.get("ui_takip_donem")
     if donem not in (1, 2):
         donem = _bugunun_donemi()
@@ -3537,10 +3561,7 @@ def _haftalik_takip_yetki(sinif_id: int) -> bool:
 def _sekizinci_sinif_mi(sinif_id: int) -> bool:
     if not sinif_id:
         return False
-    for sinif in aktif_sube_siniflari():
-        if int(sinif["id"]) == int(sinif_id):
-            return str(sinif.get("sinif_adi") or "").startswith("8/")
-    return False
+    return sinif_seviyesi(int(sinif_id)) == 8
 
 
 def _haftalik_payload(ogrenci_gerekli=True):
@@ -3763,7 +3784,7 @@ def _karne_excel(satirlar, donem: int):
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="0F2744")
     for s in satirlar:
-        lgs = s['sinif_adi'].startswith('8/')
+        lgs = sinif_seviyesi(s) == 8
         reading = not lgs and s['okudu'] + s['okumadi'] > 0
         homework = not lgs and s['tam'] + s['eksik'] + s['yok'] > 0
         empty = 'Bu sınıfta takip edilmiyor' if lgs else 'Henüz değerlendirilmedi'
@@ -3819,10 +3840,11 @@ def karne_pdf():
 
 
 def _sekiz_girilen_sinavlari_sil() -> dict:
-    """8/A ve 8/B için girilmiş deneme, yaprak test ve soru PDF'lerini siler."""
+    """8. sınıflar için girilmiş deneme, yaprak test ve soru PDF'lerini siler."""
     import lgs_optik
+    sekiz_adlar = tuple(s["sinif_adi"] for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8)
     deneme = 0
-    for grup in deneme_gruplari(("8/A", "8/B")):
+    for grup in deneme_gruplari(sekiz_adlar):
         deneme += deneme_grup_sil(grup["ad"], grup["tarih"], grup["tur"], grup["sinif_adi"])
     optik = 0
     for sinav in lgs_optik.sinavlari_listele():
@@ -4861,12 +4883,13 @@ def deneme_analiz():
 
 
 @app.route("/veli/deneme-analiz")
+@modul_gerekli("deneme")
 def veli_deneme_analiz():
     oid = session.get("veli_ogrenci_id")
     if not oid:
         return redirect(url_for("veli_giris"))
     ogr = _ogrenci_bul(int(oid))
-    if not ogr or ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+    if not ogr or "deneme" not in aktif_moduller(ogr):
         return redirect(url_for("veli_panel"))
     veri = _deneme_ekran_verisi(veli=True, kendi_id=int(oid))
     veri["gorunum"] = request.args.get("gorunum") or "birey"
@@ -4923,8 +4946,8 @@ def _lgs_optik_ekle():
     if tur == "yaprak":
         siniflar = [
             s for s in (ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari())
-            if s.get("sinif_adi") in {"8/A", "8/B"}
-        ] or [s for s in aktif_sube_siniflari() if s.get("sinif_adi") in {"8/A", "8/B"}]
+            if sinif_seviyesi(s) == 8
+        ] or [s for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8]
         if ders not in LGS_DERSLER or sinif_id not in {int(s["id"]) for s in siniflar}:
             flash("Yaprak test için sınıf ve ders seçin.", "warning")
             return redirect(url_for("lgs", ekran="evde"))
@@ -4951,7 +4974,7 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
         sinav["sonuclar"] = lgs_optik.sinav_sonuclari(sinav["id"])
         sinav["sonuc"] = lgs_optik.sonuc_getir(sinav["id"], ogrenci_id) if ogrenci_id else None
         if sinav.get("sonuc"):
-            sinav["analiz"] = lgs_optik.puan_hesapla(sinav["cevaplar"], sinav["sonuc"]["isaretler"])
+            sinav["analiz"] = lgs_optik.puan_hesapla(sinav["cevaplar"], sinav["sonuc"]["isaretler"], sinav.get("yanlis_goturme", 3))
     if test_window.parent_request():
         for sinav in sinavlar:
             test_window.parent_exam(sinav)
@@ -4961,7 +4984,7 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
         secili = sinavlar[0]
     detay = None
     if secili and secili.get("sonuc") and (not test_window.parent_request() or test_window.released(secili)):
-        detay = lgs_optik.puan_hesapla(secili["cevaplar"], secili["sonuc"]["isaretler"])
+        detay = lgs_optik.puan_hesapla(secili["cevaplar"], secili["sonuc"]["isaretler"], secili.get("yanlis_goturme", 3))
     return sinavlar, secili, detay
 
 
@@ -4981,7 +5004,7 @@ def _lgs_soru_belgesi(sinav_id):
         pass
     elif session.get("veli_ogrenci_id"):
         ogr = _ogrenci_bul(int(session["veli_ogrenci_id"]))
-        if not ogr or ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+        if not ogr or sinif_seviyesi(ogr) != 8:
             abort(403)
         if sinav.get("tur") == "yaprak" and sinav.get("sinif_id") and int(sinav["sinif_id"]) != int(ogr["sinif_id"]):
             abort(403)
@@ -5016,17 +5039,17 @@ def _lgs_ekran(veli: bool):
     if veli:
         oid = int(session["veli_ogrenci_id"])
         ogr = _ogrenci_bul(oid)
-        if not ogr or ogr.get("sinif_adi") not in {"5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B"}:
+        if not ogr or sinif_seviyesi(ogr) not in (5, 6, 7, 8):
             session.pop("veli_ogrenci_id", None)
             return redirect(url_for("veli_giris"))
-        if ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+        if sinif_seviyesi(ogr) != 8:
             return redirect(url_for("veli_panel"))
     else:
         oid = request.values.get("ogrenci", type=int)
         if request.method == "POST" and not oid:
             abort(400)
         ogr = _lgs_ogrenci(oid) if oid else None
-        if ogr and ogr.get("sinif_adi") not in {"8/A", "8/B"}:
+        if ogr and sinif_seviyesi(ogr) != 8:
             return redirect(url_for("lgs"))
     bolum = request.values.get("bolum") or ("soru" if veli else "deneme")
     if bolum in {"gunluk", "defter", "ozet", "program"}:
@@ -5199,10 +5222,10 @@ def _lgs_ekran(veli: bool):
     if not veli and not oid:
         siniflar = [
             s for s in (ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari())
-            if s.get("sinif_adi") in {"8/A", "8/B"}
+            if sinif_seviyesi(s) == 8
         ]
         if not siniflar:
-            siniflar = [s for s in aktif_sube_siniflari() if s.get("sinif_adi") in {"8/A", "8/B"}]
+            siniflar = [s for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8]
         gruplar = [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in siniflar]
         harita = lgs_tempo_harita()
         ay_harita = {}
@@ -6164,9 +6187,10 @@ def rapor_analiz_pdf():
 
 @app.route("/analiz")
 @giris_zorunlu
+@modul_gerekli("kitap_odev_rapor")
 def analiz_merkezi():
     ogretmen_id = session["ogretmen_id"]
-    siniflar = ogretmen_siniflari(ogretmen_id)
+    siniflar = [s for s in ogretmen_siniflari(ogretmen_id) if "kitap_odev_rapor" in aktif_moduller(s)]
     secili_sinif_id = _ui_sinif_sec(siniflar, request.args.get("sinif_id", type=int))
     if secili_sinif_id and secili_sinif_id not in {s["id"] for s in siniflar}:
         secili_sinif_id = None
@@ -6944,6 +6968,7 @@ def veli_randevu_kaydet():
 
 
 @app.route("/veli/kitap-okuma")
+@modul_gerekli("kitap")
 def veli_kitap_okuma(form_data=None):
     oid = session.get("veli_ogrenci_id")
     if not oid:
@@ -6952,7 +6977,7 @@ def veli_kitap_okuma(form_data=None):
     if not ogrenci:
         session.pop("veli_ogrenci_id", None)
         return redirect(url_for("veli_giris"))
-    if str(ogrenci.get("sinif_adi") or "").startswith("8/"):
+    if "kitap" not in aktif_moduller(ogrenci):
         return redirect(url_for("veli_lgs", bolum="soru"))
     kayitlar = kitap_okuma_ogrenci_gecmis(int(oid), 80)
     durumlar = {k['kitap_adi']:k['durum'] for k in reversed(kayitlar)}
@@ -6980,7 +7005,7 @@ def veli_kitap_okuma_kaydet():
     if not oid:
         return redirect(url_for("veli_giris"))
     ogrenci = _ogrenci_bul(int(oid))
-    if ogrenci and str(ogrenci.get("sinif_adi") or "").startswith("8/"):
+    if ogrenci and "kitap" not in aktif_moduller(ogrenci):
         return redirect(url_for("veli_lgs", bolum="soru"))
     sonuc = kitap_okuma_bitirdi_bildir(int(oid),request.form.get('hafta',''),
                                     request.form.get('kitap_adi',''),request.form.get('veli_notu',''))
@@ -7644,6 +7669,7 @@ register_yonetici(app)
 register_yetki(app)
 from metrik import register_metrik
 register_metrik(app)
+register_moduller(app)
 from veli_auth import register as register_veli_auth
 register_veli_auth(app)
 from rehberlik import register_rehberlik

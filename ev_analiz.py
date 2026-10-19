@@ -35,8 +35,9 @@ def connection():
     return con
 
 def visible(exam, student):
-    # Existing home tests are available to their class (or both eighth grades).
-    return (exam.get('kaynak')=='kamera' or student.get('sinif_adi') in {'8/A', '8/B'}) and (not exam.get('sinif_id') or int(exam['sinif_id']) == int(student['sinif_id']))
+    # Existing home tests are available to their class (or any eighth grade).
+    from moduller import seviye as sinif_seviyesi
+    return (exam.get('kaynak')=='kamera' or sinif_seviyesi(student) == 8) and (not exam.get('sinif_id') or int(exam['sinif_id']) == int(student['sinif_id']))
 
 def student_row(oid):
     con = db._conn()

@@ -6,8 +6,9 @@ import lgs_optik
 
 
 def build(student):
+    from moduller import seviye as sinif_seviyesi
     oid, sid = int(student['id']), int(student['sinif_id'])
-    lgs = student.get('sinif_adi') in {'8/A', '8/B'}
+    lgs = sinif_seviyesi(student) == 8
     items = []
     def add(key, kind, title, body, stamp='', teacher='', status='', href='', action='Ayrıntıyı aç', pending=False):
         items.append(dict(key=key, kind=kind, title=title, body=body or '', stamp=stamp or '',

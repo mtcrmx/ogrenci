@@ -1603,8 +1603,9 @@ def lgs_tempo_sinifa(sinif_id: int, tempo: str) -> int:
         return 0
     con = _conn()
     _lgs_init(con)
-    sinif = con.execute("SELECT sinif_adi FROM siniflar WHERE id = ?", (sinif_id,)).fetchone()
-    if not sinif or sinif["sinif_adi"] not in ("8/A", "8/B"):
+    sinif = con.execute("SELECT id, sinif_adi FROM siniflar WHERE id = ?", (sinif_id,)).fetchone()
+    from moduller import seviye as sinif_seviyesi
+    if not sinif or sinif_seviyesi(dict(sinif)) != 8:
         con.close()
         return 0
     ids = [int(r[0]) for r in con.execute(
@@ -2943,12 +2944,18 @@ def ders_programi_okul() -> list[dict]:
 
 def aktif_sube_siniflari() -> list[dict]:
     con = _conn()
+    cols = {r[1] for r in con.execute("PRAGMA table_info(siniflar)").fetchall()}
+    sec = "id, sinif_adi, seviye" if "seviye" in cols else "id, sinif_adi"
     yerler = ",".join("?" * len(_AKTIF_SUBELER))
     rows = [dict(r) for r in con.execute(
-        f"SELECT id, sinif_adi FROM siniflar WHERE sinif_adi IN ({yerler}) ORDER BY sinif_adi",
+        f"SELECT {sec} FROM siniflar WHERE sinif_adi IN ({yerler}) OR COALESCE(seviye, 0) IN (5, 6, 7, 8) ORDER BY sinif_adi",
         _AKTIF_SUBELER,
     ).fetchall()]
     con.close()
+    from moduller import seviye as sinif_seviyesi
+    for r in rows:
+        if r.get("seviye") is None:
+            r["seviye"] = sinif_seviyesi(r.get("sinif_adi"))
     return rows
 
 
@@ -3154,14 +3161,20 @@ def ogretmen_gorsel_tipi_guncelle(ogretmen_id: int, gorsel_tipi: str) -> bool:
 def ogretmen_siniflari(ogretmen_id: int) -> list[dict]:
     """Öğretmenin girdiği sınıfları döndürür."""
     con = _conn()
-    rows = [dict(r) for r in con.execute("""
-        SELECT s.id, s.sinif_adi
+    cols = {r[1] for r in con.execute("PRAGMA table_info(siniflar)").fetchall()}
+    sec = "s.id, s.sinif_adi, s.seviye" if "seviye" in cols else "s.id, s.sinif_adi"
+    rows = [dict(r) for r in con.execute(f"""
+        SELECT {sec}
         FROM siniflar s
         JOIN ogretmen_sinif os ON os.sinif_id = s.id
         WHERE os.ogretmen_id = ?
         ORDER BY s.sinif_adi
     """, (ogretmen_id,)).fetchall()]
     con.close()
+    from moduller import seviye as sinif_seviyesi
+    for r in rows:
+        if r.get("seviye") is None:
+            r["seviye"] = sinif_seviyesi(r.get("sinif_adi"))
     return rows
 
 
@@ -6488,9 +6501,11 @@ def _uc_gun_gecti(metin: str) -> bool:
 
 
 def sinif_hafta_durumu(hafta_basi: str) -> list[dict]:
-    """Üç takip alanı birlikte değerlendirilmemiş aktif sınıflar."""
+    """Üç takip alanı birlikte değerlendirilmemiş aktif sınıflar (8. sınıflar hariç)."""
     con = _conn()
     _haftalik_takip_init(con)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(siniflar)").fetchall()}
+    seviye_kosul = "COALESCE(s.seviye, CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER)) != 8" if "seviye" in cols else "s.sinif_adi NOT LIKE '8/%'"
     yer = ",".join("?" * len(_AKTIF_SUBELER))
     rows = con.execute(
         f"""
@@ -6501,7 +6516,7 @@ def sinif_hafta_durumu(hafta_basi: str) -> list[dict]:
                  WHERE h.sinif_id = s.id AND h.hafta_basi = ?
                    AND h.kitap_okuma != '' AND h.kitap_getirme != '' AND h.odev_durum != '') AS isaretli
         FROM siniflar s
-        WHERE s.sinif_adi IN ({yer})
+        WHERE s.sinif_adi IN ({yer}) AND ({seviye_kosul})
         ORDER BY s.sinif_adi
         """,
         (hafta_basi, *_AKTIF_SUBELER),
@@ -6518,6 +6533,9 @@ def onay_bekleyenler(hafta_basi: str) -> dict:
     con = _conn()
     _haftalik_takip_init(con)
     _lgs_init(con)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(siniflar)").fetchall()}
+    sekiz_kosul = "COALESCE(s.seviye, CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER)) = 8" if "seviye" in cols else "s.sinif_adi LIKE '8/%'"
+    diger_kosul = "COALESCE(s.seviye, CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER)) != 8" if "seviye" in cols else "s.sinif_adi NOT LIKE '8/%'"
     yer = ",".join("?" * len(_AKTIF_SUBELER))
     odevler = [dict(r) for r in con.execute(
         f"""
@@ -6529,7 +6547,7 @@ def onay_bekleyenler(hafta_basi: str) -> dict:
         JOIN siniflar s ON s.id = o.sinif_id
         LEFT JOIN haftalik_odev_bilgi b ON b.sinif_id = h.sinif_id AND b.hafta_basi = h.hafta_basi
         WHERE h.hafta_basi = ? AND h.odev_bildirim = 'yaptim' AND COALESCE(h.odev_durum, '') = ''
-          AND s.sinif_adi IN ({yer})
+          AND s.sinif_adi IN ({yer}) AND ({diger_kosul})
         ORDER BY s.sinif_adi, o.ad_soyad
         """,
         (hafta_basi, *_AKTIF_SUBELER),
@@ -6542,7 +6560,7 @@ def onay_bekleyenler(hafta_basi: str) -> dict:
         JOIN ogrenciler o ON o.id = g.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
         WHERE g.hafta_basi = ? AND g.bildirdi = 1 AND g.tamamlandi = 0
-          AND s.sinif_adi IN ('8/A', '8/B')
+          AND ({sekiz_kosul})
         ORDER BY s.sinif_adi, o.ad_soyad, g.gun
         """,
         (hafta_basi,),
@@ -6554,7 +6572,7 @@ def onay_bekleyenler(hafta_basi: str) -> dict:
         FROM lgs_gunluk k
         JOIN ogrenciler o ON o.id = k.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
-        WHERE k.goruldu = 0 AND s.sinif_adi IN ('8/A', '8/B')
+        WHERE k.goruldu = 0 AND ({sekiz_kosul})
         ORDER BY k.kayit_zamani, k.id
         LIMIT 80
         """,
@@ -6567,20 +6585,20 @@ def onay_bekleyenler(hafta_basi: str) -> dict:
     for satir in gunluk:
         satir["gecikti"] = _uc_gun_gecti(satir.get("kayit_zamani") or "")
     program = [dict(r) for r in con.execute(
-        """
+        f"""
         SELECT p.ogrenci_id, p.tarih, p.sira, p.metin, p.bildirim_tarih,
                o.ad_soyad, o.ogr_no, s.sinif_adi
         FROM lgs_program_isaret p
         JOIN ogrenciler o ON o.id = p.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
         WHERE p.bildirdi = 1 AND p.tamamlandi = 0
-          AND s.sinif_adi IN ('8/A', '8/B')
+          AND ({sekiz_kosul})
         ORDER BY p.bildirim_tarih, s.sinif_adi, o.ad_soyad
         LIMIT 80
         """
     ).fetchall()]
     defterler = [dict(r) for r in con.execute(
-        """
+        f"""
         SELECT d.ogrenci_id, d.hafta_basi, d.kitap_adi, d.ogrenci_not, d.veli_not, d.guncelleme,
                o.ad_soyad, o.ogr_no, s.sinif_adi,
                (
@@ -6588,9 +6606,10 @@ def onay_bekleyenler(hafta_basi: str) -> dict:
                  WHERE h.ogrenci_id = d.ogrenci_id AND h.hafta_basi = d.hafta_basi
                ) AS soru
         FROM lgs_defter d
-        JOIN ogrenciler o ON o.id = d.ogrenci_id
+        JOIN ogrenciler o ON o.id = k_o_id
+        """.replace("k_o_id", "d.ogrenci_id") + f"""
         JOIN siniflar s ON s.id = o.sinif_id
-        WHERE d.goruldu = 0 AND s.sinif_adi IN ('8/A', '8/B')
+        WHERE d.goruldu = 0 AND ({sekiz_kosul})
           AND (
             d.kitap_adi != '' OR d.ogrenci_not != '' OR d.veli_not != ''
             OR EXISTS (
@@ -6747,21 +6766,23 @@ def donem_karne_satirlari(haftalar: list[str], sinif_id: int | None = None, ogre
     }
     con.close()
     sonuc = []
+    from moduller import seviye as sinif_seviyesi
     for o in ogrenciler:
         oid = int(o["id"])
         s = sayim.get(oid, {})
         p = profiller.get(oid, {})
         nets = deneme.get(oid, [])
+        sekiz = sinif_seviyesi(o.get("sinif_adi")) == 8
         sonuc.append({
             "id": oid,
             "ad_soyad": o["ad_soyad"],
             "ogr_no": o["ogr_no"],
             "sinif_adi": o["sinif_adi"],
-            "okudu": int(s.get("okudu") or 0),
-            "okumadi": int(s.get("okumadi") or 0),
-            "tam": int(s.get("tam") or 0),
-            "eksik": int(s.get("eksik") or 0),
-            "yok": int(s.get("yok") or 0),
+            "okudu": 0 if sekiz else int(s.get("okudu") or 0),
+            "okumadi": 0 if sekiz else int(s.get("okumadi") or 0),
+            "tam": 0 if sekiz else int(s.get("tam") or 0),
+            "eksik": 0 if sekiz else int(s.get("eksik") or 0),
+            "yok": 0 if sekiz else int(s.get("yok") or 0),
             "hedef": (p.get("hedef") or "") if p else "",
             "hedef_net": int(p.get("hedef_net") or 0) if p else 0,
             "denemeler": " · ".join(nets),
@@ -6869,7 +6890,15 @@ def kitap_odev_analiz(sinif_id: int | None = None, ogrenci_id: int | None = None
             (sinif_id,),
         ).fetchall()]
     con.close()
-    kayitlar = [r for r in kayitlar if (not baslangic or r["hafta_basi"] >= baslangic) and (not bitis or r["hafta_basi"] <= bitis)]
+    from moduller import seviye as sinif_seviyesi
+    kayitlar = [
+        r for r in kayitlar
+        if (not baslangic or r["hafta_basi"] >= baslangic)
+        and (not bitis or r["hafta_basi"] <= bitis)
+    ]
+    ogrenciler = [o for o in ogrenciler if sinif_seviyesi(o.get("sinif_adi")) != 8]
+    izinli_oids = {int(o["id"]) for o in ogrenciler}
+    kayitlar = [r for r in kayitlar if int(r["ogrenci_id"]) in izinli_oids]
     haftalar = sorted({r["hafta_basi"] for r in kayitlar})
     harita: dict[tuple[int, str], dict] = {
         (int(r["ogrenci_id"]), r["hafta_basi"]): r for r in kayitlar

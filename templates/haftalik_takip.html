@@ -15,7 +15,7 @@
   {% if not loop.last %}<a class="app-button" href="{{ url_for('haftalik_takip', sinif=aktif.id if aktif else none, donem=donem, hafta=haftalar[loop.index0+1].basi) }}">Sonraki →</a>{% else %}<span class="app-button is-disabled">Sonraki →</span>{% endif %}
   {% endif %}{% endfor %}</div>
 </section>
-{% if aktif and aktif.sinif_adi.startswith('8/') %}
+{% if aktif and sinif_seviyesi(aktif) == 8 %}
 <section class="app-card">
   <h2>8. sınıflar LGS soru optiğinde</h2>
   <p>Bu sınıfta ödev ve kitap takibi kapalı. Öğretmen soru PDF’ini yükler, öğrenci optiğe işaretler.</p>
