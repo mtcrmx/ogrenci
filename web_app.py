@@ -3897,6 +3897,7 @@ def giris_raporu():
         d["etiket"] = etiket.get(d["hafta"], d["hafta"])
     return render_template(
         "giris_raporu.html",
+        activity=teacher_activity_report(request.args),
         donem=donem,
         haftalar=haftalar,
         hafta=hafta,
@@ -7649,6 +7650,8 @@ from student_results import register_results, institution_allowed as kurum_denem
 register_results(app, giris_zorunlu, _ogretmen_ogrencisine_erisebilir)
 from change_history import register_history
 register_history(app, giris_zorunlu)
+from teacher_activity import register as register_teacher_activity, report as teacher_activity_report
+register_teacher_activity(app)
 from teacher_records import register as register_teacher_records
 register_teacher_records(app, giris_zorunlu)
 from ev_analiz import register as register_ev_analiz
