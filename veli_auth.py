@@ -77,7 +77,7 @@ def register(app):
         from yonetici import active
         if active():
             return None
-        if request.endpoint in {'veli_giris', 'veli_sifre_belirle', 'yonetici_login', 'static'}:
+        if request.endpoint in {'login', 'logout', 'veli_giris', 'veli_sifre_belirle', 'yonetici_login', 'static'}:
             return None
         oid = session.get('veli_ogrenci_id')
         if not enabled() or not oid or session.get('ogretmen_id'):

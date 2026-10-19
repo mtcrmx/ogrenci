@@ -26,6 +26,10 @@ def required(fn):
 def register(app):
     @app.before_request
     def inspection_guard():
+        # Authentication must remain available when leaving read-only inspection.
+        # Teacher login clears inspection state only after valid credentials.
+        if request.endpoint in {'login', 'logout'}:
+            return
         if session.get('yonetici_until') and not active():
             session.clear()
             return redirect(url_for('yonetici_login'))
