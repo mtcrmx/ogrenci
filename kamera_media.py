@@ -290,7 +290,7 @@ def form_pdf(exam, student, token, choices, version=2):
             x,y=bubble_position(i,j,exam['soru_sayisi'],version)
             c.setLineWidth(.6);c.circle(x*mm,(297-y)*mm,(2.5 if version==2 else 2)*mm,stroke=1,fill=0)
     text(23,267,'Bu sayfayı testle birlikte teslim edin. Katlamayın ve QR alanını karalamayın.',8)
-    text(23,274,'Öğretmen: Kamera ile oku ekranından dört köşe işareti görünecek şekilde okutun.',8)
+    text(23,274,'Öğretmen: Optikleri tek PDF olarak tarayın ve Toplu PDF bölümüne yükleyin.',8)
     text(23,287,('OPTİK 2 / ' if version==2 else '')+'A4 / Gerçek boyut (%100) / Tek yüz baskı',8)
     c.save();return out.getvalue()
 

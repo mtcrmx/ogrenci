@@ -288,3 +288,7 @@ def delete_result(eid,oid):
     finally: con.close()
     flash('Öğrenci sonucu silindi. ','success')
     return redirect(url_for('.detail',eid=eid))
+
+
+from batch_optik import register as register_batch_optik
+register_batch_optik(bp)

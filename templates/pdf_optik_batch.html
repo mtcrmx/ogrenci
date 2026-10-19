@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Toplu PDF optik kontrolü{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='kamera_test.css') }}">{% endblock %}
+{% block body %}<main class="page-content kt">
+<a href="{{ url_for('kamera_test.detail',eid=exam.id) }}">← Teste dön</a>
+<h1>{{ exam.ad }} · PDF optik kontrolü</h1>
+{% if batch.saved %}<p class="kt-notice">Bu yüklemenin seçilen sonuçları kaydedildi. Yeni bir işlem için PDF’yi yeniden yükleyin.</p>
+{% elif pending %}
+<section class="kt-card" id="batch-reader" data-pages='{{ pending|tojson }}' data-total="{{ batch.pages }}" data-done="{{ rows|length }}" data-url="{{ url_for('kamera_test.batch_page_read',bid=batch.id,no=0) }}" data-csrf="{{ csrf }}">
+<p id="batch-progress" role="status">{{ rows|length }} / {{ batch.pages }} sayfa okundu. Bu ekranı açık tutun.</p>
+<button type="button" id="batch-resume" class="kt-button" hidden>Okumaya devam et</button>
+<p>Bu aşamada hiçbir öğrenci sonucu kaydedilmez. Okuma tamamlanınca cevapları kontrol edeceksiniz.</p>
+</section><script src="{{ url_for('static',filename='pdf_optik_batch.js',v='1') }}" defer></script>
+{% else %}
+<p class="kt-notice">{{ rows|length }} sayfa işlendi. Kaydetmek istediğiniz öğrencileri seçin; her öğrencinin cevaplarını görüntüyle karşılaştırıp onaylayın. Seçilmeyen sayfalar kaydedilmez. Yükleme 24 saat geçerlidir.</p>
+<form method="post" action="{{ url_for('kamera_test.batch_save',bid=batch.id) }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+{% for row in rows %}<section class="kt-card">
+<h2>Sayfa {{ row.no }}{% if row.name %} · {{ row.name }} · No {{ row.number }}{% endif %}</h2>
+{% if row.error %}<p class="kt-notice" role="alert">{{ row.error }}</p>{% else %}
+<label class="kt-check"><input type="checkbox" name="select" value="{{ row.no }}"> Bu öğrenciyi kaydet</label>
+{% if row.uncertain %}<p class="kt-notice">Kontrol gereken sorular: {{ row.uncertain|join(', ') }}. Boş görünen alanı fotoğrafla karşılaştırın.</p>{% endif %}
+<label>Cevaplar ({{ exam.soru_sayisi }} soru; {{ exam.choices|join(' / ') }}; boş için -)
+<textarea name="answers_{{ row.no }}" rows="3" spellcheck="false" autocapitalize="characters" style="width:100%;font-family:monospace;letter-spacing:.2em">{{ row.answers }}</textarea></label>
+<label class="kt-check"><input type="checkbox" name="confirm_{{ row.no }}" value="yes"> Bu öğrencinin tüm cevaplarını kontrol ettim.</label>
+{% if row.existing %}<label class="kt-check"><input type="checkbox" name="replace_{{ row.no }}" value="yes"> Önceden kayıtlı sonucu bu cevaplarla değiştirmeyi onaylıyorum.</label>{% endif %}
+{% endif %}
+<details><summary>Optik görüntüsünü aç</summary><img loading="lazy" src="{{ url_for('kamera_test.batch_preview',bid=batch.id,no=row.no) }}" alt="Sayfa {{ row.no }} optik görüntüsü" style="max-width:100%;height:auto"></details>
+</section>{% endfor %}<button class="kt-button">Seçilen ve onaylanan sonuçları kaydet</button></form>
+{% endif %}</main>{% endblock %}
