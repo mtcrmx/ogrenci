@@ -71,7 +71,7 @@ def private_response(response):
 
 @bp.errorhandler(ValueError)
 def bad_input(exc):
-    if request.path.endswith(('/tara','/kaydet','/anahtar-oku')):
+    if request.path.endswith(('/tara','/telefonda-oku','/kaydet','/anahtar-oku')):
         return jsonify(error=str(exc)),400
     flash(str(exc),'error')
     return redirect(url_for('.index'))
@@ -261,7 +261,8 @@ def print_exam(eid):
     writer=PdfWriter()
     for person,token in forms:
         # A fresh reader avoids aliasing pages when appending repeated question documents.
-        writer.append(PdfReader(source),import_outline=False)
+        if request.args.get('only')!='optik':
+            writer.append(PdfReader(source),import_outline=False)
         writer.append(PdfReader(BytesIO(media.form_pdf(exam,person,token,exam['choices']))),import_outline=False)
     out=BytesIO();writer.write(out);out.seek(0)
     return send_file(out,mimetype='application/pdf',download_name=f'yaprak-test-{eid}.pdf')
@@ -279,6 +280,10 @@ def scan(eid):
     try: reading=media.read_form(data,exam['soru_sayisi'],exam['choices'])
     except ValueError: raise
     except Exception as exc: raise ValueError('Görüntü okunamadı. JPEG veya PNG fotoğrafla tekrar deneyin.') from exc
+    return scan_response(eid,exam,reading)
+
+
+def scan_response(eid,exam,reading,local=False):
     con=connect();form=con.execute('SELECT * FROM kamera_form WHERE token=? AND sinav_id=?',(reading['token'],eid)).fetchone();con.close()
     if not form: raise ValueError('Bu optik seçili teste ait değil. Doğru testi açın.')
     if form['count']!=exam['soru_sayisi'] or form['choices']!=exam['choices']: raise ValueError('Bu optiğin soru düzeni değişmiş. Güncel optiği yazdırın.')
@@ -286,9 +291,9 @@ def scan(eid):
     if not student: abort(403)
     existing=optik.sonuc_getir(eid,student['id'])
     payload=dict(eid=eid,oid=student['id'],teacher=session['ogretmen_id'],answers=reading['answers'],uncertain=reading['uncertain'],
-                 key=fingerprint(exam['cevaplar']),before=fingerprint(existing))
+                 key=fingerprint(exam['cevaplar']),before=fingerprint(existing),local=local)
     return jsonify(student=student,answers=reading['answers'],uncertain=reading['uncertain'],existing=bool(existing),
-                   ticket=signer().dumps(payload),preview='data:image/jpeg;base64,'+base64.b64encode(reading['preview']).decode())
+                   ticket=signer().dumps(payload),local=local,preview=('data:image/jpeg;base64,'+base64.b64encode(reading['preview']).decode()) if reading.get('preview') else None)
 
 
 @bp.post('/<int:eid>/kaydet')
@@ -301,7 +306,7 @@ def save(eid):
     try: answers=json.loads(request.form.get('answers','[]'))
     except (ValueError,TypeError): abort(400)
     if not isinstance(answers,list) or len(answers)!=exam['soru_sayisi'] or any(a not in ['',*exam['choices']] for a in answers): abort(400)
-    if (scan['uncertain'] or answers!=scan['answers']) and request.form.get('reviewed')!='yes':
+    if (scan.get('local') or scan['uncertain'] or answers!=scan['answers']) and request.form.get('reviewed')!='yes':
         return jsonify(error='Belirsiz cevapları fotoğrafla karşılaştırıp onaylayın.'),400
     con=connect()
     try:
@@ -352,3 +357,20 @@ def delete_result(eid,oid):
     finally: con.close()
     flash('Öğrenci sonucu silindi. Kâğıdı yeniden okutabilirsiniz.','success')
     return redirect(url_for('.detail',eid=eid))
+
+
+@bp.post('/<int:eid>/telefonda-oku')
+def local_scan(eid):
+    exam=exam_owned(eid)
+    if len(request.form.get('reading',''))>12000:
+        abort(400)
+    try:
+        reading=json.loads(request.form.get('reading',''))
+        answers=reading['answers'];uncertain=reading['uncertain'];token=reading['token']
+        if not isinstance(token,str) or len(token)>100 or not isinstance(answers,list) or len(answers)!=exam['soru_sayisi']:
+            raise ValueError()
+        if any(a not in ['',*exam['choices']] for a in answers) or not isinstance(uncertain,list) or any(type(n)!=int or not 1<=n<=len(answers) for n in uncertain):
+            raise ValueError()
+    except (ValueError,KeyError,TypeError):
+        raise ValueError('Telefon okuma verisi geçersiz. Yeniden okutun.')
+    return scan_response(eid,exam,dict(token=token,answers=answers,uncertain=uncertain),local=True)

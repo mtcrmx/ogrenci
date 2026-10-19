@@ -64,17 +64,45 @@
     } catch (_) { return blob; }
     finally { if(bitmap) bitmap.close(); }
   }
+  async function phoneRead(blob) {
+    if(!window.Worker||!window.createImageBitmap)throw Error('Telefon okuyucusu desteklenmiyor.');
+    const bitmap=await createImageBitmap(blob,{imageOrientation:'from-image'});
+    const canvas=document.createElement('canvas'),scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));
+    canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+    const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+    const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    const result=await new Promise((resolve,reject)=>{
+      const worker=new Worker(app.dataset.worker);
+      const timer=setTimeout(()=>{worker.terminate();reject(Error('Telefon okuması zaman aşımına uğradı.'));},6000);
+      const finish=()=>{clearTimeout(timer);worker.terminate();};
+      worker.onmessage=({data})=>{finish();data.error?reject(Error(data.error)):resolve(data.result);};
+      worker.onerror=()=>{finish();reject(Error('Telefon okuyucusu başlatılamadı.'));};
+      worker.postMessage({pixels,width:canvas.width,height:canvas.height,count:Number(app.dataset.count),choices:app.dataset.choices},[pixels.buffer]);
+    });
+    canvas.width=result.width;canvas.height=result.height;
+    ctx.putImageData(new ImageData(result.pixels,result.width,result.height),0,0);
+    return {reading:{token:result.token,answers:result.answers,uncertain:result.uncertain},preview:canvas.toDataURL('image/jpeg',.8)};
+  }
   async function scan(blob) {
     if(busy) return;lock(true);current=null;$('scan-review').hidden=true;
     const started=performance.now();
     status('Fotoğraf hazırlanıyor…');
     try {
-      const photo=await preparePhoto(blob);
-      status('Optik okunuyor; öğrenci ve cevaplar kontrol ediliyor…');
-      const data=new FormData();data.set('image',photo,'scan.jpg');
-      const result=await post('tara',data);showReview(result);
-      if(!result.uncertain.length && !result.existing) await save(false);
-      else status('Okuma tamamlandı. Kaydetmeden önce aşağıdaki alanları kontrol edin.');
+      let local;
+      status('Optik telefonda okunuyor…');
+      try { local=await phoneRead(blob); }
+      catch(error) { status(`${error.message} Sunucuda deneniyor…`); }
+      let result;
+      if(local){
+        const data=new FormData();data.set('reading',JSON.stringify(local.reading));
+        result=await post('telefonda-oku',data);result.preview=local.preview;
+      }else{
+        const photo=await preparePhoto(blob),data=new FormData();data.set('image',photo,'scan.jpg');
+        result=await post('tara',data);
+      }
+      showReview(result);
+      if(!result.local && !result.uncertain.length && !result.existing) await save(false);
+      else status('Okuma tamamlandı. Cevapları kontrol edip onaylayın.');
     } catch(e) {status(e.message,true);} finally {lock(false);$('scan-photo').value='';$('scan-status').textContent+=` (${((performance.now()-started)/1000).toFixed(1)} sn)`;}
   }
   $('start-camera').addEventListener('click',async()=>{

@@ -18,16 +18,16 @@ def pdf(text='Question document'):
     out=BytesIO();c=canvas.Canvas(out);c.drawString(60,750,text);c.save();return out.getvalue()
 
 
-def marked_form(exam,student,token,marks,extra=None,choices='ABCD'):
-    data=media.form_pdf(exam,student,token,choices)
+def marked_form(exam,student,token,marks,extra=None,choices='ABCD',version=1):
+    data=media.form_pdf(exam,student,token,choices,version=version)
     with pdfium.PdfDocument(data) as doc:
         im=np.array(doc[0].render(scale=3).to_pil().convert('RGB'))
     for i,a in enumerate(marks):
         if a:
-            x,y=media.bubble_position(i,choices.index(a))
+            x,y=media.bubble_position(i,choices.index(a),exam['soru_sayisi'],version)
             cv2.circle(im,(round(x*im.shape[1]/210),round(y*im.shape[0]/297)),round(1.65*im.shape[1]/210),(0,0,0),-1)
     if extra is not None:
-        x,y=media.bubble_position(0,extra)
+        x,y=media.bubble_position(0,extra,exam['soru_sayisi'],version)
         cv2.circle(im,(round(x*im.shape[1]/210),round(y*im.shape[0]/297)),round(1.65*im.shape[1]/210),(0,0,0),-1)
     return im
 

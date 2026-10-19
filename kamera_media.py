@@ -241,11 +241,14 @@ def parse_key(text, count, choices):
     return answers, list(dict.fromkeys(warnings))
 
 
-def bubble_position(index, option):
+def bubble_position(index, option, count=90, version=1):
+    if version==2:
+        rows=20 if count<=60 else 30
+        return 30+(index//rows)*62+option*8, 72+(index%rows)*(9 if rows==20 else 6.2)
     return 28+(index//30)*62+option*8, 68+(index%30)*6.2
 
 
-def form_pdf(exam, student, token, choices):
+def form_pdf(exam, student, token, choices, version=2):
     import cv2
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import mm
@@ -269,24 +272,26 @@ def form_pdf(exam, student, token, choices):
     text(23,43,f"{student['sinif_adi']} / No: {student['ogr_no']} / {exam['soru_sayisi']} soru",9)
     text(23,51,'Her soruda tek yuvarlağı tamamen doldurun.',9)
     text(23,57,'Değiştirirken eski işareti tamamen silin.',9)
-    code=qr.QrCodeWidget('AP1:'+token); box=code.getBounds()
+    code=qr.QrCodeWidget(('AP2:' if version==2 else 'AP1:')+token); box=code.getBounds()
     drawing=Drawing(33*mm,33*mm,transform=[33*mm/(box[2]-box[0]),0,0,33*mm/(box[3]-box[1]),0,0])
     drawing.add(code);renderPDF.draw(drawing,c,161*mm,(297-55)*mm)
     dictionary=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
     for i,(x,y) in enumerate(MARKERS):
         marker=cv2.aruco.generateImageMarker(dictionary,i,200)
-        c.drawImage(ImageReader(Image.fromarray(marker)),x*mm,(297-y-10)*mm,10*mm,10*mm)
-    for col in range((exam['soru_sayisi']+29)//30):
+        size=12 if version==2 else 10
+        c.drawImage(ImageReader(Image.fromarray(marker)),(x+5-size/2)*mm,(297-y-5-size/2)*mm,size*mm,size*mm)
+    rows=20 if version==2 and exam['soru_sayisi']<=60 else 30
+    for col in range((exam['soru_sayisi']+rows-1)//rows):
         for option,letter in enumerate(choices):
-            text(27+col*62+option*8,63,letter,9)
+            text((29 if version==2 else 27)+col*62+option*8,65 if version==2 else 63,letter,9)
     for i in range(exam['soru_sayisi']):
-        x,y=bubble_position(i,0);text(x-9,y+1,str(i+1),9)
+        x,y=bubble_position(i,0,exam['soru_sayisi'],version);text(x-9,y+1,str(i+1),9)
         for j in range(len(choices)):
-            x,y=bubble_position(i,j)
-            c.setLineWidth(.6);c.circle(x*mm,(297-y)*mm,2*mm,stroke=1,fill=0)
+            x,y=bubble_position(i,j,exam['soru_sayisi'],version)
+            c.setLineWidth(.6);c.circle(x*mm,(297-y)*mm,(2.5 if version==2 else 2)*mm,stroke=1,fill=0)
     text(23,267,'Bu sayfayı testle birlikte teslim edin. Katlamayın ve QR alanını karalamayın.',8)
     text(23,274,'Öğretmen: Kamera ile oku ekranından dört köşe işareti görünecek şekilde okutun.',8)
-    text(23,287,'A4 / Gerçek boyut (%100) / Tek yüz baskı',8)
+    text(23,287,('OPTİK 2 / ' if version==2 else '')+'A4 / Gerçek boyut (%100) / Tek yüz baskı',8)
     c.save();return out.getvalue()
 
 
@@ -315,15 +320,16 @@ def read_form(data, count, choices):
     import zxingcpp
     decoded=zxingcpp.read_barcode(warp[18*SCALE:58*SCALE,157*SCALE:198*SCALE],formats=zxingcpp.BarcodeFormat.QRCode)
     code=decoded.text if decoded else ''
-    if not code.startswith('AP1:'): raise ValueError('Öğrenci QR kodu okunamadı. QR alanını netleştirip tekrar çekin.')
+    if not code.startswith(('AP1:','AP2:')): raise ValueError('Öğrenci QR kodu okunamadı. QR alanını netleştirip tekrar çekin.')
     if cv2.Laplacian(warp,cv2.CV_64F).var()<30:
         raise ValueError('Görüntü bulanık. Telefonu sabitleyip yeniden çekin.')
+    version=2 if code.startswith('AP2:') else 1
     binary=cv2.adaptiveThreshold(warp,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,41,12)
     answers=[];uncertain=[];scores=[]
     for i in range(count):
         values=[]
         for j in range(len(choices)):
-            x,y=bubble_position(i,j); x=round(x*SCALE);y=round(y*SCALE);r=round(1.25*SCALE)
+            x,y=bubble_position(i,j,count,version); x=round(x*SCALE);y=round(y*SCALE);r=round(1.25*SCALE)
             patch=binary[y-r:y+r+1,x-r:x+r+1]
             yy,xx=np.ogrid[-r:r+1,-r:r+1];mask=xx*xx+yy*yy<=r*r
             values.append(float(np.mean(patch[mask]))/255)
