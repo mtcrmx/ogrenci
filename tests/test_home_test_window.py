@@ -4,7 +4,7 @@ from datetime import datetime,timezone
 from unittest.mock import patch
 
 sandbox=tempfile.TemporaryDirectory(prefix='home-window-')
-os.environ['OGR_TAKIP_DB_PATH']=str(Path(sandbox.name)/'school.db')
+os.environ.setdefault('OGR_TAKIP_DB_PATH',str(Path(sandbox.name)/'school.db'))
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import web_app as w
 import database as db
@@ -26,6 +26,12 @@ class HomeWindowTests(unittest.TestCase):
         con.commit();con.close()
         path=optik.klasor()/'window-test.pdf'
         canvas=Canvas(str(path));canvas.drawString(30,700,'TEST QUESTION DOCUMENT');canvas.save()
+
+    @classmethod
+    def tearDownClass(cls):
+        con=veli_auth.connect()
+        con.execute("DELETE FROM veli_credentials WHERE ogrenci_id=?",(cls.student['id'],))
+        con.commit();con.close()
 
     def setUp(self):
         self.exam=optik.sinav_ekle('Saat kontrollü test','2026-10-19','window-test.pdf',['A','B','C','D'],self.teacher['id'],'yaprak','Matematik',self.student['sinif_id'])

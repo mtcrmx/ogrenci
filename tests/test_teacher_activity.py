@@ -1,7 +1,7 @@
 import os,sys,tempfile,unittest
 from pathlib import Path
 tmp=tempfile.TemporaryDirectory(prefix='teacher-work-test-')
-os.environ['OGR_TAKIP_DB_PATH']=str(Path(tmp.name)/'test.db')
+os.environ.setdefault('OGR_TAKIP_DB_PATH',str(Path(tmp.name)/'test.db'))
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import web_app as w
 import database as db
@@ -11,12 +11,17 @@ class ActivityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         w.app.config['TESTING']=True
-        @w.app.post('/test-work-request')
-        def test_request():return 'ok'
+        if 'test_request' not in w.app.view_functions:
+            w.app._got_first_request = False
+            @w.app.post('/test-work-request')
+            def test_request():return 'ok'
         con=db._conn()
+        con.execute("DELETE FROM teacher_work_request")
+        con.execute("DELETE FROM ogretmen_islem_satir WHERE islem_id='fixture-work'")
+        con.execute("DELETE FROM ogretmen_islem WHERE id='fixture-work'")
         cls.admins=[dict(r) for r in con.execute("SELECT * FROM ogretmenler WHERE ad_soyad IN ('METEHAN CÜCEN','ADEM AKGÜL')")]
         cls.teacher=dict(con.execute("SELECT * FROM ogretmenler WHERE COALESCE(yetki,'tam')='tam' AND ad_soyad NOT IN ('METEHAN CÜCEN','ADEM AKGÜL') LIMIT 1").fetchone())
-        con.execute("INSERT INTO ogretmen_islem(id,ogretmen_id,yol,zaman) VALUES('fixture-work',?,'/test-edit','2026-10-19 12:00:00')",(cls.teacher['id'],))
+        con.execute("INSERT INTO ogretmen_islem(id,ogretmen_id,yol,zaman) VALUES('fixture-work',?,'/test-edit','2026-10-19 23:59:59')",(cls.teacher['id'],))
         con.execute('INSERT INTO ogretmen_islem_satir(islem_id,tablo,anahtar,onceki,sonraki) VALUES(?,?,?,?,?)',('fixture-work','odevler','{"id":999999}',None,'{"baslik":"Örnek işlem kaydı"}'))
         con.commit();con.close()
 

@@ -10,9 +10,11 @@ import os
 import uuid
 import json
 import re
+import secrets
 import shutil
 import threading
 from datetime import datetime, timedelta
+from werkzeug.security import check_password_hash, generate_password_hash
 
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -38,6 +40,8 @@ def _kalici_veri_klasorleri() -> list[str]:
 def _legacy_db_kopyala(db_path: str) -> None:
     legacy_path = os.path.join(_APP_DIR, "ogrenci_takip.db")
     if os.path.abspath(db_path) == os.path.abspath(legacy_path):
+        return
+    if os.path.basename(db_path) != "ogrenci_takip.db":
         return
     hedef_yok = not os.path.exists(db_path) or os.path.getsize(db_path) == 0
     if hedef_yok and os.path.exists(legacy_path) and os.path.getsize(legacy_path) > 0:
@@ -991,8 +995,8 @@ def initialize_db():
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             sinif_id    INTEGER NOT NULL REFERENCES siniflar(id),
             ogretmen_id INTEGER NOT NULL REFERENCES ogretmenler(id),
-            ders_adi    TEXT    NOT NULL,
-            tema_adi    TEXT    NOT NULL,
+            ders_adi    TEXT    NOT NULL DEFAULT '',
+            tema_adi    TEXT    NOT NULL DEFAULT '',
             tarih       TEXT    NOT NULL
         );
         CREATE TABLE IF NOT EXISTS odev_sonuclari (
@@ -1053,6 +1057,8 @@ def initialize_db():
     _ders_programini_senkronize(con)
     _okuma_kitaplarini_senkronize(con)
     _lgs_init(con)
+    from migrations import migrate_up
+    migrate_up(con)
     con.close()
 
 
@@ -2987,26 +2993,92 @@ def tum_ogretmenler() -> list[dict]:
 
 
 def tum_sifre_listesi() -> list[dict]:
-    """Tüm öğretmen adlarını ve şifrelerini döndürür (yönetici listesi)."""
+    """Öğretmen şifre yönetimi için öğretmen listesini döndürür (düz metin şifre içermez)."""
     con = _conn()
-    rows = [dict(r) for r in con.execute(
-        "SELECT ad_soyad, sifre FROM ogretmenler ORDER BY sifre"
-    ).fetchall()]
-    con.close()
-    return [r for r in rows if r["ad_soyad"] not in _AYRILAN_OGRETMENLER]
+    try:
+        sutunlar = {r[1] for r in con.execute("PRAGMA table_info(ogretmenler)").fetchall()}
+        if "sifre_hash" not in sutunlar:
+            con.execute("ALTER TABLE ogretmenler ADD COLUMN sifre_hash TEXT")
+            con.commit()
+        rows = [dict(r) for r in con.execute(
+            "SELECT id, ad_soyad, sifre, sifre_hash FROM ogretmenler ORDER BY ad_soyad"
+        ).fetchall()]
+    finally:
+        con.close()
+    return [
+        {
+            "id": r["id"],
+            "ad_soyad": r["ad_soyad"],
+            "sifre_tanimli": bool((r.get("sifre_hash") or "").strip() or (r.get("sifre") or "").strip()),
+        }
+        for r in rows
+        if r["ad_soyad"] not in _AYRILAN_OGRETMENLER
+    ]
+
+
+def ogretmen_sifre_sifirla(ogretmen_id: int, yeni_sifre: str | None = None) -> dict | None:
+    """Öğretmen için tek seferlik yeni geçici şifre üretir, yalnızca hash'ini saklar."""
+    con = _conn()
+    try:
+        sutunlar = {r[1] for r in con.execute("PRAGMA table_info(ogretmenler)").fetchall()}
+        if "sifre_hash" not in sutunlar:
+            con.execute("ALTER TABLE ogretmenler ADD COLUMN sifre_hash TEXT")
+            con.commit()
+        row = con.execute(
+            "SELECT id, ad_soyad FROM ogretmenler WHERE id = ?",
+            (ogretmen_id,),
+        ).fetchone()
+        if not row or row["ad_soyad"] in _AYRILAN_OGRETMENLER:
+            return None
+        gecici_sifre = (yeni_sifre or "").strip() or secrets.token_urlsafe(8)
+        yeni_hash = generate_password_hash(gecici_sifre)
+        con.execute(
+            "UPDATE ogretmenler SET sifre_hash = ?, sifre = '' WHERE id = ?",
+            (yeni_hash, int(row["id"])),
+        )
+        con.commit()
+        return {
+            "id": int(row["id"]),
+            "ad_soyad": str(row["ad_soyad"]),
+            "gecici_sifre": gecici_sifre,
+        }
+    finally:
+        con.close()
 
 
 def ogretmen_dogrula(ad_soyad: str, sifre: str) -> bool:
-    """Ad ve şifre eşleşiyorsa True döndürür."""
+    """Ad ve şifre eşleşiyorsa True döndürür (önce sifre_hash, yoksa eski sifre + otomatik hash geçişi)."""
     if (ad_soyad or "").strip() in _AYRILAN_OGRETMENLER:
         return False
+    if not sifre:
+        return False
     con = _conn()
-    row = con.execute(
-        "SELECT id FROM ogretmenler WHERE ad_soyad = ? AND sifre = ?",
-        (ad_soyad, sifre)
-    ).fetchone()
-    con.close()
-    return row is not None
+    try:
+        sutunlar = {r[1] for r in con.execute("PRAGMA table_info(ogretmenler)").fetchall()}
+        if "sifre_hash" not in sutunlar:
+            con.execute("ALTER TABLE ogretmenler ADD COLUMN sifre_hash TEXT")
+            con.commit()
+        row = con.execute(
+            "SELECT id, sifre, sifre_hash FROM ogretmenler WHERE ad_soyad = ?",
+            (ad_soyad,),
+        ).fetchone()
+        if not row:
+            return False
+        sifre_hash = (row["sifre_hash"] or "").strip()
+        if sifre_hash:
+            return bool(check_password_hash(sifre_hash, sifre))
+        eski_sifre = row["sifre"] or ""
+        if eski_sifre and secrets.compare_digest(str(eski_sifre), str(sifre)):
+            yeni_hash = generate_password_hash(sifre)
+            con.execute(
+                "UPDATE ogretmenler SET sifre_hash = ? WHERE id = ?",
+                (yeni_hash, row["id"]),
+            )
+            con.commit()
+            return True
+        return False
+    finally:
+        con.close()
 
 
 def ogretmen_id_bul(ad_soyad: str):

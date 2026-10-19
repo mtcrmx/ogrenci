@@ -7,7 +7,37 @@ from flask import abort, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 import database as db
 
-DEFAULT_HASH = 'scrypt:32768:8:1$NarNvYIWuP3V7JOF$7aca456689dc64aaedcc6512af40fd583be8edfd521a57c8b8c29b8a10e41960060ad09ed796c22f01f4724e4068372a1e90ac3ba7c199b4f7394d6d1fab724c'
+
+def verify_hash_with_attempt_limit(expected_hash: str, password: str, extra_ok: bool = True, attempt_id: int = 1) -> bool:
+    """Ortak yönetici/admin giriş deneme sınırı (5 hatalı denemede 15 dk blok)."""
+    expected_hash = (expected_hash or '').strip()
+    if not expected_hash:
+        return False
+    con = db._conn()
+    try:
+        con.execute('CREATE TABLE IF NOT EXISTS yonetici_login_attempt (id INTEGER PRIMARY KEY, failures INTEGER, blocked REAL)')
+        with con:
+            con.execute('INSERT OR IGNORE INTO yonetici_login_attempt VALUES (?,0,0)', (attempt_id,))
+            row = con.execute('SELECT * FROM yonetici_login_attempt WHERE id=?', (attempt_id,)).fetchone()
+            now = time.time()
+            password = password or ''
+            valid = (
+                row['blocked'] <= now
+                and len(password) <= 128
+                and extra_ok
+                and check_password_hash(expected_hash, password)
+            )
+            if valid:
+                con.execute('UPDATE yonetici_login_attempt SET failures=0,blocked=0 WHERE id=?', (attempt_id,))
+            elif row['blocked'] <= now:
+                failures = (row['failures'] if not row['blocked'] else 0) + 1
+                con.execute(
+                    'UPDATE yonetici_login_attempt SET failures=?,blocked=? WHERE id=?',
+                    (failures, now + 900 if failures >= 5 else 0, attempt_id),
+                )
+        return bool(valid)
+    finally:
+        con.close()
 
 
 def active():
@@ -43,31 +73,26 @@ def register(app):
     def yonetici_login():
         error = None
         session.setdefault('yonetici_csrf', secrets.token_urlsafe(32))
+        password_hash = (os.environ.get('YONETICI_PASSWORD_HASH') or '').strip()
+        if not password_hash:
+            abort(403, 'Yönetici girişi kapalı (YONETICI_PASSWORD_HASH tanımlı değil).')
         if request.method == 'POST':
             if not secrets.compare_digest(request.form.get('csrf', ''), session['yonetici_csrf']):
                 abort(400)
-            con = db._conn()
-            try:
-                con.execute('CREATE TABLE IF NOT EXISTS yonetici_login_attempt (id INTEGER PRIMARY KEY, failures INTEGER, blocked REAL)')
-                with con:
-                    con.execute('INSERT OR IGNORE INTO yonetici_login_attempt VALUES (1,0,0)')
-                    row = con.execute('SELECT * FROM yonetici_login_attempt WHERE id=1').fetchone()
-                    now = time.time()
-                    password = request.form.get('password', '')
-                    valid = row['blocked'] <= now and len(password) <= 128 and request.form.get('username') == 'yonetici' and check_password_hash(os.environ.get('YONETICI_PASSWORD_HASH', DEFAULT_HASH), password)
-                    if valid:
-                        con.execute('UPDATE yonetici_login_attempt SET failures=0,blocked=0 WHERE id=1')
-                    elif row['blocked'] <= now:
-                        failures = (row['failures'] if not row['blocked'] else 0)+1
-                        con.execute('UPDATE yonetici_login_attempt SET failures=?,blocked=? WHERE id=1', (failures, now+900 if failures >= 5 else 0))
-                if valid:
-                    session.clear()
-                    session['yonetici_until'] = now+8*3600
-                    session['yonetici_csrf'] = secrets.token_urlsafe(32)
-                    return redirect(url_for('yonetici_students'))
-                error = 'Kullanıcı adı veya şifre hatalı. Çok sayıda deneme yaptıysanız 15 dakika sonra tekrar deneyin.'
-            finally:
-                con.close()
+            now = time.time()
+            password = request.form.get('password', '')
+            valid = verify_hash_with_attempt_limit(
+                password_hash,
+                password,
+                extra_ok=(request.form.get('username') == 'yonetici'),
+                attempt_id=1,
+            )
+            if valid:
+                session.clear()
+                session['yonetici_until'] = now + 8 * 3600
+                session['yonetici_csrf'] = secrets.token_urlsafe(32)
+                return redirect(url_for('yonetici_students'))
+            error = 'Kullanıcı adı veya şifre hatalı. Çok sayıda deneme yaptıysanız 15 dakika sonra tekrar deneyin.'
         return render_template('yonetici.html', login=True, error=error)
 
     @app.get('/yonetici')

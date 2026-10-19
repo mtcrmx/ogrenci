@@ -16,7 +16,7 @@ from kitap_icerikleri import deger_bilgisi, deger_kodu, kitap_icerigi
 from database import (
     ogrenci_ozellikleri_getir, ogrenci_ozellik_artir,
     initialize_db, KRITERLER, OLUMLU_KRITERLER,
-    tum_ogretmenler, tum_sifre_listesi,
+    tum_ogretmenler, tum_sifre_listesi, ogretmen_sifre_sifirla,
     ogretmen_dogrula, ogretmen_id_bul, ogretmen_siniflari,
     ogretmen_gorsel_tipi_al, ogretmen_gorsel_tipi_guncelle,
     sinif_ogrencileri, tum_okul_ogrencileri, ogrenci_tik_gecmisi,
@@ -128,9 +128,20 @@ app.secret_key = os.environ.get("SECRET_KEY", "erenler-cumhuriyet-2025-gizli")
 app.permanent_session_lifetime = timedelta(days=365)
 
 SIFIR_PAROLA = "1234"
-ADMIN_SIFRE  = "ECadmin"
 OGRENCI_SIFRE = os.environ.get("OGRENCI_SIFRE", "ogrenci")
 VELI_SIFRE = os.environ.get("VELI_SIFRE", "veli")
+
+
+def _admin_sifre_hash() -> str:
+    return (os.environ.get("ADMIN_SIFRE_HASH") or "").strip()
+
+
+def _admin_sifre_dogrula(girilen_sifre: str) -> bool:
+    from yonetici import verify_hash_with_attempt_limit
+    h = _admin_sifre_hash()
+    if not h:
+        return False
+    return verify_hash_with_attempt_limit(h, girilen_sifre, attempt_id=1)
 
 initialize_db()
 
@@ -2959,17 +2970,27 @@ def kitap_odev_rapor():
 
 @app.route("/admin/sifreler", methods=["GET", "POST"])
 def admin_sifreler():
-    hata, liste = None, None
+    if not _admin_sifre_hash():
+        abort(403, "Yönetici şifresi yapılandırılmamış (ADMIN_SIFRE_HASH).")
+    hata, liste, sifirlanan = None, None, None
+    girilen_admin_sifre = ""
     if request.method == "POST":
-        if request.form.get("admin_sifre") == ADMIN_SIFRE:
+        girilen_admin_sifre = request.form.get("admin_sifre", "")
+        if _admin_sifre_dogrula(girilen_admin_sifre):
+            ogretmen_id = request.form.get("ogretmen_id", type=int)
+            if ogretmen_id:
+                sifirlanan = ogretmen_sifre_sifirla(ogretmen_id)
+                if not sifirlanan:
+                    hata = "Öğretmen bulunamadı."
             liste = tum_sifre_listesi()
         else:
-            hata = "Yonetici sifresi hatali."
+            hata = "Yönetici şifresi hatalı. Çok sayıda deneme yaptıysanız 15 dakika sonra tekrar deneyin."
     son_yedek = admin_meta_get("son_yedek_hatirlatma", "")
     return render_template(
         "admin_sifreler.html",
         liste=liste,
         hata=hata,
+        sifirlanan=sifirlanan,
         son_yedek=son_yedek,
     )
 
@@ -7578,7 +7599,9 @@ def ogretmen_denetim():
 
 @app.route("/admin/yedek-onay", methods=["POST"])
 def admin_yedek_onay():
-    if request.form.get("admin_sifre") != ADMIN_SIFRE:
+    if not _admin_sifre_hash():
+        abort(403, "Yönetici şifresi yapılandırılmamış (ADMIN_SIFRE_HASH).")
+    if not _admin_sifre_dogrula(request.form.get("admin_sifre", "")):
         flash("Yönetici şifresi hatalı.", "error")
         return redirect(url_for("admin_sifreler"))
     admin_meta_set(

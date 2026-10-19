@@ -1,12 +1,18 @@
 import unittest
+from datetime import datetime
 from io import BytesIO
+from unittest.mock import patch
 from reportlab.pdfgen import canvas
 from test_app_workflows import w,d
+import home_test_window
 import lgs_optik
 
 
 class QuestionViewer(unittest.TestCase):
     def setUp(self):
+        self._now = patch.object(home_test_window, 'now', return_value=datetime.fromisoformat('2026-10-18T19:30:00+03:00'))
+        self._now.start()
+        self.addCleanup(self._now.stop)
         con=d._conn()
         self.oid,self.sid=con.execute("SELECT o.id,o.sinif_id FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='8/A' LIMIT 1").fetchone()
         self.other=con.execute("SELECT o.id FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='8/B' LIMIT 1").fetchone()[0]

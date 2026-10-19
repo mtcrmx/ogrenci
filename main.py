@@ -12,7 +12,7 @@ import tkinter as tk
 import math, time, datetime, os, subprocess, sys
 from database import (
     initialize_db, KRITERLER,
-    tum_ogretmenler, tum_sifre_listesi, ogretmen_dogrula,
+    tum_ogretmenler, tum_sifre_listesi, ogretmen_sifre_sifirla, ogretmen_dogrula,
     ogretmen_id_bul, ogretmen_siniflari,
     sinif_ogrencileri, tum_siniflar_ogrencileri, ogrenci_tik_gecmisi,
     tik_ekle, tek_ogrenci_sifirla, sinif_sifirla, tum_tikleri_sifirla,
@@ -943,18 +943,27 @@ class OgrenciKarti(ctk.CTkFrame):
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# Yönetici – Şifre Listesi Dialogu
+# Yönetici – Şifre Yönetimi Dialogu
 # ══════════════════════════════════════════════════════════════════════════
 
-ADMIN_SIFRE = "ECadmin"   # Yönetici şifresi
+
+def _masaustu_admin_dogrula(girilen_sifre: str) -> tuple[bool, str]:
+    from yonetici import verify_hash_with_attempt_limit
+    admin_hash = (os.environ.get("ADMIN_SIFRE_HASH") or "").strip()
+    if not admin_hash:
+        return False, "Yönetici şifresi kapalı (ADMIN_SIFRE_HASH tanımlı değil)."
+    if verify_hash_with_attempt_limit(admin_hash, girilen_sifre, attempt_id=1):
+        return True, ""
+    return False, "Yönetici şifresi hatalı veya çok sayıda deneme yapıldı!"
+
 
 class SifreListesiDialog(ctk.CTkToplevel):
-    """Tüm öğretmen şifrelerini gösteren yönetici penceresi."""
+    """Öğretmen şifre sıfırlama yönetici penceresi."""
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("🔑  Öğretmen Şifre Listesi")
-        self.geometry("400x560")
+        self.title("🔑  Öğretmen Şifre Yönetimi")
+        self.geometry("420x560")
         self.resizable(False, False)
         self.grab_set()
         self.lift()
@@ -970,7 +979,7 @@ class SifreListesiDialog(ctk.CTkToplevel):
         ).pack(pady=(28, 6))
 
         ctk.CTkLabel(
-            self, text="Şifre listesini görüntülemek için\nyönetici şifresini girin:",
+            self, text="Şifre yönetimi ekranını açmak için\nyönetici şifresini girin:",
             font=ctk.CTkFont(size=12), text_color=C_MUTED, justify="center"
         ).pack(pady=(0, 14))
 
@@ -988,7 +997,7 @@ class SifreListesiDialog(ctk.CTkToplevel):
         self._hata.pack(pady=(0, 4))
 
         ctk.CTkButton(
-            self, text="Görüntüle", width=160, height=36,
+            self, text="Devam Et", width=160, height=36,
             font=ctk.CTkFont(size=13, weight="bold"),
             fg_color=C_HEADER, hover_color="#0f2548",
             command=self._admin_dogrula
@@ -996,68 +1005,55 @@ class SifreListesiDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             self,
-            text=f"(İpucu: Yönetici şifrenizi bilmiyorsanız\nokul idaresine başvurun)",
+            text="(İpucu: Yönetici şifrenizi bilmiyorsanız\nokul idaresine başvurun)",
             font=ctk.CTkFont(size=9), text_color="#94a3b8", justify="center"
         ).pack(pady=(0, 20))
 
     def _admin_dogrula(self):
-        if self._admin_ent.get() == ADMIN_SIFRE:
+        ok, mesaj = _masaustu_admin_dogrula(self._admin_ent.get())
+        if ok:
             for w in self.winfo_children():
                 w.destroy()
             self._build_liste()
         else:
-            self._hata.configure(text="❌  Yönetici şifresi hatalı!")
+            self._hata.configure(text=f"❌  {mesaj}")
             self._admin_ent.delete(0, "end")
 
+    def _sifirla_ogretmen(self, oid: int):
+        sonuc = ogretmen_sifre_sifirla(oid)
+        if sonuc:
+            messagebox.showinfo(
+                "Yeni Geçici Şifre",
+                f"{sonuc['ad_soyad']} için yeni geçici şifre:\n\n{sonuc['gecici_sifre']}\n\nBu şifre yalnız bir kez gösterilir.",
+                parent=self,
+            )
+
     def _build_liste(self):
-        """Şifre listesini göster."""
-        # Üst bant
+        """Öğretmen şifre sıfırlama listesini göster."""
         ust = ctk.CTkFrame(self, fg_color=C_HEADER, corner_radius=0, height=54)
         ust.pack(fill="x")
         ust.pack_propagate(False)
         ctk.CTkLabel(
-            ust, text="🔑  Öğretmen Şifre Listesi",
+            ust, text="🔑  Öğretmen Şifre Yönetimi",
             font=ctk.CTkFont(size=13, weight="bold"), text_color="white"
         ).pack(expand=True)
 
         ctk.CTkLabel(
             self,
-            text="Bu listeyi yazdırıp öğretmenlere dağıtabilirsiniz.",
+            text="Şifreler açık saklanmaz; gerektiğinde yeni geçici şifre üretilir.",
             font=ctk.CTkFont(size=10), text_color=C_MUTED
         ).pack(pady=(8, 4))
 
-        # Tablo
         sf = ctk.CTkScrollableFrame(self, height=380)
         sf.pack(fill="both", expand=True, padx=14, pady=(0, 10))
-        sf.grid_columnconfigure((0, 1, 2), weight=1)
-
-        # Başlıklar
-        for col, metin in enumerate(["Şifre", "Ad Soyad", ""]):
-            h = ctk.CTkLabel(
-                sf, text=metin,
-                font=ctk.CTkFont(size=11, weight="bold"),
-                text_color=C_HEADER
-            )
-            h.grid(row=0, column=col, sticky="w", padx=6, pady=(4, 6))
+        sf.grid_columnconfigure(0, weight=1)
 
         liste = tum_sifre_listesi()
         for i, kayit in enumerate(liste, 1):
             alt_bg = "#f0f4ff" if i % 2 == 0 else "white"
             satir = ctk.CTkFrame(sf, fg_color=alt_bg, corner_radius=4)
-            satir.grid(row=i, column=0, columnspan=3, sticky="ew",
-                       padx=2, pady=1)
-            satir.grid_columnconfigure(1, weight=1)
-
-            # Şifre badge
-            ctk.CTkLabel(
-                satir,
-                text=kayit["sifre"],
-                font=ctk.CTkFont(size=12, weight="bold", family="Courier New"),
-                text_color="white",
-                fg_color=C_ACCENT,
-                corner_radius=5,
-                width=68
-            ).grid(row=0, column=0, padx=(6, 10), pady=4)
+            satir.grid(row=i, column=0, sticky="ew", padx=2, pady=1)
+            satir.grid_columnconfigure(0, weight=1)
 
             ctk.CTkLabel(
                 satir,
@@ -1065,7 +1061,17 @@ class SifreListesiDialog(ctk.CTkToplevel):
                 font=ctk.CTkFont(size=11),
                 text_color="#1e293b",
                 anchor="w"
-            ).grid(row=0, column=1, sticky="w", pady=4)
+            ).grid(row=0, column=0, sticky="w", padx=8, pady=4)
+
+            ctk.CTkButton(
+                satir,
+                text="Şifre Sıfırla",
+                width=92,
+                height=26,
+                font=ctk.CTkFont(size=11, weight="bold"),
+                fg_color=C_ACCENT,
+                command=lambda oid=kayit["id"]: self._sifirla_ogretmen(oid),
+            ).grid(row=0, column=1, padx=6, pady=4)
 
         ctk.CTkButton(
             self, text="Kapat", width=100, height=30,

@@ -11,6 +11,12 @@ services:
         value: /data/ogrenci_takip.db
       - key: OGR_TAKIP_DATA_DIR
         value: /data
+      - key: IKLIM_ANAHTAR
+        value: LDsIng3TpqPBo7yMSc2bfY0t
+      - key: ADMIN_SIFRE_HASH
+        sync: false
+      - key: YONETICI_PASSWORD_HASH
+        sync: false
     disk:
       name: veritabani
       mountPath: /data

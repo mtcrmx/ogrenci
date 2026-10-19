@@ -1,11 +1,17 @@
 import os
 import unittest
 from unittest.mock import patch
+from werkzeug.security import generate_password_hash
 from test_app_workflows import w,d
+
+_TEST_YONETICI_HASH = generate_password_hash('EC200')
 
 
 class AdministratorPreview(unittest.TestCase):
     def setUp(self):
+        self._env = patch.dict(os.environ, {'YONETICI_PASSWORD_HASH': _TEST_YONETICI_HASH})
+        self._env.start()
+        self.addCleanup(self._env.stop)
         self.client=w.app.test_client()
         self.client.get('/yonetici/giris')
         with self.client.session_transaction() as s:self.csrf=s['yonetici_csrf']

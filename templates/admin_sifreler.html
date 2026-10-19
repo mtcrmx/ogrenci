@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Şifre Listesi{% endblock %}
+{% block title %}Öğretmen Şifre Yönetimi{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-10">
   <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
 
     <div class="bg-okul-800 px-6 py-4 text-white font-bold text-center">
-      🔑 Yönetici — Öğretmen Şifre Listesi
+      🔑 Yönetici — Öğretmen Şifre Yönetimi
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -25,8 +25,16 @@
         <input type="password" name="admin_sifre" placeholder="Yönetici şifresi" class="rounded border px-2 py-1 text-xs font-mono flex-1 min-w-[120px]">
         <button type="submit" class="bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Yedek aldım</button>
       </form>
-      <p class="mt-2 text-[10px] text-amber-900/80">Öğretmen yetkisi: veritabanında <code class="bg-white/60 px-1 rounded">UPDATE ogretmenler SET yetki='rapor'</code> ile yalnızca rapor erişimi verilebilir.</p>
+      <p class="mt-2 text-[10px] text-amber-900/80">Öğretmen şifreleri güvenlik nedeniyle saklanmaz; yalnız hash'leri tutulur ve gerektiğinde sıfırlanır.</p>
     </div>
+
+    {% if sifirlanan %}
+    <div class="mx-6 mt-4 bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm rounded-xl px-4 py-3">
+      <p class="font-bold">✅ {{ sifirlanan.ad_soyad }} için yeni geçici şifre oluşturuldu:</p>
+      <p class="mt-1 font-mono text-base font-bold bg-white border border-emerald-300 rounded px-3 py-1.5 inline-block">{{ sifirlanan.gecici_sifre }}</p>
+      <p class="mt-1 text-xs text-emerald-800">Bu geçici şifre yalnız bir kez gösterilir; veritabanında sadece hash saklanır.</p>
+    </div>
+    {% endif %}
 
     {% if not liste %}
     <!-- Doğrulama formu -->
@@ -37,7 +45,7 @@
       </div>
       {% endif %}
       <p class="text-sm text-slate-600 text-center">
-        Şifre listesini görmek için yönetici şifresini girin.
+        Öğretmen şifre yönetimi için yönetici şifresini girin.
       </p>
       <input type="password" name="admin_sifre" placeholder="Yönetici Şifresi"
              class="w-full border border-slate-300 rounded-xl px-4 py-3
@@ -45,7 +53,7 @@
       <button type="submit"
               class="w-full bg-okul-800 hover:bg-okul-700 text-white
                      font-bold py-3 rounded-xl transition">
-        Görüntüle
+        Şifre Yönetimine Geç
       </button>
       <div class="text-center">
         <a href="{{ url_for('login') }}" class="text-xs text-slate-400 hover:text-slate-600">
@@ -55,21 +63,40 @@
     </form>
 
     {% else %}
-    <!-- Şifre listesi -->
+    <!-- Öğretmen şifre sıfırlama listesi -->
     <div class="p-4">
-      <p class="text-xs text-slate-500 text-center mb-3">
-        Bu listeyi yazdırıp öğretmenlere dağıtabilirsiniz.
-      </p>
-      <div class="space-y-1">
-        {% for k in liste %}
-        <div class="flex items-center gap-3 px-3 py-2 rounded-lg
-                    {% if loop.index % 2 == 0 %}bg-slate-50{% else %}bg-white{% endif %}">
-          <span class="bg-blue-600 text-white text-xs font-mono font-bold
-                       px-3 py-1 rounded-lg w-16 text-center">{{ k.sifre }}</span>
-          <span class="text-sm text-slate-800 font-medium">{{ k.ad_soyad }}</span>
-        </div>
-        {% endfor %}
+      {% if hata %}
+      <div class="mb-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+        ❌ {{ hata }}
       </div>
+      {% endif %}
+      <p class="text-xs text-slate-500 text-center mb-3">
+        Mevcut şifreler gösterilmez. Şifresini unutmuş öğretmen için yeni geçici şifre üretebilirsiniz.
+      </p>
+      <form method="POST" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">İşlem onayı için yönetici şifresi</label>
+          <input type="password" name="admin_sifre" placeholder="Yönetici Şifresi" required
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono">
+        </div>
+        <div class="space-y-1 max-h-96 overflow-y-auto">
+          {% for k in liste %}
+          <div class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg
+                      {% if loop.index % 2 == 0 %}bg-slate-50{% else %}bg-white{% endif %}">
+            <div>
+              <span class="text-sm text-slate-800 font-medium">{{ k.ad_soyad }}</span>
+              <span class="ml-2 text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                {% if k.sifre_tanimli %}Hash kayıtlı{% else %}Tanımsız{% endif %}
+              </span>
+            </div>
+            <button type="submit" name="ogretmen_id" value="{{ k.id }}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+              Şifre Sıfırla
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </form>
       <div class="mt-4 text-center">
         <a href="{{ url_for('login') }}"
            class="bg-okul-800 text-white text-sm px-6 py-2 rounded-xl hover:bg-okul-700">

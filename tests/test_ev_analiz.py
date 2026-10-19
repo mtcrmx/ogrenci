@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from datetime import date
 sandbox=tempfile.TemporaryDirectory(prefix='ev-analiz-tests-')
-os.environ['OGR_TAKIP_DB_PATH']=str(Path(sandbox.name)/'school.db')
+os.environ.setdefault('OGR_TAKIP_DB_PATH',str(Path(sandbox.name)/'school.db'))
 import web_app as w
 import database as db
 import lgs_optik as optik

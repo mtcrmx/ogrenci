@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 tmp = tempfile.TemporaryDirectory()
-os.environ['OGR_TAKIP_DB_PATH'] = str(Path(tmp.name) / 'test.db')
+os.environ.setdefault('OGR_TAKIP_DB_PATH', str(Path(tmp.name) / 'test.db'))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import web_app as w
 

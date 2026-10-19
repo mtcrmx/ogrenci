@@ -10,7 +10,8 @@ from pathlib import Path
 from datetime import date
 
 _database = tempfile.TemporaryDirectory(prefix="akademipuan-tests-")
-os.environ["OGR_TAKIP_DB_PATH"] = str(Path(_database.name) / "test.db")
+os.environ.setdefault("OGR_TAKIP_DB_PATH", str(Path(_database.name) / "test.db"))
+os.environ.setdefault("VELI_KISISEL_SIFRE", "0")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import web_app as w
 import database as d
@@ -146,9 +147,10 @@ class Workflows(unittest.TestCase):
         bad=dict(payload,ad='Geçersiz sınıf denemesi')
         bad[f'dogru_{a["id"]}']='19'
         bad[f'yanlis_{a["id"]}']='5'
-        self.assertEqual(self.teacher_client.post('/sonuclar',data=bad).status_code,200)
+        bad_resp=self.teacher_client.post('/sonuclar',data=bad)
+        self.assertEqual(bad_resp.status_code,200)
         self.assertFalse(any(r['ad']=='Geçersiz sınıf denemesi' for r in d.lgs_denemeler(a['id'],20)))
-        liste=self.teacher_client.get('/sonuclar',query_string={'sinif':self.sid}).get_data(as_text=True)
+        liste=bad_resp.get_data(as_text=True)
         self.assertIn(f'name="dogru_{a["id"]}"',liste)
         birey=self.teacher_client.get('/sonuclar',query_string={'ogrenci':self.oid}).get_data(as_text=True)
         self.assertIn('Bireysel sonuç',birey)
@@ -196,9 +198,9 @@ class Workflows(unittest.TestCase):
         self.assertIn('Gerçek deneme', sayfa)
         self.assertNotIn('Yaprak karışmasın', sayfa)
         menu = self.teacher_client.get('/lgs').get_data(as_text=True)
-        self.assertLess(menu.index('</span>LGS</a>'), menu.index('Deneme analizi'))
+        self.assertLess(menu.index('>LGS merkezi<'), menu.index('Deneme analizi'))
         self.assertLess(menu.index('Deneme analizi'), menu.index('>Raporlar<'))
-        self.assertIn('Test ve sınıf analizi', menu[menu.index('</span>LGS</a>'):menu.index('>Raporlar<')])
+        self.assertIn('Soru ve sınıf analizi', menu[menu.index('>LGS merkezi<'):menu.index('>Raporlar<')])
         ogr = self.teacher_client.get('/lgs', query_string={'ogrenci': self.oid}).get_data(as_text=True)
         self.assertNotIn('Ders ve deneme sonucu', ogr)
         evde = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)
@@ -251,7 +253,7 @@ class Workflows(unittest.TestCase):
         a,b=students[0],students[1]
         payload={'islem':'sinif_ders','sinif_id':self.sid,'ad':'Silinecek sınıf denemesi','tarih':'2026-10-13','ders':'Türkçe','soru_sayisi':'10','yanlis_goturme':'0',f'dogru_{a["id"]}':'8',f'yanlis_{a["id"]}':'1',f'dogru_{b["id"]}':'4',f'yanlis_{b["id"]}':'2'}
         self.teacher_client.post('/sonuclar',data=payload)
-        liste=self.teacher_client.get('/sonuclar',query_string={'sinif':self.sid}).get_data(as_text=True)
+        liste=self.teacher_client.post('/sonuclar',data={'islem':'sinif_ders','sinif_id':self.sid}).get_data(as_text=True)
         self.assertIn('sinif_ders_sil',liste)
         self.assertIn('Silinecek sınıf denemesi',liste)
         deleted=self.teacher_client.post('/sonuclar',data={'islem':'sinif_ders_sil','sinif_id':self.sid,'ad':payload['ad'],'tarih':payload['tarih'],'tur':'ders'},follow_redirects=True).get_data(as_text=True)
@@ -592,51 +594,56 @@ class Workflows(unittest.TestCase):
 
     def test_lgs_optik_veli_bitirince_ogretmen_listesinde(self):
         import lgs_optik
+        import home_test_window
+        from datetime import datetime
+        from unittest.mock import patch
         pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
-        response = self.teacher_client.post(
-            '/lgs',
-            data={
-                'islem': 'optik_ekle',
-                'ad': 'Optik deneme',
-                'tarih': '2026-10-08',
-                'anahtar': 'A B C D',
-                'pdf': (BytesIO(pdf), 'soru.pdf'),
-            },
-            content_type='multipart/form-data',
-            follow_redirects=True,
-        )
-        html = response.get_data(as_text=True)
-        self.assertIn('4 soruluk deneme açıldı', html)
-        self.assertIn('Henüz optik bitirilmedi', html)
-        sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Optik deneme')
-        soru = self.parent.get('/veli/lgs?bolum=soru&sinav=' + str(sinav['id']))
-        sayfa = soru.get_data(as_text=True)
-        self.assertIn('name="c0"', sayfa)
-        self.assertNotIn('>Defter<', sayfa)
-        pdf_yanit = self.parent.get('/lgs/optik/%s/pdf' % sinav['id'])
-        self.assertEqual(pdf_yanit.data[:5], b'%PDF-')
-        pdf_yanit.close()
-        bitirdi = self.parent.post('/veli/lgs', data={
-            'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'],
-            'c0': 'A', 'c1': 'A', 'c2': 'C', 'c3': '',
-        }, follow_redirects=True)
-        sonuc = bitirdi.get_data(as_text=True)
-        self.assertIn('Net 1.67', sonuc)
-        self.assertIn('Doğru 2', sonuc)
-        self.assertIn('is-yanlis', sonuc)
-        self.assertIn('is-bos', sonuc)
-        self.assertIn('2. soru yanlış', sonuc)
-        self.assertIn('4. soru boş', sonuc)
-        self.assertIn('Yapılan testler', sonuc)
-        self.assertLess(sonuc.index('Yapılan testler'), sonuc.index('Optik deneme'))
-        analiz = self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True)
-        self.assertIn('Soru analizi', analiz)
-        self.assertIn('Optik deneme', analiz)
-        self.assertIn('2. soru yanlış', analiz)
-        tekrar = self.parent.post('/veli/lgs', data={
-            'islem': 'optik_bitir', 'sinav_id': sinav['id'], 'c0': 'A',
-        }, follow_redirects=True)
-        self.assertIn('daha önce bitirilmiş', tekrar.get_data(as_text=True))
+        with patch.object(home_test_window, 'now', return_value=datetime.fromisoformat('2026-10-08T19:30:00+03:00')):
+            response = self.teacher_client.post(
+                '/lgs',
+                data={
+                    'islem': 'optik_ekle',
+                    'ad': 'Optik deneme',
+                    'tarih': '2026-10-08',
+                    'anahtar': 'A B C D',
+                    'pdf': (BytesIO(pdf), 'soru.pdf'),
+                },
+                content_type='multipart/form-data',
+                follow_redirects=True,
+            )
+            html = response.get_data(as_text=True)
+            self.assertIn('4 soruluk deneme', html)
+            self.assertIn('Henüz optik bitirilmedi', html)
+            sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Optik deneme')
+            soru = self.parent.get('/veli/lgs?bolum=soru&sinav=' + str(sinav['id']))
+            sayfa = soru.get_data(as_text=True)
+            self.assertIn('name="c0"', sayfa)
+            self.assertNotIn('>Defter<', sayfa)
+            pdf_yanit = self.parent.get('/lgs/optik/%s/pdf' % sinav['id'])
+            self.assertEqual(pdf_yanit.data[:5], b'%PDF-')
+            pdf_yanit.close()
+            bitirdi = self.parent.post('/veli/lgs', data={
+                'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'],
+                'c0': 'A', 'c1': 'A', 'c2': 'C', 'c3': '',
+            }, follow_redirects=True)
+            tekrar = self.parent.post('/veli/lgs', data={
+                'islem': 'optik_bitir', 'sinav_id': sinav['id'], 'c0': 'A',
+            }, follow_redirects=True)
+            self.assertIn('daha önce bitirilmiş', tekrar.get_data(as_text=True))
+        with patch.object(home_test_window, 'now', return_value=datetime.fromisoformat('2026-10-08T21:05:00+03:00')):
+            sonuc = self.parent.get('/veli/lgs?bolum=soru&sinav=' + str(sinav['id'])).get_data(as_text=True)
+            self.assertIn('Net 1.67', sonuc)
+            self.assertIn('Doğru 2', sonuc)
+            self.assertIn('is-yanlis', sonuc)
+            self.assertIn('is-bos', sonuc)
+            self.assertIn('2. soru yanlış', sonuc)
+            self.assertIn('4. soru boş', sonuc)
+            self.assertIn('Yapılan testler', sonuc)
+            self.assertLess(sonuc.index('Yapılan testler'), sonuc.index('Optik deneme'))
+            analiz = self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True)
+            self.assertIn('Soru analizi', analiz)
+            self.assertIn('Optik deneme', analiz)
+            self.assertIn('2. soru yanlış', analiz)
         pano = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)
         self.assertIn(self.student['ad_soyad'], pano)
         self.assertIn('1.67', pano)
@@ -646,17 +653,21 @@ class Workflows(unittest.TestCase):
 
     def test_leaf_and_exam_charts_on_parent_analysis(self):
         import lgs_optik
+        import home_test_window
+        from datetime import datetime
+        from unittest.mock import patch
         pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
-        self.teacher_client.post('/lgs', data={
-            'islem': 'optik_ekle', 'ad': 'Yaprak üslü', 'tarih': '2026-10-13', 'tur': 'yaprak',
-            'ders': 'Matematik', 'sinif_id': str(self.sid),
-            'anahtar': 'AB', 'pdf': (BytesIO(pdf), 'yaprak.pdf'),
-        }, content_type='multipart/form-data')
-        sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Yaprak üslü')
-        self.assertEqual(sinav['tur'], 'yaprak')
-        self.parent.post('/veli/lgs', data={
-            'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'], 'c0': 'A', 'c1': '',
-        })
+        with patch.object(home_test_window, 'now', return_value=datetime.fromisoformat('2026-10-13T19:30:00+03:00')):
+            self.teacher_client.post('/lgs', data={
+                'islem': 'optik_ekle', 'ad': 'Yaprak üslü', 'tarih': '2026-10-13', 'tur': 'yaprak',
+                'ders': 'Matematik', 'sinif_id': str(self.sid),
+                'anahtar': 'AB', 'pdf': (BytesIO(pdf), 'yaprak.pdf'),
+            }, content_type='multipart/form-data')
+            sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Yaprak üslü')
+            self.assertEqual(sinav['tur'], 'yaprak')
+            self.parent.post('/veli/lgs', data={
+                'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'], 'c0': 'A', 'c1': '',
+            })
         self.teacher_client.post('/sonuclar', data={
             'ogrenci': self.oid, 'tur': 'ders', 'ad': 'Yaprak matematik', 'tarih': '2026-10-12',
             'ders': 'Matematik', 'soru_sayisi': '10', 'dogru': '6', 'yanlis': '2', 'yanlis_goturme': '0',
@@ -666,7 +677,8 @@ class Workflows(unittest.TestCase):
             'ders': ['Türkçe', 'Matematik'], 'soru_sayisi': ['10', '10'],
             'dogru': ['7', '5'], 'yanlis': ['1', '3'], 'yanlis_goturme': ['3', '3'],
         })
-        sayfa = self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True)
+        with patch.object(home_test_window, 'now', return_value=datetime.fromisoformat('2026-10-13T21:05:00+03:00')):
+            sayfa = self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True)
         self.assertIn('Yaprak testler', sayfa)
         self.assertIn('Yaprak üslü', sayfa)
         self.assertIn('2. soru boş', sayfa)
@@ -683,34 +695,38 @@ class Workflows(unittest.TestCase):
 
     def test_leaf_tests_list_by_class_and_course(self):
         import lgs_optik
+        import home_test_window
+        from datetime import datetime
+        from unittest.mock import patch
         pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
-        eksik = self.teacher_client.post('/lgs', data={
-            'islem': 'optik_ekle', 'ad': 'Eksik yaprak', 'tarih': '2026-10-01', 'tur': 'yaprak',
-            'anahtar': 'AB', 'pdf': (BytesIO(pdf), 'eksik.pdf'),
-        }, content_type='multipart/form-data', follow_redirects=True)
-        self.assertIn('sınıf ve ders seçin', eksik.get_data(as_text=True))
-        self.assertFalse(any(s['ad'] == 'Eksik yaprak' for s in lgs_optik.sinavlari_listele()))
-        con = d._conn()
-        diger_sinif = con.execute("SELECT id FROM siniflar WHERE sinif_adi='8/B'").fetchone()[0]
-        con.close()
-
-        def yukle(ad, tarih, ders, sinif_id):
-            self.teacher_client.post('/lgs', data={
-                'islem': 'optik_ekle', 'ad': ad, 'tarih': tarih, 'tur': 'yaprak',
-                'ders': ders, 'sinif_id': str(sinif_id), 'anahtar': 'AB',
-                'pdf': (BytesIO(pdf), 'yaprak.pdf'),
+        with patch.object(home_test_window, 'now', return_value=datetime.fromisoformat('2026-09-01T18:00:00+03:00')):
+            eksik = self.teacher_client.post('/lgs', data={
+                'islem': 'optik_ekle', 'ad': 'Eksik yaprak', 'tarih': '2026-10-01', 'tur': 'yaprak',
+                'anahtar': 'AB', 'pdf': (BytesIO(pdf), 'eksik.pdf'),
             }, content_type='multipart/form-data', follow_redirects=True)
+            self.assertIn('sınıf ve ders seçin', eksik.get_data(as_text=True))
+            self.assertFalse(any(s['ad'] == 'Eksik yaprak' for s in lgs_optik.sinavlari_listele()))
+            con = d._conn()
+            diger_sinif = con.execute("SELECT id FROM siniflar WHERE sinif_adi='8/B'").fetchone()[0]
+            con.close()
 
-        yukle('Eski Türkçe', '2026-09-01', 'Türkçe', self.sid)
-        yukle('Yeni Türkçe', '2026-10-12', 'Türkçe', self.sid)
-        yukle('Sınıf matematiği', '2026-10-10', 'Matematik', self.sid)
-        yukle('Diğer sınıf Türkçe', '2026-10-11', 'Türkçe', diger_sinif)
+            def yukle(ad, tarih, ders, sinif_id):
+                self.teacher_client.post('/lgs', data={
+                    'islem': 'optik_ekle', 'ad': ad, 'tarih': tarih, 'tur': 'yaprak',
+                    'ders': ders, 'sinif_id': str(sinif_id), 'anahtar': 'AB',
+                    'pdf': (BytesIO(pdf), 'yaprak.pdf'),
+                }, content_type='multipart/form-data', follow_redirects=True)
+
+            yukle('Eski Türkçe', '2026-09-01', 'Türkçe', self.sid)
+            yukle('Yeni Türkçe', '2026-10-12', 'Türkçe', self.sid)
+            yukle('Sınıf matematiği', '2026-10-10', 'Matematik', self.sid)
+            yukle('Diğer sınıf Türkçe', '2026-10-11', 'Türkçe', diger_sinif)
         ana = self.teacher_client.get('/lgs').get_data(as_text=True)
         self.assertNotIn('bg-white p-4" open', ana)
         self.assertNotIn('Koçluk çizelgesi', ana)
         self.assertNotIn('Yaprak testler', ana)
-        self.assertIn('Evde Soru Testleri', ana)
-        self.assertIn('Okulda Yaprak Test', ana)
+        self.assertIn('Evde soru testleri', ana)
+        self.assertIn('Okulda yaprak test', ana)
         evde = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)
         self.assertIn('Soruları gönder', evde)
         self.assertNotIn('Yaprak testler', evde)
@@ -727,7 +743,7 @@ class Workflows(unittest.TestCase):
             'ders': 'Matematik', 'soru_sayisi': '10', 'yanlis_goturme': '0',
             f'dogru_{students[0]["id"]}': '7', f'yanlis_{students[0]["id"]}': '1',
         }, follow_redirects=True)
-        liste = self.teacher_client.get('/sonuclar', query_string={'sinif': self.sid}).get_data(as_text=True)
+        liste = self.teacher_client.post('/sonuclar', data={'islem': 'sinif_ders', 'sinif_id': self.sid}).get_data(as_text=True)
         self.assertIn('data-yaprak="Türkçe"', liste)
         self.assertIn('data-yaprak="Matematik"', liste)
         self.assertLess(liste.index('Ekim matematik yaprağı'), liste.index('Ekim Türkçe yaprağı'))
@@ -739,16 +755,20 @@ class Workflows(unittest.TestCase):
 
     def test_teacher_class_analysis_charts_questions_and_scores(self):
         import lgs_optik
+        import home_test_window
+        from datetime import datetime
+        from unittest.mock import patch
         pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
-        self.teacher_client.post('/lgs', data={
-            'islem': 'optik_ekle', 'ad': 'Sınıf analiz denemesi', 'tarih': '2026-10-13', 'tur': 'deneme',
-            'anahtar': 'ABCD', 'pdf': (BytesIO(pdf), 'sinif.pdf'),
-        }, content_type='multipart/form-data')
-        sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Sınıf analiz denemesi')
-        self.parent.post('/veli/lgs', data={
-            'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'],
-            'c0': 'A', 'c1': 'A', 'c2': 'C', 'c3': '',
-        })
+        with patch.object(home_test_window, 'now', return_value=datetime.fromisoformat('2026-10-13T19:30:00+03:00')):
+            self.teacher_client.post('/lgs', data={
+                'islem': 'optik_ekle', 'ad': 'Sınıf analiz denemesi', 'tarih': '2026-10-13', 'tur': 'deneme',
+                'anahtar': 'ABCD', 'pdf': (BytesIO(pdf), 'sinif.pdf'),
+            }, content_type='multipart/form-data')
+            sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Sınıf analiz denemesi')
+            self.parent.post('/veli/lgs', data={
+                'islem': 'optik_bitir', 'bolum': 'soru', 'sinav_id': sinav['id'],
+                'c0': 'A', 'c1': 'A', 'c2': 'C', 'c3': '',
+            })
         con = d._conn()
         diger = dict(con.execute("SELECT o.id, o.ad_soyad FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='8/B' ORDER BY o.id LIMIT 1").fetchone())
         con.close()
