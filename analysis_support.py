@@ -81,6 +81,11 @@ def assign(con, exam, teacher, can_access, form):
 def progress(con, group, teacher, oid, can_access):
     plan=con.execute('SELECT * FROM ev_support_plan WHERE grup_id=?',(group['id'],)).fetchone()
     if not plan:return None
+    if not teacher:
+        from home_test_window import released
+        for eid in (group['kaynak_id'], plan['target_id']):
+            exam = optik.sinav_getir(eid)
+            if exam and not released(exam):return None
     from lgs_kazanim import catalog
     entries={i['id']:i for i in catalog()['items']}
     baseline=json.loads(plan['baseline'])

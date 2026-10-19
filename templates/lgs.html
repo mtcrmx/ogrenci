@@ -59,7 +59,7 @@
   {% if ekran == 'evde' %}
   <section class="mt-5 rounded-3xl border border-slate-200 bg-white p-4">
     <h2 class="text-lg font-black">Evde Soru Testleri</h2>
-    <p class="mt-1 text-xs text-slate-600">PDF’i yükleyin. Soru sayısı kadar cevap kutusu açılır; anahtarı gizleyebilirsiniz. Öğrenci soruları görür, işaretler ve bitirince sonucu burada görünür.</p>
+    <p class="mt-1 text-xs text-slate-600">Testin tarihini seçin. Sorular o gün Türkiye saatiyle 19.00–21.00 arasında açılır; cevaplar 21.00’den önce gönderilmelidir. Bitiren öğrenci toplam doğru–yanlış sayısını hemen, cevap anahtarını 21.00’den sonra görür. Soru PDF’ine cevap anahtarı eklemeyin.</p>
     <form method="post" enctype="multipart/form-data" class="mt-3 grid gap-3 sm:grid-cols-2" data-optik-form>
       <input type="hidden" name="islem" value="optik_ekle">
       <label class="text-sm font-bold">Ad<input name="ad" required maxlength="80" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" placeholder="Kasım denemesi"></label>
@@ -472,7 +472,16 @@
     <p class="mt-3 text-sm text-slate-600">Görmek istediğin sınavı seç.</p>
     {% else %}
     <p class="mt-3 text-sm font-bold">{{ optik_secili.ad }} · {{ optik_secili.tarih }} · {{ optik_secili.soru_sayisi }} soru</p>
+    {% if veli and optik_secili.window.home %}
+    <p class="app-notice" role="status">{{ optik_secili.window.message }}</p>
+    {% if optik_secili.window.released %}<details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in optik_secili.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>{% endif %}
+    {% if optik_secili.window.open %}<script>
+    (function(){const expires=performance.now()+{{ optik_secili.window.remaining|tojson }}*1000;function closeTest(){if(performance.now()>=expires){document.querySelectorAll('[data-home-test],iframe[title$=" soruları"]').forEach(el=>el.remove());location.reload();}}setInterval(closeTest,1000);document.addEventListener('visibilitychange',closeTest);})();
+    </script>{% endif %}
+    {% endif %}
+    {% if not veli or optik_secili.window.open %}
     <iframe class="mt-3 h-[70vh] w-full rounded-2xl border border-slate-200" src="{{ url_for('lgs_soru_goruntule', sinav_id=optik_secili.id) }}" title="{{ optik_secili.ad }} soruları"></iframe>
+    {% endif %}
     {% if optik_secili.sonuc %}
     {% if optik_secili.analiz %}
     {% with sinav=optik_secili %}{% include '_soru_grafik.html' %}{% endwith %}
@@ -481,8 +490,8 @@
     {% endif %}
     {% elif optik_secili.kaynak == 'kamera' %}
     <p class="mt-4 text-sm text-slate-600">Bu test okulda kâğıt üzerinde çözülür. Öğretmen optiği okuttuğunda sonuçlarınız burada görünecek.</p>
-    {% elif veli %}
-    <form method="post" action="{{ url_for('veli_lgs') }}" class="mt-4">
+    {% elif veli and optik_secili.window.open %}
+    <form method="post" action="{{ url_for('veli_lgs') }}" class="mt-4" data-home-test>
       <input type="hidden" name="islem" value="optik_bitir">
       <input type="hidden" name="bolum" value="soru">
       <input type="hidden" name="sinav_id" value="{{ optik_secili.id }}">
@@ -499,7 +508,7 @@
       <button class="mt-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Bitir</button>
     </form>
     {% else %}
-    <p class="mt-4 text-sm text-slate-600">Bu öğrenci optiği henüz bitirmedi.</p>
+    {% if not veli %}<p class="mt-4 text-sm text-slate-600">Bu öğrenci optiği henüz bitirmedi.</p>{% endif %}
     {% if not veli %}<p class="mt-1 font-mono text-xs text-slate-500">Anahtar: {{ optik_secili.cevaplar|join('') }}</p>{% endif %}
     {% endif %}
     {% endif %}

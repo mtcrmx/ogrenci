@@ -5,6 +5,7 @@ import secrets
 from flask import Blueprint, abort, render_template, request, session, redirect, url_for, flash
 import database as db
 import lgs_optik as optik
+import home_test_window as test_window
 
 bp = Blueprint('ev_analiz', __name__)
 
@@ -76,7 +77,7 @@ def index():
     student = student_row(oid) if oid else None
     if oid and not student: abort(403)
     exams = optik.sinavlari_listele()
-    if student: exams = [e for e in exams if visible(e, student)]
+    if student: exams = [e for e in exams if visible(e, student) and test_window.released(e)]
     selected = request.values.get('test', type=int)
     exam = next((e for e in exams if e['id'] == selected), None)
     if selected and exam is None: abort(404)

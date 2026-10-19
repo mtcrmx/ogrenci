@@ -6,6 +6,7 @@ from statistics import mean
 from flask import Blueprint, abort, redirect, render_template, request, session, url_for
 import database as db
 import lgs_optik as optik
+import home_test_window as test_window
 
 bp = Blueprint('yaprak_analiz', __name__)
 
@@ -189,7 +190,7 @@ def combined():
     history.sort(key=lambda r:(r['date'],r['ad']),reverse=True)
     people = [dict(name=p['ad_soyad'],classroom=p['sinif_adi'],**combined_stats([r for r in rows if r['ogrenci_id']==p['id']])) for p in roster if any(r['ogrenci_id']==p['id'] for r in rows)]
     from lgs_kazanim import outcome_summary
-    outcomes=outcome_summary(rows)
+    outcomes=outcome_summary([r for r in rows if teacher or 'exam_id' not in r or test_window.released(r)])
     return render_template('birlesik_analiz.html',outcomes=outcomes,teacher=bool(teacher),sources=SOURCE_NAMES,source=source,
         classes=sorted({r['sinif_adi'] for r in roster}),classroom=classroom,roster=roster,student=student,
         courses=courses,course=course,start=start,end=end,stats=combined_stats(rows),breakdown=breakdown,history=history,people=people)

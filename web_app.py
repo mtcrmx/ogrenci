@@ -108,6 +108,7 @@ from export import excel_raporu_olustur, OPENPYXL_OK
 from lgs_konular import LGS_KONULAR
 from lgs_program import DEFTER_DERSLER, LGS_AYLAR, TEMPO_AD, blok_metin, gun_plani
 import lgs_optik
+import home_test_window as test_window
 from lgs_sayac import lgs_sayac_verisi
 from pdf_export import PDF_OK, derle_analiz_snapshot, pdf_analiz_uret_bytes, pdf_odev_raporu_bytes
 from rapor_analiz import (
@@ -342,6 +343,7 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
                 {"etiket": "Onay", "metin": "Bekleyen onaylarda tamamlanan testleri de görürsünüz. Test belgesini ve öğrencinin soru soru cevaplarını açın, inceledim kutusunu işaretleyip onaylayın. Sonuçlar onay öncesinde de analizlerde görünür."},
                 {"etiket": "Karne", "metin": "Dönem özeti kitap, ödev ve LGS netini gösterir. Excel ve PDF alınır."},
                 {"etiket": "Analiz", "metin": "Kitap ve ödev raporunu sınıf ya da tek öğrenci için açın."},
+                {"etiket": "Evde test saati", "metin": "Evde verdiğiniz testler seçtiğiniz tarihte Türkiye saatiyle 19.00–21.00 arasında çözülür. Öğrenci 21.00’den önce Bitir ile gönderir; doğru–yanlış–boş sayısını hemen görür. Cevap anahtarı ve soru bazlı analiz 21.00’de açılır. Soru belgesine cevap anahtarı eklemeyin."},
                 {"etiket": "LGS", "metin": "LGS merkezinde evde test, okulda yaprak test, deneme ve birleşik analiz bulunur. Okul testini belge olarak yükleyin, optik eklenmiş çıktıyı dağıtın ve cevapları kamerayla okuyup kontrol ederek kaydedin."},
                 {"etiket": "Kazanımlar", "metin": "Soru kazanımları ekranında testi seçin; sorulara ders, konu ve kazanım atayın. Toplu atama ile bir soru aralığını eşleştirebilirsiniz. Kaydettikten sonra kazanım başarısını birleşik analizde izleyin."},
                 {"etiket": "Deneme", "metin": "Bireysel ve genel grafik buradadır. Veli yalnız kendi çocuğunun adını görür."},
@@ -359,7 +361,7 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
             "alt": "Öğrencinizin kayıtlarını, testlerini ve analizlerini takip edin.",
             "adimlar": [
                 {"etiket": "Tik geçmişi", "metin": "Her satırda tik tarihi, öğretmenin seçtiği davranış nedeni (kriter) ve kaydı işleyen öğretmen adı yer alır."},
-                {"etiket": "Test teslimi", "metin": "LGS alanında öğrencinizin testini açın, cevapları kontrol ederek bitirin. Teslim otomatik puanlanır ve testi veren öğretmenin incelemesine gider."},
+                {"etiket": "Test teslimi", "metin": "LGS alanındaki ev testini testin tarihinde Türkiye saatiyle 19.00–21.00 arasında açın. 21.00’den önce Bitir ile gönderin; doğru–yanlış–boş sayısı hemen görünür. Cevap anahtarı ve soru bazlı analiz 21.00’de açılır. Süre dışında soru açılmaz ve cevap gönderilemez."},
                 {"etiket": "Analiz ve yardım", "metin": "Ayrı ve birleşik analizlerle öğrencinizin sonuçlarını takip edin. Zorlandığı soru için soru analizinden yardım isteği bırakın. Ayrıntılı kullanım kılavuzuna menüdeki Yardım bağlantısından ulaşın."},
             ],
         },
@@ -4639,6 +4641,8 @@ def _test_analiz_baglam(
     ders_istek: str = "",
 ) -> dict:
     optikler = lgs_optik.sinavlari_listele()
+    if test_window.parent_request():
+        optikler = [s for s in optikler if test_window.released(s)]
     for sinav in optikler:
         sinav["katilan"] = len(lgs_optik.sinav_sonuclari(sinav["id"]))
     if ogrenci_id:
@@ -4887,7 +4891,12 @@ def _lgs_optik_ekle():
     dosya = request.files.get("pdf")
     anahtar = lgs_optik.anahtar_oku(request.form.get("anahtar") or "")
     ad = (request.form.get("ad") or "").strip()
-    tarih = (request.form.get("tarih") or date.today().isoformat())[:10]
+    tarih = (request.form.get("tarih") or test_window.now().date().isoformat())[:10]
+    try:
+        date.fromisoformat(tarih)
+    except ValueError:
+        flash("Geçerli bir test tarihi seçin. Sorular bu tarihte 19.00–21.00 arasında açılır.", "warning")
+        return redirect(url_for("lgs", ekran="evde"))
     if not ad:
         flash("Sınav adı yazın.", "warning")
         return redirect(url_for("lgs", ekran="evde"))
@@ -4942,12 +4951,15 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
         sinav["sonuc"] = lgs_optik.sonuc_getir(sinav["id"], ogrenci_id) if ogrenci_id else None
         if sinav.get("sonuc"):
             sinav["analiz"] = lgs_optik.puan_hesapla(sinav["cevaplar"], sinav["sonuc"]["isaretler"])
+    if test_window.parent_request():
+        for sinav in sinavlar:
+            test_window.parent_exam(sinav)
     secili_id = request.args.get("sinav", type=int)
     secili = next((s for s in sinavlar if s["id"] == secili_id), None)
     if secili is None and len(sinavlar) == 1:
         secili = sinavlar[0]
     detay = None
-    if secili and secili.get("sonuc"):
+    if secili and secili.get("sonuc") and (not test_window.parent_request() or test_window.released(secili)):
         detay = lgs_optik.puan_hesapla(secili["cevaplar"], secili["sonuc"]["isaretler"])
     return sinavlar, secili, detay
 
@@ -4955,7 +4967,9 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
 @app.route("/lgs/optik/<int:sinav_id>/pdf")
 def lgs_optik_pdf(sinav_id):
     sinav, yol = _lgs_soru_belgesi(sinav_id)
-    return send_file(yol, mimetype="application/pdf", download_name=f"{sinav['ad']}.pdf", as_attachment=False)
+    response = send_file(yol, mimetype="application/pdf", download_name=f"{sinav['ad']}.pdf", as_attachment=False)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 def _lgs_soru_belgesi(sinav_id):
@@ -4972,6 +4986,8 @@ def _lgs_soru_belgesi(sinav_id):
             abort(403)
     else:
         abort(403)
+    if test_window.parent_request() and not test_window.state(sinav)["open"]:
+        abort(403, description=test_window.state(sinav)["message"])
     yol = lgs_optik.pdf_yolu(sinav)
     if not yol:
         abort(404)
@@ -4982,7 +4998,7 @@ def _lgs_soru_belgesi(sinav_id):
 def lgs_soru_goruntule(sinav_id):
     from question_viewer import view
     sinav, yol = _lgs_soru_belgesi(sinav_id)
-    return view(yol, sinav['ad'], lambda page: url_for('lgs_soru_sayfa', sinav_id=sinav_id, page=page))
+    return view(yol, sinav['ad'], lambda page: url_for('lgs_soru_sayfa', sinav_id=sinav_id, page=page), remaining=test_window.state(sinav)['remaining'] if test_window.parent_request() else None)
 
 
 @app.get('/lgs/optik/<int:sinav_id>/sayfa/<int:page>')
@@ -5034,6 +5050,9 @@ def _lgs_ekran(veli: bool):
             from ev_analiz import visible as ev_test_visible
             if not sinav or sinav.get('kaynak') == 'kamera' or not ev_test_visible(sinav, ogr):
                 abort(403)
+            if not test_window.state(sinav)["open"]:
+                flash(test_window.state(sinav)["message"], "warning")
+                return redirect(url_for("veli_lgs", bolum="soru", sinav=sinav_id))
             isaret = []
             if sinav:
                 isaret = [((request.form.get(f"c{i}") or "").strip().upper()) for i in range(len(sinav["cevaplar"]))]

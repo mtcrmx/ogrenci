@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 import database as db
+import home_test_window as test_window
 
 SECENEKLER = frozenset("ABCDE")
 AZAMI_SORU = 90
@@ -165,6 +166,8 @@ def sonuc_kaydet(sinav_id: int, ogrenci_id: int, isaretler: list[str]) -> dict:
     sinav = sinav_getir(sinav_id)
     if not sinav:
         return {"ok": False, "hata": "Sınav bulunamadı."}
+    if test_window.parent_request() and not test_window.state(sinav)["open"]:
+        return {"ok": False, "hata": test_window.state(sinav)["message"]}
     if sonuc_getir(sinav_id, ogrenci_id):
         return {"ok": False, "hata": "Bu optik daha önce bitirilmiş."}
     temiz = [(h if h in SECENEKLER else "") for h in isaretler]

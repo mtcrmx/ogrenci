@@ -7,12 +7,12 @@ import pypdfium2 as pdfium
 PDF_LOCK=Lock()
 
 
-def view(path, title, page_url):
+def view(path, title, page_url, remaining=None):
     with PDF_LOCK, pdfium.PdfDocument(str(path)) as pdf:
         total=len(pdf)
     page=request.args.get('page',1,type=int)
     if not 1 <= page <= total:abort(404)
-    response=make_response(render_template('question_viewer.html',title=title,page=page,total=total,image_url=page_url(page)))
+    response=make_response(render_template('question_viewer.html',title=title,page=page,total=total,image_url=page_url(page), remaining=remaining))
     response.headers['Cache-Control']='private, no-store'
     return response
 
