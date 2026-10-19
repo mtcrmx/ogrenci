@@ -279,7 +279,7 @@ def register_hizli_giris(app, login_required):
         seviye = sinif_seviye_bul(secili_sinif) if secili_sinif else 8
         moduller = aktif_moduller(seviye)
         tur = (request.values.get("tur") or tercih.get("tur") or "okul_yaprak").strip()
-        if tur == "deneme" and "lgs_deneme" not in moduller:
+        if tur == "deneme" and "deneme" not in moduller:
             tur = "okul_yaprak"
         if tur not in ("okul_yaprak", "evde_test", "deneme"):
             tur = "okul_yaprak"

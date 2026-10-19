@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Sınıf Analizi · {{ secili_sinif.sinif_adi if secili_sinif else '' }} · AkademiPuan{% endblock %}
+{% block body %}
+{% include '_app_sidebar.html' %}
+<main class="mx-auto max-w-6xl px-3 py-4 sm:px-6">
+  <div class="top">
+    <div>
+      <h1>Sınıf analizi · {{ secili_sinif.sinif_adi if secili_sinif else 'Tüm Sınıflar' }}</h1>
+      <p>{{ seviye }}. sınıf · {% if 'deneme' in aktif_moduller %}yalnız LGS: denemeler, optik, yaprak ve evde testler{% else %}okulda yaprak test, evde test, ödev ve kitap takibi{% endif %}</p>
+    </div>
+    <span class="sp"></span>
+    <form method="get" action="{{ url_for('sinif_analiz_v2') }}" class="flex flex-wrap gap-2">
+      <select name="sinif" onchange="this.form.submit()">
+        {% for s in siniflar %}
+          <option value="{{ s.id }}" {{ 'selected' if secili_sinif and s.id == secili_sinif.id else '' }}>{{ s.sinif_adi }}</option>
+        {% endfor %}
+      </select>
+      <select name="ders" onchange="this.form.submit()">
+        <option value="">Tüm dersler</option>
+        {% for d in dersler %}
+          <option value="{{ d }}" {{ 'selected' if secili_ders == d else '' }}>{{ d }}</option>
+        {% endfor %}
+      </select>
+      <select name="tur" onchange="this.form.submit()">
+        <option value="" {{ 'selected' if not secili_tur else '' }}>Tüm türler</option>
+        <option value="okul" {{ 'selected' if secili_tur == 'okul' else '' }}>Okulda yaprak</option>
+        <option value="ev" {{ 'selected' if secili_tur == 'ev' else '' }}>Evde test</option>
+        {% if 'deneme' in aktif_moduller %}
+        <option value="deneme" {{ 'selected' if secili_tur == 'deneme' else '' }}>Deneme</option>
+        {% endif %}
+      </select>
+    </form>
+  </div>
+
+  <!-- 4 Özet KPI Kartı -->
+  <section class="grid g4">
+    <div class="card kpi">
+      <span>Sınıf başarısı</span>
+      <strong>{% if kpi.sinif_oran is not none %}%{{ goster(kpi.sinif_oran) }}{% else %}—{% endif %}</strong>
+      <em class="muted">Toplam {{ kpi.toplam_soru }} soru üzerinden</em>
+    </div>
+    <div class="card kpi">
+      <span>Son deneme ort. neti</span>
+      <strong>{% if kpi.son_deneme_ort is not none %}{{ goster(kpi.son_deneme_ort) }}{% else %}—{% endif %}</strong>
+      <em class="muted">{{ kpi.son_deneme_ad or '—' }}</em>
+    </div>
+    <div class="card kpi">
+      <span>Risk altında</span>
+      <strong>{{ risk_listesi|length }} öğrenci</strong>
+      <em class="down">Kural tabanlı tespit</em>
+    </div>
+    <div class="card kpi">
+      <span>Katılım / Öğrenci</span>
+      <strong>{{ ogrenci_satirlari|length }}</strong>
+      <em class="muted">Sınıf mevcudu</em>
+    </div>
+  </section>
+
+  <div class="insight">
+    Özet: <b>{{ secili_sinif.sinif_adi if secili_sinif else 'Sınıf' }}</b> genel başarı oranı <b>{% if kpi.sinif_oran is not none %}%{{ goster(kpi.sinif_oran) }}{% else %}—{% endif %}</b>; {{ risk_listesi|length }} öğrenci yakın takip listesinde.
+  </div>
+
+  <!-- Risk Altındaki Öğrenciler & Başarı Dağılımı -->
+  <section class="grid g2" style="margin-top:8px">
+    <div class="card">
+      <h2>Risk altındaki öğrenciler</h2>
+      <ul class="list">
+        {% for r in risk_listesi[:6] %}
+        <li>
+          <div class="avatar">{{ (r.ad_soyad or 'Ö')[:1] }}</div>
+          <div class="sp">
+            <a href="{{ url_for('ogrenci_detay_v2', oid=r.ogrenci_id) }}"><b>{{ r.ad_soyad }}</b></a>
+            <div class="muted">{{ r.neden }}</div>
+          </div>
+          <span class="tag {{ 't-bad' if r.seviye == 'bad' else 't-warn' }}">
+            {% if r.oran is not none %}%{{ goster(r.oran) }}{% else %}—{% endif %}
+          </span>
+        </li>
+        {% else %}
+        <li class="muted">Risk kriterine giren öğrenci bulunmuyor.</li>
+        {% endfor %}
+      </ul>
+      <p class="muted" style="margin-top:8px">Kural: genel oran &lt; %50 veya son 3 testte düşüş veya bekleyen evde test.</p>
+    </div>
+
+    <div class="card">
+      <h2>Başarı dağılımı (öğrenci sayısı)</h2>
+      <table>
+        <thead><tr><th>Aralık</th><th>Öğrenci sayısı</th></tr></thead>
+        <tbody>
+          {% for aralik, sayi in dagilim %}
+          <tr>
+            <td>{{ aralik }}</td>
+            <td><b>{{ sayi }}</b></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Öğrenci × Ders Isı Haritası -->
+  <details class="sec" open>
+    <summary>Öğrenci × ders başarı ısı haritası <span class="muted" style="margin-left:auto;margin-right:10px;font-weight:500">% başarı · — veri yok</span></summary>
+    <div class="in">
+      <div class="scroll">
+        <table class="hm">
+          <thead>
+            <tr>
+              <th class="l">Öğrenci</th>
+              {% for d in tablo_dersler %}
+                <th>{{ d }}</th>
+              {% endfor %}
+              <th>Genel</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in ogrenci_satirlari %}
+            <tr>
+              <td class="l"><a href="{{ url_for('ogrenci_detay_v2', oid=o.id) }}"><b>{{ o.ad_soyad }}</b></a></td>
+              {% for d in tablo_dersler %}
+                {% set val = o.ders_oranlari.get(d) %}
+                {% set h_cls = 'h0' if val is none else ('h5' if val >= 80 else ('h4' if val >= 65 else ('h3' if val >= 50 else ('h2' if val >= 35 else 'h1')))) %}
+                <td class="{{ h_cls }}">{% if val is not none %}{{ goster(val) }}{% else %}—{% endif %}</td>
+              {% endfor %}
+              <td><b>{% if o.genel_oran is not none %}%{{ goster(o.genel_oran) }}{% else %}—{% endif %}</b></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <!-- Mevcut Diğer Analizler -->
+  <details class="sec" open>
+    <summary>Ayrıntılı analiz ekranları <span class="muted" style="margin-left:auto;margin-right:10px;font-weight:500">mevcut tüm özellikler</span></summary>
+    <div class="in">
+      <div class="flex flex-wrap gap-2">
+        <a class="btn" href="{{ url_for('yaprak_analiz.combined') }}">◈ Birleşik analiz ve kazanım matrisi</a>
+        <a class="btn" href="{{ url_for('test_sinif_analiz') }}">▦ Soru soru başarı ve en çok zorlayan sorular</a>
+        <a class="btn" href="{{ url_for('yaprak_analiz.index') }}">▤ Okul yaprak testi analizi</a>
+        <a class="btn" href="{{ url_for('ev_analiz.index') }}">✉ Evde test analizi ve çalışma grupları</a>
+        {% if 'deneme' in aktif_moduller %}
+        <a class="btn" href="{{ url_for('deneme_analiz') }}">◈ Deneme analizi</a>
+        <a class="btn" href="{{ url_for('lgs', sr_olcut='test', _anchor='lgs-siralama') }}">▥ LGS sıralama</a>
+        {% endif %}
+      </div>
+    </div>
+  </details>
+</main>
+{% endblock %}

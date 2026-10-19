@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}{{ ogrenci.ad_soyad }} · Öğrenci Detayı · AkademiPuan{% endblock %}
+{% block body %}
+{% include '_app_sidebar.html' %}
+<main class="mx-auto max-w-6xl px-3 py-4 sm:px-6">
+  <div class="top">
+    <a href="{{ url_for('dashboard', sinif=ogrenci.sinif_id) }}">← Öğrenciler</a>
+  </div>
+  <div class="top">
+    <div class="avatar">{{ (ogrenci.ad_soyad or 'Ö')[:2] }}</div>
+    <div>
+      <h1>{{ ogrenci.ad_soyad }}</h1>
+      <p>{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no or '—' }}{% if hedef_lise %} · Hedef: {{ hedef_lise }}{% endif %}</p>
+    </div>
+    <span class="sp"></span>
+    <a class="btn" href="{{ url_for('karne', sinif=ogrenci.sinif_id) }}">⎙ Karne / PDF</a>
+    <a class="btn" href="{{ url_for('sonuclar', ogrenci=ogrenci.id) }}">✎ Sonuç gir / düzenle</a>
+    <a class="btn pri" href="{{ url_for('ort_giris', sinif_id=ogrenci.sinif_id) }}">＋ Test sonucu gir</a>
+  </div>
+
+  <!-- 4 Özet KPI Kartı -->
+  <section class="grid g4">
+    <div class="card kpi">
+      <span>Genel başarı (tüm testler)</span>
+      <strong>{% if kpi.genel_oran is not none %}%{{ goster(kpi.genel_oran) }}{% else %}—{% endif %}</strong>
+      <em class="{{ 'up' if kpi.sinif_fark is not none and kpi.sinif_fark >= 0 else 'down' }}">
+        Sınıf {% if kpi.sinif_oran is not none %}%{{ goster(kpi.sinif_oran) }}{% else %}—{% endif %}
+      </em>
+    </div>
+    <div class="card kpi">
+      <span>Son deneme neti</span>
+      <strong>{% if kpi.son_deneme_net is not none %}{{ goster(kpi.son_deneme_net) }}{% else %}—{% endif %}</strong>
+      <em class="muted">{{ kpi.son_deneme_ad or 'Deneme kaydı yok' }}</em>
+    </div>
+    {% if 'lgs' in ogrenci_modulleri %}
+    <div class="card kpi">
+      <span>LGS sıralama (8. sınıflar)</span>
+      <strong>{{ kpi.siralama_metin or '—' }}</strong>
+      <em class="muted">8. sınıflar içinde</em>
+    </div>
+    {% else %}
+    <div class="card kpi">
+      <span>Haftalık ödev / kitap</span>
+      <strong>{{ kpi.odev_durum or '—' }}</strong>
+      <em class="muted">{{ kpi.kitap_durum or 'Bu hafta' }}</em>
+    </div>
+    {% endif %}
+    <div class="card kpi">
+      <span>En zayıf ders / konu</span>
+      <strong>{{ kpi.en_zayif_baslik or '—' }}</strong>
+      <em class="down">{% if kpi.en_zayif_oran is not none %}%{{ goster(kpi.en_zayif_oran) }}{% else %}Veri bekleniyor{% endif %}</em>
+    </div>
+  </section>
+
+  <!-- Tek Cümlelik Otomatik Yorum -->
+  <div class="insight">
+    Özet: <b>{{ ogrenci.ad_soyad }}</b> için {{ tek_cumle_yorum }}
+  </div>
+
+  <!-- Kural Tabanlı Otomatik Öneriler -->
+  <section class="card oneri" style="margin-top:16px">
+    <h2>Otomatik öneriler <span class="muted" style="font-weight:500">son 4 haftanın verisinden</span></h2>
+    {% if oneriler %}
+    <ul style="margin:0;padding-left:18px">
+      {% for o in oneriler %}
+      <li>{{ o }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted" style="margin:0">Henüz yeterli sınav/test verisi oluşmadığı için otomatik uyarı bulunmuyor.</p>
+    {% endif %}
+  </section>
+
+  <!-- Sekmeler -->
+  <nav class="tabs" style="margin-top:16px">
+    <a class="on" href="#gelisim">Gelişim</a>
+    <a href="#ders-konu">Ders ve konu</a>
+    <a href="#kaynaklar">Kaynaklara göre başarı</a>
+    <a href="#evde-okul">Evde / okul</a>
+    {% if 'deneme' in ogrenci_modulleri %}
+    <a href="#denemeler">Denemeler</a>
+    {% endif %}
+    {% if 'odev' in ogrenci_modulleri or 'kitap' in ogrenci_modulleri %}
+    <a href="#odev-kitap">Ödev ve kitap</a>
+    {% endif %}
+    <a href="#mevcut-analizler">Soru ayrıntısı ve diğer analizler</a>
+  </nav>
+
+  <!-- Bölüm 1: Zaman İçinde Gelişim -->
+  <details class="sec" id="gelisim" open>
+    <summary>Zaman içinde gelişim <span class="muted" style="margin-left:auto;margin-right:10px;font-weight:500">deneme netleri · yaprak test oranları</span></summary>
+    <div class="in">
+      <div class="cmp">
+        <div>
+          <h3 style="margin:0 0 8px;font-size:14px">Deneme ve ders sonuçları</h3>
+          <table>
+            <thead><tr><th>Sınav / Test</th><th>Tarih</th><th>Tür</th><th>Net</th></tr></thead>
+            <tbody>
+              {% for d in denemeler[:8] %}
+              <tr>
+                <td><b>{{ d.ad }}</b></td>
+                <td class="muted">{{ d.tarih }}</td>
+                <td><span class="chip">{{ d.tur }}</span></td>
+                <td><b>{{ goster(d.net) }}</b></td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="muted">Henüz deneme kaydı yok.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 style="margin:0 0 8px;font-size:14px">Ders bazında başarı özeti</h3>
+          <table>
+            <thead><tr><th>Ders</th><th>Son başarı</th><th>Soru</th><th>Net</th></tr></thead>
+            <tbody>
+              {% for a in ders_analiz %}
+              <tr>
+                <td><b>{{ a.ders }}</b></td>
+                <td>%{{ goster(a.son.yuzde) }}</td>
+                <td>{{ a.son.soru_sayisi }}</td>
+                <td><b>{{ goster(a.son.net) }}</b></td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="muted">Henüz ders testi verisi yok.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Bölüm 2: Kaynaklara Göre Başarı (Tek Formül) -->
+  <details class="sec" id="kaynaklar" open>
+    <summary>Kaynaklara göre başarı (tek formül: ΣD ÷ ΣS)</summary>
+    <div class="in">
+      <table>
+        <thead><tr><th>Kaynak</th><th>D / Y / B</th><th>Başarı</th><th>Net</th></tr></thead>
+        <tbody>
+          {% for k in kaynak_tablosu %}
+          <tr>
+            <td>{% if k.kalin %}<b>{{ k.etiket }}</b>{% else %}{{ k.etiket }}{% endif %}</td>
+            <td>{{ k.dogru }} / {{ k.yanlis }} / {{ k.bos }}</td>
+            <td>{% if k.oran is not none %}%{{ goster(k.oran) }}{% else %}—{% endif %}</td>
+            <td><b>{{ goster(k.net) }}</b></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- Bölüm 3: Evde ↔ Okul Karşılaştırması -->
+  <details class="sec" id="evde-okul" open>
+    <summary>Evde test ↔ okulda yaprak test</summary>
+    <div class="in">
+      <table>
+        <thead><tr><th>Ders</th><th>Evde test</th><th>Okulda yaprak test</th><th>Fark (puan)</th></tr></thead>
+        <tbody>
+          {% for eo in evde_okul_tablo %}
+          <tr>
+            <td><b>{{ eo.ders }}</b></td>
+            <td>{% if eo.evde is not none %}%{{ goster(eo.evde) }}{% else %}—{% endif %}</td>
+            <td>{% if eo.okul is not none %}%{{ goster(eo.okul) }}{% else %}—{% endif %}</td>
+            <td><b>{% if eo.fark is not none %}{{ '+' if eo.fark > 0 else '' }}{{ goster(eo.fark) }}{% else %}—{% endif %}</b></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="muted">Karşılaştırma için yeterli ders verisi yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  {% if 'odev' in ogrenci_modulleri or 'kitap' in ogrenci_modulleri %}
+  <!-- 5-7. Sınıflar İçin Ödev ve Kitap Bölümü -->
+  <details class="sec" id="odev-kitap" open>
+    <summary>Haftalık ödev ve kitap takibi (5–7. sınıf modülü)</summary>
+    <div class="in">
+      <p>Ödev durumu: <b>{{ kpi.odev_durum or '—' }}</b> · Kitap durumu: <b>{{ kpi.kitap_durum or '—' }}</b></p>
+      <a class="btn" href="{{ url_for('haftalik_takip') }}">Haftalık takip ekranını aç →</a>
+    </div>
+  </details>
+  {% endif %}
+
+  <!-- Mevcut Tüm Analiz Bağlantıları (Hiçbir Özellik Kaybolmaz) -->
+  <details class="sec" id="mevcut-analizler" open>
+    <summary>Soru ayrıntısı ve diğer mevcut analizler <span class="muted" style="margin-left:auto;margin-right:10px;font-weight:500">tüm mevcut araçlar</span></summary>
+    <div class="in">
+      <div class="flex flex-wrap gap-2">
+        <a class="btn" href="{{ url_for('yaprak_analiz.combined') }}">◈ Birleşik ve kazanım analizi</a>
+        <a class="btn" href="{{ url_for('yaprak_analiz.index') }}">▤ Okul yaprak testi analizi</a>
+        <a class="btn" href="{{ url_for('ev_analiz.index') }}">✉ Evde test ve cevap haritası</a>
+        <a class="btn" href="{{ url_for('sonuclar', ogrenci=ogrenci.id) }}">✎ Öğrenci sonuçları ve düzenleme</a>
+        {% if 'deneme' in ogrenci_modulleri %}
+        <a class="btn" href="{{ url_for('deneme_analiz') }}">◈ Deneme analizi</a>
+        <a class="btn" href="{{ url_for('lgs', sr_olcut='test', _anchor='lgs-siralama') }}">▥ LGS sıralama</a>
+        {% endif %}
+      </div>
+    </div>
+  </details>
+</main>
+{% endblock %}

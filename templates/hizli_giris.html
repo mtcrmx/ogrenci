@@ -10,7 +10,7 @@
       <p class="mt-1 text-sm text-indigo-100">
         {% if secili_sinif %}
           {{ secili_sinif.sinif_adi }} ({{ seviye }}. sınıf) seçili —
-          {% if 'lgs_deneme' in aktif_moduller %}yaprak test, evde test ve deneme (optik){% else %}okulda yaprak test ve evde test{% endif %}
+          {% if 'deneme' in aktif_moduller %}yaprak test, evde test ve deneme (optik){% else %}okulda yaprak test ve evde test{% endif %}
         {% else %}
           Sınıf seçin
         {% endif %}
@@ -43,7 +43,7 @@
            class="rounded-lg px-3 py-1.5 text-xs font-black {% if tur == 'evde_test' %}bg-emerald-700 text-white{% else %}text-slate-700{% endif %}">
           Evde test
         </a>
-        {% if 'lgs_deneme' in aktif_moduller %}
+        {% if 'deneme' in aktif_moduller %}
         <a href="{{ url_for('ort_giris', sinif_id=secili_sinif_id, ders=secili_ders, tur='deneme') }}"
            class="rounded-lg px-3 py-1.5 text-xs font-black {% if tur == 'deneme' %}bg-emerald-700 text-white{% else %}text-slate-700{% endif %}">
           Deneme (optik)

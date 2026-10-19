@@ -76,6 +76,31 @@ def topla(satirlar) -> dict:
     }
 
 
+def toplu_oran(ciftler) -> float | None:
+    """(dogru, soru_sayisi) çiftlerinden ΣD ÷ ΣS oranını hesaplar."""
+    d_top = 0.0
+    s_top = 0.0
+    for item in ciftler or []:
+        if isinstance(item, dict):
+            d_top += float(item.get("dogru") or 0)
+            s_top += float(item.get("soru_sayisi") or 0)
+        elif isinstance(item, (tuple, list)) and len(item) >= 2:
+            d_top += float(item[0] or 0)
+            s_top += float(item[1] or 0)
+    return oran(d_top, s_top)
+
+
+def goster(deger) -> str:
+    """Sayısal değeri Türkçe ondalık virgülle ('61,4') veya None ise '—' olarak biçimlendirir."""
+    if deger is None or deger == "":
+        return "—"
+    try:
+        v = round(float(deger), 1)
+        return f"{v:.1f}".replace(".", ",")
+    except (TypeError, ValueError):
+        return "—"
+
+
 def yuzde_filtre(deger) -> str:
     """Jinja `|yuzde` filtresi: None -> '—', sayı -> '%75.0'."""
     if deger is None or deger == "":
@@ -104,4 +129,6 @@ def register_metrik(app) -> None:
         VARSAYILAN_GOTURME=VARSAYILAN_GOTURME,
         hesap_oran=oran,
         hesap_net=net,
+        toplu_oran=toplu_oran,
+        goster=goster,
     )

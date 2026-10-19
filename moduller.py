@@ -108,7 +108,15 @@ def ogrenci_seviyesi(ogrenci_id: int | None) -> int | None:
 
 
 def aktif_moduller(sinif) -> set[str]:
-    sev = seviye(sinif)
+    if isinstance(sinif, int):
+        con = db._conn()
+        try:
+            exists = con.execute("SELECT 1 FROM siniflar WHERE id = ?", (sinif,)).fetchone()
+        finally:
+            con.close()
+        sev = seviye(sinif) if exists else sinif
+    else:
+        sev = seviye(sinif)
     if sev == 8:
         return set(MODULLER[8])
     return set(MODULLER["diger"])

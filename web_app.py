@@ -7044,25 +7044,7 @@ def ogretmen_ogrenci_mac_reddet(mac_id):
 
 @app.route("/veli/ozet")
 def veli_ozet_sayfa():
-    return redirect(url_for("veli_panel"))
-    oid = session.get("veli_ogrenci_id")
-    if not oid:
-        return redirect(url_for("veli_giris"))
-    o = _ogrenci_bul(int(oid))
-    if not o:
-        session.pop("veli_ogrenci_id", None)
-        return redirect(url_for("veli_giris"))
-    metrics = veli_ozet_metrikleri(int(oid), 30)
-    gecmis_kisa = ogrenci_tik_gecmisi(int(oid))[:20]
-    odevler = ogrenci_odevleri(int(oid), 8)
-    return render_template(
-        "veli_ozet.html",
-        ogrenci=o,
-        avatar=_avatar(o),
-        metrics=metrics,
-        gecmis_kisa=gecmis_kisa,
-        odevler=odevler,
-    )
+    return redirect(url_for("veli_panel"), code=301)
 
 
 @app.route("/veli/randevu", methods=["POST"])
@@ -7818,6 +7800,10 @@ from school_broadcast import register_broadcast
 register_broadcast(app, giris_zorunlu)
 from hizli_giris import register_hizli_giris
 register_hizli_giris(app, giris_zorunlu)
+from menu import register_menu
+register_menu(app)
+from asama6_routes import register_asama6
+register_asama6(app, giris_zorunlu, _ogretmen_ogrencisine_erisebilir)
 import batch_optik
 try:
     batch_optik.cleanup_expired_batches(force=True)

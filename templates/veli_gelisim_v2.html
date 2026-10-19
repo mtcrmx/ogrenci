@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Gelişim ve Sonuçlar · {{ ogrenci.ad_soyad }} · AkademiPuan{% endblock %}
+{% block body %}
+{% include '_app_sidebar.html' %}
+<main class="mx-auto max-w-6xl px-3 py-4 sm:px-6">
+  <div class="top">
+    <div class="avatar">{{ (ogrenci.ad_soyad or 'Ö')[:2] }}</div>
+    <div>
+      <h1>{{ ogrenci.ad_soyad }}</h1>
+      <p>{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no or '—' }}</p>
+    </div>
+  </div>
+
+  <!-- 4 Özet KPI Kartı -->
+  <section class="grid g4" style="margin-top:12px">
+    <div class="card kpi">
+      <span>Genel başarı</span>
+      <strong>{% if kpi.genel_oran is not none %}%{{ goster(kpi.genel_oran) }}{% else %}—{% endif %}</strong>
+      <em class="muted">Sınıf {% if kpi.sinif_oran is not none %}%{{ goster(kpi.sinif_oran) }}{% else %}—{% endif %}</em>
+    </div>
+    <div class="card kpi">
+      <span>Son deneme</span>
+      <strong>{% if kpi.son_deneme_net is not none %}{{ goster(kpi.son_deneme_net) }} net{% else %}—{% endif %}</strong>
+      <em class="muted">{{ kpi.son_deneme_ad or 'Deneme kaydı yok' }}</em>
+    </div>
+    <div class="card kpi">
+      <span>Bekleyen evde test</span>
+      <strong>{{ kpi.bekleyen_ev_testi }}</strong>
+      <em class="muted">{% if 'lgs' in aktif_moduller %}Sorular ve optik bölümünden açın{% else %}Aktif test{% endif %}</em>
+    </div>
+    <div class="card kpi">
+      <span>En zayıf ders</span>
+      <strong>{{ kpi.en_zayif_baslik or '—' }}</strong>
+      <em class="muted">{% if kpi.en_zayif_oran is not none %}%{{ goster(kpi.en_zayif_oran) }}{% else %}—{% endif %}</em>
+    </div>
+  </section>
+
+  <div class="insight">
+    Özet: {{ tek_cumle_yorum }}
+  </div>
+
+  <!-- Kural Tabanlı Otomatik Öneriler -->
+  <section class="card oneri" style="margin-top:16px">
+    <h2>Otomatik öneriler <span class="muted" style="font-weight:500">son 4 haftanın verisinden</span></h2>
+    {% if oneriler %}
+    <ul style="margin:0;padding-left:18px">
+      {% for o in oneriler %}
+      <li>{{ o }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted" style="margin:0">Sonuç bulunmayan alanlar başarısızlık değildir; yeni test verisi girildikçe öneriler güncellenir.</p>
+    {% endif %}
+  </section>
+
+  <!-- Sekmeler -->
+  <nav class="tabs" style="margin-top:16px">
+    <a class="on" href="#ozet">Özet</a>
+    <a href="{{ url_for('yaprak_analiz.index') }}">Okulda yaprak test</a>
+    <a href="{{ url_for('ev_analiz.index') }}">Evde test</a>
+    {% if 'deneme' in aktif_moduller %}
+    <a href="{{ url_for('veli_deneme_analiz') }}">Deneme</a>
+    <a href="{{ url_for('veli_lgs', sr_olcut='test', _anchor='lgs-siralama') }}">Sıralama</a>
+    {% endif %}
+    <a href="{{ url_for('veli_sonuclar') }}">Tüm sonuç kayıtları</a>
+    <a href="{{ url_for('yaprak_analiz.combined') }}">Birleşik ve kazanım analizi</a>
+  </nav>
+
+  <!-- Kaynaklara Göre Başarı -->
+  <details class="sec" id="ozet" open>
+    <summary>Kaynaklara göre başarı (ΣD ÷ ΣS)</summary>
+    <div class="in">
+      <table>
+        <thead><tr><th>Kaynak</th><th>D / Y / B</th><th>Başarı</th><th>Net</th></tr></thead>
+        <tbody>
+          {% for k in kaynak_tablosu %}
+          <tr>
+            <td>{% if k.kalin %}<b>{{ k.etiket }}</b>{% else %}{{ k.etiket }}{% endif %}</td>
+            <td>{{ k.dogru }} / {{ k.yanlis }} / {{ k.bos }}</td>
+            <td>{% if k.oran is not none %}%{{ goster(k.oran) }}{% else %}—{% endif %}</td>
+            <td><b>{{ goster(k.net) }}</b></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- Ders ve Konu Başarısı -->
+  <details class="sec" open>
+    <summary>Ders bazında başarı</summary>
+    <div class="in">
+      <table>
+        <thead><tr><th>Ders</th><th>Son başarı</th><th>Soru</th><th>Net</th></tr></thead>
+        <tbody>
+          {% for a in ders_analiz %}
+          <tr>
+            <td><b>{{ a.ders }}</b></td>
+            <td>%{{ goster(a.son.yuzde) }}</td>
+            <td>{{ a.son.soru_sayisi }}</td>
+            <td><b>{{ goster(a.son.net) }}</b></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="muted">Henüz ders sonucu bulunmuyor.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- Evde ↔ Okul Karşılaştırması -->
+  <details class="sec" open>
+    <summary>Evde test ↔ okul testi</summary>
+    <div class="in">
+      <table>
+        <thead><tr><th>Ders</th><th>Evde test</th><th>Okulda yaprak test</th><th>Fark (puan)</th></tr></thead>
+        <tbody>
+          {% for eo in evde_okul_tablo %}
+          <tr>
+            <td><b>{{ eo.ders }}</b></td>
+            <td>{% if eo.evde is not none %}%{{ goster(eo.evde) }}{% else %}—{% endif %}</td>
+            <td>{% if eo.okul is not none %}%{{ goster(eo.okul) }}{% else %}—{% endif %}</td>
+            <td><b>{% if eo.fark is not none %}{{ '+' if eo.fark > 0 else '' }}{{ goster(eo.fark) }}{% else %}—{% endif %}</b></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="muted">Karşılaştırma için yeterli veri yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</main>
+{% endblock %}

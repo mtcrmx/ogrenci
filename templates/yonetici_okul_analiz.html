@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Okul Analizi · Yönetici · AkademiPuan{% endblock %}
+{% block body %}
+{% include '_app_sidebar.html' %}
+<main class="mx-auto max-w-6xl px-3 py-4 sm:px-6">
+  <div class="top">
+    <div>
+      <h1>Okul analizi</h1>
+      <p>Tüm sınıfların sınav, test, ödev ve bilgi girişi özeti</p>
+    </div>
+    <span class="sp"></span>
+    <a class="btn" href="{{ url_for('giris_raporu') }}">◷ Bilgi girişi takibi</a>
+    <a class="btn" href="{{ url_for('yonetim_sinavlar') }}">▦ Sınav kayıtları</a>
+    <a class="btn" href="{{ url_for('admin_sifreler') }}">⚿ Hesaplar ve roller</a>
+  </div>
+
+  <!-- 4 Özet KPI Kartı -->
+  <section class="grid g4">
+    <div class="card kpi">
+      <span>Okul başarısı</span>
+      <strong>{% if kpi.okul_oran is not none %}%{{ goster(kpi.okul_oran) }}{% else %}—{% endif %}</strong>
+      <em class="muted">Toplam doğru ÷ toplam soru</em>
+    </div>
+    <div class="card kpi">
+      <span>Aktif sınıf sayısı</span>
+      <strong>{{ sinif_satirlari|length }}</strong>
+      <em class="muted">Tüm seviyeler (5–8)</em>
+    </div>
+    <div class="card kpi">
+      <span>Ödev tamamlama (5–7)</span>
+      <strong>{% if kpi.odev_oran is not none %}%{{ goster(kpi.odev_oran) }}{% else %}—{% endif %}</strong>
+      <em class="muted">8. sınıflar hariç</em>
+    </div>
+    <div class="card kpi">
+      <span>Son deneme (8. sınıf)</span>
+      <strong>{% if kpi.sekiz_deneme_ort is not none %}{{ goster(kpi.sekiz_deneme_ort) }} net{% else %}—{% endif %}</strong>
+      <em class="muted">8. sınıflar ortalaması</em>
+    </div>
+  </section>
+
+  {% if oneriler %}
+  <div class="insight">
+    Özet: {{ oneriler|join(' ') }}
+  </div>
+  {% endif %}
+
+  <!-- Sınıf Karşılaştırması -->
+  <details class="sec" open>
+    <summary>Sınıf karşılaştırması</summary>
+    <div class="in">
+      <table>
+        <thead>
+          <tr>
+            <th>Sınıf</th>
+            <th>Seviye</th>
+            <th>Ödev / Kitap</th>
+            <th>Test başarısı</th>
+            <th>Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sinif_satirlari %}
+          <tr>
+            <td><a href="{{ url_for('sinif_analiz_v2', sinif=s.id) }}"><b>{{ s.sinif_adi }}</b></a></td>
+            <td>{{ s.seviye }}. sınıf</td>
+            <td>
+              {% if s.seviye == 8 %}
+                <span class="muted">LGS modülü</span>
+              {% else %}
+                {% if s.odev_oran is not none %}%{{ goster(s.odev_oran) }}{% else %}—{% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% if s.test_oran is not none %}
+                <div class="bar"><b style="width:{{ s.test_oran|round(0, 'floor')|int }}%"></b></div>
+                %{{ goster(s.test_oran) }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if s.test_oran is none %}
+                <span class="tag t-n">Veri yok</span>
+              {% elif s.test_oran >= 60 %}
+                <span class="tag t-ok">İyi</span>
+              {% else %}
+                <span class="tag t-warn">İzle</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- Dersler Arası Tablo (Sınıf × Ders) -->
+  <details class="sec" open>
+    <summary>Dersler arası tablo (sınıf × ders) <span class="muted" style="margin-left:auto;margin-right:10px;font-weight:500">% başarı · — veri yok</span></summary>
+    <div class="in">
+      <div class="scroll">
+        <table class="hm">
+          <thead>
+            <tr>
+              <th class="l">Sınıf</th>
+              {% for d in tablo_dersler %}
+                <th>{{ d }}</th>
+              {% endfor %}
+              <th>Genel</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in sinif_satirlari %}
+            <tr>
+              <td class="l"><b>{{ s.sinif_adi }}</b></td>
+              {% for d in tablo_dersler %}
+                {% set val = s.ders_oranlari.get(d) %}
+                {% set h_cls = 'h0' if val is none else ('h5' if val >= 80 else ('h4' if val >= 65 else ('h3' if val >= 50 else ('h2' if val >= 35 else 'h1')))) %}
+                <td class="{{ h_cls }}">{% if val is not none %}{{ goster(val) }}{% else %}—{% endif %}</td>
+              {% endfor %}
+              <td><b>{% if s.test_oran is not none %}%{{ goster(s.test_oran) }}{% else %}—{% endif %}</b></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+</main>
+{% endblock %}

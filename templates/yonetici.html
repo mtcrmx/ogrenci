@@ -1,1 +1,79 @@
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Yönetici · AkademiPuan</title><style>body{font:16px system-ui;margin:0;background:#f6f3fa;color:#30243f}main{max-width:1000px;margin:40px auto;padding:24px}section{background:white;border-radius:20px;padding:24px;margin:20px 0}input,select,button{font:inherit;padding:12px;border-radius:10px;border:1px solid #ccc}button{background:#604781;color:white;cursor:pointer}label{display:block;margin:16px 0}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px;border-bottom:1px solid #eee}.table{overflow:auto}nav{display:flex;gap:20px}a{color:#604781}</style></head><body><main><h1>{{ 'Yönetici girişi' if login else 'Tüm öğrenci hesapları' }}</h1>{% if login %}<section><p>Öğrencilerin veli panellerini ve analizlerini görüntüleyin.</p>{% if error %}<p role="alert">{{ error }}</p>{% endif %}<form method="post"><input type="hidden" name="csrf" value="{{ session.yonetici_csrf }}"><label>Kullanıcı adı <input name="username" autocomplete="username" required></label><label>Şifre <input type="password" name="password" autocomplete="current-password" required></label><button>Giriş yap</button></form><p><a href="{{ url_for('login') }}">Ana girişe dön</a></p></section>{% else %}<nav><span>Yönetici · yonetici</span><a href="{{ url_for('logout') }}">Çıkış yap</a></nav><section><form method="get"><label>Öğrenci adı veya numarası <input name="q" value="{{ query }}"></label><label>Sınıf <select name="sinif"><option value="">Tüm sınıflar</option>{% for c in classes %}<option {{ 'selected' if classroom==c }}>{{ c }}</option>{% endfor %}</select></label><button>Filtrele</button></form></section><section><h2>{{ students|length }} öğrenci</h2><p>Öğrenci şifresine ihtiyaç duymadan hesabı görüntüleyebilirsiniz. Bu görünüm öğrenci adına işlem yapmaz.</p><div class="table"><table><thead><tr><th>Öğrenci</th><th>No</th><th>Sınıf</th><th>Hesap</th></tr></thead><tbody>{% for s in students %}<tr><td>{{ s.ad_soyad }}</td><td>{{ s.ogr_no }}</td><td>{{ s.sinif_adi }}</td><td><form method="post" action="{{ url_for('yonetici_select',oid=s.id) }}"><input type="hidden" name="csrf" value="{{ session.yonetici_csrf }}"><button>Hesabı görüntüle</button></form></td></tr>{% else %}<tr><td colspan="4">Öğrenci bulunamadı.</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}</main></body></html>
+{% extends "base.html" %}
+{% block title %}Yönetici · AkademiPuan{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-5xl px-4 py-6">
+  <header class="top">
+    <div>
+      <h1>{{ 'Yönetici girişi' if login else 'Tüm öğrenci hesapları · Yönetici önizleme' }}</h1>
+      <p>{{ 'Öğrencilerin veli panellerini ve analizlerini görüntüleyin.' if login else 'Öğrenci şifresine ihtiyaç duymadan hesabı görüntüleyebilirsiniz. Bu görünüm öğrenci adına işlem yapmaz.' }}</p>
+    </div>
+    {% if not login %}
+    <span class="sp"></span>
+    <nav class="flex items-center gap-3 text-sm font-bold">
+      <a class="btn" href="{{ url_for('yonetici_okul_analiz') }}">◈ Okul analizi</a>
+      <span>Yönetici · yonetici</span>
+      <a class="btn" href="{{ url_for('logout') }}">Çıkış yap</a>
+    </nav>
+    {% endif %}
+  </header>
+
+  {% if login %}
+  <section class="card mt-4 max-w-md">
+    {% if error %}<p class="tag t-bad mb-3" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" class="space-y-3">
+      <input type="hidden" name="csrf" value="{{ session.yonetici_csrf }}">
+      <label class="block text-sm font-bold">Kullanıcı adı
+        <input name="username" autocomplete="username" required class="mt-1 w-full">
+      </label>
+      <label class="block text-sm font-bold">Şifre
+        <input type="password" name="password" autocomplete="current-password" required class="mt-1 w-full">
+      </label>
+      <button class="btn pri w-full justify-center">Giriş yap</button>
+    </form>
+    <p class="mt-3 text-sm"><a href="{{ url_for('login') }}">Ana girişe dön</a></p>
+  </section>
+  {% else %}
+  <section class="card mt-4">
+    <form method="get" class="flex flex-wrap items-end gap-3">
+      <label class="text-sm font-bold">Öğrenci adı veya numarası
+        <input name="q" value="{{ query }}" class="mt-1 block">
+      </label>
+      <label class="text-sm font-bold">Sınıf
+        <select name="sinif" class="mt-1 block">
+          <option value="">Tüm sınıflar</option>
+          {% for c in classes %}<option {{ 'selected' if classroom==c }}>{{ c }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="btn pri">Filtrele</button>
+    </form>
+  </section>
+
+  <section class="card mt-4">
+    <h2>{{ students|length }} öğrenci</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Öğrenci</th><th>No</th><th>Sınıf</th><th>Detay</th><th>Hesap</th></tr></thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td><b>{{ s.ad_soyad }}</b></td>
+            <td>{{ s.ogr_no }}</td>
+            <td>{{ s.sinif_adi }}</td>
+            <td><a href="{{ url_for('ogrenci_detay_v2', oid=s.id) }}">Öğrenci detayı</a></td>
+            <td>
+              <form method="post" action="{{ url_for('yonetici_select',oid=s.id) }}">
+                <input type="hidden" name="csrf" value="{{ session.yonetici_csrf }}">
+                <button class="btn">Hesabı görüntüle</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5">Öğrenci bulunamadı.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}
