@@ -3107,6 +3107,19 @@ def ogretmen_yetki_guncelle(ogretmen_id: int, yetki: str) -> None:
     con = _conn()
     _yardimci_tablolar_init(con)
     con.execute("UPDATE ogretmenler SET yetki = ? WHERE id = ?", (yetki, ogretmen_id))
+    tablo_var = con.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='ogretmen_yetki'"
+    ).fetchone()
+    if tablo_var:
+        con.execute(
+            "DELETE FROM ogretmen_yetki WHERE ogretmen_id = ? AND yetki IN ('rapor', 'rehber')",
+            (ogretmen_id,),
+        )
+        if yetki in ("rapor", "rehber"):
+            con.execute(
+                "INSERT OR IGNORE INTO ogretmen_yetki (ogretmen_id, yetki) VALUES (?, ?)",
+                (ogretmen_id, yetki),
+            )
     con.commit()
     con.close()
 
@@ -3703,7 +3716,22 @@ LIG_GOREVLER = [
     "Gunun Ozeti Duzgun Yazilmasi",
 ]
 
-VAR_INCELEME_OGRETMENLER = ["ADEM AKGÜL", "METEHAN CÜCEN"]
+def _var_inceleme_hakemleri(con: sqlite3.Connection) -> list[dict]:
+    tablo_var = con.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='ogretmen_yetki'"
+    ).fetchone()
+    if not tablo_var:
+        return []
+    rows = con.execute(
+        """
+        SELECT o.id, o.ad_soyad
+        FROM ogretmen_yetki y
+        JOIN ogretmenler o ON o.id = y.ogretmen_id
+        WHERE y.yetki = 'yonetici'
+        ORDER BY o.id
+        """
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def _mac_tablosu_olustur(con):
@@ -3981,15 +4009,13 @@ def mac_detay(mac_id: int) -> dict | None:
     """, (mac_id,)).fetchall()]
     d["oylar"] = oylar
     hakemler = []
-    for ad in VAR_INCELEME_OGRETMENLER:
-        r = con.execute("SELECT id FROM ogretmenler WHERE ad_soyad=?", (ad,)).fetchone()
-        if r:
-            oy = con.execute(
-                "SELECT secilen_id FROM lig_oylari WHERE mac_id=? AND ogretmen_id=?",
-                (mac_id, r["id"])
-            ).fetchone()
-            hakemler.append({"ad": ad, "id": r["id"],
-                              "oy_verildi": oy["secilen_id"] if oy else None})
+    for h in _var_inceleme_hakemleri(con):
+        oy = con.execute(
+            "SELECT secilen_id FROM lig_oylari WHERE mac_id=? AND ogretmen_id=?",
+            (mac_id, h["id"])
+        ).fetchone()
+        hakemler.append({"ad": h["ad_soyad"], "id": h["id"],
+                          "oy_verildi": oy["secilen_id"] if oy else None})
     d["hakemler"] = hakemler
     con.close()
     return d
@@ -4027,11 +4053,7 @@ def mac_oy_ver(mac_id: int, ogretmen_id: int, secilen_sinif_id: int) -> dict:
         VALUES (?, ?, ?)
     """, (mac_id, ogretmen_id, secilen_sinif_id))
     con.commit()
-    hakem_idler = []
-    for ad in VAR_INCELEME_OGRETMENLER:
-        r = con.execute("SELECT id FROM ogretmenler WHERE ad_soyad=?", (ad,)).fetchone()
-        if r:
-            hakem_idler.append(r["id"])
+    hakem_idler = [h["id"] for h in _var_inceleme_hakemleri(con)]
     oylar = [dict(r) for r in con.execute(
         "SELECT ogretmen_id, secilen_id FROM lig_oylari WHERE mac_id=?", (mac_id,)
     ).fetchall()]

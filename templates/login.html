@@ -16,7 +16,7 @@
     <p class="entry-intro">Hoş geldiniz. Sınıfınızın gelişimini takip etmek için hesabınıza giriş yapın.</p>
     {% if hata %}<div class="entry-error" role="alert">{{ hata }}</div>{% endif %}
     <form method="POST">
-      <label><span>Öğretmen seçin</span><select name="ad_soyad" required><option value="">Adınızı seçin</option>{% for ogr in ogretmenler %}<option value="{{ ogr }}" {% if ogr == secili %}selected{% endif %}>{{ ogr }}{% if ogr == 'ADEM AKGÜL' %} — Müdür{% elif ogr == 'METEHAN CÜCEN' %} — Müdür Yardımcısı{% endif %}</option>{% endfor %}</select></label>
+      <label><span>Öğretmen seçin</span><select name="ad_soyad" required><option value="">Adınızı seçin</option>{% for ogr in ogretmenler %}{% set unvan = ogretmen_unvani(ogr) %}<option value="{{ ogr }}" {% if ogr == secili %}selected{% endif %}>{{ ogr }}{% if unvan in ['Müdür', 'Müdür Yardımcısı'] %} — {{ unvan }}{% endif %}</option>{% endfor %}</select></label>
       <div class="entry-field"><label for="sifre-input">Şifre</label><div class="entry-password"><input type="password" name="sifre" id="sifre-input" placeholder="Şifrenizi girin" autocomplete="current-password" required><button type="button" onclick="toggleSifre()" id="password-toggle" aria-label="Şifreyi göster" aria-pressed="false">Göster</button></div></div>
       <button type="submit" class="entry-submit">Giriş yap <span aria-hidden="true">→</span></button>
     </form>

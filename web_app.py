@@ -173,32 +173,19 @@ def _ogretmen_ogrencisine_erisebilir(ogretmen_id: int, ogrenci_id: int) -> bool:
     return _ogretmen_sinifinda_mi(ogretmen_id, int(og["sinif_id"]))
 
 
-# Okul geneli sıfırlama (tüm tikler, lig sezonu, tam veri silme) — yalnızca bu öğretmen.
-_TOPLU_SIFIRLAMA_AD_SOYAD = "ADEM AKGÜL"
-_GIRIS_RAPORU_ADLARI = ("ADEM AKGÜL", "METEHAN CÜCEN")
+from yetki import mudur_adi, register_yetki, yetkili, yetkili_idleri
 
 
 def _giris_raporu_acik_mi() -> bool:
-    ad = str(session.get("ogretmen_adi") or "").strip().casefold()
-    oid = session.get("ogretmen_id")
-    for isim in _GIRIS_RAPORU_ADLARI:
-        if isim.casefold() == ad and ogretmen_id_bul(isim) == oid:
-            return True
-    return False
-_EVRAK_TAKIP_YONETICI_ADLARI = ("ADEM AKGÜL", "METEHAN CÜCEN")
+    return yetkili(session.get("ogretmen_id"), "yonetici")
 
 
 def _toplu_sifirlamaya_izinli_mi(ogretmen_id: int) -> bool:
-    beklenen = ogretmen_id_bul(_TOPLU_SIFIRLAMA_AD_SOYAD)
-    return beklenen is not None and beklenen == ogretmen_id
+    return yetkili(ogretmen_id, "toplu_sifirlama")
 
 
 def _evrak_takip_yonetici_mi(ogretmen_id: int) -> bool:
-    yonetici_idleri = {ogretmen_id_bul(ad) for ad in _EVRAK_TAKIP_YONETICI_ADLARI}
-    if ogretmen_id in {int(i) for i in yonetici_idleri if i is not None}:
-        return True
-    aktif_ad = str(session.get("ogretmen_adi") or "").strip().casefold()
-    return aktif_ad in {ad.casefold() for ad in _EVRAK_TAKIP_YONETICI_ADLARI}
+    return yetkili(ogretmen_id, "evrak_takip")
 
 
 def _ogretmen_ogrenci_macina_erisebilir(ogretmen_id: int, mac: dict | None) -> bool:
@@ -550,14 +537,7 @@ def _durum(tik: int) -> dict:
 
 
 def _var_hakem_idleri() -> list[int]:
-    from database import VAR_INCELEME_OGRETMENLER
-
-    out: list[int] = []
-    for ad in VAR_INCELEME_OGRETMENLER:
-        oid = ogretmen_id_bul(ad)
-        if oid:
-            out.append(int(oid))
-    return out
+    return yetkili_idleri("yonetici")
 
 
 LIG_KART_NEDENLERI = [
@@ -1677,7 +1657,7 @@ def ogretmen_sinav_analiz():
         sinav_kayit_yonetici=_toplu_sifirlamaya_izinli_mi(oid),
         ogretmenler=[o["ad_soyad"] for o in tum_ogretmenler()],
         okul_adi="Erenler Cumhuriyet Ortaokulu",
-        mudur_adi="ADEM AKGÜL",
+        mudur_adi=mudur_adi(),
         dersler=[
             "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler",
             "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü",
@@ -2107,7 +2087,7 @@ def _sinav_hazirliktan_analiz_state(
         "okulAdi": hazirlik_meta.get("okulAdi") or "Erenler Cumhuriyet Ortaokulu",
         "ders": hazirlik_meta.get("ders") or "",
         "ogretmen": hazirlik_meta.get("ogretmen") or ogretmen_adi or "",
-        "mudur": onceki_meta.get("mudur") or "ADEM AKGÜL",
+        "mudur": onceki_meta.get("mudur") or mudur_adi(),
         "sinavAdi": hazirlik_meta.get("sinavAdi") or "Sınav",
         "egitimYili": hazirlik_meta.get("egitimYili") or "",
         "analizTuru": onceki_meta.get("analizTuru") or "genel",
@@ -7661,6 +7641,7 @@ def api_admin_yedek_geri_yukle(yedek_id: int):
 
 from yonetici import register as register_yonetici
 register_yonetici(app)
+register_yetki(app)
 from veli_auth import register as register_veli_auth
 register_veli_auth(app)
 from rehberlik import register_rehberlik

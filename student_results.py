@@ -41,12 +41,8 @@ def answer_letters(text, key=False):
 
 
 def institution_allowed():
-    if not session.get('ogretmen_id'):
-        return False
-    con = db._conn()
-    teacher = con.execute('SELECT ad_soyad,yetki FROM ogretmenler WHERE id=?', (session['ogretmen_id'],)).fetchone()
-    con.close()
-    return bool(teacher and teacher['yetki'] not in ('rapor', 'rehber') and normalize(teacher['ad_soyad']) in ('adem akgul', 'metehan cucen'))
+    from yetki import yetkili
+    return yetkili(session.get('ogretmen_id'), 'yonetici')
 
 
 def course_analysis(records, include_exams=False):

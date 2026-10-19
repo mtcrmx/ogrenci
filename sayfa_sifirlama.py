@@ -7,8 +7,8 @@ from datetime import datetime
 from flask import abort, g, jsonify, request, session
 
 import database as db
+from yetki import yetkili
 
-YETKILI_AD_SOYAD = "METEHAN CÜCEN"
 ONAY_METNI = "SIFIRLA"
 
 # tablo, sınıf filtresi, hafta sütunu. Filtre: "sinif" → sinif_id sütunu,
@@ -60,11 +60,7 @@ SAYFALAR = {
 
 
 def yetkili_mi() -> bool:
-    oid = session.get("ogretmen_id")
-    if not oid or session.get("ogretmen_yetki") in ("rapor", "rehber"):
-        return False
-    beklenen = db.ogretmen_id_bul(YETKILI_AD_SOYAD)
-    return beklenen is not None and int(beklenen) == int(oid)
+    return yetkili(session.get("ogretmen_id"), "sayfa_sifirlama")
 
 
 def _init(con):

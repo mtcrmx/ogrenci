@@ -19,11 +19,8 @@ def teacher_can_view(exam):
         return True
     actor=session['ogretmen_id']
     if not hasattr(g,'home_test_manager'):
-        con=db._conn()
-        try:
-            row=con.execute('SELECT ad_soyad FROM ogretmenler WHERE id=?',(actor,)).fetchone()
-            g.home_test_manager=bool(row and row[0] in {'METEHAN CÜCEN','ADEM AKGÜL','ALPEREN MURAT LEBLEBİCİ'})
-        finally:con.close()
+        from yetki import yetkili
+        g.home_test_manager=yetkili(actor,'lgs_yonet')
     return g.home_test_manager or exam.get('ogretmen_id')==actor
 
 

@@ -46,7 +46,7 @@
   const SINIFLAR = {{ siniflar | default([]) | tojson }};
   const DERSLER = {{ dersler | default([]) | tojson }};
   const DEFAULT_OKUL = {{ (okul_adi or "Erenler Cumhuriyet Ortaokulu") | tojson }};
-  const DEFAULT_MUDUR = "ADEM AKGÜL";
+  const DEFAULT_MUDUR = {{ (mudur_adi or "") | tojson }};
   const OGRETMEN_ADI = {{ (ogretmen_adi or "") | tojson }};
   const SINAV_KAYIT_YONETICI = {{ sinav_kayit_yonetici | default(false) | tojson }};
   const OGRETMENLER = {{ ogretmenler | default([]) | tojson }};

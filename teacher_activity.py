@@ -36,10 +36,11 @@ def register(app):
 
 def report(args):
     # Check the current database identity, not a requested teacher or session label.
+    from yetki import yetkili
+    if not yetkili(session.get('ogretmen_id'), 'yonetici'):
+        abort(403)
     con=db._conn()
     try:
-        actor=con.execute('SELECT ad_soyad FROM ogretmenler WHERE id=?',(session.get('ogretmen_id'),)).fetchone()
-        if not actor or actor[0] not in {'METEHAN CÜCEN','ADEM AKGÜL'}:abort(403)
         start=args.get('is_baslangic','');end=args.get('is_bitis','')
         try:
             if start:date.fromisoformat(start)
