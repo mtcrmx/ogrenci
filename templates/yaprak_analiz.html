@@ -24,7 +24,7 @@
 </div>
 </header>
 <div class="ea-toolbar">
-{% if teacher %}<a class="ea-button" href="{{ url_for('kamera_test.index') }}">Test hazırla / Kamera ile oku →</a>{% endif %}
+{% if teacher %}<a class="ea-button" href="{{ url_for('kamera_test.index') }}">Test hazırla →</a>{% endif %}
 <a class="ea-button secondary" href="{{ url_for('sonuclar') if teacher else url_for('veli_panel') }}">{{ 'Okulda Yaprak Test →' if teacher else 'Veli paneli →' }}</a>
 <a href="{{ url_for('ev_analiz.index') }}">Evde test analizi →</a>
 </div>

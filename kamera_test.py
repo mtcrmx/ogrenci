@@ -1,7 +1,6 @@
 """Owner-scoped paper test preparation and camera ingestion into existing analysis."""
 from __future__ import annotations
 
-import base64
 from datetime import date, datetime
 from hashlib import sha256
 from io import BytesIO
@@ -11,7 +10,6 @@ import secrets
 import sqlite3
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
-from itsdangerous import URLSafeTimedSerializer, BadSignature
 from pypdf import PdfReader, PdfWriter
 
 import database as db
@@ -248,89 +246,22 @@ def print_exam(eid):
     if not people: abort(404)
     source=optik.pdf_yolu(exam)
     if not source: abort(404)
-    con=connect();forms=[]
-    try:
-        for person in people:
-            con.execute('INSERT OR IGNORE INTO kamera_form(token,sinav_id,ogrenci_id,count,choices) VALUES(?,?,?,?,?)',
-                        (secrets.token_urlsafe(24),eid,person['id'],exam['soru_sayisi'],exam['choices']))
-            token=con.execute('SELECT token FROM kamera_form WHERE sinav_id=? AND ogrenci_id=? AND count=? AND choices=?',
-                              (eid,person['id'],exam['soru_sayisi'],exam['choices'])).fetchone()[0]
-            forms.append((person,token))
-        con.commit()
-    finally: con.close()
+    if request.args.get('only')=='optik': abort(410)
     writer=PdfWriter()
-    for person,token in forms:
-        # A fresh reader avoids aliasing pages when appending repeated question documents.
-        if request.args.get('only')!='optik':
-            writer.append(PdfReader(source),import_outline=False)
-        writer.append(PdfReader(BytesIO(media.form_pdf(exam,person,token,exam['choices']))),import_outline=False)
+    for person in people:
+        writer.append(PdfReader(source),import_outline=False)
     out=BytesIO();writer.write(out);out.seek(0)
     return send_file(out,mimetype='application/pdf',download_name=f'yaprak-test-{eid}.pdf')
 
 
 def fingerprint(value): return sha256(json.dumps(value,sort_keys=True,ensure_ascii=True).encode()).hexdigest()
 def result_version(row): return fingerprint([row[k] for k in ('id','isaretler','dogru','yanlis','bos','net','zaman')])
-def signer(): return URLSafeTimedSerializer(current_app.secret_key,salt='kamera-scan-v1')
-
-
 @bp.post('/<int:eid>/tara')
-def scan(eid):
-    exam=exam_owned(eid)
-    upload=request.files.get('image');data,_=read_upload(upload)
-    try: reading=media.read_form(data,exam['soru_sayisi'],exam['choices'])
-    except ValueError: raise
-    except Exception as exc: raise ValueError('Görüntü okunamadı. JPEG veya PNG fotoğrafla tekrar deneyin.') from exc
-    return scan_response(eid,exam,reading)
-
-
-def scan_response(eid,exam,reading,local=False):
-    con=connect();form=con.execute('SELECT * FROM kamera_form WHERE token=? AND sinav_id=?',(reading['token'],eid)).fetchone();con.close()
-    if not form: raise ValueError('Bu optik seçili teste ait değil. Doğru testi açın.')
-    if form['count']!=exam['soru_sayisi'] or form['choices']!=exam['choices']: raise ValueError('Bu optiğin soru düzeni değişmiş. Güncel optiği yazdırın.')
-    student=next((r for r in roster(exam['sinif_id']) if r['id']==form['ogrenci_id']),None)
-    if not student: abort(403)
-    existing=optik.sonuc_getir(eid,student['id'])
-    payload=dict(eid=eid,oid=student['id'],teacher=session['ogretmen_id'],answers=reading['answers'],uncertain=reading['uncertain'],
-                 key=fingerprint(exam['cevaplar']),before=fingerprint(existing),local=local)
-    return jsonify(student=student,answers=reading['answers'],uncertain=reading['uncertain'],existing=bool(existing),
-                   ticket=signer().dumps(payload),local=local,preview=('data:image/jpeg;base64,'+base64.b64encode(reading['preview']).decode()) if reading.get('preview') else None)
-
-
+@bp.post('/<int:eid>/telefonda-oku')
 @bp.post('/<int:eid>/kaydet')
-def save(eid):
-    exam=exam_owned(eid)
-    try: scan=signer().loads(request.form.get('ticket',''),max_age=900)
-    except BadSignature: return jsonify(error='Okuma süresi doldu. Kâğıdı tekrar okutun.'),400
-    if scan['eid']!=eid or scan['teacher']!=session['ogretmen_id']: abort(403)
-    if scan['oid'] not in {r['id'] for r in roster(exam['sinif_id'])}: abort(403)
-    try: answers=json.loads(request.form.get('answers','[]'))
-    except (ValueError,TypeError): abort(400)
-    if not isinstance(answers,list) or len(answers)!=exam['soru_sayisi'] or any(a not in ['',*exam['choices']] for a in answers): abort(400)
-    if (scan.get('local') or scan['uncertain'] or answers!=scan['answers']) and request.form.get('reviewed')!='yes':
-        return jsonify(error='Belirsiz cevapları fotoğrafla karşılaştırıp onaylayın.'),400
-    con=connect()
-    try:
-        con.execute('BEGIN IMMEDIATE')
-        current=con.execute('SELECT * FROM lgs_optik_sinav WHERE id=? AND ogretmen_id=?',(eid,session['ogretmen_id'])).fetchone()
-        old=con.execute('SELECT * FROM lgs_optik_sonuc WHERE sinav_id=? AND ogrenci_id=?',(eid,scan['oid'])).fetchone()
-        previous=dict(old) if old else None
-        if previous: previous['isaretler']=json.loads(previous['isaretler'])
-        if not current or fingerprint(json.loads(current['cevaplar']))!=scan['key'] or fingerprint(previous)!=scan['before']:
-            return jsonify(error='Anahtar veya öğrenci sonucu değişti. Güncel durum için tekrar okutun.'),409
-        if old and request.form.get('replace')!='yes':
-            return jsonify(error='Bu öğrenci zaten kayıtlı. Sonucu değiştirmek için ayrıca onaylayın.'),409
-        score=optik.puan_hesapla(json.loads(current['cevaplar']),answers)
-        values=(json.dumps(answers),score['dogru'],score['yanlis'],score['bos'],score['net'],datetime.now().strftime('%Y-%m-%d %H:%M:%S'),eid,scan['oid'])
-        if old:
-            con.execute('UPDATE lgs_optik_sonuc SET isaretler=?,dogru=?,yanlis=?,bos=?,net=?,zaman=? WHERE sinav_id=? AND ogrenci_id=?',values)
-        else:
-            con.execute('INSERT INTO lgs_optik_sonuc(isaretler,dogru,yanlis,bos,net,zaman,sinav_id,ogrenci_id) VALUES(?,?,?,?,?,?,?,?)',values)
-        con.execute('INSERT INTO kamera_islem(sinav_id,ogrenci_id,owner,action,before_json,after_json) VALUES(?,?,?,?,?,?)',
-                    (eid,scan['oid'],session['ogretmen_id'],'replace' if old else 'scan',json.dumps(previous),json.dumps(answers)))
-        con.commit()
-    finally: con.close()
-    count=len(optik.sinav_sonuclari(eid))
-    return jsonify(ok=True,count=count,**{k:score[k] for k in ('dogru','yanlis','bos','net')})
+def optical_removed(eid):
+    exam_owned(eid)
+    return jsonify(error='Optikten okuma özelliği kaldırıldı. Mevcut sonuçlarınız korunuyor.'),410
 
 
 @bp.post('/taslak/<ident>/vazgec')
@@ -355,22 +286,5 @@ def delete_result(eid,oid):
         con.execute('INSERT INTO kamera_islem(sinav_id,ogrenci_id,owner,action,before_json) VALUES(?,?,?,?,?)',(eid,oid,session['ogretmen_id'],'delete',json.dumps(dict(row))))
         con.execute('DELETE FROM lgs_optik_sonuc WHERE sinav_id=? AND ogrenci_id=?',(eid,oid));con.commit()
     finally: con.close()
-    flash('Öğrenci sonucu silindi. Kâğıdı yeniden okutabilirsiniz.','success')
+    flash('Öğrenci sonucu silindi. ','success')
     return redirect(url_for('.detail',eid=eid))
-
-
-@bp.post('/<int:eid>/telefonda-oku')
-def local_scan(eid):
-    exam=exam_owned(eid)
-    if len(request.form.get('reading',''))>12000:
-        abort(400)
-    try:
-        reading=json.loads(request.form.get('reading',''))
-        answers=reading['answers'];uncertain=reading['uncertain'];token=reading['token']
-        if not isinstance(token,str) or len(token)>100 or not isinstance(answers,list) or len(answers)!=exam['soru_sayisi']:
-            raise ValueError()
-        if any(a not in ['',*exam['choices']] for a in answers) or not isinstance(uncertain,list) or any(type(n)!=int or not 1<=n<=len(answers) for n in uncertain):
-            raise ValueError()
-    except (ValueError,KeyError,TypeError):
-        raise ValueError('Telefon okuma verisi geçersiz. Yeniden okutun.')
-    return scan_response(eid,exam,dict(token=token,answers=answers,uncertain=uncertain),local=True)

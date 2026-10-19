@@ -10,7 +10,7 @@
 
   {% if not veli and not ogrenci and ekran != 'evde' %}<nav class="lgs-quick-nav" aria-label="LGS hızlı erişim">
 <a href="{{ url_for('lgs',ekran='evde') }}"><strong>Evde soru testleri</strong><small>Öğrencilere test gönderin, çözümleri izleyin.</small></a>
-<a href="{{ url_for('kamera_test.index') }}"><strong>Okulda yaprak test</strong><small>Belge yükleyin, yazdırın, kamerayla okuyun.</small></a>
+<a href="{{ url_for('kamera_test.index') }}"><strong>Okulda yaprak test</strong><small>Test hazırlayın, yazdırın ve sonuçları inceleyin.</small></a>
 <a href="{{ url_for('deneme_analiz') }}"><strong>Deneme analizi</strong><small>Deneme sonuçlarını ve gelişimi inceleyin.</small></a>
 <a href="{{ url_for('yaprak_analiz.combined') }}"><strong>Birleşik analiz</strong><small>Ev, okul ve denemeyi birlikte karşılaştırın.</small></a>
 </nav>{% endif %}

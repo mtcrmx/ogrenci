@@ -71,33 +71,6 @@ class KeyParsing(unittest.TestCase):
         with patch('broadcast_presentations.office_command',return_value=None):
             with self.assertRaisesRegex(ValueError,'dönüştürücü'):media.convert_document(out.getvalue(),'.docx')
 
-    def test_ninety_questions_five_choices(self):
-        exam=dict(ad='Ninety question form',soru_sayisi=90)
-        student=dict(ad_soyad='Example Student',sinif_adi='8/A',ogr_no=100)
-        marks=list('ABCDE'*18);marks[7]=''
-        im=marked_form(exam,student,'test-token-90',marks,choices='ABCDE')
-        _,jpg=cv2.imencode('.jpg',im)
-        result=media.read_form(jpg.tobytes(),90,'ABCDE')
-        self.assertEqual(result['answers'],marks);self.assertEqual(result['uncertain'],[])
-
-
-class CompressedPhoto(unittest.TestCase):
-    def test_upload_size_rotation_and_shadow(self):
-        exam=dict(ad='Upload test',soru_sayisi=90)
-        student=dict(ad_soyad='Example Student',sinif_adi='8/A',ogr_no=100)
-        marks=list('ABCDE'*18);marks[7]=''
-        im=marked_form(exam,student,'compressed-photo',marks,choices='ABCDE')
-        scale=2200/max(im.shape[:2])
-        im=cv2.resize(im,None,fx=scale,fy=scale,interpolation=cv2.INTER_AREA)
-        shade=np.linspace(.65,1,im.shape[1])[None,:,None]
-        im=np.uint8(im*shade)
-        im=cv2.rotate(im,cv2.ROTATE_90_CLOCKWISE)
-        _,jpg=cv2.imencode('.jpg',im,[cv2.IMWRITE_JPEG_QUALITY,90])
-        result=media.read_form(jpg.tobytes(),90,'ABCDE')
-        self.assertEqual(result['answers'],marks)
-        self.assertEqual(result['uncertain'],[])
-
-
 class CameraWorkflow(unittest.TestCase):
     def setUp(self):
         self.t=next(t for t in d.tum_ogretmenler() if t['yetki']=='tam')
@@ -122,87 +95,19 @@ class CameraWorkflow(unittest.TestCase):
                 con.execute('DELETE FROM lgs_optik_sinav WHERE id=?',(exam['id'],))
         con.commit();con.close()
 
-    def form(self,marks=None,extra=None):
-        r=self.c.get(f'/yaprak-kamera/{self.eid}/yazdir?student={self.student["id"]}')
-        self.assertEqual(r.status_code,200);self.assertEqual(len(PdfReader(BytesIO(r.data)).pages),2)
-        con=kt.connect();token=con.execute('SELECT token FROM kamera_form WHERE sinav_id=?',(self.eid,)).fetchone()[0];con.close()
-        im=marked_form(self.exam,self.student,token,marks or self.exam['cevaplar'],extra)
-        return im
-
-    def scan(self,im):
-        _,jpg=cv2.imencode('.jpg',im)
-        return self.c.post(f'/yaprak-kamera/{self.eid}/tara',data={'csrf':self.csrf,'image':(BytesIO(jpg.tobytes()),'scan.jpg')})
-
-    def save(self,scan,**overrides):
-        data=dict(csrf=self.csrf,ticket=scan['ticket'],answers=json.dumps(scan['answers']));data.update(overrides)
-        return self.c.post(f'/yaprak-kamera/{self.eid}/kaydet',data=data)
-
-    def test_prepare_confirm_ownership_and_print(self):
-        r=self.c.post('/yaprak-kamera/hazirla',data=dict(csrf=self.csrf,count='4',choices='ABCD',class_id=str(self.student['sinif_id']),name='Uploaded test',course='Fen',questions=(BytesIO(pdf()),'test.pdf'),key=(BytesIO(pdf('1 A 2 B 3 C 4 D')),'key.pdf')))
-        self.assertEqual(r.status_code,302);path=r.location
-        draft_html=self.c.get(path).get_data(as_text=True)
-        self.assertIn('Anahtarı onayla',draft_html)
-        self.assertIn('4 / 4 cevap belgeden okundu',draft_html)
-        preview=self.c.get(path+'/onizleme/1')
-        self.assertEqual(preview.status_code,200);self.assertEqual(preview.mimetype,'image/png')
-        self.assertEqual(self.c.get(path+'/onizleme/9').status_code,404)
-        self.assertEqual(self.c.post(path,data=dict(csrf=self.csrf)).status_code,200)
-        r=self.c.post(path,data=dict(csrf=self.csrf,q1='A',q2='B',q3='C',q4='D',confirmed='yes'))
-        self.assertEqual(r.status_code,302);self.assertEqual(self.c.get(r.location).status_code,200)
-        self.assertEqual(self.c.get(path).status_code,404)
-
-    def test_clear_scan_save_duplicate_and_parent_analysis(self):
-        r=self.scan(self.form());self.assertEqual(r.status_code,200,r.data)
-        self.assertEqual(r.json['answers'],self.exam['cevaplar']);self.assertEqual(r.json['uncertain'],[])
-        saved=self.save(r.json);self.assertEqual(saved.status_code,200,saved.data);self.assertEqual(saved.json['dogru'],14)
-        self.assertEqual(self.save(r.json).status_code,409)
-        again=self.scan(self.form());self.assertTrue(again.json['existing'])
-        self.assertEqual(self.save(again.json).status_code,409)
-        self.assertEqual(self.save(again.json,replace='yes',reviewed='yes').status_code,200)
-        parent=w.app.test_client()
-        import veli_auth
-        con=veli_auth.connect()
-        con.execute('INSERT OR REPLACE INTO veli_credentials(ogrenci_id,password_hash,auth_version) VALUES(?,?,?)',(self.student['id'],'test-fixture','camera-test-version'))
-        con.commit();con.close()
-        with parent.session_transaction() as s:
-            s['veli_ogrenci_id']=self.student['id']
-            s['veli_auth_version']='camera-test-version'
-        response=parent.get(f'/evde-analiz?test={self.eid}')
-        self.assertEqual(response.status_code,200)
-        school=parent.get('/okul-yaprak-analiz').get_data(as_text=True)
-        self.assertIn('Soru bazlı cevapları incele',school)
-        self.assertEqual(parent.get('/yaprak-kamera').status_code,302)
-
-    def test_perspective_rotation_and_double_mark(self):
-        im=self.form(extra=1)
-        height,width=im.shape[:2]
-        src=np.float32([[0,0],[width-1,0],[width-1,height-1],[0,height-1]])
-        dst=np.float32([[100,50],[width-120,0],[width-25,height-80],[20,height-20]])
-        warped=cv2.warpPerspective(im,cv2.getPerspectiveTransform(src,dst),(width,height),borderValue=(255,255,255))
-        warped=cv2.rotate(warped,cv2.ROTATE_90_CLOCKWISE)
-        result=self.scan(warped);self.assertEqual(result.status_code,200,result.data)
-        self.assertIn(1,result.json['uncertain'])
-        self.assertEqual(self.save(result.json).status_code,400)
-        answers=result.json['answers'];answers[0]='A'
-        self.assertEqual(self.save(result.json,answers=json.dumps(answers),reviewed='yes').status_code,200)
-
-    def test_blank_requires_review_crop_rejected(self):
-        result=self.scan(self.form(marks=['']*14));self.assertEqual(result.status_code,200,result.data)
-        self.assertEqual(len(result.json['uncertain']),14)
-        self.assertEqual(self.scan(self.form()[150:]).status_code,400)
-
-    def test_changed_key_rejects_pending_scan(self):
-        result=self.scan(self.form());self.assertEqual(result.status_code,200,result.data)
-        con=kt.connect();con.execute('UPDATE lgs_optik_sinav SET cevaplar=? WHERE id=?',(json.dumps(['D']*14),self.eid));con.commit();con.close()
-        self.assertEqual(self.save(result.json).status_code,409)
-
-    def test_permissions_csrf_and_wrong_test(self):
-        self.assertEqual(self.c.post(f'/yaprak-kamera/{self.eid}/kaydet').status_code,400)
-        other=w.app.test_client();teacher=next(t for t in d.tum_ogretmenler() if t['yetki']=='tam' and t['id']!=self.t['id'])
-        with other.session_transaction() as s:s['ogretmen_id']=teacher['id']
-        self.assertEqual(other.get(f'/yaprak-kamera/{self.eid}').status_code,404)
-        im=self.form();con=kt.connect();con.execute('DELETE FROM kamera_form WHERE sinav_id=?',(self.eid,));con.commit();con.close()
-        self.assertEqual(self.scan(im).status_code,400)
-
+    def test_scanning_removed_results_and_printing_remain(self):
+        for action in ('tara','telefonda-oku','kaydet'):
+            response=self.c.post(f'/yaprak-kamera/{self.eid}/{action}',data={'csrf':self.csrf})
+            self.assertEqual(response.status_code,410)
+        detail=self.c.get(f'/yaprak-kamera/{self.eid}')
+        self.assertEqual(detail.status_code,200)
+        self.assertNotIn('camera-app',detail.text)
+        self.assertNotIn('Kamerayı aç',detail.text)
+        self.assertNotIn('Yeni optikleri yazdır',detail.text)
+        printed=self.c.get(f'/yaprak-kamera/{self.eid}/yazdir?student={self.student["id"]}')
+        self.assertEqual(printed.status_code,200)
+        self.assertEqual(len(PdfReader(BytesIO(printed.data)).pages),1)
+        self.assertEqual(self.c.get(f'/yaprak-kamera/{self.eid}/yazdir?only=optik').status_code,410)
+        self.assertIsNotNone(optik.sinav_getir(self.eid))
 
 if __name__=='__main__':unittest.main()
