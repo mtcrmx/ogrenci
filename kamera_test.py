@@ -100,10 +100,10 @@ def read_upload(upload):
 
 @bp.post('/anahtar-oku')
 def read_home_key():
-    count=request.form.get('count',type=int)
+    count=request.form.get('count',type=int) or request.form.get('soru_sayisi',type=int)
     if not count or not 1<=count<=90:
         raise ValueError('Önce 1–90 arasında soru sayısı girin.')
-    data,suffix=read_upload(request.files.get('key'))
+    data,suffix=read_upload(request.files.get('key') or request.files.get('anahtar_dosya'))
     try:
         text,ocr=media.extract_key_text(data,suffix)
         answers,warnings=media.parse_key(text,count,'ABCDE')
@@ -118,7 +118,7 @@ def read_home_key():
 @bp.get('')
 def index():
     con=connect()
-    exams=[dict(r) for r in con.execute('SELECT e.*,COUNT(r.id) AS scanned FROM kamera_sinav k JOIN lgs_optik_sinav e ON e.id=k.sinav_id LEFT JOIN lgs_optik_sonuc r ON r.sinav_id=e.id WHERE e.ogretmen_id=? GROUP BY e.id ORDER BY e.id DESC',(session['ogretmen_id'],))]
+    exams=[dict(r) for r in con.execute("SELECT e.*,COUNT(r.id) AS scanned FROM kamera_sinav k JOIN lgs_optik_sinav e ON e.id=k.sinav_id LEFT JOIN lgs_optik_sonuc r ON r.sinav_id=e.id WHERE e.ogretmen_id=? AND (e.silindi_at IS NULL OR e.silindi_at='') GROUP BY e.id ORDER BY e.id DESC",(session['ogretmen_id'],))]
     con.close()
     classes={r['sinif_id']:r['sinif_adi'] for r in roster()}
     return render_template('kamera_test.html',mode='index',exams=exams,classes=classes,csrf=csrf())
@@ -126,12 +126,17 @@ def index():
 
 @bp.post('/hazirla')
 def prepare():
-    count=request.form.get('count',type=int);choices=request.form.get('choices')
-    sid=request.form.get('class_id',type=int);name=request.form.get('name','').strip()
+    count=request.form.get('count',type=int) or request.form.get('soru_sayisi',type=int)
+    choices=request.form.get('choices') or request.form.get('secenekler') or 'ABCD'
+    sid=request.form.get('class_id',type=int) or request.form.get('sinif_id',type=int)
+    name=(request.form.get('name') or request.form.get('ad') or '').strip()
+    course=(request.form.get('course') or request.form.get('ders') or '').strip()[:40]
+    goturme=request.form.get('yanlis_goturme',type=int)
+    if goturme not in (0,3,4): goturme=3
     if not count or not 1<=count<=90 or choices not in ('ABCD','ABCDE'): raise ValueError('1-90 soru ve 4 veya 5 seçenek seçin.')
     if not name or len(name)>80: raise ValueError('Test adı 1-80 karakter olmalı.')
     if not sid or not roster(sid): abort(403)
-    uploads=request.files.getlist('questions')
+    uploads=request.files.getlist('questions') or request.files.getlist('sorular')
     if not 1<=len(uploads)<=20: raise ValueError('1-20 dosya seçin.')
     try:
         pdf,pages=media.merge_documents([read_upload(u) for u in uploads])
@@ -140,7 +145,7 @@ def prepare():
         current_app.logger.warning('Question conversion failed: %s',type(exc).__name__)
         raise ValueError('Soru dosyası açılamadı. Dosya biçimini kontrol edip tekrar yükleyin.') from exc
     answers=['']*count;warnings=[];text='';key_pdf=None
-    key=request.files.get('key')
+    key=request.files.get('key') or request.files.get('anahtar_dosya')
     if key and key.filename:
         data,suffix=read_upload(key)
         try:
@@ -157,7 +162,7 @@ def prepare():
     ident=secrets.token_hex(16)
     (optik.klasor()/(ident+'.pdf')).write_bytes(pdf)
     if key_pdf: (optik.klasor()/(ident+'-key.pdf')).write_bytes(key_pdf)
-    payload=dict(name=name,count=count,choices=choices,class_id=sid,course=request.form.get('course','').strip()[:40],
+    payload=dict(name=name,count=count,choices=choices,class_id=sid,course=course,yanlis_goturme=goturme,
                  answers=answers,warnings=warnings,text=text[:20000],pages=pages,key_pdf=bool(key_pdf),
                  key_pages=min(len(PdfReader(BytesIO(key_pdf)).pages),5) if key_pdf else 0)
     con=connect();con.execute('INSERT INTO kamera_taslak(id,owner,data) VALUES(?,?,?)',(ident,session['ogretmen_id'],json.dumps(payload)));con.commit();con.close()
@@ -183,10 +188,9 @@ def draft(ident):
             try:
                 con.execute('BEGIN IMMEDIATE')
                 if not con.execute('SELECT 1 FROM kamera_taslak WHERE id=? AND owner=?',(ident,session['ogretmen_id'])).fetchone(): abort(409)
-                cur=con.execute('INSERT INTO lgs_optik_sinav(ad,tarih,pdf_dosya,cevaplar,soru_sayisi,ogretmen_id,olusturma,tur,ders,sinif_id) VALUES(?,?,?,?,?,?,?,?,?,?)',
-                                (data['name'],date.today().isoformat(),ident+'.pdf',json.dumps(answers),data['count'],session['ogretmen_id'],datetime.now().strftime('%Y-%m-%d %H:%M'),'yaprak',data['course'],data['class_id']))
+                cur=con.execute('INSERT INTO lgs_optik_sinav(ad,tarih,pdf_dosya,cevaplar,soru_sayisi,ogretmen_id,olusturma,tur,ders,sinif_id,yanlis_goturme,secenekler,kaynak) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                                (data['name'],date.today().isoformat(),ident+'.pdf',json.dumps(answers),data['count'],session['ogretmen_id'],datetime.now().strftime('%Y-%m-%d %H:%M'),'yaprak',data['course'],data['class_id'],int(data.get('yanlis_goturme',3)),data['choices'],'kamera'))
                 eid=cur.lastrowid
-                con.execute("UPDATE lgs_optik_sinav SET kaynak='kamera' WHERE id=?",(eid,))
                 con.execute('INSERT INTO kamera_sinav(sinav_id,choices) VALUES(?,?)',(eid,data['choices']))
                 con.execute('DELETE FROM kamera_taslak WHERE id=?',(ident,));con.commit()
             finally: con.close()

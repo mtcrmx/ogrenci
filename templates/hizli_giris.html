@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+{% block title %}Hızlı Giriş · AkademiPuan{% endblock %}
+{% block body %}
+{% include '_app_sidebar.html' %}
+<main class="mx-auto max-w-6xl px-3 py-4 sm:px-5" data-taslak-anahtar="{{ taslak_anahtar }}">
+  <header class="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-gradient-to-r from-indigo-950 via-purple-900 to-fuchsia-900 p-5 text-white shadow-xl">
+    <div>
+      <p class="text-xs font-extrabold uppercase tracking-widest text-amber-300">Ortak Sınav ve Test Girişi</p>
+      <h1 class="mt-1 text-2xl font-black">Hızlı Giriş</h1>
+      <p class="mt-1 text-sm text-indigo-100">
+        {% if secili_sinif %}
+          {{ secili_sinif.sinif_adi }} ({{ seviye }}. sınıf) seçili —
+          {% if 'lgs_deneme' in aktif_moduller %}yaprak test, evde test ve deneme (optik){% else %}okulda yaprak test ve evde test{% endif %}
+        {% else %}
+          Sınıf seçin
+        {% endif %}
+      </p>
+    </div>
+    <div class="text-right text-xs font-bold text-emerald-300" id="taslak-durum">
+      {% if taslak %}● Taslak yüklendi · {{ taslak.guncelleme }}{% else %}● Son seçimler hatırlandı{% endif %}
+    </div>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mt-3 space-y-2">
+        {% for category, msg in messages %}
+          <div class="rounded-2xl border px-4 py-3 text-sm font-bold {% if category == 'warning' %}border-amber-300 bg-amber-50 text-amber-950{% else %}border-emerald-300 bg-emerald-50 text-emerald-950{% endif %}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Üst Seçim Çubuğu -->
+  <section class="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+    <form method="get" action="{{ url_for('ort_giris') }}" class="flex flex-wrap items-center gap-2" id="secim-formu">
+      <div class="inline-flex rounded-xl border border-slate-300 bg-slate-100 p-1">
+        <a href="{{ url_for('ort_giris', sinif_id=secili_sinif_id, ders=secili_ders, tur='okul_yaprak') }}"
+           class="rounded-lg px-3 py-1.5 text-xs font-black {% if tur == 'okul_yaprak' %}bg-emerald-700 text-white{% else %}text-slate-700{% endif %}">
+          Okulda yaprak test
+        </a>
+        <a href="{{ url_for('ort_giris', sinif_id=secili_sinif_id, ders=secili_ders, tur='evde_test') }}"
+           class="rounded-lg px-3 py-1.5 text-xs font-black {% if tur == 'evde_test' %}bg-emerald-700 text-white{% else %}text-slate-700{% endif %}">
+          Evde test
+        </a>
+        {% if 'lgs_deneme' in aktif_moduller %}
+        <a href="{{ url_for('ort_giris', sinif_id=secili_sinif_id, ders=secili_ders, tur='deneme') }}"
+           class="rounded-lg px-3 py-1.5 text-xs font-black {% if tur == 'deneme' %}bg-emerald-700 text-white{% else %}text-slate-700{% endif %}">
+          Deneme (optik)
+        </a>
+        {% endif %}
+      </div>
+      <input type="hidden" name="tur" value="{{ tur }}">
+      <select name="sinif_id" onchange="this.form.submit()" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">
+        {% for s in siniflar %}
+          <option value="{{ s.id }}" {{ 'selected' if s.id == secili_sinif_id else '' }}>{{ s.sinif_adi }}</option>
+        {% endfor %}
+      </select>
+      <select name="ders" onchange="this.form.submit()" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">
+        {% for d in dersler %}
+          <option value="{{ d }}" {{ 'selected' if d == secili_ders else '' }}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    {% if tur != 'evde_test' %}
+    <!-- 3 Adım Optik Kartı -->
+    <div class="mt-4 grid gap-3 sm:grid-cols-3">
+      <div class="rounded-2xl border-2 border-indigo-200 bg-indigo-50/40 p-4">
+        <div class="text-xs font-bold text-slate-500">Adım 1</div>
+        <h3 class="mt-1 text-base font-black text-slate-900">⎙ Optik formları yazdır</h3>
+        <p class="mt-1 text-xs text-slate-600">Öğrenciye özel, QR kodlu · {{ ogrenciler|length }} öğrenci · A4, %100 ölçek</p>
+        {% if optik_testler %}
+          <a href="{{ url_for('kamera_test.batch_forms', eid=optik_testler[0].id) }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Optik formları yazdır</a>
+        {% else %}
+          <a href="{{ url_for('kamera_test.index') }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Yeni optik test hazırla</a>
+        {% endif %}
+      </div>
+      <div class="rounded-2xl border-2 border-indigo-200 bg-indigo-50/40 p-4">
+        <div class="text-xs font-bold text-slate-500">Adım 2</div>
+        <h3 class="mt-1 text-base font-black text-slate-900">⇪ Taranmış PDF yükle</h3>
+        <p class="mt-1 text-xs text-slate-600">Yazıcıda 200–300 dpi tek PDF · en fazla 60 sayfa</p>
+        {% if optik_testler %}
+          <a href="{{ url_for('kamera_test.detail', eid=optik_testler[0].id) }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Taranmış PDF yükle</a>
+        {% else %}
+          <a href="{{ url_for('kamera_test.index') }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Optik ekrana git</a>
+        {% endif %}
+      </div>
+      <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div class="text-xs font-bold text-slate-500">Adım 3</div>
+        <h3 class="mt-1 text-base font-black text-slate-900">✓ Kontrol et ve kaydet</h3>
+        <p class="mt-1 text-xs text-slate-600">Otomatik okunanlar hazır gelir; yalnız şüpheliler kontrol edilir.</p>
+      </div>
+    </div>
+    {% else %}
+    <div class="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950">
+      <p class="font-bold">Evde test (19.00–21.00 penceresi):</p>
+      <p class="mt-1 text-xs">Soru PDF'i ve cevap anahtarı yüklenir; öğrenciler evden optiği işaretler.</p>
+      <a href="{{ url_for('lgs', ekran='evde') }}" class="mt-2 inline-block rounded-xl bg-indigo-800 px-4 py-2 text-xs font-black text-white">Evde test yükleme ekranını aç</a>
+    </div>
+    {% endif %}
+
+    <!-- Yedek Yol: Elle D/Y Girişi ve Excel Yapıştırma -->
+    <details class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" open>
+      <summary class="cursor-pointer text-sm font-black text-slate-900">
+        Yedek yol: elle D/Y girişi (optik kullanılmadıysa)
+      </summary>
+      <form method="post" action="{{ url_for('ort_giris') }}" class="mt-3" id="elle-dy-form">
+        <input type="hidden" name="islem" value="elle_dy">
+        <input type="hidden" name="sinif_id" value="{{ secili_sinif_id }}">
+        <input type="hidden" name="ders" value="{{ secili_ders }}">
+        <input type="hidden" name="tur" value="{{ tur }}">
+
+        <div class="grid gap-3 sm:grid-cols-4">
+          <label class="text-xs font-bold text-slate-700">
+            Test adı
+            <input type="text" name="ad" value="{{ secili_ders }} Yaprak Testi" required maxlength="80"
+                   class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+          </label>
+          <label class="text-xs font-bold text-slate-700">
+            Tarih
+            <input type="date" name="tarih" value="{{ bugun }}" required
+                   class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+          </label>
+          <label class="text-xs font-bold text-slate-700">
+            Soru sayısı
+            <input type="number" name="soru_sayisi" id="inp-soru-sayisi" min="1" max="500" value="{{ soru_sayisi }}" required
+                   class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+          </label>
+          <label class="text-xs font-bold text-slate-700">
+            Yanlış götürme
+            <select name="yanlis_goturme" id="inp-goturme" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+              <option value="3" {{ 'selected' if yanlis_goturme == 3 else '' }}>3 yanlış 1 doğruyu götürür (LGS)</option>
+              <option value="4" {{ 'selected' if yanlis_goturme == 4 else '' }}>4 yanlış 1 doğruyu götürür</option>
+              <option value="0" {{ 'selected' if yanlis_goturme == 0 else '' }}>Götürme yok</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+          <span><kbd class="rounded border bg-white px-1.5 py-0.5 font-mono">Tab</kbd> sonraki hücre · <kbd class="rounded border bg-white px-1.5 py-0.5 font-mono">Enter</kbd> alttaki öğrenci · <kbd class="rounded border bg-white px-1.5 py-0.5 font-mono">K</kbd> katılmadı · D+Y &gt; soru anında uyarılır</span>
+          <button type="button" id="btn-excel-ac" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-bold text-slate-800">⎘ Excel'den yapıştır</button>
+        </div>
+
+        <div id="excel-kutu" class="mt-2 hidden rounded-2xl border border-indigo-200 bg-white p-3">
+          <label class="block text-xs font-bold text-slate-700">
+            Excel'den kopyaladığınız satırları yapıştırın (Öğrenci No / Ad Soyad | Doğru | Yanlış):
+            <textarea id="excel-metin" rows="4" class="mt-1 w-full rounded-xl border border-slate-300 p-2 font-mono text-xs" placeholder="112&#9;18&#9;2&#10;87&#9;15&#9;3"></textarea>
+          </label>
+          <div class="mt-2 flex items-center gap-2">
+            <button type="button" id="btn-excel-uygula" class="rounded-xl bg-indigo-800 px-3 py-1.5 text-xs font-black text-white">Tabloya aktar</button>
+            <span id="excel-durum" class="text-xs font-bold text-slate-600"></span>
+          </div>
+        </div>
+
+        {% if bekleyen_satirlar %}
+        <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs font-bold text-amber-950">
+          Kontrol bekleyen satırlar:
+          <ul class="mt-1 list-disc pl-5">
+            {% for b in bekleyen_satirlar %}
+              <li>{{ b.ad_soyad }}: {{ b.neden }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+          <table class="w-full min-w-[560px] text-left text-sm" id="dy-tablo">
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                <th class="px-3 py-2">No</th>
+                <th class="px-3 py-2">Öğrenci</th>
+                <th class="px-3 py-2">D</th>
+                <th class="px-3 py-2">Y</th>
+                <th class="px-3 py-2">B (oto)</th>
+                <th class="px-3 py-2">Net (oto)</th>
+                <th class="px-3 py-2">Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in ogrenciler %}
+              <tr class="border-b border-slate-100" data-oid="{{ o.id }}">
+                <td class="px-3 py-2 font-mono text-xs text-slate-500">{{ o.ogr_no or '—' }}</td>
+                <td class="px-3 py-2 font-bold text-slate-900">{{ o.ad_soyad }}</td>
+                <td class="px-3 py-2">
+                  <input type="text" name="dogru_{{ o.id }}" data-role="d" data-oid="{{ o.id }}" placeholder="D"
+                         class="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center font-bold">
+                </td>
+                <td class="px-3 py-2">
+                  <input type="text" name="yanlis_{{ o.id }}" data-role="y" data-oid="{{ o.id }}" placeholder="Y"
+                         class="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center font-bold">
+                </td>
+                <td class="px-3 py-2 font-mono text-xs text-slate-600" data-role="bos">—</td>
+                <td class="px-3 py-2 font-black text-slate-900" data-role="net">—</td>
+                <td class="px-3 py-2 text-xs font-bold text-slate-500" data-role="durum">
+                  <input type="hidden" name="durum_{{ o.id }}" data-role="durum-input" value="">
+                  <span data-role="durum-etiket">—</span>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="7" class="px-3 py-4 text-center text-slate-500">Bu sınıfta öğrenci bulunamadı.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <button type="button" id="btn-taslak-kaydet" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-black text-slate-800">Taslağı şimdi kaydet</button>
+          <button type="submit" class="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-black text-white">Geçerli satırları kaydet ve velilere bildir</button>
+        </div>
+      </form>
+    </details>
+  </section>
+</main>
+
+<script>
+(function(){
+  var soruInp = document.getElementById('inp-soru-sayisi');
+  var goturmeInp = document.getElementById('inp-goturme');
+  var tablo = document.getElementById('dy-tablo');
+  var taslakDurum = document.getElementById('taslak-durum');
+  var anahtar = document.querySelector('[data-taslak-anahtar]').getAttribute('data-taslak-anahtar');
+  var baslangicTaslak = {{ (taslak.veri if taslak else {})|tojson }};
+
+  function satirHesapla(tr) {
+    var dInp = tr.querySelector('[data-role="d"]');
+    var yInp = tr.querySelector('[data-role="y"]');
+    var bosEl = tr.querySelector('[data-role="bos"]');
+    var netEl = tr.querySelector('[data-role="net"]');
+    var durumInp = tr.querySelector('[data-role="durum-input"]');
+    var durumEtiket = tr.querySelector('[data-role="durum-etiket"]');
+    if (!dInp || !yInp) return;
+
+    var dRaw = (dInp.value || '').trim().toUpperCase();
+    var yRaw = (yInp.value || '').trim().toUpperCase();
+    var soru = parseInt(soruInp.value || '20', 10) || 20;
+    var goturme = parseInt(goturmeInp.value || '3', 10);
+
+    if (dRaw === 'K' || yRaw === 'K' || durumInp.value === 'K') {
+      durumInp.value = 'K';
+      bosEl.textContent = '—';
+      netEl.textContent = '—';
+      durumEtiket.textContent = 'Katılmadı';
+      durumEtiket.className = 'text-slate-500 font-bold';
+      tr.classList.remove('bg-rose-50');
+      return;
+    }
+    if (dRaw === '' && yRaw === '') {
+      bosEl.textContent = '—';
+      netEl.textContent = '—';
+      durumEtiket.textContent = '—';
+      tr.classList.remove('bg-rose-50');
+      return;
+    }
+    var d = parseInt(dRaw || '0', 10);
+    var y = parseInt(yRaw || '0', 10);
+    if (isNaN(d) || isNaN(y) || d < 0 || y < 0 || d + y > soru) {
+      bosEl.textContent = '—';
+      netEl.textContent = '—';
+      durumEtiket.textContent = '⚠ D+Y = ' + (d + y) + ' > ' + soru + ' soru';
+      durumEtiket.className = 'text-rose-700 font-black';
+      tr.classList.add('bg-rose-50');
+      return;
+    }
+    tr.classList.remove('bg-rose-50');
+    var bos = soru - d - y;
+    var netVal = goturme > 0 ? Math.max(0, d - (y / goturme)) : Math.max(0, d);
+    bosEl.textContent = String(bos);
+    netEl.textContent = netVal.toFixed(2).replace('.', ',');
+    durumEtiket.textContent = '✓ Hazır';
+    durumEtiket.className = 'text-emerald-700 font-black';
+  }
+
+  function taslakOku() {
+    var satirlar = {};
+    if (!tablo) return satirlar;
+    tablo.querySelectorAll('tbody tr[data-oid]').forEach(function(tr){
+      var oid = tr.getAttribute('data-oid');
+      var d = tr.querySelector('[data-role="d"]').value;
+      var y = tr.querySelector('[data-role="y"]').value;
+      var k = tr.querySelector('[data-role="durum-input"]').value;
+      if (d || y || k) satirlar[oid] = {d: d, y: y, k: k};
+    });
+    return {satirlar: satirlar};
+  }
+
+  var timer = null;
+  function taslakGonder() {
+    fetch('{{ url_for("api_giris_taslak") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({anahtar: anahtar, veri: taslakOku()})
+    }).then(function(r){ return r.json(); }).then(function(res){
+      if (res && res.ok && taslakDurum) {
+        taslakDurum.textContent = '● Otomatik kaydedildi · ' + (res.guncelleme || '').slice(11, 16);
+      }
+    }).catch(function(){});
+  }
+
+  function planlaTaslak() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(taslakGonder, 800);
+  }
+
+  if (tablo) {
+    var satirList = Array.from(tablo.querySelectorAll('tbody tr[data-oid]'));
+    satirList.forEach(function(tr, idx){
+      var oid = tr.getAttribute('data-oid');
+      if (baslangicTaslak && baslangicTaslak.satirlar && baslangicTaslak.satirlar[oid]) {
+        var kayit = baslangicTaslak.satirlar[oid];
+        tr.querySelector('[data-role="d"]').value = kayit.d || '';
+        tr.querySelector('[data-role="y"]').value = kayit.y || '';
+        tr.querySelector('[data-role="durum-input"]').value = kayit.k || '';
+        satirHesapla(tr);
+      }
+      ['d', 'y'].forEach(function(role){
+        var inp = tr.querySelector('[data-role="' + role + '"]');
+        if (!inp) return;
+        inp.addEventListener('input', function(){
+          if (inp.value.trim().toUpperCase() !== 'K') {
+            tr.querySelector('[data-role="durum-input"]').value = '';
+          }
+          satirHesapla(tr);
+          planlaTaslak();
+        });
+        inp.addEventListener('keydown', function(ev){
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            var nextTr = satirList[idx + 1];
+            if (nextTr) {
+              var nextInp = nextTr.querySelector('[data-role="' + role + '"]');
+              if (nextInp) nextInp.focus();
+            }
+          } else if (ev.key.toUpperCase() === 'K') {
+            ev.preventDefault();
+            inp.value = 'K';
+            tr.querySelector('[data-role="durum-input"]').value = 'K';
+            satirHesapla(tr);
+            planlaTaslak();
+          }
+        });
+      });
+    });
+  }
+
+  if (soruInp) soruInp.addEventListener('input', function(){
+    if (tablo) tablo.querySelectorAll('tbody tr[data-oid]').forEach(satirHesapla);
+  });
+  if (goturmeInp) goturmeInp.addEventListener('change', function(){
+    if (tablo) tablo.querySelectorAll('tbody tr[data-oid]').forEach(satirHesapla);
+  });
+
+  var btnTaslak = document.getElementById('btn-taslak-kaydet');
+  if (btnTaslak) btnTaslak.addEventListener('click', taslakGonder);
+
+  var btnExcelAc = document.getElementById('btn-excel-ac');
+  var excelKutu = document.getElementById('excel-kutu');
+  if (btnExcelAc && excelKutu) {
+    btnExcelAc.addEventListener('click', function(){
+      excelKutu.classList.toggle('hidden');
+    });
+  }
+
+  var btnExcelUygula = document.getElementById('btn-excel-uygula');
+  if (btnExcelUygula) {
+    btnExcelUygula.addEventListener('click', function(){
+      var metin = document.getElementById('excel-metin').value;
+      fetch('{{ url_for("api_giris_excel_coz") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({sinif_id: {{ secili_sinif_id or 'null' }}, metin: metin})
+      }).then(function(r){ return r.json(); }).then(function(res){
+        if (!res || !res.ok) return;
+        (res.eslesen || []).forEach(function(item){
+          var tr = tablo.querySelector('tbody tr[data-oid="' + item.ogrenci_id + '"]');
+          if (!tr) return;
+          if (item.katilmadi) {
+            tr.querySelector('[data-role="d"]').value = 'K';
+            tr.querySelector('[data-role="y"]').value = '';
+            tr.querySelector('[data-role="durum-input"]').value = 'K';
+          } else {
+            tr.querySelector('[data-role="d"]').value = item.dogru !== null ? item.dogru : '';
+            tr.querySelector('[data-role="y"]').value = item.yanlis !== null ? item.yanlis : '';
+            tr.querySelector('[data-role="durum-input"]').value = '';
+          }
+          satirHesapla(tr);
+        });
+        var durumEl = document.getElementById('excel-durum');
+        if (durumEl) {
+          durumEl.textContent = (res.eslesen || []).length + ' öğrenci aktarıldı' +
+            ((res.eslesmeyen || []).length ? (', ' + res.eslesmeyen.length + ' satır eşleşmedi.') : '.');
+        }
+        planlaTaslak();
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}

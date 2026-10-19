@@ -22,7 +22,8 @@ def build(student):
             t.ad_soyad AS teacher,r.id AS result_id,r.dogru,r.yanlis,r.bos,r.zaman
             FROM lgs_optik_sinav e LEFT JOIN ogretmenler t ON t.id=e.ogretmen_id
             LEFT JOIN lgs_optik_sonuc r ON r.sinav_id=e.id AND r.ogrenci_id=?
-            WHERE (e.sinif_id=? OR (e.sinif_id IS NULL AND ?))
+            WHERE (e.silindi_at IS NULL OR e.silindi_at='')
+              AND (e.sinif_id=? OR (e.sinif_id IS NULL AND ?))
               AND (e.kaynak='kamera' OR ?)
             ORDER BY COALESCE(r.zaman,e.olusturma) DESC,e.id DESC LIMIT 40''', (oid,sid,lgs,lgs)).fetchall()
     finally:

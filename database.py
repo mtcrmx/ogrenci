@@ -1370,7 +1370,7 @@ def _lgs_init(con: sqlite3.Connection) -> None:
     deneme_kolon = {r[1] for r in con.execute("PRAGMA table_info(lgs_deneme)").fetchall()}
     if "puan" not in deneme_kolon:
         con.execute("ALTER TABLE lgs_deneme ADD COLUMN puan REAL")
-    for ad, tip in [('ogretmen_id', 'INTEGER'), ('tur', "TEXT NOT NULL DEFAULT 'kurum'"), ('surum', 'INTEGER NOT NULL DEFAULT 1')]:
+    for ad, tip in [('ogretmen_id', 'INTEGER'), ('tur', "TEXT NOT NULL DEFAULT 'kurum'"), ('surum', 'INTEGER NOT NULL DEFAULT 1'), ('silindi_at', 'TEXT DEFAULT NULL')]:
         if ad not in deneme_kolon:
             con.execute(f'ALTER TABLE lgs_deneme ADD COLUMN {ad} {tip}')
     ders_kolon = {r[1] for r in con.execute('PRAGMA table_info(lgs_deneme_ders)')}
@@ -2200,7 +2200,7 @@ def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
     con = _conn()
     _lgs_init(con)
     denemeler = [dict(r) for r in con.execute(
-        "SELECT * FROM lgs_deneme WHERE ogrenci_id = ? ORDER BY tarih DESC, id DESC LIMIT ?",
+        "SELECT * FROM lgs_deneme WHERE ogrenci_id = ? AND (silindi_at IS NULL OR silindi_at = '') ORDER BY tarih DESC, id DESC LIMIT ?",
         (ogrenci_id, limit),
     ).fetchall()]
     for d in denemeler:
@@ -2214,19 +2214,21 @@ def lgs_denemeler(ogrenci_id: int, limit: int = 8) -> list[dict]:
     return denemeler
 
 
-def deneme_gruplari(sinif_adlari: tuple[str, ...] | None = None) -> list[dict]:
+def deneme_gruplari(sinif_adlari: tuple[str, ...] | None = None, silinenler_dahil: bool = False) -> list[dict]:
     """Girilen yaprak test, deneme ve kurum sonuçları, sınıfına göre."""
     con = _conn()
     _lgs_init(con)
-    sql = """
-        SELECT d.ad, d.tarih, d.tur, s.sinif_adi, COUNT(DISTINCT d.id) AS adet
+    kosul = "WHERE 1=1" if silinenler_dahil else "WHERE (d.silindi_at IS NULL OR d.silindi_at = '')"
+    sql = f"""
+        SELECT d.ad, d.tarih, d.tur, s.sinif_adi, MAX(d.silindi_at) AS silindi_at, COUNT(DISTINCT d.id) AS adet
         FROM lgs_deneme d
         JOIN ogrenciler o ON o.id = d.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
+        {kosul}
     """
     params: list = []
     if sinif_adlari:
-        sql += f" WHERE s.sinif_adi IN ({','.join('?' for _ in sinif_adlari)})"
+        sql += f" AND s.sinif_adi IN ({','.join('?' for _ in sinif_adlari)})"
         params.extend(sinif_adlari)
     sql += " GROUP BY d.ad, d.tarih, d.tur, s.sinif_adi ORDER BY d.tarih DESC, s.sinif_adi, d.ad"
     rows = [dict(r) for r in con.execute(sql, params)]
@@ -2234,14 +2236,41 @@ def deneme_gruplari(sinif_adlari: tuple[str, ...] | None = None) -> list[dict]:
     return rows
 
 
-def deneme_grup_sil(ad: str, tarih: str, tur: str, sinif_adi: str | None = None) -> int:
+def deneme_grup_sil(ad: str, tarih: str, tur: str, sinif_adi: str | None = None, kalici: bool = False) -> int:
     con = _conn()
     _lgs_init(con)
     sql = """
         SELECT d.id FROM lgs_deneme d
         JOIN ogrenciler o ON o.id = d.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
-        WHERE d.ad=? AND d.tarih=? AND d.tur=?
+        WHERE d.ad=? AND d.tarih=? AND d.tur=? AND (d.silindi_at IS NULL OR d.silindi_at = '')
+    """
+    params: list = [ad, tarih, tur]
+    if sinif_adi:
+        sql += " AND s.sinif_adi=?"
+        params.append(sinif_adi)
+    ids = [r[0] for r in con.execute(sql, params)]
+    if kalici:
+        for deneme_id in ids:
+            con.execute("DELETE FROM lgs_deneme_ders WHERE deneme_id=?", (deneme_id,))
+            con.execute("DELETE FROM lgs_deneme WHERE id=?", (deneme_id,))
+    else:
+        simdi = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        for deneme_id in ids:
+            con.execute("UPDATE lgs_deneme SET silindi_at=? WHERE id=?", (simdi, deneme_id))
+    con.commit()
+    con.close()
+    return len(ids)
+
+
+def deneme_grup_geri_al(ad: str, tarih: str, tur: str, sinif_adi: str | None = None) -> int:
+    con = _conn()
+    _lgs_init(con)
+    sql = """
+        SELECT d.id FROM lgs_deneme d
+        JOIN ogrenciler o ON o.id = d.ogrenci_id
+        JOIN siniflar s ON s.id = o.sinif_id
+        WHERE d.ad=? AND d.tarih=? AND d.tur=? AND d.silindi_at IS NOT NULL AND d.silindi_at != ''
     """
     params: list = [ad, tarih, tur]
     if sinif_adi:
@@ -2249,8 +2278,7 @@ def deneme_grup_sil(ad: str, tarih: str, tur: str, sinif_adi: str | None = None)
         params.append(sinif_adi)
     ids = [r[0] for r in con.execute(sql, params)]
     for deneme_id in ids:
-        con.execute("DELETE FROM lgs_deneme_ders WHERE deneme_id=?", (deneme_id,))
-        con.execute("DELETE FROM lgs_deneme WHERE id=?", (deneme_id,))
+        con.execute("UPDATE lgs_deneme SET silindi_at=NULL WHERE id=?", (deneme_id,))
     con.commit()
     con.close()
     return len(ids)
@@ -2263,7 +2291,7 @@ def deneme_sinav_listesi() -> list[dict]:
         """
         SELECT ad, tarih, COUNT(*) AS adet
         FROM lgs_deneme
-        WHERE tur = 'deneme'
+        WHERE tur = 'deneme' AND (silindi_at IS NULL OR silindi_at = '')
         GROUP BY ad, tarih
         ORDER BY tarih DESC, ad
         """

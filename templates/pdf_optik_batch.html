@@ -13,17 +13,53 @@
 </section><script src="{{ url_for('static',filename='pdf_optik_batch.js',v='1') }}" defer></script>
 {% else %}
 <p class="kt-notice">{{ rows|length }} sayfa işlendi. Kaydetmek istediğiniz öğrencileri seçin; her öğrencinin cevaplarını görüntüyle karşılaştırıp onaylayın. Seçilmeyen sayfalar kaydedilmez. Yükleme 24 saat geçerlidir.</p>
+{% if eksik_ogrenciler %}
+<section class="kt-card">
+<h2>Optiği okunmayan öğrenciler ({{ eksik_ogrenciler|length }})</h2>
+<p>Sınıf listesindeki şu öğrencilerin optik sayfası PDF'de bulunamadı: {% for o in eksik_ogrenciler %}{{ o.ad_soyad }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+<form method="post" action="{{ url_for('kamera_test.batch_upload',eid=exam.id) }}" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="hidden" name="bid" value="{{ batch.id }}">
+<label>Eksik sayfaları ekle (PDF)<input type="file" name="pdf" accept=".pdf,application/pdf" required></label>
+<button class="kt-button" type="submit">Eksik sayfaları ekle</button>
+</form>
+</section>
+{% endif %}
 <form method="post" action="{{ url_for('kamera_test.batch_save',bid=batch.id) }}"><input type="hidden" name="csrf" value="{{ csrf }}">
 {% for row in rows %}<section class="kt-card">
 <h2>Sayfa {{ row.no }}{% if row.name %} · {{ row.name }} · No {{ row.number }}{% endif %}</h2>
-{% if row.error %}<p class="kt-notice" role="alert">{{ row.error }}</p>{% else %}
-<label class="kt-check"><input type="checkbox" name="select" value="{{ row.no }}"> Bu öğrenciyi kaydet</label>
+{% if row.error %}
+<p class="kt-notice" role="alert">{{ row.error }}</p>
+{% if not row.oid and not row.duplicate_of and people %}
+<div class="mt-2">
+<label>Öğrenciyi elle ata:
+<select data-assign-student="{{ row.no }}" data-url="{{ url_for('kamera_test.batch_assign_student',bid=batch.id,no=row.no) }}">
+<option value="">Öğrenci seçin</option>
+{% for p in people %}<option value="{{ p.id }}">{{ p.ogr_no }} · {{ p.ad_soyad }}</option>{% endfor %}
+</select>
+</label>
+</div>
+{% endif %}
+{% else %}
+<label class="kt-check"><input type="checkbox" name="select" value="{{ row.no }}" {% if not row.uncertain and not row.existing %}checked{% endif %}> Bu öğrenciyi kaydet</label>
 {% if row.uncertain %}<p class="kt-notice">Kontrol gereken sorular: {{ row.uncertain|join(', ') }}. Boş görünen alanı fotoğrafla karşılaştırın.</p>{% endif %}
 <label>Cevaplar ({{ exam.soru_sayisi }} soru; {{ exam.choices|join(' / ') }}; boş için -)
 <textarea name="answers_{{ row.no }}" rows="3" spellcheck="false" autocapitalize="characters" style="width:100%;font-family:monospace;letter-spacing:.2em">{{ row.answers }}</textarea></label>
-<label class="kt-check"><input type="checkbox" name="confirm_{{ row.no }}" value="yes"> Bu öğrencinin tüm cevaplarını kontrol ettim.</label>
+<label class="kt-check"><input type="checkbox" name="confirm_{{ row.no }}" value="yes" {% if not row.uncertain %}checked{% endif %}> Bu öğrencinin tüm cevaplarını kontrol ettim.</label>
 {% if row.existing %}<label class="kt-check"><input type="checkbox" name="replace_{{ row.no }}" value="yes"> Önceden kayıtlı sonucu bu cevaplarla değiştirmeyi onaylıyorum.</label>{% endif %}
 {% endif %}
 <details><summary>Optik görüntüsünü aç</summary><img loading="lazy" src="{{ url_for('kamera_test.batch_preview',bid=batch.id,no=row.no) }}" alt="Sayfa {{ row.no }} optik görüntüsü" style="max-width:100%;height:auto"></details>
 </section>{% endfor %}<button class="kt-button">Seçilen ve onaylanan sonuçları kaydet</button></form>
+<script>
+document.querySelectorAll('[data-assign-student]').forEach(function(sel){
+  sel.addEventListener('change', function(){
+    if(!sel.value) return;
+    var fd = new FormData();
+    fd.append('csrf', '{{ csrf }}');
+    fd.append('oid', sel.value);
+    fetch(sel.getAttribute('data-url'), {method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(function(r){ if(r.ok) location.reload(); });
+  });
+});
+</script>
 {% endif %}</main>{% endblock %}

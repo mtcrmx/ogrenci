@@ -58,16 +58,9 @@ def index():
     else:
         roster=[r for r in roster if r['sinif_id']==child['sinif_id']]
     allowed={r['id'] for r in roster}
-    rows=[dict(r) for r in con.execute('''SELECT d.ad,d.tarih,d.ogrenci_id,dd.*,o.ad_soyad,o.ogr_no,o.sinif_id,s.sinif_adi
-        FROM lgs_deneme d JOIN lgs_deneme_ders dd ON dd.deneme_id=d.id
-        JOIN ogrenciler o ON o.id=d.ogrenci_id JOIN siniflar s ON s.id=o.sinif_id
-        WHERE d.tur='ders' ORDER BY dd.id''') if r['ogrenci_id'] in allowed]
-    rows += [dict(r) for r in con.execute('''SELECT e.id AS camera_exam,e.ad,e.tarih,e.ders,e.soru_sayisi,
-        r.ogrenci_id,r.dogru,r.yanlis,r.bos,r.net,3 AS yanlis_goturme,
-        o.ad_soyad,o.ogr_no,o.sinif_id,s.sinif_adi FROM lgs_optik_sinav e
-        JOIN lgs_optik_sonuc r ON r.sinav_id=e.id JOIN ogrenciler o ON o.id=r.ogrenci_id
-        JOIN siniflar s ON s.id=o.sinif_id WHERE e.kaynak='kamera' ORDER BY r.id''') if r['ogrenci_id'] in allowed]
     con.close()
+    import sinav_okuyucu
+    rows=sinav_okuyucu.okul_yaprak_satirlari(allowed)
     groups=group_records(rows)
     if child: groups=[g for g in groups if any(r['ogrenci_id']==oid for r in g['rows'])]
     courses=sorted({g['ders'] for g in groups})
@@ -152,24 +145,9 @@ def combined():
     allowed = {r['id'] for r in roster}
     if child_id and not allowed:
         con.close(); abort(403)
-    rows = []
-    for row in con.execute('SELECT d.ad,d.tarih,d.tur,d.ogretmen_id,d.ogrenci_id,dd.* FROM lgs_deneme d JOIN lgs_deneme_ders dd ON dd.deneme_id=d.id ORDER BY dd.id'):
-        r = dict(row)
-        if r['ogrenci_id'] not in allowed: continue
-        r['source'] = 'okul' if r['tur']=='ders' else 'deneme'
-        r['exam_key'] = ('legacy',r['ogretmen_id'],r['ad'],r['tarih'],r['tur'])
-        r['detail'] = url_for('yaprak_analiz.index',ders=r['ders']) if r['source']=='okul' else (url_for('deneme_analiz') if teacher else url_for('veli_lgs',bolum='deneme'))
-        rows.append(r)
-    for row in con.execute('SELECT e.id AS exam_id,e.ogretmen_id,e.ad,e.tarih,e.tur,e.kaynak,e.ders,e.soru_sayisi,e.cevaplar,r.isaretler,r.ogrenci_id,r.dogru,r.yanlis,r.bos,r.net FROM lgs_optik_sinav e JOIN lgs_optik_sonuc r ON r.sinav_id=e.id ORDER BY r.id'):
-        r = dict(row)
-        if not optik.teacher_can_view(r): continue
-        if r['ogrenci_id'] not in allowed: continue
-        r['source'] = 'okul' if r['kaynak']=='kamera' else ('deneme' if r['tur']=='deneme' else 'ev')
-        r['exam_key'] = ('optik',r['exam_id'])
-        r['detail'] = url_for('ev_analiz.index',test=r['exam_id'])
-        r['ders'] = r['ders'] or 'Genel deneme'
-        rows.append(r)
     con.close()
+    import sinav_okuyucu
+    rows = sinav_okuyucu.birlesik_sonuclar(allowed, teacher=teacher)
     students = {r['id']:r for r in roster}
     unique = {}
     for r in rows:

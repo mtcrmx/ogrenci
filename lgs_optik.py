@@ -76,13 +76,18 @@ def _init(con) -> None:
         con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN yanlis_goturme INTEGER DEFAULT 3")
     if "secenekler" not in kolon:
         con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN secenekler TEXT DEFAULT 'ABCD'")
+    if "silindi_at" not in kolon:
+        con.execute("ALTER TABLE lgs_optik_sinav ADD COLUMN silindi_at TEXT DEFAULT NULL")
 
 
-def anahtar_oku(metin: str) -> list[str] | None:
-    harfler = re.findall(r"[A-Ea-e]", metin or "")
-    if not 1 <= len(harfler) <= AZAMI_SORU:
+def anahtar_oku(metin: str, secenekler: str = "ABCDE") -> list[str] | None:
+    izinli_set = {c.upper() for c in (secenekler or "ABCDE") if c.upper() in SECENEKLER} or set(SECENEKLER)
+    tum_harfler = re.findall(r"[A-Ea-e]", metin or "")
+    if any(h.upper() not in izinli_set for h in tum_harfler):
         return None
-    return [h.upper() for h in harfler]
+    if not 1 <= len(tum_harfler) <= AZAMI_SORU:
+        return None
+    return [h.upper() for h in tum_harfler]
 
 
 def puan_hesapla(anahtar: list[str], isaretler: list[str], goturme: int | None = None) -> dict:
@@ -123,16 +128,19 @@ def sinav_ekle(
     sinif_id: int | None = None,
     yanlis_goturme: int = 3,
     secenekler: str = "ABCD",
+    kaynak: str | None = None,
 ) -> int:
     if tur not in ("yaprak", "deneme"):
         tur = "deneme"
+    if kaynak is None:
+        kaynak = "ev_yaprak" if tur == "yaprak" else "ev"
     con = db._conn()
     _init(con)
     simdi = datetime.now().strftime("%Y-%m-%d %H:%M")
     cur = con.execute(
         """
-        INSERT INTO lgs_optik_sinav (ad, tarih, pdf_dosya, cevaplar, soru_sayisi, ogretmen_id, olusturma, tur, ders, sinif_id, yanlis_goturme, secenekler)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO lgs_optik_sinav (ad, tarih, pdf_dosya, cevaplar, soru_sayisi, ogretmen_id, olusturma, tur, ders, sinif_id, yanlis_goturme, secenekler, kaynak)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             (ad or "LGS soruları")[:80],
@@ -147,6 +155,7 @@ def sinav_ekle(
             sinif_id,
             int(yanlis_goturme if yanlis_goturme is not None else 3),
             (secenekler or "ABCD")[:10],
+            kaynak,
         ),
     )
     con.commit()
@@ -155,14 +164,16 @@ def sinav_ekle(
     return sinav_id
 
 
-def sinavlari_listele() -> list[dict]:
+def sinavlari_listele(silinenler_dahil: bool = False) -> list[dict]:
     con = db._conn()
     _init(con)
+    kosul = "" if silinenler_dahil else "WHERE (o.silindi_at IS NULL OR o.silindi_at = '')"
     rows = [dict(r) for r in con.execute(
-        """
+        f"""
         SELECT o.*, s.sinif_adi
         FROM lgs_optik_sinav o
         LEFT JOIN siniflar s ON s.id = o.sinif_id
+        {kosul}
         ORDER BY o.tarih DESC, o.id DESC
         """
     )]
@@ -173,10 +184,11 @@ def sinavlari_listele() -> list[dict]:
     return rows
 
 
-def sinav_getir(sinav_id: int) -> dict | None:
+def sinav_getir(sinav_id: int, silinen_dahil: bool = False) -> dict | None:
     con = db._conn()
     _init(con)
-    row = con.execute("SELECT * FROM lgs_optik_sinav WHERE id=?", (int(sinav_id),)).fetchone()
+    kosul = "" if silinen_dahil else " AND (silindi_at IS NULL OR silindi_at = '')"
+    row = con.execute(f"SELECT * FROM lgs_optik_sinav WHERE id=?{kosul}", (int(sinav_id),)).fetchone()
     con.close()
     if not row:
         return None
@@ -247,19 +259,37 @@ def sonuc_kaydet(sinav_id: int, ogrenci_id: int, isaretler: list[str]) -> dict:
     return {"ok": True, **puan}
 
 
-def sinav_sil(sinav_id: int) -> bool:
+def sinav_sil(sinav_id: int, kalici: bool = False) -> bool:
     sinav = sinav_getir(sinav_id)
     if not sinav:
         return False
-    dosya = pdf_yolu(sinav)
     con = db._conn()
     _init(con)
-    con.execute("DELETE FROM lgs_optik_sonuc WHERE sinav_id=?", (int(sinav_id),))
-    con.execute("DELETE FROM lgs_optik_sinav WHERE id=?", (int(sinav_id),))
+    if kalici:
+        dosya = pdf_yolu(sinav)
+        con.execute("DELETE FROM lgs_optik_sonuc WHERE sinav_id=?", (int(sinav_id),))
+        con.execute("DELETE FROM lgs_optik_sinav WHERE id=?", (int(sinav_id),))
+        con.commit()
+        con.close()
+        if dosya:
+            dosya.unlink(missing_ok=True)
+        return True
+    simdi = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    con.execute("UPDATE lgs_optik_sinav SET silindi_at=? WHERE id=?", (simdi, int(sinav_id)))
     con.commit()
     con.close()
-    if dosya:
-        dosya.unlink(missing_ok=True)
+    return True
+
+
+def sinav_geri_al(sinav_id: int) -> bool:
+    sinav = sinav_getir(sinav_id, silinen_dahil=True)
+    if not sinav or not sinav.get("silindi_at"):
+        return False
+    con = db._conn()
+    _init(con)
+    con.execute("UPDATE lgs_optik_sinav SET silindi_at=NULL WHERE id=?", (int(sinav_id),))
+    con.commit()
+    con.close()
     return True
 
 

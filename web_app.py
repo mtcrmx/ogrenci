@@ -173,7 +173,7 @@ def _ogretmen_ogrencisine_erisebilir(ogretmen_id: int, ogrenci_id: int) -> bool:
     return _ogretmen_sinifinda_mi(ogretmen_id, int(og["sinif_id"]))
 
 
-from yetki import mudur_adi, register_yetki, yetkili, yetkili_idleri
+from yetki import mudur_adi, register_yetki, yetki_gerekli, yetkili, yetkili_idleri
 from moduller import aktif_moduller, modul_gerekli, modul_var_mi, register_moduller, seviye as sinif_seviyesi
 
 
@@ -3753,6 +3753,43 @@ def onay_kutusu():
     return render_template("onay_kutusu.html", hafta=hafta, **kutu)
 
 
+@app.route("/onay-kutusu/toplu", methods=["POST"])
+@giris_zorunlu
+def onay_kutusu_toplu():
+    hafta = _lgs_hafta()
+    karar = (request.form.get("karar") or "onay").strip()
+    secimler = request.form.getlist("secim")
+    onaylanan = 0
+    for item in secimler:
+        parcalar = item.split(":")
+        tip = parcalar[0] if parcalar else ""
+        if tip == "odev" and len(parcalar) >= 3:
+            sinif_id = int(parcalar[1])
+            ogrenci_id = int(parcalar[2])
+            if _haftalik_takip_yetki(sinif_id) and ogrenci_id:
+                odev_karar = karar if karar in {"tam", "eksik", "yok"} else "tam"
+                haftalik_takip_isaretle(sinif_id, ogrenci_id, hafta, "odev_durum", odev_karar, session["ogretmen_id"])
+                onaylanan += 1
+        elif tip == "lgs" and len(parcalar) >= 3:
+            ogrenci_id = int(parcalar[1])
+            gorev_id = int(parcalar[2])
+            lgs_gorev_onayla(ogrenci_id, gorev_id, "onay" if karar != "reddet" else "reddet")
+            onaylanan += 1
+        elif tip == "gunluk" and len(parcalar) >= 2:
+            kayit_id = int(parcalar[1])
+            lgs_gunluk_onayla(kayit_id, "onay" if karar != "reddet" else "reddet")
+            onaylanan += 1
+    if onaylanan:
+        flash(f"{onaylanan} kayıt toplu olarak güncellendi.", "success")
+    return redirect(url_for("onay_kutusu"))
+
+
+@app.route("/yaprak-optik")
+@giris_zorunlu
+def yaprak_optik_alias():
+    return redirect(url_for("kamera_test.index"))
+
+
 @app.route("/ogrenci-ara")
 @giris_zorunlu
 def ogrenci_ara():
@@ -3864,10 +3901,10 @@ def _sekiz_sinav_temizligi_bir_kez() -> None:
 
 @app.route("/yonetim/sinavlar", methods=["GET", "POST"])
 @giris_zorunlu
+@yetki_gerekli("yonetici")
 def yonetim_sinavlar():
-    if not _giris_raporu_acik_mi():
-        abort(403)
     import lgs_optik
+    from database import deneme_grup_geri_al
     if request.method == "POST":
         islem = request.form.get("islem")
         if islem == "deneme":
@@ -3878,11 +3915,24 @@ def yonetim_sinavlar():
                 (request.form.get("sinif") or "").strip() or None,
             )
             flash(f"{adet} öğrencinin sınav kaydı silindi." if adet else "Silinecek kayıt bulunamadı.", "success" if adet else "warning")
+        elif islem == "deneme_geri_al":
+            adet = deneme_grup_geri_al(
+                (request.form.get("ad") or "").strip(),
+                (request.form.get("tarih") or "")[:10],
+                request.form.get("tur") or "",
+                (request.form.get("sinif") or "").strip() or None,
+            )
+            flash(f"{adet} öğrencinin sınav kaydı geri yüklendi." if adet else "Geri yüklenecek kayıt bulunamadı.", "success" if adet else "warning")
         elif islem == "optik":
             if lgs_optik.sinav_sil(request.form.get("sinav_id", type=int) or 0):
                 flash("Soru testi ve sonuçları silindi.", "success")
             else:
                 flash("Soru testi bulunamadı.", "warning")
+        elif islem == "optik_geri_al":
+            if lgs_optik.sinav_geri_al(request.form.get("sinav_id", type=int) or 0):
+                flash("Soru testi geri yüklendi.", "success")
+            else:
+                flash("Geri yüklenecek soru testi bulunamadı.", "warning")
         elif islem == "sekiz":
             if (request.form.get("onay") or "").strip() != "SIL":
                 flash("Tümünü silmek için kutuya SIL yazın.", "warning")
@@ -3892,10 +3942,14 @@ def yonetim_sinavlar():
         else:
             abort(400)
         return redirect(url_for("yonetim_sinavlar"))
+    silinen_optikler = [s for s in lgs_optik.sinavlari_listele(silinenler_dahil=True) if s.get("silindi_at")]
+    silinen_gruplar = [g for g in deneme_gruplari(silinenler_dahil=True) if g.get("silindi_at")]
     return render_template(
         "yonetim_sinav.html",
         gruplar=deneme_gruplari(),
         optikler=lgs_optik.sinavlari_listele(),
+        silinen_gruplar=silinen_gruplar,
+        silinen_optikler=silinen_optikler,
     )
 
 
@@ -4912,51 +4966,112 @@ def veli_analizler():
     return render_template('veli_analizler.html')
 
 
+def _lgs_evde_render_hata(hata_mesaji: str, form_data: dict, gecici_pdf: str = ""):
+    flash(hata_mesaji, "warning")
+    oid = session.get("ogretmen_id")
+    if not oid:
+        return redirect(url_for("lgs", ekran="evde"))
+    siniflar = [
+        s for s in (ogretmen_siniflari(oid) or aktif_sube_siniflari())
+        if sinif_seviyesi(s) == 8
+    ] or [s for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8]
+    gruplar = [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in siniflar]
+    harita = lgs_tempo_harita()
+    ay_harita = {}
+    for grup in gruplar:
+        for ogrenci_satir in grup["ogrenciler"]:
+            ogrenci_satir["tempo"] = harita.get(int(ogrenci_satir["id"]), "")
+            ay_harita[int(ogrenci_satir["id"])] = lgs_ay_durum(int(ogrenci_satir["id"]))
+    return render_template(
+        "lgs.html",
+        gruplar=gruplar,
+        ogrenci=None,
+        veli=False,
+        tempo_adlari=TEMPO_AD,
+        aylar=LGS_AYLAR,
+        ay_harita=ay_harita,
+        optik_sinavlar=_lgs_optik_paketi()[0],
+        bugun=test_window.now().date().isoformat(),
+        lgs_dersler=LGS_DERSLER,
+        ekran="evde",
+        evde_form=form_data,
+        gecici_pdf=gecici_pdf,
+    ), 422
+
+
 def _lgs_optik_ekle():
+    from pathlib import Path
+    from uuid import uuid4
     dosya = request.files.get("pdf")
-    anahtar = lgs_optik.anahtar_oku(request.form.get("anahtar") or "")
+    gecici_pdf = (request.form.get("gecici_pdf") or "").strip()
+    secenekler = (request.form.get("secenekler") or request.form.get("choices") or "ABCD").strip().upper()
+    if secenekler not in ("ABCD", "ABCDE"):
+        secenekler = "ABCD"
     ad = (request.form.get("ad") or "").strip()
-    try:
-        tarih = test_window.validate_schedule_date(request.form.get("tarih"))
-    except ValueError as exc:
-        flash(str(exc), "warning")
-        return redirect(url_for("lgs", ekran="evde"))
-    if not ad:
-        flash("Sınav adı yazın.", "warning")
-        return redirect(url_for("lgs", ekran="evde"))
-    if not anahtar:
-        flash("Cevap anahtarına her soru için A, B, C veya D yazın. En fazla 90 soru.", "warning")
-        return redirect(url_for("lgs", ekran="evde"))
-    count=request.form.get('soru_sayisi',type=int)
-    if count is not None and (not 1<=count<=90 or len(anahtar)!=count):
-        flash('Cevap sayısı soru sayısıyla aynı olmalı. Eksik cevapları kontrol edin.', 'warning')
-        return redirect(url_for('lgs',ekran='evde'))
-    if not dosya or not (dosya.filename or "").lower().endswith(".pdf"):
-        flash("Soruların PDF dosyasını seçin.", "warning")
-        return redirect(url_for("lgs", ekran="evde"))
-    ham = dosya.read(lgs_optik.AZAMI_BOYUT + 1)
-    if not ham.startswith(b"%PDF-") or len(ham) > lgs_optik.AZAMI_BOYUT:
-        flash("PDF boş, bozuk veya 20 MB'dan büyük.", "warning")
-        return redirect(url_for("lgs", ekran="evde"))
     tur = request.form.get("tur") or "deneme"
     if tur not in ("yaprak", "deneme"):
         tur = "deneme"
     ders = (request.form.get("ders") or "").strip()
     sinif_id = request.form.get("sinif_id", type=int)
+    count = request.form.get("soru_sayisi", type=int)
+    raw_anahtar = request.form.get("anahtar") or ""
+    form_data = {
+        "ad": ad,
+        "tur": tur,
+        "ders": ders,
+        "sinif_id": sinif_id,
+        "tarih": request.form.get("tarih") or "",
+        "soru_sayisi": count if count is not None else 20,
+        "anahtar": raw_anahtar,
+        "secenekler": secenekler,
+        "yanlis_goturme": request.form.get("yanlis_goturme", type=int) or 3,
+    }
+    # Geçici PDF kontrolü / kaydı
+    ham = b""
+    if dosya and (dosya.filename or "").lower().endswith(".pdf"):
+        ham = dosya.read(lgs_optik.AZAMI_BOYUT + 1)
+        if ham.startswith(b"%PDF-") and len(ham) <= lgs_optik.AZAMI_BOYUT:
+            gecici_ad = "tmp_" + uuid4().hex + ".pdf"
+            (lgs_optik.klasor() / gecici_ad).write_bytes(ham)
+            gecici_pdf = gecici_ad
+    elif gecici_pdf and gecici_pdf.startswith("tmp_") and (lgs_optik.klasor() / Path(gecici_pdf).name).is_file():
+        ham = (lgs_optik.klasor() / Path(gecici_pdf).name).read_bytes()
+
+    try:
+        tarih = test_window.validate_schedule_date(request.form.get("tarih"))
+    except ValueError as exc:
+        return _lgs_evde_render_hata(str(exc), form_data, gecici_pdf)
+    if not ad:
+        return _lgs_evde_render_hata("Sınav adı yazın.", form_data, gecici_pdf)
+    anahtar = lgs_optik.anahtar_oku(raw_anahtar, secenekler=secenekler)
+    secenek_metin = "A, B, C, D veya E" if secenekler == "ABCDE" else "A, B, C veya D"
+    if not anahtar:
+        return _lgs_evde_render_hata(f"Cevap anahtarına her soru için {secenek_metin} yazın. En fazla 90 soru.", form_data, gecici_pdf)
+    if count is not None and (not 1 <= count <= 90 or len(anahtar) != count):
+        return _lgs_evde_render_hata("Cevap sayısı soru sayısıyla aynı olmalı. Eksik cevapları kontrol edin.", form_data, gecici_pdf)
+    if not ham:
+        if not dosya or not (dosya.filename or "").lower().endswith(".pdf"):
+            return _lgs_evde_render_hata("Soruların PDF dosyasını seçin.", form_data, gecici_pdf)
+        return _lgs_evde_render_hata("PDF boş, bozuk veya 20 MB'dan büyük.", form_data, gecici_pdf)
+    if not ham.startswith(b"%PDF-") or len(ham) > lgs_optik.AZAMI_BOYUT:
+        return _lgs_evde_render_hata("PDF boş, bozuk veya 20 MB'dan büyük.", form_data, gecici_pdf)
     if tur == "yaprak":
         siniflar = [
             s for s in (ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari())
             if sinif_seviyesi(s) == 8
         ] or [s for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8]
         if ders not in LGS_DERSLER or sinif_id not in {int(s["id"]) for s in siniflar}:
-            flash("Yaprak test için sınıf ve ders seçin.", "warning")
-            return redirect(url_for("lgs", ekran="evde"))
+            return _lgs_evde_render_hata("Yaprak test için sınıf ve ders seçin.", form_data, gecici_pdf)
     else:
         ders, sinif_id = "", None
-    from uuid import uuid4
     ad_dosya = uuid4().hex + ".pdf"
     (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
-    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), tur, ders, sinif_id)
+    if gecici_pdf and gecici_pdf.startswith("tmp_"):
+        (lgs_optik.klasor() / Path(gecici_pdf).name).unlink(missing_ok=True)
+    goturme = request.form.get("yanlis_goturme", type=int)
+    if goturme not in (0, 3, 4):
+        goturme = 3
+    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), tur, ders, sinif_id, yanlis_goturme=goturme, secenekler=secenekler)
     flash(f"{ad}: {len(anahtar)} soruluk {'yaprak test' if tur == 'yaprak' else 'deneme'} {tarih} günü 19.00–21.00 için kaydedildi. Cevap anahtarı {tarih} 21.00’de açılacak.", "success")
     return redirect(url_for("lgs", ekran="evde"))
 
@@ -7701,6 +7816,13 @@ from sayfa_sifirlama import register_sayfa_sifirlama
 register_sayfa_sifirlama(app, giris_zorunlu)
 from school_broadcast import register_broadcast
 register_broadcast(app, giris_zorunlu)
+from hizli_giris import register_hizli_giris
+register_hizli_giris(app, giris_zorunlu)
+import batch_optik
+try:
+    batch_optik.cleanup_expired_batches(force=True)
+except Exception:
+    pass
 _sekiz_sinav_temizligi_bir_kez()
 
 if __name__ == "__main__":

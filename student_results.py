@@ -63,6 +63,124 @@ def course_analysis(records, include_exams=False):
     return result
 
 
+def sinif_ders_toplu_kaydet(
+    sinif_id: int,
+    title: str,
+    when: str,
+    course: str,
+    count: int,
+    penalty: int,
+    form_data,
+    ogretmen_id: int | None = None,
+    key: list[str] | None = None,
+    satir_bazli: bool = False,
+) -> dict:
+    """Sınıf ders yaprak testini satır bazlı doğrulayıp tek transaction içinde kaydeder."""
+    from datetime import datetime
+    from metrik import net as metrik_net
+
+    title = (title or '').strip()[:80]
+    when = date.fromisoformat((when or '').strip()).isoformat()
+    course = (course or '').strip()
+    courses = school_courses()
+    if not title or course not in courses or not 1 <= int(count) <= 500 or int(penalty) not in (0, 3, 4):
+        raise ValueError('Deneme adı, ders, soru sayısı ve net kuralını seçin.')
+    count = int(count)
+    penalty = int(penalty)
+    students = db.sinif_ogrencileri(sinif_id)
+    hazir = []
+    bekleyen = []
+    for student in students:
+        sid = student['id']
+        durum = (form_data.get(f"durum_{sid}") or '').strip().upper()
+        if durum in ('K', 'KATILMADI'):
+            continue
+        raw_cevap = (form_data.get(f"cevap_{sid}") or '').strip()
+        if key and raw_cevap:
+            try:
+                marks = answer_letters(raw_cevap)
+                if len(marks) > count:
+                    raise ValueError(f"{student['ad_soyad']}: {len(marks)} cevap yazıldı, testte {count} soru var.")
+                marks += [''] * (count - len(marks))
+                rows = db.soru_durumlari(key, marks)
+                dogru = sum(r['durum'] == 'dogru' for r in rows)
+                yanlis = sum(r['durum'] == 'yanlis' for r in rows)
+                hazir.append((student, dogru, yanlis, marks))
+            except ValueError as err:
+                if satir_bazli:
+                    bekleyen.append({'ogrenci_id': sid, 'ad_soyad': student['ad_soyad'], 'neden': str(err)})
+                else:
+                    raise
+            continue
+        raw_dogru = (form_data.get(f"dogru_{sid}") or '').strip()
+        raw_yanlis = (form_data.get(f"yanlis_{sid}") or '').strip()
+        if raw_dogru == '' and raw_yanlis == '':
+            continue
+        if raw_dogru.upper() == 'K' or raw_yanlis.upper() == 'K':
+            continue
+        try:
+            dogru = int(raw_dogru or 0)
+            yanlis = int(raw_yanlis or 0)
+        except ValueError:
+            msg = f"{student['ad_soyad']}: doğru ve yanlış sayı olmalı."
+            if satir_bazli:
+                bekleyen.append({'ogrenci_id': sid, 'ad_soyad': student['ad_soyad'], 'neden': msg})
+                continue
+            raise ValueError(msg)
+        if min(dogru, yanlis) < 0 or dogru + yanlis > count:
+            msg = f"{student['ad_soyad']}: doğru ve yanlış toplamı {count} soruyu geçemez."
+            if satir_bazli:
+                bekleyen.append({'ogrenci_id': sid, 'ad_soyad': student['ad_soyad'], 'neden': msg})
+                continue
+            raise ValueError(msg)
+        hazir.append((student, dogru, yanlis, None))
+
+    if not hazir and not (satir_bazli and bekleyen):
+        raise ValueError('En az bir öğrencinin cevaplarını ya da doğru ve yanlışını yazın. Boş satırlar kayda girmez.')
+
+    kaydedilen = []
+    con = db._conn()
+    db._lgs_init(con)
+    try:
+        with con:
+            for student, dogru, yanlis, marks in hazir:
+                bos = count - dogru - yanlis
+                net_val = metrik_net(dogru, yanlis, penalty)
+                cur = con.execute(
+                    "INSERT INTO lgs_deneme (ogrenci_id, ad, tarih, ogretmen_id, tur) VALUES (?, ?, ?, ?, 'ders')",
+                    (int(student['id']), title, when, ogretmen_id),
+                )
+                deneme_id = int(cur.lastrowid)
+                con.execute(
+                    """INSERT INTO lgs_deneme_ders
+                       (deneme_id, ders, soru_sayisi, dogru, yanlis, bos, net, yanlis_goturme, anahtar, isaretler)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        deneme_id, course, count, dogru, yanlis, bos, net_val, penalty,
+                        json.dumps(key) if key else None,
+                        json.dumps(marks) if marks else None,
+                    ),
+                )
+                kaydedilen.append({
+                    'ogrenci_id': int(student['id']),
+                    'ad_soyad': student['ad_soyad'],
+                    'deneme_id': deneme_id,
+                    'dogru': dogru,
+                    'yanlis': yanlis,
+                    'bos': bos,
+                    'net': net_val,
+                })
+    finally:
+        con.close()
+
+    for item in kaydedilen:
+        try:
+            db.veli_haber_ekle(item['ogrenci_id'], f'{title}: sonuç kaydedildi. Ders analizinizi inceleyebilirsiniz.', sonuc_id=item['deneme_id'])
+        except Exception:
+            pass
+    return {'ok': bool(kaydedilen), 'kaydedilen': kaydedilen, 'bekleyen': bekleyen}
+
+
 def register_results(app, login_required, accessible):
     @app.context_processor
     def results_context():
@@ -185,48 +303,24 @@ def register_results(app, login_required, accessible):
             raise ValueError('Cevap anahtarı en fazla 500 soru olabilir.')
         count = len(key) if key else int(request.form.get('soru_sayisi', ''))
         penalty = int(request.form.get('yanlis_goturme', ''))
-        courses = school_courses()
-        if not title or course not in courses or not 1 <= count <= 500 or penalty not in (0, 3, 4):
-            raise ValueError('Deneme adı, ders, soru sayısı ve net kuralını seçin.')
-        students = db.sinif_ogrencileri(sinif_id)
-        hazir = []
-        for student in students:
-            raw_cevap = (request.form.get(f"cevap_{student['id']}") or '').strip()
-            if key and raw_cevap:
-                try:
-                    marks = answer_letters(raw_cevap)
-                except ValueError as error:
-                    raise ValueError(f"{student['ad_soyad']}: {error}")
-                if len(marks) > count:
-                    raise ValueError(f"{student['ad_soyad']}: {len(marks)} cevap yazıldı, testte {count} soru var.")
-                marks += [''] * (count - len(marks))
-                rows = db.soru_durumlari(key, marks)
-                dogru = sum(r['durum'] == 'dogru' for r in rows)
-                yanlis = sum(r['durum'] == 'yanlis' for r in rows)
-                hazir.append((student, dogru, yanlis, marks))
-                continue
-            raw_dogru = (request.form.get(f"dogru_{student['id']}") or '').strip()
-            raw_yanlis = (request.form.get(f"yanlis_{student['id']}") or '').strip()
-            if raw_dogru == '' and raw_yanlis == '':
-                continue
-            dogru = int(raw_dogru or 0)
-            yanlis = int(raw_yanlis or 0)
-            if min(dogru, yanlis) < 0 or dogru + yanlis > count:
-                raise ValueError(f"{student['ad_soyad']}: doğru ve yanlış toplamı {count} soruyu geçemez.")
-            hazir.append((student, dogru, yanlis, None))
-        if not hazir:
-            raise ValueError('En az bir öğrencinin cevaplarını ya da doğru ve yanlışını yazın. Boş satırlar kayda girmez.')
-        for student, dogru, yanlis, marks in hazir:
-            saved = db.lgs_deneme_ekle(
-                student['id'], title, when,
-                [dict(ders=course, soru_sayisi=count, dogru=dogru, yanlis=yanlis, bos=count - dogru - yanlis, yanlis_goturme=penalty,
-                      anahtar=key or None, isaretler=marks)],
-                ogretmen_id=session['ogretmen_id'], tur='ders',
-            )
-            if not saved.get('ok'):
-                raise ValueError(saved.get('hata') or f"{student['ad_soyad']} kaydedilemedi.")
-            db.veli_haber_ekle(student['id'], f'{title}: sonuç kaydedildi. Ders analizinizi inceleyebilirsiniz.', sonuc_id=saved['id'])
-        flash(f'{title}: {len(hazir)} öğrenciye yazıldı. Boş bırakılan satırlar kayda girmedi.', 'success')
+        satir_bazli = request.form.get('satir_bazli') == '1'
+        res = sinif_ders_toplu_kaydet(
+            sinif_id=sinif_id,
+            title=title,
+            when=when,
+            course=course,
+            count=count,
+            penalty=penalty,
+            form_data=request.form,
+            ogretmen_id=session.get('ogretmen_id'),
+            key=key or None,
+            satir_bazli=satir_bazli,
+        )
+        if res['bekleyen']:
+            hatalar = '; '.join(b['neden'] for b in res['bekleyen'])
+            flash(f"{title}: {len(res['kaydedilen'])} öğrenciye yazıldı. Hatalı satırlar bekletildi: {hatalar}", 'warning')
+        else:
+            flash(f"{title}: {len(res['kaydedilen'])} öğrenciye yazıldı. Boş bırakılan satırlar kayda girmedi.", 'success')
         return redirect(url_for('sonuclar', sinif=sinif_id))
 
     @app.route('/sonuclar', methods=['GET', 'POST'])

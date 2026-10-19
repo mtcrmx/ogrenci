@@ -44,5 +44,29 @@
     <p class="app-muted">Yüklü soru testi yok.</p>
     {% endfor %}
   </section>
+  {% if silinen_gruplar or silinen_optikler %}
+  <section class="app-card">
+    <h2>Silinen sınavlar (Geri yükle)</h2>
+    {% for g in silinen_gruplar %}
+    <form method="post" class="app-row" style="justify-content:space-between;border-top:1px solid #e5dce8;padding:10px 0">
+      <input type="hidden" name="islem" value="deneme_geri_al">
+      <input type="hidden" name="ad" value="{{ g.ad }}">
+      <input type="hidden" name="tarih" value="{{ g.tarih }}">
+      <input type="hidden" name="tur" value="{{ g.tur }}">
+      <input type="hidden" name="sinif" value="{{ g.sinif_adi }}">
+      <span>{{ g.tarih }} · {{ g.sinif_adi }} · {{ g.ad }} ({{ g.adet }} öğrenci) · Silindi: {{ g.silindi_at }}</span>
+      <button class="app-button" type="submit">Geri yükle</button>
+    </form>
+    {% endfor %}
+    {% for s in silinen_optikler %}
+    <form method="post" class="app-row" style="justify-content:space-between;border-top:1px solid #e5dce8;padding:10px 0">
+      <input type="hidden" name="islem" value="optik_geri_al">
+      <input type="hidden" name="sinav_id" value="{{ s.id }}">
+      <span>{{ s.tarih }} · {{ s.sinif_adi or '8. sınıflar' }} · {{ s.ad }} ({{ s.soru_sayisi }} soru) · Silindi: {{ s.silindi_at }}</span>
+      <button class="app-button" type="submit">Geri yükle</button>
+    </form>
+    {% endfor %}
+  </section>
+  {% endif %}
 </main>
 {% endblock %}

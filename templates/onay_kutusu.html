@@ -12,6 +12,18 @@
   </header>
   {% with messages=get_flashed_messages(with_categories=true) %}{% for cat,message in messages %}<p class="app-notice {{ 'app-notice--success' if cat == 'success' else 'app-notice--error' }}" role="status">{{ message }}</p>{% endfor %}{% endwith %}
 
+  {% if odevler or gorevler or gunluk %}
+  <form method="post" action="{{ url_for('onay_kutusu_toplu') }}" id="toplu-onay-form" class="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
+    <label class="flex items-center gap-2 font-bold">
+      <input type="checkbox" id="tumunu-sec"> Tüm bekleyen kayıtları seç
+    </label>
+    <div class="flex gap-2">
+      <button type="submit" name="karar" value="onay" class="rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white">Seçilenleri onayla</button>
+      <button type="submit" name="karar" value="reddet" class="rounded-xl bg-rose-700 px-3 py-2 text-xs font-black text-white">Seçilenleri reddet</button>
+    </div>
+  </form>
+  {% endif %}
+
   <section class="mt-4 space-y-2">
     <h2 class="font-black">Tamamlanan testler · {{ testler|length }}</h2>
     <p class="text-sm text-slate-600">Verdiğiniz ev testleri, okulda yaprak testler ve soru bazlı denemeler. Tüm tarihlerdeki bekleyen teslimler burada görünür. Önce içeriği açıp inceleyin, ardından onaylayın.</p>
@@ -29,7 +41,10 @@
     <h2 class="font-black">Ödev · {{ odevler|length }}</h2>
     {% for o in odevler %}
     <article class="rounded-2xl border {{ 'border-rose-300 bg-rose-50' if o.gecikti else 'border-slate-200 bg-white' }} p-4 text-sm">
-      <div class="font-black">{{ o.ad_soyad }} <span class="font-bold text-slate-500">{{ o.sinif_adi }} · No {{ o.ogr_no }}</span></div>
+      <label class="flex items-center gap-2 font-black">
+        <input type="checkbox" name="secim" value="odev:{{ o.sinif_id }}:{{ o.ogrenci_id }}" form="toplu-onay-form" data-toplu-secim>
+        {{ o.ad_soyad }} <span class="font-bold text-slate-500">{{ o.sinif_adi }} · No {{ o.ogr_no }}</span>
+      </label>
       <p class="mt-1 text-slate-600">{{ o.sinif_ders or o.odev_ders or 'Ders yok' }} · {{ o.sinif_aciklama or o.odev_not or 'Açıklama yok' }}</p>
       <p class="text-xs text-slate-400">{{ o.odev_bildirim_tarih or 'Tarih yok' }}{% if o.gecikti %} · 3 günü geçti{% endif %}</p>
       <div class="mt-2 flex flex-wrap gap-2">
@@ -53,7 +68,10 @@
     <h2 class="font-black">LGS görevi · {{ gorevler|length }}</h2>
     {% for g in gorevler %}
     <article class="rounded-2xl border {{ 'border-rose-300 bg-rose-50' if g.gecikti else 'border-slate-200 bg-white' }} p-4 text-sm">
-      <div class="font-black">{{ g.ad_soyad }} <span class="font-bold text-slate-500">{{ g.sinif_adi }}</span></div>
+      <label class="flex items-center gap-2 font-black">
+        <input type="checkbox" name="secim" value="lgs:{{ g.ogrenci_id }}:{{ g.id }}" form="toplu-onay-form" data-toplu-secim>
+        {{ g.ad_soyad }} <span class="font-bold text-slate-500">{{ g.sinif_adi }}</span>
+      </label>
       <p class="mt-1">{{ g.gun_adi }} · {{ g.ders }} · {{ g.konu or 'Konu yok' }} · {{ g.hedef_soru }} soru</p>
       <div class="mt-2 flex gap-2">
         <form method="post"><input type="hidden" name="tip" value="lgs"><input type="hidden" name="ogrenci_id" value="{{ g.ogrenci_id }}"><input type="hidden" name="gorev_id" value="{{ g.id }}"><input type="hidden" name="karar" value="onay"><button class="min-h-11 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white">Onayla</button></form>
@@ -86,7 +104,10 @@
     <p class="text-xs text-slate-500">Öğrencinin yazdığı rakam, siz gördüm demeden tempo hesabına girmez.</p>
     {% for g in gunluk %}
     <article class="rounded-2xl border {{ 'border-rose-300 bg-rose-50' if g.gecikti else 'border-slate-200 bg-white' }} p-4 text-sm">
-      <div class="font-black">{{ g.ad_soyad }} <span class="font-bold text-slate-500">{{ g.sinif_adi }}</span></div>
+      <label class="flex items-center gap-2 font-black">
+        <input type="checkbox" name="secim" value="gunluk:{{ g.id }}" form="toplu-onay-form" data-toplu-secim>
+        {{ g.ad_soyad }} <span class="font-bold text-slate-500">{{ g.sinif_adi }}</span>
+      </label>
       <p class="mt-1">{{ g.tarih }} · {{ g.ders }} · {{ g.cozulen }} soru · {{ g.dogru }}/{{ g.yanlis }} · {{ g.sayfa }} sayfa</p>
       <div class="mt-2 flex gap-2">
         <form method="post"><input type="hidden" name="tip" value="gunluk"><input type="hidden" name="kayit_id" value="{{ g.id }}"><input type="hidden" name="karar" value="gor"><button class="min-h-11 rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">Gördüm</button></form>
@@ -97,5 +118,17 @@
     <p class="text-sm text-slate-500">Görülmemiş günlük kayıt yok.</p>
     {% endfor %}
   </section>
+  <script>
+  (function(){
+    var tumu = document.getElementById('tumunu-sec');
+    if (tumu) {
+      tumu.addEventListener('change', function(){
+        document.querySelectorAll('[data-toplu-secim]').forEach(function(cb){
+          cb.checked = tumu.checked;
+        });
+      });
+    }
+  })();
+  </script>
 </main>
 {% endblock %}
