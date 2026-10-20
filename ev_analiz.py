@@ -35,9 +35,11 @@ def connection():
     return con
 
 def visible(exam, student):
-    # Existing home tests are available to their class (or any eighth grade).
+    # Class-bound tests are visible to that class; tests without a class are for all eighth grades.
     from moduller import seviye as sinif_seviyesi
-    return (exam.get('kaynak')=='kamera' or sinif_seviyesi(student) == 8) and (not exam.get('sinif_id') or int(exam['sinif_id']) == int(student['sinif_id']))
+    if exam.get('sinif_id'):
+        return int(exam['sinif_id']) == int(student['sinif_id'])
+    return exam.get('kaynak') == 'kamera' or sinif_seviyesi(student) == 8
 
 def student_row(oid):
     con = db._conn()

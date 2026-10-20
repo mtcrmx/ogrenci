@@ -1,0 +1,94 @@
+<div class="es" style="margin-top:16px">
+  <section class="es-card" aria-labelledby="es-sorular">
+    <h2 id="es-sorular">Sorular ve optik</h2>
+    {% if not optik_sinavlar %}
+    <p class="es-empty" style="margin-top:12px">Öğretmen henüz soru PDF’i yüklemedi.</p>
+    {% else %}
+    {% if veli %}
+    {% set cozulen = optik_sinavlar|selectattr('sonuc')|list %}
+    {% set bekleyen = optik_sinavlar|rejectattr('sonuc')|list %}
+    {% if bekleyen %}
+    <p class="es-label">Çözülecek</p>
+    <div class="es-pick">
+      {% for s in bekleyen %}
+      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="{{ 'is-on' if optik_secili and optik_secili.id == s.id else '' }}">
+        <span><b>{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</b><small>{{ s.tarih }} · {{ s.soru_sayisi }} soru · henüz çözülmedi</small></span>
+        <span class="es-chip es-chip--warn">Bekliyor</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if cozulen %}
+    <p class="es-label">Yapılan testler</p>
+    <div class="es-pick">
+      {% for s in cozulen %}
+      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="{{ 'is-on' if optik_secili and optik_secili.id == s.id else '' }}">
+        <span><b>{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</b><small>{{ s.tarih }} · net {{ s.sonuc.net }} · doğru {{ s.sonuc.dogru }} · yanlış {{ s.sonuc.yanlis }} · boş {{ s.sonuc.bos }}</small></span>
+        <span class="es-chip es-chip--ok">Bitti</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="es-meta" style="margin-top:12px">
+      {% for s in optik_sinavlar %}
+      <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='soru', sinav=s.id) }}" class="es-chip {{ 'es-chip--acc' if optik_secili and optik_secili.id == s.id else '' }}">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+  </section>
+
+  {% if optik_sinavlar %}
+  {% if not optik_secili %}
+  <p class="es-empty">Görmek istediğin sınavı seç.</p>
+  {% else %}
+  <section class="es-card" aria-labelledby="es-secili">
+    <div class="es-test-top">
+      <h2 id="es-secili">{{ optik_secili.ad }}</h2>
+      <div class="es-meta"><span class="es-chip es-chip--acc">{{ optik_secili.tarih }}</span><span class="es-chip">{{ optik_secili.soru_sayisi }} soru</span></div>
+    </div>
+    {% if veli and optik_secili.window.home %}
+    <p class="app-notice" role="status">{{ optik_secili.window.message }}</p>
+    {% if optik_secili.window.released %}<details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in optik_secili.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>{% endif %}
+    {% if optik_secili.window.open %}<script>
+    (function(){const expires=performance.now()+{{ optik_secili.window.remaining|tojson }}*1000;function closeTest(){if(performance.now()>=expires){document.querySelectorAll('[data-home-test],iframe[title$=" soruları"]').forEach(el=>el.remove());location.reload();}}setInterval(closeTest,1000);document.addEventListener('visibilitychange',closeTest);})();
+    </script>{% endif %}
+    {% endif %}
+    {% if not veli or optik_secili.window.open %}
+    <iframe class="es-frame" src="{{ url_for('lgs_soru_goruntule', sinav_id=optik_secili.id) }}" title="{{ optik_secili.ad }} soruları"></iframe>
+    {% endif %}
+    {% if optik_secili.sonuc %}
+    {% if optik_secili.analiz %}
+    {% with sinav=optik_secili %}{% include '_soru_grafik.html' %}{% endwith %}
+    {% else %}
+    <div class="es-meta" style="margin-top:12px"><span class="es-chip es-chip--ok">Doğru {{ optik_secili.sonuc.dogru }}</span><span class="es-chip">Yanlış {{ optik_secili.sonuc.yanlis }}</span><span class="es-chip">Boş {{ optik_secili.sonuc.bos }}</span><span class="es-chip es-chip--acc">Net {{ optik_secili.sonuc.net }}</span></div>
+    {% endif %}
+    {% elif optik_secili.kaynak == 'kamera' %}
+    <p class="es-note" style="margin-top:12px">Bu test okulda kâğıt üzerinde çözülür. Öğretmen optiği okuttuğunda sonuçlarınız burada görünecek.</p>
+    {% elif veli and optik_secili.window.open %}
+    <form method="post" action="{{ url_for('veli_lgs') }}" data-home-test style="margin-top:14px">
+      <input type="hidden" name="islem" value="optik_bitir">
+      <input type="hidden" name="bolum" value="soru">
+      <input type="hidden" name="sinav_id" value="{{ optik_secili.id }}">
+      <p class="es-step-title"><span>✓</span> Optik form</p>
+      <div class="es-optik">
+        {% for n in range(optik_secili.soru_sayisi) %}
+        <fieldset>
+          <legend>{{ n + 1 }}</legend>
+          {% for harf in (optik_secili.secenekler or 'ABCD') %}
+          <label><input type="radio" name="c{{ n }}" value="{{ harf }}" aria-label="{{ n + 1 }}. soru {{ harf }}"><span>{{ harf }}</span></label>
+          {% endfor %}
+        </fieldset>
+        {% endfor %}
+      </div>
+      <div class="es-actions" style="margin-top:14px"><button class="es-btn">Bitir</button></div>
+    </form>
+    {% elif not veli %}
+    <p class="es-sub" style="margin-top:12px">Bu öğrenci optiği henüz bitirmedi.</p>
+    <p class="es-sub" style="font-family:ui-monospace,monospace">Anahtar: {{ optik_secili.cevaplar|join('') }}</p>
+    {% endif %}
+  </section>
+  {% endif %}
+  {% endif %}
+</div>

@@ -26,6 +26,9 @@ MODULLER: dict[int | str, set[str]] = {
         "mesaj",
         "karne",
         "rozet",
+        "deneme",
+        "evde_test",
+        "optik",
     },
 }
 

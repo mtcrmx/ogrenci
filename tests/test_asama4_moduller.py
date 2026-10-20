@@ -82,7 +82,8 @@ class TestAsama4Moduller(unittest.TestCase):
             self.assertTrue(modul_var_mi(s, "haftalik_takip"))
             self.assertTrue(modul_var_mi(s, "yaprak_test"))
             self.assertFalse(modul_var_mi(s, "lgs"))
-            self.assertFalse(modul_var_mi(s, "deneme"))
+            self.assertTrue(modul_var_mi(s, "deneme"))
+            self.assertTrue(modul_var_mi(s, "evde_test"))
 
     def test_sekizinci_sinif_veli_kitap_odev_rapor_yonlendirme(self):
         client = w.app.test_client()
@@ -101,16 +102,20 @@ class TestAsama4Moduller(unittest.TestCase):
         resp_deneme_8c = client.get("/veli/deneme-analiz")
         self.assertEqual(resp_deneme_8c.status_code, 200)
 
-    def test_yedinci_sinif_veli_deneme_analiz_yonlendirme(self):
+    def test_yedinci_sinif_veli_deneme_ve_evde_soru(self):
         client = w.app.test_client()
         with client.session_transaction() as sess:
             sess["veli_ogrenci_id"] = self.ogr_7a["id"]
         resp = client.get("/veli/deneme-analiz")
-        self.assertIn(resp.status_code, (301, 302))
-        self.assertIn("/veli", resp.headers["Location"])
+        self.assertEqual(resp.status_code, 200)
+        soru = client.get("/veli/lgs", query_string={"bolum": "soru"})
+        self.assertEqual(soru.status_code, 200)
+        self.assertIn("Sorular ve optik", soru.get_data(as_text=True))
+        program = client.get("/veli/lgs", query_string={"bolum": "program"})
+        self.assertIn(program.status_code, (301, 302))
 
         analiz_html = client.get("/veli/analizler").get_data(as_text=True)
-        self.assertNotIn("Deneme analizini aç", analiz_html)
+        self.assertIn("Deneme analizini aç", analiz_html)
         self.assertIn("Okul yaprak testi", analiz_html)
 
     def test_ogretmen_8_sinif_analiz_ve_rapor_yonlendirme(self):

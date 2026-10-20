@@ -50,7 +50,6 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
             {"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("sinif_analiz_v2", sinif=sinif_id), "endpoint": "sinif_analiz_v2", "grup": "Analizler"},
             {"id": "soru_sinif_analiz", "label": "Soru ve sınıf analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Analizler"},
             {"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Analizler"},
-            {"id": "kazanim", "label": "Kazanımlar", "icon": "▤", "href": _guvenli_url("lgs_kazanim.index"), "endpoint": "lgs_kazanim.index", "grup": "Analizler"},
         ])
         if rol == "yonetici":
             items.extend(_yonetici_ogeleri())
@@ -64,6 +63,10 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
     items.append({"id": "hizli_giris", "label": "Hızlı giriş", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "Takip"})
     if "yaprak_test" in moduller and not lgs_var:
         items.append({"id": "okul_yaprak", "label": "Okulda yaprak test", "icon": "▤", "href": _guvenli_url("kamera_test.index"), "endpoint": "kamera_test.index", "grup": "Takip"})
+    if "evde_test" in moduller:
+        items.append({"id": "evde_test", "label": "Evde sorular", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde", sinif=sinif_id), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "Deneme ve evde soru"})
+    if "deneme" in moduller:
+        items.append({"id": "deneme_analiz", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("deneme_analiz"), "endpoint": "deneme_analiz", "grup": "Deneme ve evde soru"})
     items.append({"id": "kayitlarim", "label": "Geçmiş kayıtlar", "icon": "✎", "href": _guvenli_url("teacher_records"), "endpoint": "teacher_records", "grup": "Takip"})
     items.append({"id": "islem_gecmisi", "label": "İşlem geçmişi", "icon": "↶", "href": _guvenli_url("islem_gecmisi"), "endpoint": "islem_gecmisi", "grup": "Takip"})
 
@@ -79,8 +82,6 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
             items.append({"id": "evde_test", "label": "Ev testleri", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde"), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "LGS merkezi"})
         if "yaprak_test" in moduller:
             items.append({"id": "okul_yaprak", "label": "Yaprak test", "icon": "▤", "href": _guvenli_url("kamera_test.index"), "endpoint": "kamera_test.index", "grup": "LGS merkezi"})
-        if "lgs_analiz" in moduller:
-            items.append({"id": "kazanim", "label": "Kazanımlar", "icon": "▤", "href": _guvenli_url("lgs_kazanim.index"), "endpoint": "lgs_kazanim.index", "grup": "LGS merkezi"})
         if "siralama" in moduller:
             items.append({"id": "siralama", "label": "Sıralama", "icon": "▥", "href": _guvenli_url("lgs", sekme="siralama", sr_olcut="test"), "endpoint": "lgs", "args": {"sekme": "siralama"}, "grup": "LGS merkezi"})
 
@@ -130,6 +131,10 @@ def veli_menusu(seviye: int = 8) -> list[dict]:
     elif "odev" in moduller or "kitap" in moduller:
         items.append({"id": "odev_kitap", "label": "Ödev ve kitap", "icon": "▤", "href": _guvenli_url("veli_panel") + "#hafta", "endpoint": "veli_panel", "parent_nav": "hafta"})
         items.append({"id": "kitap_okuma", "label": "Kitap okuma ve özet", "icon": "✎", "href": _guvenli_url("veli_kitap_okuma"), "endpoint": "veli_kitap_okuma"})
+    if "evde_test" in moduller:
+        items.append({"id": "sorular_optik", "label": "Evde sorular", "icon": "✦", "href": _guvenli_url("veli_lgs", bolum="soru"), "endpoint": "veli_lgs"})
+    if "deneme" in moduller:
+        items.append({"id": "deneme_sonuc", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("veli_deneme_analiz"), "endpoint": "veli_deneme_analiz"})
 
     items.append({"id": "gelisim_sonuclar", "label": "Gelişim ve sonuçlar", "icon": "◈", "href": _guvenli_url("veli_gelisim"), "endpoint": "veli_gelisim"})
     items.append({"id": "mesajlar", "label": "Mesajlar", "icon": "✉", "href": _guvenli_url("veli_panel") + "#mesajlar", "endpoint": "veli_panel", "parent_nav": "mesajlar"})

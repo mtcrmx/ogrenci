@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Deneme analizi{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='evde_sorular.css') }}?v=1">{% endblock %}
 {% block body %}{% if session.get('ogretmen_yetki')=='rehber' %}<div class="page-content"><a class="app-button" href="{{ url_for('rehberlik_lgs') }}">← Rehberlik LGS takip merkezi</a></div>{% endif %}
-<main class="mx-auto max-w-6xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
+<main class="es-page mx-auto max-w-6xl px-3 pb-28 pt-4 text-slate-800 sm:px-4">
   <style>
     @keyframes deneme-belir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
     @keyframes deneme-dol { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -9,17 +10,19 @@
     .d-cubuk { transform-origin: left center; animation: deneme-dol .8s ease both; }
   </style>
   {% if not secili %}
-  <section class="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-    <h1 class="text-2xl font-black">Deneme analizi</h1>
-    <p class="mt-2 text-sm text-slate-500">Henüz deneme yok. Yalnız deneme olarak girilen sonuçlar burada görünür.</p>
-    {% if not veli %}<a class="mt-4 inline-block rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white" href="{{ url_for('lgs') }}">LGS</a>{% else %}
-    <a class="mt-4 inline-block text-sm font-black text-sky-800" href="{{ url_for('veli_panel') }}">Veli paneli</a>{% endif %}
-  </section>
+  <div class="es"><section class="es-card es-head">
+    <div>
+      <p class="es-eyebrow">Deneme ve evde soru</p>
+      <h1>Deneme analizi</h1>
+      <p class="es-sub">Henüz deneme yok. Yalnız deneme olarak girilen sonuçlar burada görünür.</p>
+    </div>
+    <div class="es-actions">{% if not veli %}<a class="es-btn" href="{{ url_for('ort_giris') }}">Sonuç girişi</a><a class="es-btn es-btn--ghost" href="{{ url_for('lgs', ekran='evde') }}">Evde sorular</a>{% else %}<a class="es-btn es-btn--ghost" href="{{ url_for('veli_panel') }}">Veli paneli</a>{% endif %}</div>
+  </section></div>
   {% else %}
-  <header class="d-kart rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
-    <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">{{ 'Veli analizi' if veli else 'Öğretmen analizi' }}</p>
+  <header class="d-kart es-card es-deneme-head">
+    <p class="es-eyebrow">{{ 'Veli analizi' if veli else 'Öğretmen analizi' }}</p>
     <h1 class="mt-1 text-2xl font-black">{{ secili.ad }}</h1>
-    <p class="mt-1 text-sm text-slate-300">{{ secili.tarih }} · {{ okul.adet }} öğrenci{% if birey %} · {{ birey.ad }}{% endif %}</p>
+    <p class="es-sub">{{ secili.tarih }} · {{ okul.adet }} öğrenci{% if birey %} · {{ birey.ad }}{% endif %}</p>
     <form method="get" class="mt-3 app-filter"><input type="hidden" name="gorunum" value="{{ gorunum }}"><input type="hidden" name="sinif" value="{{ sinif }}">{% if birey and not veli %}<input type="hidden" name="ogrenci" value="{{ birey.id }}">{% endif %}<label>Deneme<select name="sinav" onchange="this.form.submit()">{% for s in sinavlar %}<option {{ 'selected' if s.ad == secili.ad else '' }}>{{ s.ad }}</option>{% endfor %}</select></label><button class="app-button">Göster</button></form>
   </header>
 

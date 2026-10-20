@@ -1,0 +1,117 @@
+{% set ef = evde_form if evde_form is defined and evde_form else {} %}
+{% set evde_denemeler = optik_sinavlar|selectattr('tur', 'equalto', 'deneme')|list %}
+<div class="es">
+  <header class="es-card es-head">
+    <div>
+      <p class="es-eyebrow">Deneme ve evde soru</p>
+      <h1>Evde sorular</h1>
+      <p class="es-sub">Soru PDF’ini ve cevap anahtarını gönderin; öğrenciler seçtiğiniz gün evde çözer, sonuçlar burada toplanır.</p>
+    </div>
+    <div class="es-stats">
+      <div class="es-stat"><b>{{ gruplar|length }}</b><small>sınıf</small></div>
+      <div class="es-stat"><b>{{ evde_denemeler|length }}</b><small>gönderilen deneme</small></div>
+    </div>
+  </header>
+  {% with mesajlar = get_flashed_messages(with_categories=true) %}
+  {% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--success' if kategori == 'success' else 'app-notice--error' }}" role="status">{{ mesaj }}</p>{% endfor %}
+  {% endwith %}
+
+  <section class="es-card" aria-labelledby="es-yeni">
+    <h2 id="es-yeni">Yeni evde soru testi</h2>
+    <p class="es-note">Yükleme tarihini değil, öğrencilerin testi çözeceği günü seçin. Sorular o gün Türkiye saatiyle 19.00–21.00 arasında açılır; cevaplar 21.00’den önce gönderilmelidir. Bitiren öğrenci toplam doğru–yanlış sayısını hemen, cevap anahtarını 21.00’den sonra görür. Soru PDF’ine cevap anahtarı eklemeyin.</p>
+    <form method="post" enctype="multipart/form-data" class="es-steps" data-optik-form>
+      <input type="hidden" name="islem" value="optik_ekle">
+      {% if gecici_pdf %}<input type="hidden" name="gecici_pdf" value="{{ gecici_pdf }}">{% endif %}
+      <div class="es-step">
+        <p class="es-step-title"><span>1</span> Sınıf ve test</p>
+        <div class="es-seg" role="radiogroup" aria-label="Test türü">
+          <label><input type="radio" name="tur" value="deneme" {{ 'checked' if ef.get('tur', 'deneme') == 'deneme' else '' }}><span>Deneme</span></label>
+          <label><input type="radio" name="tur" value="yaprak" {{ 'checked' if ef.get('tur') == 'yaprak' else '' }}><span>Yaprak test</span></label>
+        </div>
+        <div class="es-grid">
+          <label class="es-field">Sınıf
+            <select name="sinif_id">
+              <option value="">Deneme: tüm 8. sınıflar</option>
+              {% for g in gruplar %}<option value="{{ g.sinif.id }}" {{ 'selected' if ef.get('sinif_id') == g.sinif.id or (not ef and nav_sinif_id == g.sinif.id) else '' }}>{{ g.sinif.sinif_adi }} ({{ g.ogrenciler|length }} öğrenci)</option>{% endfor %}
+            </select>
+            <small>5, 6 ve 7. sınıflarda bir şube seçin.</small>
+          </label>
+          <label class="es-field">Ders
+            <select name="ders"><option value="">Deneme için boş</option>{% for ders in lgs_dersler %}<option {{ 'selected' if ef.get('ders') == ders else '' }}>{{ ders }}</option>{% endfor %}</select>
+            <small>Yaprak testte zorunlu.</small>
+          </label>
+          <label class="es-field">Ad<input name="ad" required maxlength="80" value="{{ ef.get('ad', '') }}" placeholder="Kasım denemesi"></label>
+          <label class="es-field">Çözüm günü · 19.00–21.00<input type="date" name="tarih" min="{{ bugun }}" value="{{ ef.get('tarih', '') }}" required></label>
+          <label class="es-field">Soru sayısı<input name="soru_sayisi" type="number" min="1" max="90" value="{{ ef.get('soru_sayisi', 20) }}" required data-question-count></label>
+        </div>
+        <ul class="es-chips" aria-label="Evde soru gönderilebilen sınıflar">
+          {% for g in gruplar %}<li class="es-chip">{{ g.sinif.sinif_adi }}<em>{{ g.ogrenciler|length }} öğr.</em></li>{% endfor %}
+        </ul>
+      </div>
+      <div class="es-step">
+        <p class="es-step-title"><span>2</span> Sorular ve cevap anahtarı</p>
+        <label class="es-field es-file">Soru PDF{% if gecici_pdf %} <small>(Seçilen PDF korundu)</small>{% endif %}<input type="file" name="pdf" accept="application/pdf" {% if not gecici_pdf %}required{% endif %}></label>
+        <div class="answer-key-box" data-key-box>
+          <div class="es-test-top"><strong>Cevap anahtarı</strong><button type="button" class="es-btn es-btn--ghost" data-key-toggle>Gizle</button></div>
+          <p class="es-sub">Her kutu bir soru. Soru sayısını değiştirince kutu sayısı da değişir.</p>
+          <label class="es-field" style="margin-top:10px">Cevap anahtarı belgesi (soru PDF’inden ayrı)
+            <input type="file" accept=".pdf,.docx,.jpg,.jpeg,.png" data-key-file>
+          </label>
+          <div class="es-actions" style="margin-top:8px"><button type="button" class="es-btn es-btn--ghost" data-key-read>Belgeden cevapları oku</button></div>
+          <p class="es-sub" role="status" aria-live="polite" data-key-status>PDF, DOCX, JPEG veya PNG seçin. Belge seçilince cevaplar otomatik okunur; soru sayısını önce doğru girin.</p>
+          <label class="es-sub" data-key-confirm-label hidden><input type="checkbox" data-key-confirm> Okunan cevapları belgeyle karşılaştırdım.</label>
+          <div class="answer-key-slots" data-key-slots style="margin-top:10px"></div>
+          <input type="hidden" name="anahtar" value="{{ ef.get('anahtar', '') }}" data-key-value>
+        </div>
+      </div>
+      <div class="es-actions"><button class="es-btn">Soruları gönder</button></div>
+    </form>
+  </section>
+
+  <section class="es-card" aria-labelledby="es-liste">
+    <div class="es-test-top">
+      <div><h2 id="es-liste">Gönderilen denemeler</h2><p class="es-sub">Sonuçlar öğrenci optiği bitirdikçe dolar.</p></div>
+      <a class="es-btn es-btn--ghost" href="{{ url_for('teacher_records', tur='ev-testi') }}">Testlerimi düzenle / sil</a>
+    </div>
+    <div class="es-list">
+    {% for s in evde_denemeler %}
+      <article class="es-test">
+        <div class="es-test-top">
+          <div>
+            <h3>{{ s.ad }}</h3>
+            <div class="es-meta">
+              <span class="es-chip es-chip--acc">{{ s.tarih }}</span>
+              <span class="es-chip">{{ s.sinif_adi or 'Tüm 8. sınıflar' }}</span>
+              <span class="es-chip">{{ s.soru_sayisi }} soru</span>
+              <span class="es-chip {{ 'es-chip--ok' if s.sonuclar else 'es-chip--warn' }}">{{ s.sonuclar|length }} sonuç</span>
+            </div>
+          </div>
+          <div class="es-actions">
+            <a class="es-btn es-btn--ghost" href="{{ url_for('lgs_soru_goruntule', sinav_id=s.id) }}">Soruları aç</a>
+            <a class="es-btn es-btn--ghost" href="{{ url_for('test_sinif_analiz', sinav=s.id) }}">Sınıf analizi</a>
+            {% if s.ogretmen_id == session.get('ogretmen_id') %}<a class="es-btn es-btn--ghost" href="{{ url_for('teacher_record_edit', kind='ev-testi', rid=s.id) }}">Düzenle</a><a class="es-btn es-btn--ghost" href="{{ url_for('teacher_record_edit', kind='ev-testi', rid=s.id) }}#sil">Sil</a>{% endif %}
+          </div>
+        </div>
+        <details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in s.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>
+        <details {{ 'open' if loop.first else '' }}>
+          <summary>Öğrenci sonuçları</summary>
+          <div class="es-table-wrap">
+            <table class="es-table">
+              <thead><tr><th>Öğrenci</th><th>Sınıf</th><th>Doğru</th><th>Yanlış</th><th>Boş</th><th>Net</th></tr></thead>
+              <tbody>
+              {% for r in s.sonuclar %}
+              <tr><td><b>{{ r.ad_soyad }}</b></td><td>{{ r.sinif_adi }}</td><td>{{ r.dogru }}</td><td>{{ r.yanlis }}</td><td>{{ r.bos }}</td><td>{{ r.net }}</td></tr>
+              {% else %}
+              <tr><td colspan="6">Henüz optik bitirilmedi.</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </article>
+    {% else %}
+      <p class="es-empty">Henüz deneme yok.</p>
+    {% endfor %}
+    </div>
+  </section>
+</div>

@@ -174,7 +174,7 @@ def _ogretmen_ogrencisine_erisebilir(ogretmen_id: int, ogrenci_id: int) -> bool:
 
 
 from yetki import mudur_adi, register_yetki, yetki_gerekli, yetkili, yetkili_idleri
-from moduller import aktif_moduller, modul_gerekli, modul_var_mi, register_moduller, seviye as sinif_seviyesi
+from moduller import aktif_moduller, modul_gerekli, modul_var_mi, ogrenci_seviyesi, register_moduller, seviye as sinif_seviyesi
 
 
 def _giris_raporu_acik_mi() -> bool:
@@ -445,7 +445,9 @@ def _ekran_duzeni_context():
         siniflar = aktif_sube_siniflari() or siniflar
     if rol == "ogretmen" and not siniflar:
         siniflar = aktif_sube_siniflari()
-    if rol == 'ogretmen' and endpoint == 'lgs':
+    if rol == 'ogretmen' and endpoint == 'lgs' and request.args.get('ekran') == 'evde':
+        siniflar = [s for s in siniflar if 'evde_test' in aktif_moduller(s)]
+    elif rol == 'ogretmen' and endpoint == 'lgs':
         siniflar = [s for s in siniflar if sinif_seviyesi(s) == 8]
     elif rol == 'ogretmen' and endpoint == 'haftalik_takip':
         siniflar = [s for s in siniflar if 'haftalik_takip' in aktif_moduller(s)]
@@ -459,8 +461,8 @@ def _ekran_duzeni_context():
     if veli and endpoint == 'veli_panel':
         from rehberlik import library
         rehber_yeni = library(int(session['veli_ogrenci_id']))[:3]
-    sayac_goster = endpoint in {"lgs", "veli_lgs"} or (
-        endpoint == "veli_panel" and ogrenci and sinif_seviyesi(ogrenci) == 8
+    sayac_goster = (endpoint == "lgs" and request.args.get("ekran") != "evde") or (
+        endpoint in {"veli_panel", "veli_lgs"} and ogrenci and sinif_seviyesi(ogrenci) == 8
     )
     secili_kaynak = ogrenci if veli else (secili or (siniflar[0] if siniflar else None))
     moduller_kumesi = aktif_moduller(secili_kaynak) if secili_kaynak else set()
@@ -4428,6 +4430,8 @@ def _deneme_ekran_verisi(veli: bool, kendi_id: int | None = None) -> dict:
             int(o["ogrenci_id"]) == int(kendi_id)
             for o in deneme_sinav_ogrencileri(s["ad"], s["tarih"], "deneme")
         )]
+        if not sahip and ogrenci_seviyesi(int(kendi_id)) != 8:
+            return {"sinavlar": [], "secili": None, "veli": veli}
         if sahip and not any(s["ad"] == secili["ad"] and s["tarih"] == secili["tarih"] for s in sahip):
             secili = sahip[0]
         sinavlar = sahip or sinavlar
@@ -4974,16 +4978,23 @@ def veli_analizler():
     return render_template('veli_analizler.html')
 
 
+def _evde_siniflari(ogretmen_id: int) -> list[dict]:
+    """Evde soru testi verilebilecek sınıflar: öğretmenin evde test modülü açık şubeleri."""
+    def uygun(liste):
+        return [s for s in liste if "evde_test" in aktif_moduller(s)]
+    return uygun(ogretmen_siniflari(ogretmen_id) or []) or uygun(aktif_sube_siniflari())
+
+
+def _evde_gruplari(ogretmen_id: int) -> list[dict]:
+    return [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in _evde_siniflari(ogretmen_id)]
+
+
 def _lgs_evde_render_hata(hata_mesaji: str, form_data: dict, gecici_pdf: str = ""):
     flash(hata_mesaji, "warning")
     oid = session.get("ogretmen_id")
     if not oid:
         return redirect(url_for("lgs", ekran="evde"))
-    siniflar = [
-        s for s in (ogretmen_siniflari(oid) or aktif_sube_siniflari())
-        if sinif_seviyesi(s) == 8
-    ] or [s for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8]
-    gruplar = [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in siniflar]
+    gruplar = _evde_gruplari(oid)
     harita = lgs_tempo_harita()
     ay_harita = {}
     for grup in gruplar:
@@ -5063,15 +5074,16 @@ def _lgs_optik_ekle():
         return _lgs_evde_render_hata("PDF boş, bozuk veya 20 MB'dan büyük.", form_data, gecici_pdf)
     if not ham.startswith(b"%PDF-") or len(ham) > lgs_optik.AZAMI_BOYUT:
         return _lgs_evde_render_hata("PDF boş, bozuk veya 20 MB'dan büyük.", form_data, gecici_pdf)
+    izinli_siniflar = {int(s["id"]) for s in _evde_siniflari(session["ogretmen_id"])}
     if tur == "yaprak":
-        siniflar = [
-            s for s in (ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari())
-            if sinif_seviyesi(s) == 8
-        ] or [s for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8]
-        if ders not in LGS_DERSLER or sinif_id not in {int(s["id"]) for s in siniflar}:
+        if ders not in LGS_DERSLER or sinif_id not in izinli_siniflar:
             return _lgs_evde_render_hata("Yaprak test için sınıf ve ders seçin.", form_data, gecici_pdf)
     else:
-        ders, sinif_id = "", None
+        ders = ""
+        if sinif_id and sinif_id not in izinli_siniflar:
+            return _lgs_evde_render_hata("Bu sınıfa evde soru gönderemezsiniz.", form_data, gecici_pdf)
+        if sinif_id and sinif_seviyesi(sinif_id) == 8:
+            sinif_id = None
     ad_dosya = uuid4().hex + ".pdf"
     (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
     if gecici_pdf and gecici_pdf.startswith("tmp_"):
@@ -5088,10 +5100,10 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
     sinavlar = lgs_optik.sinavlari_listele()
     if ogrenci_id:
         ogr = _ogrenci_bul(int(ogrenci_id))
-        sinif_id = int(ogr["sinif_id"]) if ogr else 0
+        from ev_analiz import visible as ev_test_visible
         sinavlar = [
             s for s in sinavlar
-            if s.get("tur") != "yaprak" or not s.get("sinif_id") or int(s["sinif_id"]) == sinif_id
+            if ogr and ev_test_visible(s, ogr)
         ]
     for sinav in sinavlar:
         sinav["sonuclar"] = lgs_optik.sinav_sonuclari(sinav["id"])
@@ -5127,9 +5139,8 @@ def _lgs_soru_belgesi(sinav_id):
         pass
     elif session.get("veli_ogrenci_id"):
         ogr = _ogrenci_bul(int(session["veli_ogrenci_id"]))
-        if not ogr or sinif_seviyesi(ogr) != 8:
-            abort(403)
-        if sinav.get("tur") == "yaprak" and sinav.get("sinif_id") and int(sinav["sinif_id"]) != int(ogr["sinif_id"]):
+        from ev_analiz import visible as ev_test_visible
+        if not ogr or "evde_test" not in aktif_moduller(ogr) or not ev_test_visible(sinav, ogr):
             abort(403)
     else:
         abort(403)
@@ -5268,7 +5279,11 @@ def _lgs_ekran(veli: bool):
             session.pop("veli_ogrenci_id", None)
             return redirect(url_for("veli_giris"))
         if sinif_seviyesi(ogr) != 8:
-            return redirect(url_for("veli_panel"))
+            yalniz_evde = (request.values.get("bolum") or "soru") == "soru" and (
+                request.method != "POST" or request.form.get("islem") == "optik_bitir"
+            )
+            if not yalniz_evde or "evde_test" not in aktif_moduller(ogr):
+                return redirect(url_for("veli_panel"))
     else:
         oid = request.values.get("ogrenci", type=int)
         if request.method == "POST" and not oid:
@@ -5445,13 +5460,16 @@ def _lgs_ekran(veli: bool):
         return redirect(url_for(hedef_url, **parametre))
 
     if not veli and not oid:
-        siniflar = [
-            s for s in (ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari())
-            if sinif_seviyesi(s) == 8
-        ]
-        if not siniflar:
-            siniflar = [s for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8]
-        gruplar = [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in siniflar]
+        if request.args.get("ekran") == "evde":
+            gruplar = _evde_gruplari(session["ogretmen_id"])
+        else:
+            siniflar = [
+                s for s in (ogretmen_siniflari(session["ogretmen_id"]) or aktif_sube_siniflari())
+                if sinif_seviyesi(s) == 8
+            ]
+            if not siniflar:
+                siniflar = [s for s in aktif_sube_siniflari() if sinif_seviyesi(s) == 8]
+            gruplar = [{"sinif": s, "ogrenciler": sinif_ogrencileri(s["id"])} for s in siniflar]
         harita = lgs_tempo_harita()
         ay_harita = {}
         for grup in gruplar:
@@ -5565,6 +5583,7 @@ def _lgs_ekran(veli: bool):
         optik_detay=optik_detay,
         ta=ta,
         yaprak_gelisim=yaprak_gelisim,
+        lgs_ogrencisi=sinif_seviyesi(ogr) == 8,
     )
 
 

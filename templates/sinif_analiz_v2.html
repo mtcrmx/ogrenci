@@ -5,7 +5,7 @@
   <div class="top">
     <div>
       <h1>Sınıf analizi · {{ secili_sinif.sinif_adi if secili_sinif else 'Tüm Sınıflar' }}</h1>
-      <p>{{ seviye }}. sınıf · {% if 'deneme' in aktif_moduller %}yalnız LGS: denemeler, optik, yaprak ve evde testler{% else %}okulda yaprak test, evde test, ödev ve kitap takibi{% endif %}</p>
+      <p>{{ seviye }}. sınıf · {% if 'lgs' in aktif_moduller %}yalnız LGS: denemeler, optik, yaprak ve evde testler{% else %}okulda yaprak test, evde test, ödev ve kitap takibi{% endif %}</p>
     </div>
     <span class="sp"></span>
     <form method="get" action="{{ url_for('sinif_analiz_v2') }}" class="flex flex-wrap gap-2">
@@ -142,7 +142,7 @@
         <a class="btn" href="{{ url_for('ev_analiz.index') }}">✉ Evde test analizi ve çalışma grupları</a>
         {% if 'deneme' in aktif_moduller %}
         <a class="btn" href="{{ url_for('deneme_analiz') }}">◈ Deneme analizi</a>
-        <a class="btn" href="{{ url_for('lgs', sr_olcut='test', _anchor='lgs-siralama') }}">▥ LGS sıralama</a>
+        {% if 'lgs' in aktif_moduller %}<a class="btn" href="{{ url_for('lgs', sr_olcut='test', _anchor='lgs-siralama') }}">▥ LGS sıralama</a>{% endif %}
         {% endif %}
       </div>
     </div>

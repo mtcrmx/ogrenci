@@ -1,88 +1,29 @@
 {% extends "base.html" %}
 {% set sekmeler_sayfada = not veli and not ogrenci and ekran != 'evde' %}
 {% block title %}LGS{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=7"><link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=7"><link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1"><link rel="stylesheet" href="{{ url_for('static', filename='evde_sorular.css') }}?v=1">{% endblock %}
 {% block body %}
 {% set lgs_merkez = not veli and not ogrenci and ekran != 'evde' %}
-{% if not lgs_merkez %}<a class="app-button" style="margin:12px" href="{{ url_for('yaprak_analiz.combined') }}">Birleşik analiz →</a>{% endif %}
+{% set evde_ekrani = (ekran == 'evde' and not ogrenci) or (veli and bolum == 'soru') %}
+{% if not lgs_merkez and not evde_ekrani %}<a class="app-button" style="margin:12px" href="{{ url_for('yaprak_analiz.combined') }}">Birleşik analiz →</a>{% endif %}
 <main class="lgs-page {{ 'lm' if lgs_merkez else 'mx-auto max-w-5xl px-3 pb-28 pt-4 text-slate-800 sm:px-4' }}">
   {% if lgs_merkez %}
   {% include '_lgs_merkez.html' %}
   {% else %}
+  {% if evde_ekrani %}
+  <nav class="es" style="margin-bottom:12px" aria-label="Analiz bağlantıları"><div class="es-actions">
+    <a class="es-btn es-btn--ghost" href="{{ url_for('ev_analiz.index') }}">Soru analizi · Çalışma grupları · Yardım {{ "· Haftalık özet" if veli else "" }} →</a>
+    <a class="es-btn es-btn--ghost" href="{{ url_for('yaprak_analiz.combined') }}">Birleşik analiz →</a>
+  </div></nav>
+  {% else %}
   <a class="app-button" style="margin:12px 0" href="{{ url_for('ev_analiz.index') }}">Soru analizi · Çalışma grupları · Yardım {{ "· Haftalık özet" if veli else "" }} →</a>
+  {% endif %}
   {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
-  {% include '_lgs_ranking.html' %}
+  {% if lgs_ogrencisi is not defined or lgs_ogrencisi %}{% include '_lgs_ranking.html' %}{% endif %}
   {% endif %}
   {% if not ogrenci %}
   {% if ekran == 'evde' %}
-  <header class="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
-    <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">LGS</p>
-    <h1 class="mt-1 text-2xl font-black">Evde Soru Testleri</h1>
-    <p class="mt-1 text-sm text-slate-300">Soru PDF’ini ve cevap anahtarını gönderin. Öğrenci soruları evde çözer.</p>
-  </header>
-  {% with mesajlar = get_flashed_messages(with_categories=true) %}
-  {% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--success' if kategori == 'success' else 'app-notice--error' }}" role="status">{{ mesaj }}</p>{% endfor %}
-  {% endwith %}
-  {% endif %}
-  {% if ekran == 'evde' %}
-  <section class="mt-5 rounded-3xl border border-slate-200 bg-white p-4">
-    <h2 class="text-lg font-black">Evde Soru Testleri</h2>
-    <p class="mt-1 text-xs text-slate-600">Yükleme tarihini değil, öğrencilerin testi çözeceği günü seçin. Sorular seçtiğiniz gün Türkiye saatiyle 19.00–21.00 arasında açılır; cevaplar 21.00’den önce gönderilmelidir. Bitiren öğrenci toplam doğru–yanlış sayısını hemen, cevap anahtarını 21.00’den sonra görür. Soru PDF’ine cevap anahtarı eklemeyin.</p>
-    <form method="post" enctype="multipart/form-data" class="mt-3 grid gap-3 sm:grid-cols-2" data-optik-form>
-      <input type="hidden" name="islem" value="optik_ekle">
-      {% if gecici_pdf %}<input type="hidden" name="gecici_pdf" value="{{ gecici_pdf }}">{% endif %}
-      {% set ef = evde_form if evde_form is defined and evde_form else {} %}
-      <label class="text-sm font-bold">Ad<input name="ad" required maxlength="80" value="{{ ef.get('ad', '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" placeholder="Kasım denemesi"></label>
-      <label class="text-sm font-bold">Tür<select name="tur" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="yaprak" {{ 'selected' if ef.get('tur') == 'yaprak' else '' }}>Yaprak test</option><option value="deneme" {{ 'selected' if ef.get('tur', 'deneme') == 'deneme' else '' }}>Deneme</option></select></label>
-      <label class="text-sm font-bold">Sınıf<select name="sinif_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="">Deneme: tüm 8. sınıflar</option>{% for g in gruplar %}<option value="{{ g.sinif.id }}" {{ 'selected' if ef.get('sinif_id') == g.sinif.id else '' }}>{{ g.sinif.sinif_adi }}</option>{% endfor %}</select></label>
-      <label class="text-sm font-bold">Ders<select name="ders" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="">Deneme için boş</option>{% for ders in lgs_dersler %}<option {{ 'selected' if ef.get('ders') == ders else '' }}>{{ ders }}</option>{% endfor %}</select></label>
-      <label class="text-sm font-bold">Çözüm tarihi · 19.00–21.00<input type="date" name="tarih" min="{{ bugun }}" value="{{ ef.get('tarih', '') }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"></label>
-      <label class="text-sm font-bold">Soru sayısı<input name="soru_sayisi" type="number" min="1" max="90" value="{{ ef.get('soru_sayisi', 20) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" data-question-count></label>
-      <label class="text-sm font-bold sm:col-span-2">Soru PDF{% if gecici_pdf %} <span class="text-emerald-700">(Seçilen PDF korundu)</span>{% endif %}<input type="file" name="pdf" accept="application/pdf" {% if not gecici_pdf %}required{% endif %} class="mt-1 block w-full text-sm"></label>
-      <div class="answer-key-box sm:col-span-2" data-key-box>
-        <div class="answer-key-head"><strong>Cevap anahtarı</strong><button type="button" class="app-button" data-key-toggle>Gizle</button></div>
-        <p class="app-muted">Her kutu bir soru. Soru sayısını değiştirince kutu sayısı da değişir.</p>
-        <label class="block text-sm font-bold">Cevap anahtarı belgesi (soru PDF’inden ayrı)
-          <input type="file" accept=".pdf,.docx,.jpg,.jpeg,.png" data-key-file class="mt-2 block w-full">
-        </label>
-        <button type="button" class="app-button mt-2" data-key-read>Belgeden cevapları oku</button>
-        <p class="text-sm mt-2" role="status" aria-live="polite" data-key-status>PDF, DOCX, JPEG veya PNG seçin. Belge seçilince cevaplar otomatik okunur; soru sayısını önce doğru girin.</p>
-        <label class="block text-sm mt-2" data-key-confirm-label hidden><input type="checkbox" data-key-confirm> Okunan cevapları belgeyle karşılaştırdım.</label>
-        <div class="answer-key-slots" data-key-slots></div>
-        <input type="hidden" name="anahtar" value="{{ ef.get('anahtar', '') }}" data-key-value>
-      </div>
-      <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white sm:col-span-2">Soruları gönder</button>
-    </form>
-    <div class="mt-5">
-      <h3 class="font-black">Denemeler</h3><a class="app-button" href="{{ url_for('teacher_records',tur='ev-testi') }}">Testlerimi düzenle / sil</a>
-    {% for s in optik_sinavlar if s.tur == 'deneme' %}
-    <article class="mt-4 rounded-2xl border border-slate-200 p-3">
-      <h3 class="font-black">{{ s.tarih }} · {% if s.tur == 'yaprak' %}{{ s.sinif_adi or 'Sınıf' }} · {{ s.ders or 'Ders' }} · {% endif %}{{ s.ad }} · {{ s.soru_sayisi }} soru</h3>
-      {% if s.ogretmen_id==session.get('ogretmen_id') %}<div class="result-actions"><a class="app-button" href="{{ url_for('teacher_record_edit',kind='ev-testi',rid=s.id) }}">Düzenle</a><a class="app-button" href="{{ url_for('teacher_record_edit',kind='ev-testi',rid=s.id) }}#sil">Sil</a></div>{% endif %}<details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in s.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>
-      <a class="mt-2 inline-block text-sm font-black text-indigo-800" href="{{ url_for('lgs_soru_goruntule', sinav_id=s.id) }}">Soruları aç</a>
-      <a class="mt-2 ml-3 inline-block text-sm font-black text-indigo-800" href="{{ url_for('test_sinif_analiz', sinav=s.id) }}">Sınıf analizi</a>
-      <div class="mt-3 overflow-x-auto">
-        <table class="w-full min-w-[520px] text-left text-sm">
-          <thead><tr class="text-xs uppercase text-slate-500"><th>Öğrenci</th><th>Sınıf</th><th>Doğru</th><th>Yanlış</th><th>Boş</th><th>Net</th></tr></thead>
-          <tbody>
-          {% for r in s.sonuclar %}
-          <tr class="border-t border-slate-100"><td class="py-2 font-bold">{{ r.ad_soyad }}</td><td>{{ r.sinif_adi }}</td><td>{{ r.dogru }}</td><td>{{ r.yanlis }}</td><td>{{ r.bos }}</td><td class="font-black">{{ r.net }}</td></tr>
-          {% else %}
-          <tr><td class="py-2 text-slate-500" colspan="6">Henüz optik bitirilmedi.</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </article>
-    {% else %}
-    <p class="mt-2 text-sm text-slate-500">Henüz deneme yok.</p>
-    {% endfor %}
-    </div>
-  </section>
-  <style>
-    body.ui-theme [data-key-slots] label { width:64px; }
-    body.ui-theme [data-key-slots] select { width:64px; min-width:64px; padding:8px 20px 8px 8px!important; font-size:16px!important; font-weight:800; color:#342747!important; }
-  </style>
+  {% include '_evde_sorular_ogretmen.html' %}
   <script>
   document.querySelectorAll("[data-optik-form]").forEach(function (form) {
     var countInput = form.querySelector("[data-question-count]");
@@ -401,89 +342,7 @@
   {% endif %}
 
   {% elif bolum == 'soru' %}
-  <section class="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
-    <h2 class="font-black">Sorular ve optik</h2>
-    {% if not optik_sinavlar %}
-    <p class="mt-2 text-sm text-slate-600">Öğretmen henüz soru PDF’i yüklemedi.</p>
-    {% else %}
-    {% if veli %}
-    {% set cozulen = optik_sinavlar|selectattr('sonuc')|list %}
-    {% set bekleyen = optik_sinavlar|rejectattr('sonuc')|list %}
-    {% if bekleyen %}
-    <p class="mt-4 text-xs font-black uppercase tracking-wide text-slate-400">Çözülecek</p>
-    <div class="mt-2 grid gap-2">
-      {% for s in bekleyen %}
-      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="block rounded-xl px-3 py-3 text-sm {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">
-        <span class="block font-black">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</span>
-        <span class="mt-1 block text-xs {{ 'text-slate-300' if optik_secili and optik_secili.id == s.id else 'text-slate-500' }}">{{ s.tarih }} · {{ s.soru_sayisi }} soru · henüz çözülmedi</span>
-      </a>
-      {% endfor %}
-    </div>
-    {% endif %}
-    {% if cozulen %}
-    <p class="mt-4 text-xs font-black uppercase tracking-wide text-slate-400">Yapılan testler</p>
-    <div class="mt-2 grid gap-2">
-      {% for s in cozulen %}
-      <a href="{{ url_for('veli_lgs', bolum='soru', sinav=s.id) }}" class="block rounded-xl px-3 py-3 text-sm {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">
-        <span class="block font-black">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</span>
-        <span class="mt-1 block text-xs {{ 'text-slate-300' if optik_secili and optik_secili.id == s.id else 'text-slate-500' }}">{{ s.tarih }} · net {{ s.sonuc.net }} · doğru {{ s.sonuc.dogru }} · yanlış {{ s.sonuc.yanlis }} · boş {{ s.sonuc.bos }}</span>
-      </a>
-      {% endfor %}
-    </div>
-    {% endif %}
-    {% else %}
-    <div class="mt-3 flex flex-wrap gap-2">
-      {% for s in optik_sinavlar %}
-      <a href="{{ url_for('lgs', ogrenci=ogrenci.id, bolum='soru', sinav=s.id) }}" class="rounded-xl px-3 py-2 text-sm font-black {{ 'bg-slate-900 text-white' if optik_secili and optik_secili.id == s.id else 'border border-slate-200' }}">{% if s.ders %}{{ s.ders }} · {% endif %}{{ s.ad }}</a>
-      {% endfor %}
-    </div>
-    {% endif %}
-    {% if not optik_secili %}
-    <p class="mt-3 text-sm text-slate-600">Görmek istediğin sınavı seç.</p>
-    {% else %}
-    <p class="mt-3 text-sm font-bold">{{ optik_secili.ad }} · {{ optik_secili.tarih }} · {{ optik_secili.soru_sayisi }} soru</p>
-    {% if veli and optik_secili.window.home %}
-    <p class="app-notice" role="status">{{ optik_secili.window.message }}</p>
-    {% if optik_secili.window.released %}<details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in optik_secili.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>{% endif %}
-    {% if optik_secili.window.open %}<script>
-    (function(){const expires=performance.now()+{{ optik_secili.window.remaining|tojson }}*1000;function closeTest(){if(performance.now()>=expires){document.querySelectorAll('[data-home-test],iframe[title$=" soruları"]').forEach(el=>el.remove());location.reload();}}setInterval(closeTest,1000);document.addEventListener('visibilitychange',closeTest);})();
-    </script>{% endif %}
-    {% endif %}
-    {% if not veli or optik_secili.window.open %}
-    <iframe class="mt-3 h-[70vh] w-full rounded-2xl border border-slate-200" src="{{ url_for('lgs_soru_goruntule', sinav_id=optik_secili.id) }}" title="{{ optik_secili.ad }} soruları"></iframe>
-    {% endif %}
-    {% if optik_secili.sonuc %}
-    {% if optik_secili.analiz %}
-    {% with sinav=optik_secili %}{% include '_soru_grafik.html' %}{% endwith %}
-    {% else %}
-    <p class="mt-4 text-sm font-black">Doğru {{ optik_secili.sonuc.dogru }} · Yanlış {{ optik_secili.sonuc.yanlis }} · Boş {{ optik_secili.sonuc.bos }} · Net {{ optik_secili.sonuc.net }}</p>
-    {% endif %}
-    {% elif optik_secili.kaynak == 'kamera' %}
-    <p class="mt-4 text-sm text-slate-600">Bu test okulda kâğıt üzerinde çözülür. Öğretmen optiği okuttuğunda sonuçlarınız burada görünecek.</p>
-    {% elif veli and optik_secili.window.open %}
-    <form method="post" action="{{ url_for('veli_lgs') }}" class="mt-4" data-home-test>
-      <input type="hidden" name="islem" value="optik_bitir">
-      <input type="hidden" name="bolum" value="soru">
-      <input type="hidden" name="sinav_id" value="{{ optik_secili.id }}">
-      <div class="grid gap-2">
-        {% for n in range(optik_secili.soru_sayisi) %}
-        <fieldset class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 px-3 py-2">
-          <legend class="px-1 text-sm font-black">{{ n + 1 }}</legend>
-          {% for harf in 'ABCD' %}
-          <label class="text-sm font-bold"><input type="radio" name="c{{ n }}" value="{{ harf }}"> {{ harf }}</label>
-          {% endfor %}
-        </fieldset>
-        {% endfor %}
-      </div>
-      <button class="mt-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Bitir</button>
-    </form>
-    {% else %}
-    {% if not veli %}<p class="mt-4 text-sm text-slate-600">Bu öğrenci optiği henüz bitirmedi.</p>{% endif %}
-    {% if not veli %}<p class="mt-1 font-mono text-xs text-slate-500">Anahtar: {{ optik_secili.cevaplar|join('') }}</p>{% endif %}
-    {% endif %}
-    {% endif %}
-    {% endif %}
-  </section>
+  {% include '_evde_sorular_ogrenci.html' %}
   {% elif bolum == 'defter' %}
   <section class="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
     <div class="flex items-center justify-between gap-2">
