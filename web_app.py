@@ -2553,6 +2553,50 @@ def _deneme_hikaye(denemeler: list) -> str:
     return f"{adet} denemede {secim[1]} {secim[2]} netten {secim[3]} nete çıktı."
 
 
+def _veli_ozet(o) -> dict:
+    """Veli ana sayfası özeti: son sonuç, sıralama, evde soru ve kaynak toplamları."""
+    from metrik import KAYNAK_ADLARI, birlesik_sonuclar, kaynak_ozeti
+    import lgs_ranking
+    from database import _conn
+    oid = int(o["id"])
+    moduller = aktif_moduller(o)
+    con = _conn()
+    try:
+        satirlar = birlesik_sonuclar(con, [oid])
+        siralama = lgs_ranking.build(con, {}, oid)
+    finally:
+        con.close()
+    seviye = satirlar[0]["seviye"] if satirlar else sinif_seviyesi(o)
+    kayitlar = {}
+    for s in satirlar:
+        k = kayitlar.setdefault(s["kayit"], {"ad": s["ad"], "tarih": s["tarih"], "kaynak": s["kaynak"], "net": 0.0})
+        k["net"] += s["net"]
+    sirali = sorted(kayitlar.values(), key=lambda k: k["tarih"], reverse=True)
+    for k in sirali:
+        k["net"] = round(k["net"], 2)
+        k["kaynak_ad"] = KAYNAK_ADLARI.get(k["kaynak"], k["kaynak"])
+    sira = None
+    if siralama:
+        kendi = next((r for r in siralama["rows"] if r["kendi"]), None)
+        if kendi and kendi.get("test"):
+            sira = {"sira": kendi["sira"], "toplam": len(siralama["rows"])}
+    evde = None
+    if "evde_test" in moduller or "lgs" in moduller:
+        from ev_analiz import visible as ev_test_visible
+        sinavlar = [s for s in lgs_optik.sinavlari_listele()
+                    if s.get("tur") != "deneme" and str(s.get("kaynak") or "").startswith("ev") and ev_test_visible(s, o)]
+        biten = sum(1 for s in sinavlar if lgs_optik.sonuc_getir(s["id"], oid))
+        evde = {"bekleyen": len(sinavlar) - biten, "biten": biten}
+    return {
+        "son": sirali[0] if sirali else None,
+        "son_deneme": next((k for k in sirali if k["kaynak"] == "deneme"), None),
+        "sira": sira,
+        "evde": evde,
+        "kaynaklar": [k for k in kaynak_ozeti(satirlar, seviye) if k["kayit"]],
+        "deneme_acik": "deneme" in moduller or "lgs" in moduller,
+    }
+
+
 @app.route("/veli")
 def veli_panel():
     ogrenci_id = session.get("veli_ogrenci_id")
@@ -2667,6 +2711,7 @@ def veli_panel():
     return render_template(
         "veli_panel.html",
         akis=veli_akis_build(o),
+        ozet=_veli_ozet(o),
         ogrenci=o,
         avatar=_avatar(o),
         hafta=hafta,
