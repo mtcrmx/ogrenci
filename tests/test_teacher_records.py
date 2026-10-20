@@ -3,6 +3,7 @@ import re
 import unittest
 from html import unescape
 from test_app_workflows import w,d
+from _rehber_fixture import rehber_ogretmen_olustur, rehber_ogretmen_sil
 import lgs_optik as optik
 
 
@@ -111,7 +112,8 @@ class TeacherRecords(unittest.TestCase):
         self.assertEqual(restored,before)
 
     def test_counselor_own_notes_only(self):
-        t=next(t for t in d.tum_ogretmenler() if t['yetki']=='rehber')
+        t=rehber_ogretmen_olustur()
+        self.addCleanup(rehber_ogretmen_sil,t['id'])
         with self.c.session_transaction() as s:s.update(ogretmen_id=t['id'],ogretmen_adi=t['ad_soyad'],ogretmen_yetki='rehber')
         self.assertEqual(self.c.get('/kayitlarim').status_code,200)
         self.assertEqual(self.c.get('/kayitlarim?tur=not').status_code,403)

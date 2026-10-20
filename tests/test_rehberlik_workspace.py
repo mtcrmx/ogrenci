@@ -1,11 +1,13 @@
 import unittest
 from test_app_workflows import w, d
 from rehberlik_workspace import query, TOPICS
+from _rehber_fixture import rehber_ogretmen_olustur, rehber_ogretmen_sil
 
 
 class CounselorWorkspace(unittest.TestCase):
     def setUp(self):
-        self.teacher=next(t for t in d.tum_ogretmenler() if t['yetki']=='rehber')
+        self.teacher=rehber_ogretmen_olustur()
+        self.addCleanup(rehber_ogretmen_sil,self.teacher['id'])
         self.student=query("SELECT o.* FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE s.sinif_adi='8/A' LIMIT 1")[0]
         self.client=w.app.test_client()
         with self.client.session_transaction() as s:

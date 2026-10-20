@@ -15,6 +15,8 @@ os.environ.setdefault("VELI_KISISEL_SIFRE", "0")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import web_app as w
 import database as d
+import yetki
+from _rehber_fixture import rehber_ogretmen_olustur, rehber_ogretmen_sil
 
 w.app.config.update(TESTING=True)
 d._veli_push_sonra = lambda *_: None
@@ -71,13 +73,14 @@ class Workflows(unittest.TestCase):
 
     def test_institution_upload_has_named_server_permission(self):
         teachers=d.tum_ogretmenler()
-        for name in ('ADEM AKGÜL','METEHAN CÜCEN'):
+        yoneticiler=('ADEM AKGÜL','METEHAN CÜCEN','ALPEREN MURAT LEBLEBİCİ')
+        for name in yoneticiler:
             t=next(r for r in teachers if r['ad_soyad']==name)
             c=w.app.test_client()
             with c.session_transaction() as s:s.update(ogretmen_id=t['id'],ogretmen_adi=name,ogretmen_yetki='tam')
             self.assertIn('/lgs/kurum-pdf',c.get('/lgs').get_data(as_text=True))
             self.assertEqual(c.post('/lgs/kurum-pdf').status_code,302)
-        other=next(r for r in teachers if r['ad_soyad'] not in ('ADEM AKGÜL','METEHAN CÜCEN') and r['yetki']=='tam')
+        other=next(r for r in teachers if r['ad_soyad'] not in yoneticiler and r['yetki']=='tam')
         c=w.app.test_client()
         with c.session_transaction() as s:s.update(ogretmen_id=other['id'],ogretmen_adi='ADEM AKGÜL',ogretmen_yetki='tam')
         self.assertNotIn('/lgs/kurum-pdf',c.get('/lgs').get_data(as_text=True))
@@ -118,7 +121,7 @@ class Workflows(unittest.TestCase):
         payload=dict(ogrenci=self.oid,tur='ders',ad='Geçersiz toplam',tarih='2026-10-01',ders='Türkçe',soru_sayisi='10',dogru='9',yanlis='3',yanlis_goturme='3')
         self.assertEqual(self.teacher_client.post('/sonuclar',data=payload).status_code,200)
         self.assertFalse(any(r['ad']==payload['ad'] for r in d.lgs_denemeler(self.oid,200)))
-        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam')
+        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam' and not yetki.yetkili(r['id'],'yonetici'))
         saved=d.lgs_deneme_ekle(self.oid,'Başka öğretmenin testi','2026-10-01',[dict(ders='Türkçe',dogru=8,yanlis=1,bos=1,soru_sayisi=10)],ogretmen_id=other['id'],tur='ders')
         self.assertEqual(self.teacher_client.get('/sonuclar',query_string={'ogrenci':self.oid,'duzenle':saved['id']}).status_code,403)
 
@@ -223,10 +226,10 @@ class Workflows(unittest.TestCase):
 
     def test_only_two_admins_can_delete_entered_exams(self):
         d.lgs_deneme_ekle(self.oid, 'Silinecek yönetici denemesi', '2026-10-15', [dict(ders='Matematik', dogru=4, yanlis=1, bos=5)], ogretmen_id=self.teacher['id'], tur='deneme')
-        yasak = {'adem akgül', 'metehan cücen'}
+        yasak = {'ADEM AKGÜL', 'METEHAN CÜCEN', 'ALPEREN MURAT LEBLEBİCİ'}
         yabanci = None
         for aday in d.tum_ogretmenler():
-            if aday['ad_soyad'].casefold() in yasak or aday['yetki'] != 'tam':
+            if aday['ad_soyad'] in yasak or aday['yetki'] != 'tam':
                 continue
             deneme = w.app.test_client()
             with deneme.session_transaction() as s:
@@ -274,7 +277,7 @@ class Workflows(unittest.TestCase):
         self.teacher_client.post('/islem-gecmisi/'+self._latest_action()+'/geri-al')
         back=next(r for r in d.lgs_denemeler(self.oid,30) if r['ad']=='Tek silinecek')
         self.assertEqual((back['dersler'][0]['dogru'],back['dersler'][0]['yanlis']),(7,1))
-        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam')
+        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam' and not yetki.yetkili(r['id'],'yonetici'))
         client=w.app.test_client()
         with client.session_transaction() as s:s.update(ogretmen_id=other['id'],ogretmen_adi=other['ad_soyad'],ogretmen_yetki='tam')
         self.assertEqual(client.post('/sonuclar',data={'ogrenci':self.oid,'islem':'sil','deneme':back['id']}).status_code,403)
@@ -286,7 +289,7 @@ class Workflows(unittest.TestCase):
         payload=dict(sinif_id=student['sinif_id'],ogrenci_id=student['id'],hafta=self.week,alan='odev_not',deger='İlk not')
         self.teacher_client.post('/haftalik-takip/metin',json=payload)
         action=self._latest_action()
-        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam')
+        other=next(r for r in d.tum_ogretmenler() if r['id']!=self.teacher['id'] and r['yetki']=='tam' and not yetki.yetkili(r['id'],'yonetici'))
         client=w.app.test_client()
         with client.session_transaction() as s:s.update(ogretmen_id=other['id'],ogretmen_adi=other['ad_soyad'],ogretmen_yetki='tam')
         self.assertEqual(client.post('/islem-gecmisi/'+action+'/geri-al').status_code,403)
@@ -417,12 +420,22 @@ class Workflows(unittest.TestCase):
     def test_guidance_teacher_roster(self):
         teachers=[o for o in d.tum_ogretmenler() if o['ad_soyad']=='ALPEREN MURAT LEBLEBİCİ']
         self.assertEqual(len(teachers),1)
-        self.assertEqual(teachers[0]['yetki'],'rehber')
+        self.assertEqual(teachers[0]['yetki'],'tam')
         self.assertEqual(len(d.ogretmen_siniflari(teachers[0]['id'])),8)
         client=w.app.test_client()
-        r=client.post('/login',data={'ad_soyad':teachers[0]['ad_soyad'],'sifre':teachers[0]['sifre']})
-        self.assertEqual(r.status_code,302)
-        self.assertEqual(r.location,'/rehberlik')
+        with client.session_transaction() as s:
+            s.update(ogretmen_id=teachers[0]['id'],ogretmen_adi=teachers[0]['ad_soyad'],ogretmen_yetki=teachers[0]['yetki'])
+        r=client.get('/dashboard')
+        self.assertEqual(r.status_code,200)
+        self.assertEqual(client.get('/giris-raporu').status_code,200)
+        self.assertEqual(client.get('/yayin').status_code,200)
+        rehber=rehber_ogretmen_olustur()
+        try:
+            r=w.app.test_client().post('/login',data={'ad_soyad':rehber['ad_soyad'],'sifre':rehber['sifre']})
+            self.assertEqual(r.status_code,302)
+            self.assertEqual(r.location,'/rehberlik')
+        finally:
+            rehber_ogretmen_sil(rehber['id'])
 
     def test_book_treasure_requires_teacher_approval(self):
         con=d._conn()
@@ -821,11 +834,12 @@ class GuidanceService(unittest.TestCase):
         import rehberlik as rh
         self.rh = rh
         rh.FILE_DIR = Path(_database.name) / 'guidance-files'
+        self.teacher = rehber_ogretmen_olustur()
+        self.addCleanup(rehber_ogretmen_sil, self.teacher['id'])
         con = d._conn()
         con.execute('DELETE FROM rehber_gorusme')
         con.execute('DELETE FROM rehber_alici')
         con.execute('DELETE FROM rehber_icerik')
-        self.teacher = dict(con.execute("SELECT * FROM ogretmenler WHERE yetki='rehber' LIMIT 1").fetchone())
         self.roster = rh.students()
         self.oid, self.other = self.roster[0]['id'], self.roster[-1]['id']
         con.commit();con.close()

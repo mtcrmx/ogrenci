@@ -34,7 +34,7 @@ def test_menu_uretici_ve_tek_siralama_kurali():
 
     # 8. sınıfta yalnız evde sorular, denemeler ve analizler; Sıralama yok
     assert not any(x["label"] == "Sıralama" for x in m8)
-    assert {"evde_test", "deneme_analiz"} <= {x["id"] for x in m8}
+    assert {"evde_test", "deneme_analiz", "yayin", "yayin_yonetim"} <= {x["id"] for x in m8}
     assert any(x.get("grup") == "Analizler" for x in m8)
     assert not any(x["id"] == "haftalik_takip" for x in m8)
 
@@ -57,7 +57,7 @@ def test_menu_uretici_ve_tek_siralama_kurali():
 
     # Kazanımlar 8. sınıf menüsünden kaldırıldı; 5-7 öğretmeninde deneme ve evde soru var
     assert not any(x["id"] == "kazanim" for x in m8 + m_yon)
-    assert {"evde_test", "deneme_analiz", "haftalik_takip"} <= {x["id"] for x in m7}
+    assert {"evde_test", "deneme_analiz", "haftalik_takip", "yayin", "yayin_yonetim"} <= {x["id"] for x in m7}
 
 
 def test_oneriler_kural_tabanli_birim():

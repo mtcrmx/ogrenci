@@ -4,35 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% if veli_modu %}Veli · {% endif %}{{ ogrenci.ad_soyad }} — Tik geçmişi</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="{{ url_for('favicon') }}" sizes="any">
+  <script src="{{ url_for('static', filename='renk.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='rozet_clay.css') }}?v=rozet20260930d">
   <style>
     :root {
       color-scheme: light;
-      --surface: rgba(255, 255, 255, .92);
+      --surface: var(--pm-glass, rgba(255, 255, 255, .62));
       --surface-strong: #ffffff;
-      --ink: #0f172a;
-      --muted: #64748b;
-      --line: rgba(148, 163, 184, .28);
-      --shadow: 0 22px 60px rgba(15, 23, 42, .12);
-      --radius: 8px;
+      --ink: var(--pm-ink, #0b1220);
+      --muted: var(--pm-mute, #5b6478);
+      --line: rgba(15, 23, 42, .08);
+      --shadow: var(--pm-sh);
+      --radius: 14px;
     }
-    body.student-mode {
-      --accent: #0ea5e9;
-      --accent-strong: #0369a1;
-      --accent-soft: rgba(14, 165, 233, .12);
-      --accent-two: #22c55e;
-      --accent-three: #f59e0b;
-      --hero: linear-gradient(135deg, rgba(8, 145, 178, .95), rgba(37, 99, 235, .92) 50%, rgba(34, 197, 94, .86));
+    body.student-mode, body.parent-mode {
+      --accent: var(--pm-acc);
+      --accent-strong: var(--pm-acc3);
+      --accent-soft: var(--pm-acc-soft);
+      --accent-two: var(--pm-ok);
+      --accent-three: var(--pm-warn);
+      --hero: linear-gradient(135deg, var(--pm-acc), var(--pm-acc3));
     }
-    body.parent-mode {
-      --accent: #2563eb;
-      --accent-strong: #1d4ed8;
-      --accent-soft: rgba(37, 99, 235, .11);
-      --accent-two: #10b981;
-      --accent-three: #f97316;
-      --hero: linear-gradient(135deg, rgba(15, 23, 42, .96), rgba(30, 64, 175, .92) 52%, rgba(16, 185, 129, .82));
-    }
+    .min-w-0 { min-width: 0; }
+    .space-y-4 > * + * { margin-top: 1rem; }
+    .mt-3 { margin-top: .75rem; }
+    .mt-4 { margin-top: 1rem; }
+    .inline-flex { display: inline-flex; }
+    .items-center { align-items: center; }
+    .gap-2 { gap: .5rem; }
     * { box-sizing: border-box; letter-spacing: 0; }
     body {
       min-height: 100vh;
@@ -585,9 +585,11 @@
       .live-strip { align-items: flex-start; flex-direction: column; }
     }
   </style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
+  {% include '_pm_font.html' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}?v=premium1h">
 </head>
-<body class="ui-theme {% if veli_modu %}parent-mode{% else %}student-mode{% endif %}">
+<body class="pm pm-solo {% if veli_modu %}parent-mode{% else %}student-mode{% endif %}">
+{% include '_pm_ortak.html' %}
 {% if veli_modu and veli_pencereler %}
 <div id="veli-popup-katman"></div>
 <script type="application/json" id="veli-popup-veri">{{ veli_pencereler|tojson }}</script>
@@ -943,5 +945,6 @@ setInterval(() => {
 
 document.getElementById('guncelleme-bilgi').textContent = 'Yüklendi';
 </script>
+<script src="{{ url_for('static', filename='premium.js') }}?v=premium1f" defer></script>
 </body>
 </html>

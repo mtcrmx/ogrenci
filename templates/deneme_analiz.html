@@ -139,7 +139,7 @@
   {% if gorunum == 'birey' and birey %}
   setler.push({ label: "Öğrenci", data: {{ grafik.ogrenci|tojson }}, backgroundColor: "#f7b7d4", borderRadius: 16 });
   {% endif %}
-  setler.push({ label: "Sınıf", data: {{ grafik.sinif|tojson }}, backgroundColor: "#c9b4f0", borderRadius: 16 });
+  setler.push({ label: "Sınıf", data: {{ grafik.sinif|tojson }}, backgroundColor: "#a5b4fc", borderRadius: 16 });
   setler.push({ label: "Okul", data: {{ grafik.okul|tojson }}, backgroundColor: "#b8d8ff", borderRadius: 16 });
   new Chart(document.getElementById("ders-net"), {
     type: "bar",
@@ -158,7 +158,7 @@
     type: "bar",
     data: {
       labels: {{ grafik.dagilim_ad|tojson }},
-      datasets: [{ label: "Öğrenci", data: {{ grafik.dagilim_adet|tojson }}, backgroundColor: "#8b6ad4", borderRadius: 16 }]
+      datasets: [{ label: "Öğrenci", data: {{ grafik.dagilim_adet|tojson }}, backgroundColor: "#4f46e5", borderRadius: 16 }]
     },
     options: { ...ortak, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   });
@@ -168,7 +168,7 @@
       type: "bar",
       data: {
         labels: {{ grafik.sinif_ad|tojson }},
-        datasets: [{ label: "Puan ortalaması", data: {{ grafik.sinif_puan|tojson }}, backgroundColor: ["#c9b4f0", "#ffd6a8", "#bde9d8", "#f7b7d4"], borderRadius: 16 }]
+        datasets: [{ label: "Puan ortalaması", data: {{ grafik.sinif_puan|tojson }}, backgroundColor: ["#4f46e5", "#06b6d4", "#7c3aed", "#f59e0b"], borderRadius: 16 }]
       },
       options: { ...ortak, indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
     });

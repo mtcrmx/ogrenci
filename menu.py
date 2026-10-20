@@ -51,6 +51,7 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
             {"id": "soru_sinif_analiz", "label": "Evde soru analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Analizler"},
             {"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Analizler"},
         ])
+        items.extend(_yayin_ogeleri())
         if rol == "yonetici":
             items.extend(_yonetici_ogeleri())
         return items
@@ -83,12 +84,19 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
 
     # Diğer
     items.append({"id": "veli_iletisim", "label": "Veli görüşmeleri", "icon": "💬", "href": _guvenli_url("ogretmen_randevular"), "endpoint": "ogretmen_randevular", "grup": "Diğer"})
-    items.append({"id": "yayin", "label": "Okul yayın ekranı", "icon": "📺", "href": _guvenli_url("yayin"), "endpoint": "yayin", "yeni_sekme": True, "grup": "Diğer"})
+    items.extend(_yayin_ogeleri())
 
     if rol == "yonetici":
         items.extend(_yonetici_ogeleri())
 
     return items
+
+
+def _yayin_ogeleri() -> list[dict]:
+    return [
+        {"id": "yayin", "label": "Okul yayın ekranı", "icon": "📺", "href": _guvenli_url("yayin"), "endpoint": "yayin", "yeni_sekme": True, "grup": "Diğer"},
+        {"id": "yayin_yonetim", "label": "Yayın yönetimi", "icon": "▣", "href": _guvenli_url("yayin_yonetim"), "endpoint": "yayin_yonetim", "grup": "Diğer"},
+    ]
 
 
 def _yonetici_ogeleri() -> list[dict]:

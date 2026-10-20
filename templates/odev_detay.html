@@ -1,185 +1,120 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ odev.sinif_adi }} - Ödev Detayı</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
-        .radio-tamamladi:checked + label { background-color: #16a34a; color: white; border-color: #16a34a; }
-        .btn-seg {
-            cursor: pointer;
-            padding: 0.5rem 0.85rem;
-            border-radius: 0.5rem;
-            font-size: 0.8125rem;
-            font-weight: 700;
-            transition: background .15s, color .15s;
-        }
-    </style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
-</head>
-<body class="ui-theme p-4 md:p-8 pb-24 md:pb-8">
+{% extends 'base.html' %}
+{% block title %}{{ odev.sinif_adi }} - Ödev Detayı{% endblock %}
+{% block body %}
+<main class="pm-page pm-odev">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in msgs %}
+  <div class="pm-flash {{ 'pm-flash--bad' if cat == 'error' else 'pm-flash--warn' }}" role="status">{{ msg }}</div>
+  {% endfor %}
+  {% endwith %}
 
-    {% with msgs = get_flashed_messages(with_categories=true) %}
-    {% if msgs %}
-    <div class="max-w-4xl mx-auto mb-4 space-y-2">
-        {% for cat, msg in msgs %}
-        <div class="rounded-lg px-4 py-2 text-sm font-bold {{ 'bg-red-900/40 text-red-200 border border-red-700' if cat == 'error' else 'bg-amber-900/30 text-amber-200 border border-amber-700' }}">
-            {{ msg }}
-        </div>
-        {% endfor %}
+  <header class="pm-odev-head">
+    <div>
+      <h1>Ödev takibi</h1>
+      <p class="app-muted">Öğrenci yanıtlarını işaretleyip kaydedin; PDF raporu güncel listeyi yansıtır.</p>
     </div>
-    {% endif %}
-    {% endwith %}
-
-    <div class="max-w-4xl mx-auto space-y-6">
-        <div class="flex flex-col gap-4 mb-6">
-            <div class="flex flex-wrap items-center gap-3">
-                <a href="/odevler" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition shrink-0">
-                    <i class="fa-solid fa-arrow-left"></i> Ödev listesi
-                </a>
-                {% if pdf_ok %}
-                <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}" target="_blank" rel="noopener"
-                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition shadow-lg shadow-rose-900/30">
-                    <i class="fa-solid fa-file-pdf"></i> PDF (sınıf)
-                </a>
-                <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id, tur='hepsi') }}" target="_blank" rel="noopener"
-                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition shadow-lg shadow-indigo-900/30"
-                   title="Önce sınıf özeti, sonra her öğrenci ayrı sayfa">
-                    <i class="fa-solid fa-file-lines"></i> PDF (her öğrenci)
-                </a>
-                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <select id="ogr_pdf_sel"
-                            class="min-w-[11rem] max-w-[18rem] flex-1 sm:flex-none rounded-xl border border-slate-600 bg-slate-900 text-slate-200 text-sm font-semibold px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                        <option value="">Öğrenci seç…</option>
-                        {% for ogr in ogrenciler %}
-                        <option value="{{ ogr.id }}">{{ ogr.ogr_no }} — {{ ogr.ad_soyad }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="button" onclick="odevPdfSeciliOgrenci()"
-                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold transition shadow-lg shadow-amber-900/30 shrink-0">
-                        <i class="fa-solid fa-user"></i> PDF (seçili)
-                    </button>
-                </div>
-                <script>
-                  function odevPdfSeciliOgrenci() {
-                    var s = document.getElementById('ogr_pdf_sel');
-                    if (!s || !s.value) { alert('Lütfen listeden bir öğrenci seçin.'); return; }
-                    var base = "{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}";
-                    var u = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'tur=ogrenci&ogr=' + encodeURIComponent(s.value);
-                    window.open(u, '_blank', 'noopener');
-                  }
-                </script>
-                {% else %}
-                <span class="text-xs text-slate-500 px-2" title="pip install reportlab">PDF için reportlab</span>
-                {% endif %}
-            </div>
-            <h1 class="text-2xl sm:text-3xl font-black text-white">Ödev takibi</h1>
-            <p class="text-slate-500 text-sm -mt-2">Öğrenci yanıtlarını işaretleyip kaydedin; PDF raporu güncel listeyi yansıtır.</p>
-        </div>
-
-        <!-- Ödev Bilgisi -->
-        <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700 shadow-xl">
-            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                <div>
-                    <div class="flex items-center gap-3 mb-2 flex-wrap">
-                        <span class="px-3 py-1 bg-blue-600/20 text-blue-400 font-black rounded-lg text-lg">{{ odev.sinif_adi }}</span>
-                        {% if odev.sinif_seviyesi and odev.sinif_seviyesi >= 5 and odev.sinif_seviyesi <= 8 %}
-                        <span class="px-2 py-1 bg-indigo-600/30 text-indigo-200 text-xs font-bold rounded-lg border border-indigo-500/40">{{ odev.sinif_seviyesi }}. sınıf (TYMM)</span>
-                        {% endif %}
-                        <span class="text-sm font-bold text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>{{ odev.tarih[:10] }}</span>
-                    </div>
-                    <div class="text-xl font-bold text-white mb-1">{{ odev.ders_adi }}</div>
-                    <div class="text-slate-400">{{ odev.tema_adi }}</div>
-                    {% if odev.konu_adi %}
-                    <div class="mt-3 text-sm text-slate-300"><span class="text-slate-500 font-bold">Öğrenme kanıtları:</span> {{ odev.konu_adi }}</div>
-                    {% endif %}
-                    {% if odev.ogrenme_cikti_kodlari and odev.ogrenme_cikti_kodlari|length > 0 %}
-                    <div class="mt-3 flex flex-wrap gap-2 items-center">
-                        <span class="text-xs font-bold text-slate-500 uppercase">Kanıt kodları</span>
-                        {% for kod in odev.ogrenme_cikti_kodlari %}
-                        <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-amber-300 border border-slate-600">{{ kod }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    {% if odev.ogrenme_ciktilari and odev.ogrenme_ciktilari|length > 0 %}
-                    <div class="mt-3">
-                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Seçilen öğrenme kanıtları</div>
-                        <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
-                            {% for c in odev.ogrenme_ciktilari %}
-                            <li>{{ c }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center min-w-[120px]">
-                    <div class="text-xs font-bold text-slate-500 mb-1">Tamamlanma Oranı</div>
-                    {% set completed = ogrenciler | selectattr('durum', 'equalto', 'tamamladi') | list | length %}
-                    {% set total = ogrenciler | length %}
-                    {% set percent = (completed / total * 100) | round | int if total > 0 else 0 %}
-                    <div class="text-3xl font-black {{ 'text-green-400' if percent >= 80 else ('text-amber-400' if percent >= 50 else 'text-red-400') }}">
-                        %{{ percent }}
-                    </div>
-                    <div class="text-xs text-slate-400 mt-1">{{ completed }} / {{ total }} Öğrenci</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Öğrenci Listesi -->
-        <form method="POST" class="bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
-            <div class="p-4 border-b border-slate-700 bg-slate-800/80">
-                <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-users mr-2 text-blue-400"></i>Sınıftaki öğrenciler</h3>
-                <p class="text-slate-500 text-xs mt-1">Her satırda ödevi yaptı mı, yapmadı mı işaretleyin.</p>
-            </div>
-            
-            <div class="divide-y divide-slate-700/50">
-                {% for ogr in ogrenciler %}
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 hover:bg-slate-700/20 transition">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-xs font-black text-slate-300 shrink-0">
-                            {{ ogr.ogr_no }}
-                        </div>
-                        <div class="font-bold text-slate-200 truncate">{{ ogr.ad_soyad }}</div>
-                    </div>
-                    
-                    <div class="flex bg-slate-900 rounded-xl p-1 border border-slate-600 shrink-0 self-start sm:self-center">
-                        <div class="relative">
-                            <input type="radio" name="durum_{{ ogr.id }}" id="no_{{ ogr.id }}" value="tamamlamadi" class="hidden radio-tamamlamadi" {{ 'checked' if ogr.durum == 'tamamlamadi' else '' }}>
-                            <label for="no_{{ ogr.id }}" class="btn-seg text-slate-400 hover:bg-slate-800 inline-flex items-center gap-1.5">
-                                <i class="fa-solid fa-xmark"></i> Yapmadı
-                            </label>
-                        </div>
-                        <div class="relative">
-                            <input type="radio" name="durum_{{ ogr.id }}" id="yes_{{ ogr.id }}" value="tamamladi" class="hidden radio-tamamladi" {{ 'checked' if ogr.durum == 'tamamladi' else '' }}>
-                            <label for="yes_{{ ogr.id }}" class="btn-seg text-slate-400 hover:bg-slate-800 inline-flex items-center gap-1.5">
-                                <i class="fa-solid fa-check"></i> Yaptı
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            
-            <div class="p-4 border-t border-slate-700 bg-slate-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <p class="text-xs text-slate-500 order-2 sm:order-1">Değişiklikler kaydedilene kadar uygulanmaz.</p>
-                <button type="submit" class="order-1 sm:order-2 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-base shadow-lg shadow-green-900/25 transition">
-                    <i class="fa-solid fa-floppy-disk"></i> Kaydet
-                </button>
-            </div>
-        </form>
+    <div class="app-actions">
+      <a href="/odevler" class="pm-btn--ghost">← Ödev listesi</a>
+      {% if pdf_ok %}
+      <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}" target="_blank" rel="noopener" class="app-button">PDF (sınıf)</a>
+      <a href="{{ url_for('odev_rapor_pdf', odev_id=odev.id, tur='hepsi') }}" target="_blank" rel="noopener" class="pm-btn--ghost"
+         title="Önce sınıf özeti, sonra her öğrenci ayrı sayfa">PDF (her öğrenci)</a>
+      {% else %}
+      <span class="app-muted" title="pip install reportlab">PDF için reportlab</span>
+      {% endif %}
     </div>
+  </header>
 
-    {% if request.args.get('yeni') and pdf_ok %}
-    <script>
-      window.addEventListener("load", function () {
-        window.open("{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}", "_blank", "noopener");
-      });
-    </script>
-    {% endif %}
+  {% if pdf_ok %}
+  <div class="pm-odev-pdf app-row">
+    <select id="ogr_pdf_sel" aria-label="PDF için öğrenci">
+      <option value="">Öğrenci seç…</option>
+      {% for ogr in ogrenciler %}
+      <option value="{{ ogr.id }}">{{ ogr.ogr_no }} — {{ ogr.ad_soyad }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" onclick="odevPdfSeciliOgrenci()" class="pm-btn--ghost">PDF (seçili)</button>
+  </div>
+  <script>
+    function odevPdfSeciliOgrenci() {
+      var s = document.getElementById('ogr_pdf_sel');
+      if (!s || !s.value) { alert('Lütfen listeden bir öğrenci seçin.'); return; }
+      var base = "{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}";
+      var u = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'tur=ogrenci&ogr=' + encodeURIComponent(s.value);
+      window.open(u, '_blank', 'noopener');
+    }
+  </script>
+  {% endif %}
 
-</body>
-</html>
+  {% set completed = ogrenciler | selectattr('durum', 'equalto', 'tamamladi') | list | length %}
+  {% set total = ogrenciler | length %}
+  {% set percent = (completed / total * 100) | round | int if total > 0 else 0 %}
+  <section class="app-card pm-odev-bilgi">
+    <div class="min-w-0">
+      <div class="app-row">
+        <span class="pm-chip pm-chip--in">{{ odev.sinif_adi }}</span>
+        {% if odev.sinif_seviyesi and odev.sinif_seviyesi >= 5 and odev.sinif_seviyesi <= 8 %}
+        <span class="pm-chip">{{ odev.sinif_seviyesi }}. sınıf (TYMM)</span>
+        {% endif %}
+        <span class="app-muted">{{ odev.tarih[:10] }}</span>
+      </div>
+      <h2>{{ odev.ders_adi }}</h2>
+      <p class="app-muted">{{ odev.tema_adi }}</p>
+      {% if odev.konu_adi %}
+      <p><strong>Öğrenme kanıtları:</strong> {{ odev.konu_adi }}</p>
+      {% endif %}
+      {% if odev.ogrenme_cikti_kodlari and odev.ogrenme_cikti_kodlari|length > 0 %}
+      <div class="app-row">
+        <span class="app-muted">Kanıt kodları</span>
+        {% for kod in odev.ogrenme_cikti_kodlari %}<code class="pm-chip">{{ kod }}</code>{% endfor %}
+      </div>
+      {% endif %}
+      {% if odev.ogrenme_ciktilari and odev.ogrenme_ciktilari|length > 0 %}
+      <div>
+        <p class="app-muted">Seçilen öğrenme kanıtları</p>
+        <ul class="pm-odev-liste">{% for c in odev.ogrenme_ciktilari %}<li>{{ c }}</li>{% endfor %}</ul>
+      </div>
+      {% endif %}
+    </div>
+    <div class="pm-odev-oran">
+      <span class="app-muted">Tamamlanma oranı</span>
+      <strong class="{{ 'pm-ok' if percent >= 80 else ('pm-warn' if percent >= 50 else 'pm-bad') }}">%{{ percent }}</strong>
+      <span class="app-muted">{{ completed }} / {{ total }} öğrenci</span>
+    </div>
+  </section>
+
+  <form method="POST" class="app-card pm-odev-form">
+    <h2>Sınıftaki öğrenciler</h2>
+    <p class="app-muted">Her satırda ödevi yaptı mı, yapmadı mı işaretleyin.</p>
+    <div class="pm-odev-satirlar">
+      {% for ogr in ogrenciler %}
+      <div class="pm-odev-satir">
+        <div class="pm-odev-ogr">
+          <span class="pm-odev-no">{{ ogr.ogr_no }}</span>
+          <span class="pm-odev-ad">{{ ogr.ad_soyad }}</span>
+        </div>
+        <div class="pm-seg" role="radiogroup" aria-label="{{ ogr.ad_soyad }} ödev durumu">
+          <input type="radio" name="durum_{{ ogr.id }}" id="no_{{ ogr.id }}" value="tamamlamadi" class="radio-tamamlamadi" {{ 'checked' if ogr.durum == 'tamamlamadi' else '' }}>
+          <label for="no_{{ ogr.id }}">✕ Yapmadı</label>
+          <input type="radio" name="durum_{{ ogr.id }}" id="yes_{{ ogr.id }}" value="tamamladi" class="radio-tamamladi" {{ 'checked' if ogr.durum == 'tamamladi' else '' }}>
+          <label for="yes_{{ ogr.id }}">✓ Yaptı</label>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions pm-odev-kaydet">
+      <p class="app-muted">Değişiklikler kaydedilene kadar uygulanmaz.</p>
+      <button type="submit" class="app-button">Kaydet</button>
+    </div>
+  </form>
+</main>
+{% endblock %}
+{% block scripts %}
+{% if request.args.get('yeni') and pdf_ok %}
+<script>
+  window.addEventListener("load", function () {
+    window.open("{{ url_for('odev_rapor_pdf', odev_id=odev.id) }}", "_blank", "noopener");
+  });
+</script>
+{% endif %}
+{% endblock %}

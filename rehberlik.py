@@ -68,8 +68,10 @@ def now():
 
 
 def counselor():
-    from yetki import yetkili
-    return bool(session.get('ogretmen_id') and yetkili(session['ogretmen_id'], 'rehber'))
+    oid = session.get('ogretmen_id')
+    if not oid:
+        return False
+    return db.ogretmen_yetki_al(oid) == 'rehber'
 
 
 def csrf():

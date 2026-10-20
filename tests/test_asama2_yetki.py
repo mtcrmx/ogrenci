@@ -4,6 +4,7 @@ from test_app_workflows import w, d
 from migrations import current_version, migrate_down, migrate_up
 import lgs_optik as optik
 import yetki
+from _rehber_fixture import rehber_ogretmen_olustur, rehber_ogretmen_sil
 
 
 class Asama2YetkiTests(unittest.TestCase):
@@ -30,9 +31,10 @@ class Asama2YetkiTests(unittest.TestCase):
                 self.assertTrue(yetki.yetkili(metehan, r), f"Metehan eksik yetki: {r}")
             self.assertFalse(yetki.yetkili(metehan, "toplu_sifirlama"))
 
-            for r in ("lgs_yonet", "rehber"):
+            for r in ("yonetici", "evrak_takip", "lgs_yonet", "rehber"):
                 self.assertTrue(yetki.yetkili(alperen, r), f"Alperen eksik yetki: {r}")
-            self.assertFalse(yetki.yetkili(alperen, "yonetici"))
+            for r in ("sayfa_sifirlama", "toplu_sifirlama"):
+                self.assertFalse(yetki.yetkili(alperen, r))
 
             # down(1) -> ogretmen_yetki tablosu silinir, tekrar up() ile geri gelir
             migrate_down(con, target=1)
@@ -55,20 +57,25 @@ class Asama2YetkiTests(unittest.TestCase):
             if t["ad_soyad"] not in ("ADEM AKGÜL", "METEHAN CÜCEN", "ALPEREN MURAT LEBLEBİCİ")
             and t.get("yetki") == "tam"
         )
+        rehber = rehber_ogretmen_olustur()
+        self.addCleanup(rehber_ogretmen_sil, rehber["id"])
 
         cases = [
             # (teacher, session_yetki, endpoint, method, expected_status)
             (adem, "tam", "/giris-raporu", "GET", 200),
             (metehan, "tam", "/giris-raporu", "GET", 200),
-            (alperen, "rehber", "/giris-raporu", "GET", 302),
+            (alperen, "tam", "/giris-raporu", "GET", 200),
+            (rehber, "rehber", "/giris-raporu", "GET", 302),
             (normal, "tam", "/giris-raporu", "GET", 403),
             (adem, "tam", "/yonetim/sinavlar", "GET", 200),
             (metehan, "tam", "/yonetim/sinavlar", "GET", 200),
+            (alperen, "tam", "/yonetim/sinavlar", "GET", 200),
             (normal, "tam", "/yonetim/sinavlar", "GET", 403),
             (adem, "tam", "/ogrenci-ara", "GET", 200),
             (metehan, "tam", "/ogrenci-ara", "GET", 200),
+            (alperen, "tam", "/ogrenci-ara", "GET", 200),
             (normal, "tam", "/ogrenci-ara", "GET", 403),
-            (alperen, "rehber", "/rehberlik", "GET", 200),
+            (rehber, "rehber", "/rehberlik", "GET", 200),
             (normal, "tam", "/rehberlik", "GET", 403),
         ]
 
@@ -85,7 +92,7 @@ class Asama2YetkiTests(unittest.TestCase):
                 self.assertEqual(resp.status_code, expected)
 
         # Sayfa sıfırlama yalnız Metehan'a açık
-        for teacher, expected in ((metehan, 200), (adem, 403), (normal, 403)):
+        for teacher, expected in ((metehan, 200), (adem, 403), (alperen, 403), (normal, 403)):
             with self.subTest(sayfa_sifirla=teacher["ad_soyad"]):
                 c = w.app.test_client()
                 with c.session_transaction() as s:
@@ -107,6 +114,23 @@ class Asama2YetkiTests(unittest.TestCase):
                 from flask import session
                 session["ogretmen_id"] = teacher["id"]
                 self.assertEqual(optik.teacher_can_view(fake_exam), expected)
+
+    def test_alperen_logs_into_teacher_screen_like_metehan(self):
+        teachers = {t["ad_soyad"]: t for t in d.tum_ogretmenler()}
+        for ad in ("METEHAN CÜCEN", "ALPEREN MURAT LEBLEBİCİ"):
+            t = teachers[ad]
+            self.assertEqual(t.get("yetki"), "tam")
+            c = w.app.test_client()
+            with c.session_transaction() as s:
+                s.update(
+                    ogretmen_id=t["id"],
+                    ogretmen_adi=t["ad_soyad"],
+                    ogretmen_yetki="tam",
+                )
+            r = c.get("/dashboard")
+            self.assertEqual(r.status_code, 200)
+            for url in ("/giris-raporu", "/yonetim/sinavlar", "/yayin", "/yayin/yonetim"):
+                self.assertEqual(c.get(url).status_code, 200, url)
 
     def test_titles_and_toolbar_come_from_db(self):
         self.assertEqual(yetki.ogretmen_unvani("ADEM AKGÜL"), "Müdür")

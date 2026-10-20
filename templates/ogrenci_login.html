@@ -1,82 +1,28 @@
 <!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="tr"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Öğrenci Girişi - Erenler Cumhuriyet Ortaokulu</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
-</head>
-<body class="ui-theme min-h-screen overflow-x-hidden">
-  <main class="ui-shell flex min-h-screen items-center py-8">
-    <section class="grid w-full gap-5 lg:grid-cols-[.95fr_1.05fr]">
-      <div class="ui-hero p-6 sm:p-8">
-        <div class="relative z-10 flex h-full min-h-[340px] flex-col justify-between">
-          <div>
-            <a href="{{ url_for('login') }}"
-               class="inline-flex rounded-[8px] border border-white/25 bg-white/15 px-3 py-2 text-xs font-black text-white backdrop-blur hover:bg-white/20">
-              Ana menü
-            </a>
-            <h1 class="mt-8 text-3xl font-black leading-tight text-white sm:text-5xl">Öğrenci kişisel alanı</h1>
-            <p class="mt-4 max-w-lg text-sm font-bold leading-6 text-white/78">
-              Girişten sonra kendi tik kayıtlarını ve ödevlerini görürsün.
-            </p>
-          </div>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div class="rounded-[8px] border border-white/20 bg-white/14 p-3 text-white backdrop-blur">
-              <div class="text-xs font-black text-white/70">Takip</div>
-              <div class="mt-1 text-lg font-black">Tik geçmişi</div>
-            </div>
-            <div class="rounded-[8px] border border-white/20 bg-white/14 p-3 text-white backdrop-blur">
-              <div class="text-xs font-black text-white/70">Ödev</div>
-              <div class="mt-1 text-lg font-black">Tema listesi</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <form method="POST" class="ui-card p-5 sm:p-7">
-        <div class="mb-6">
-          <h2 class="text-2xl font-black text-slate-950">Öğrenci girişi</h2>
-          <p class="mt-1 text-sm font-bold text-slate-500">Numaran ve öğrenci şifrenle devam et.</p>
-        </div>
-
-        {% if hata %}
-        <div class="mb-4 rounded-[8px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
-          {{ hata }}
-        </div>
-        {% endif %}
-
-        <input type="hidden" name="next" value="{{ next_url }}">
-
-        <div class="space-y-4">
-          <label class="block">
-            <span class="mb-1.5 block text-sm font-black text-slate-700">Öğrenci numarası</span>
-            <input type="number" name="ogr_no" inputmode="numeric" placeholder="Örn: 105" required autofocus
-                   class="w-full rounded-[8px] border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none">
-          </label>
-
-          <label class="block">
-            <span class="mb-1.5 block text-sm font-black text-slate-700">Öğrenci şifresi</span>
-            <input type="password" name="sifre" autocomplete="current-password" required
-                   class="w-full rounded-[8px] border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none">
-          </label>
-
-          <button type="submit" class="w-full rounded-[8px] bg-sky-700 px-4 py-3 text-sm font-black text-white shadow-lg shadow-sky-900/15 hover:bg-sky-800">
-            Giriş yap
-          </button>
-        </div>
-
-        <div class="mt-5 grid gap-2 border-t border-slate-200 pt-4 text-center text-xs font-bold sm:grid-cols-2">
-          <a href="{{ url_for('ogrenci_gorunum') }}" class="rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sky-700 hover:bg-sky-50">
-            Tik geçmişine git
-          </a>
-          <a href="{{ url_for('login') }}" class="rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-slate-600 hover:bg-slate-50">
-            Öğretmen girişine dön
-          </a>
-        </div>
-      </form>
-    </section>
+  <link rel="icon" href="{{ url_for('favicon') }}" sizes="any"><link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <script src="{{ url_for('static', filename='renk.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='login_motion.css') }}?v=20260929d">
+  <link rel="stylesheet" href="{{ url_for('static', filename='school-entry.css') }}?v=20261001-softedges">
+  <link rel="preload" as="image" href="{{ url_for('static', filename='school-campus.webp') }}">
+  {% include '_pm_font.html' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}?v=premium1h">
+</head><body class="pm ui-theme min-h-screen overflow-x-hidden">
+  {% include '_pm_ortak.html' %}
+  <main class="login-stage school-entry">
+    {% include "_school_entry_visual.html" %}
+    <form method="POST" class="school-entry-form" aria-labelledby="student-entry-title">
+      <div class="entry-account"><span>ÖĞRENCİ ALANI</span><span>2026–2027</span></div>
+      <h2 id="student-entry-title">Öğrenci girişi</h2>
+      <p class="entry-intro">Numaran ve öğrenci şifrenle devam et. Girişten sonra kendi tik kayıtlarını ve ödevlerini görürsün.</p>
+      {% if hata %}<div class="entry-error" role="alert">{{ hata }}</div>{% endif %}
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <label><span>Öğrenci numarası</span><input type="number" name="ogr_no" inputmode="numeric" placeholder="Örn: 105" required autofocus autocomplete="username"></label>
+      <label><span>Öğrenci şifresi</span><input type="password" name="sifre" autocomplete="current-password" required placeholder="Öğrenci şifreni gir"></label>
+      <button type="submit" class="entry-submit">Giriş yap <span aria-hidden="true">→</span></button>
+      <div class="entry-form-footer"><a href="{{ url_for('ogrenci_gorunum') }}">Tik geçmişine git</a><a href="{{ url_for('login') }}">Öğretmen girişine dön</a></div>
+    </form>
   </main>
-</body>
-</html>
+</body></html>

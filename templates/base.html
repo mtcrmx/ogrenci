@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% block title %}Öğrenci Takip{% endblock %} — Erenler Cumhuriyet Ortaokulu</title>
   <link rel="manifest" href="{{ url_for('manifest_veli' if ui_role == 'veli' else 'manifest') }}">
-  <meta name="theme-color" content="#c9b4f0">
+  <meta name="theme-color" content="#f4f5fb">
   <link rel="icon" href="{{ url_for('favicon') }}" sizes="any">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <script src="{{ url_for('static', filename='renk.js') }}"></script>
@@ -15,13 +15,12 @@
       theme: {
         extend: {
           colors: {
-            okul: { 900:'#8b6ad4', 800:'#c9b4f0', 700:'#a88adf', 100:'#efe4ff' }
+            okul: { 900:'#4338ca', 800:'#4f46e5', 700:'#6366f1', 100:'#e0e7ff' }
           }
         }
       }
     }
   </script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='ui_theme.css') }}?v=claysoft2026">
   <link rel="stylesheet" href="{{ url_for('static', filename='tasarim.css') }}?v=asama6">
   <style>
     :root {
@@ -462,7 +461,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20261018floatinghelp">
 <link rel="stylesheet" href="{{ url_for('static', filename='yeni_tema.css') }}?v=20261020i">
 {% include '_pm_font.html' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}?v=premium1f">
+<link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}?v=premium1h">
 </head>
 <body class="pm ui-theme app-background bg-slate-100 layout-page {{ 'dashboard-page' if request.endpoint == 'dashboard' else '' }}">
 {% include '_pm_ortak.html' %}

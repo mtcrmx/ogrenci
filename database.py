@@ -2848,13 +2848,11 @@ def _ogretmen_kadrosunu_senkronize(con: sqlite3.Connection) -> None:
             "SELECT id FROM ogretmenler WHERE ad_soyad = ?", (ad,)
         ).fetchone()
         if row:
-            if ad in _REHBER_OGRETMENLER:
-                con.execute("UPDATE ogretmenler SET yetki = 'rehber' WHERE id = ?", (row['id'],))
             continue
         sifre = _bos_sifre_uret(con)
         con.execute(
-            "INSERT INTO ogretmenler (ad_soyad, sifre, yetki) VALUES (?, ?, ?)",
-            (ad, sifre, 'rehber' if ad in _REHBER_OGRETMENLER else 'tam'),
+            "INSERT INTO ogretmenler (ad_soyad, sifre, yetki) VALUES (?, ?, 'tam')",
+            (ad, sifre),
         )
         print(f"INFO: Yeni ogretmen eklendi: {ad}")
 
