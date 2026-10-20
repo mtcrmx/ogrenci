@@ -1,35 +1,38 @@
 {% extends "base.html" %}
 {% block title %}{{ ogrenci.ad_soyad }} · Öğrenci Detayı · AkademiPuan{% endblock %}
 {% block body %}
-{% include '_app_sidebar.html' %}
-<main class="mx-auto max-w-6xl px-3 py-4 sm:px-6">
+<main class="mx-auto max-w-6xl px-3 py-4 sm:px-6 pm-page">
   <div class="top">
-    <a href="{{ url_for('dashboard', sinif=ogrenci.sinif_id) }}">← Öğrenciler</a>
+    <a class="pm-back" href="{{ url_for('dashboard', sinif=ogrenci.sinif_id) }}">← Öğrenciler</a>
   </div>
-  <div class="top">
-    <div class="avatar">{{ (ogrenci.ad_soyad or 'Ö')[:2] }}</div>
+  {% set ad_parca = (ogrenci.ad_soyad or 'Ö').split() %}
+  <div class="top pm-hero pm-glass">
+    <div class="avatar">{{ ad_parca[0][:1] ~ (ad_parca[-1][:1] if ad_parca|length > 1 else '') }}</div>
     <div>
       <h1>{{ ogrenci.ad_soyad }}</h1>
       <p>{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no or '—' }}{% if hedef_lise %} · Hedef: {{ hedef_lise }}{% endif %}</p>
     </div>
     <span class="sp"></span>
-    <a class="btn" href="{{ url_for('karne', sinif=ogrenci.sinif_id) }}">⎙ Karne / PDF</a>
-    <a class="btn" href="{{ url_for('sonuclar', ogrenci=ogrenci.id) }}">✎ Sonuç gir / düzenle</a>
-    <a class="btn pri" href="{{ url_for('ort_giris', sinif_id=ogrenci.sinif_id) }}">＋ Test sonucu gir</a>
+    <div class="pm-hero-actions">
+    <a class="btn" href="{{ url_for('karne', sinif=ogrenci.sinif_id) }}"><svg class="pm-ic" aria-hidden="true"><use href="#pm-i-file"/></svg> Karne / PDF</a>
+    <a class="btn" href="{{ url_for('sonuclar', ogrenci=ogrenci.id) }}"><svg class="pm-ic" aria-hidden="true"><use href="#pm-i-edit"/></svg> Sonuç gir / düzenle</a>
+    <a class="btn pri" href="{{ url_for('ort_giris', sinif_id=ogrenci.sinif_id) }}"><svg class="pm-ic" aria-hidden="true"><use href="#pm-i-plus"/></svg> Test sonucu gir</a>
+    </div>
   </div>
 
   <!-- 4 Özet KPI Kartı -->
   <section class="grid g4">
     <div class="card kpi">
       <span>Genel başarı (tüm testler)</span>
-      <strong>{% if kpi.genel_oran is not none %}%{{ goster(kpi.genel_oran) }}{% else %}—{% endif %}</strong>
+      <strong {% if kpi.genel_oran is not none %}data-pm-count{% endif %}>{% if kpi.genel_oran is not none %}%{{ goster(kpi.genel_oran) }}{% else %}—{% endif %}</strong>
       <em class="{{ 'up' if kpi.sinif_fark is not none and kpi.sinif_fark >= 0 else 'down' }}">
         Sınıf {% if kpi.sinif_oran is not none %}%{{ goster(kpi.sinif_oran) }}{% else %}—{% endif %}
       </em>
+      {% if kpi.genel_oran is not none %}<div class="pm-fill-bar" aria-hidden="true"><i class="pm-fill" style="width: {{ [[kpi.genel_oran, 0]|max, 100]|min }}%"></i></div>{% endif %}
     </div>
     <div class="card kpi">
       <span>Son deneme neti</span>
-      <strong>{% if kpi.son_deneme_net is not none %}{{ goster(kpi.son_deneme_net) }}{% else %}—{% endif %}</strong>
+      <strong {% if kpi.son_deneme_net is not none %}data-pm-count{% endif %}>{% if kpi.son_deneme_net is not none %}{{ goster(kpi.son_deneme_net) }}{% else %}—{% endif %}</strong>
       <em class="muted">{{ kpi.son_deneme_ad or 'Deneme kaydı yok' }}</em>
     </div>
     {% if 'lgs' in ogrenci_modulleri %}
@@ -51,6 +54,25 @@
       <em class="down">{% if kpi.en_zayif_oran is not none %}%{{ goster(kpi.en_zayif_oran) }}{% else %}Veri bekleniyor{% endif %}</em>
     </div>
   </section>
+
+  {% set seri = (denemeler[:8]|rejectattr('net', 'none')|list)|reverse|list %}
+  {% if seri|length >= 2 %}
+  {% set netler = seri|map(attribute='net')|map('float')|list %}
+  {% set enb = netler|max %}{% set enk = netler|min %}{% set aralik = (enb - enk) if enb != enk else 1 %}
+  {% set adim = 400 / (netler|length - 1) %}
+  {% set nokta = namespace(d='') %}
+  {% for n in netler %}{% set nokta.d = nokta.d ~ ('M' if loop.first else ' L') ~ ((loop.index0 * adim)|round(1)) ~ ' ' ~ ((110 - (n - enk) / aralik * 90)|round(1)) %}{% endfor %}
+  <section class="card pm-spark-card" style="margin-top:18px" aria-label="Son sınav netleri grafiği">
+    <h3>Net gelişimi</h3>
+    <p class="muted" style="margin:0">Son {{ netler|length }} sınav / test · en düşük {{ goster(enk) }}, en yüksek {{ goster(enb) }}</p>
+    <svg class="pm-spark" viewBox="0 -6 400 132" preserveAspectRatio="none" role="img" aria-label="Net değişimi çizgi grafiği">
+      <defs><linearGradient id="pm-spark-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--pm-acc3);stop-opacity:.3"/><stop offset="1" style="stop-color:var(--pm-acc3);stop-opacity:0"/></linearGradient></defs>
+      <g stroke="rgba(15,23,42,.06)"><line x1="0" y1="20" x2="400" y2="20"/><line x1="0" y1="65" x2="400" y2="65"/><line x1="0" y1="110" x2="400" y2="110"/></g>
+      <path class="pm-area" d="{{ nokta.d }} L400 126 L0 126 Z" fill="url(#pm-spark-g)"/>
+      <path class="pm-draw" pathLength="1" d="{{ nokta.d }}" fill="none" style="stroke:var(--pm-acc3)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </section>
+  {% endif %}
 
   <!-- Tek Cümlelik Otomatik Yorum -->
   <div class="insight">

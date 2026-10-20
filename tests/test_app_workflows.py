@@ -198,9 +198,10 @@ class Workflows(unittest.TestCase):
         self.assertIn('Gerçek deneme', sayfa)
         self.assertNotIn('Yaprak karışmasın', sayfa)
         menu = self.teacher_client.get('/lgs').get_data(as_text=True)
-        self.assertLess(menu.index('>LGS merkezi<'), menu.index('Deneme analizi'))
-        self.assertLess(menu.index('Deneme analizi'), menu.index('>Raporlar<'))
-        self.assertIn('Soru ve sınıf analizi', menu[menu.index('>LGS merkezi<'):menu.index('>Raporlar<')])
+        lgs_grup, rapor_grup = menu.index('data-grup="LGS merkezi"'), menu.index('data-grup="Raporlar"')
+        self.assertLess(lgs_grup, rapor_grup)
+        self.assertIn('>Denemeler<', menu)
+        self.assertIn('Soru ve sınıf analizi', self.teacher_client.get('/evde-analiz').get_data(as_text=True))
         ogr = self.teacher_client.get('/lgs', query_string={'ogrenci': self.oid}).get_data(as_text=True)
         self.assertNotIn('Ders ve deneme sonucu', ogr)
         evde = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)
@@ -522,7 +523,7 @@ class Workflows(unittest.TestCase):
         self.assertEqual(parent.post('/veli/kitap-okuma/kaydet',data={**payload,'hafta':'2000-01-03'}).status_code,400)
 
     def test_teacher_secondary_tools_reachable(self):
-        html=self.teacher_client.get('/dashboard').get_data(as_text=True)
+        html=self.teacher_client.get('/haftalik-takip').get_data(as_text=True)
         for url in ['/ogretmen/kitap-okuma','/ogretmen/randevular']:
             self.assertTrue(url in html,url)
 
@@ -725,8 +726,8 @@ class Workflows(unittest.TestCase):
         self.assertNotIn('bg-white p-4" open', ana)
         self.assertNotIn('Koçluk çizelgesi', ana)
         self.assertNotIn('Yaprak testler', ana)
-        self.assertIn('Evde soru testleri', ana)
-        self.assertIn('Okulda yaprak test', ana)
+        self.assertIn('>Ev testleri<', ana)
+        self.assertIn('>Yaprak test<', ana)
         evde = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)
         self.assertIn('Soruları gönder', evde)
         self.assertNotIn('Yaprak testler', evde)

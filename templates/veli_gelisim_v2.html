@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Gelişim ve Sonuçlar · {{ ogrenci.ad_soyad }} · AkademiPuan{% endblock %}
 {% block body %}
-{% include '_app_sidebar.html' %}
-<main class="mx-auto max-w-6xl px-3 py-4 sm:px-6">
-  <div class="top">
-    <div class="avatar">{{ (ogrenci.ad_soyad or 'Ö')[:2] }}</div>
+<main class="mx-auto max-w-6xl px-3 py-4 sm:px-6 pm-page">
+  {% set ad_parca = (ogrenci.ad_soyad or 'Ö').split() %}
+  <div class="top pm-hero pm-glass">
+    <div class="avatar">{{ ad_parca[0][:1] ~ (ad_parca[-1][:1] if ad_parca|length > 1 else '') }}</div>
     <div>
       <h1>{{ ogrenci.ad_soyad }}</h1>
       <p>{{ ogrenci.sinif_adi }} · No {{ ogrenci.ogr_no or '—' }}</p>

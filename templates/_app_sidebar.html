@@ -1,3 +1,4 @@
+{% from '_pm_ikon.html' import pm_ikon %}
 <aside class="app-sidebar" id="app-menu" aria-label="{{ 'Veli' if ui_role == 'veli' else 'Öğretmen' }} menüsü">
   {% set rehber_only = session.get('ogretmen_yetki') == 'rehber' %}
   {% set rapor_only = session.get('ogretmen_yetki') in ['rapor', 'rehber'] %}
@@ -21,50 +22,71 @@
             <summary>{{ item.grup }}</summary>
             {% for sub in item.alt %}
               <a href="{{ sub.href }}" class="{{ 'is-current' if request.endpoint == sub.endpoint else '' }}">
-                <span aria-hidden="true">{{ sub.icon }}</span>{{ sub.label }}
+                <span aria-hidden="true">{{ pm_ikon(sub.id, sub.icon) }}</span>{{ sub.label }}
               </a>
             {% endfor %}
           </details>
         {% else %}
           <a href="{{ item.href }}" {% if item.parent_nav %}data-parent-nav="{{ item.parent_nav }}"{% endif %} class="{{ 'is-current' if request.endpoint == item.endpoint else '' }}">
-            <span aria-hidden="true">{{ item.icon }}</span>{{ item.label }}
+            <span aria-hidden="true">{{ pm_ikon(item.id, item.icon) }}</span>{{ item.label }}
           </a>
         {% endif %}
       {% endfor %}
     </nav>
   {% else %}
-    <p class="app-account">{{ session.ogretmen_adi }}</p>
     <nav class="app-nav" aria-label="Ana menü">
       {% set m_rol = 'rehber' if rehber_only else ('rapor' if rapor_only else ('yonetici' if yetkili('yonetici') else 'ogretmen')) %}
       {% set m_seviye = secili_sinif_seviyesi|default(8) %}
       {% set m_items = ogretmen_menusu(m_seviye, m_rol, nav_sinif_id) %}
-      {% for grup, grup_items in m_items|groupby('grup') %}
+      {% set ana_basliklar = {'Takip': ('✓', 'Takip'), 'Kitap okuma': ('📚', 'Kitap okuma'), 'LGS merkezi': ('🎯', 'LGS'), 'Raporlar': ('📊', 'Raporlar'), 'Yönetici': ('🏫', 'Okul yönetimi')} %}
+      {% set bolum = aktif_bolum(m_items, request.endpoint, request.args) %}
+      {% for grup, grup_items in menu_gruplari(m_items) %}
         {% if grup == 'Ana' %}
           {% for item in grup_items %}
-            <a href="{{ item.href }}" class="{{ 'is-current' if request.endpoint == item.endpoint else '' }}">
-              <span aria-hidden="true">{{ item.icon }}</span>{{ item.label }}
+            <a href="{{ item.href }}" class="yt-nav-top {{ 'is-current' if request.endpoint == item.endpoint else '' }}">
+              <span aria-hidden="true">{{ pm_ikon(item.id, item.icon) }}</span>{{ item.label }}
+            </a>
+          {% endfor %}
+        {% elif grup in ana_basliklar %}
+          {% set ikon, baslik = ana_basliklar[grup] %}
+          <a href="{{ grup_items[0].href }}" data-grup="{{ grup }}" class="yt-nav-top {{ 'is-current' if bolum and bolum.grup == grup else '' }}">
+            <span aria-hidden="true">{{ pm_ikon(grup, ikon) }}</span>{{ baslik }}
+            {% if grup == 'Takip' and nav_takip_eksik %}<em class="yt-nav-count" title="Bu hafta takibi eksik öğrenci">{{ nav_takip_eksik }}</em>{% endif %}
+            {% if grup == 'LGS merkezi' %}<em class="yt-nav-badge">8. sınıf</em>{% endif %}
+          </a>
+        {% elif grup == 'Diğer' %}
+          <h2 class="yt-nav-heading">Diğer</h2>
+          {% for item in grup_items %}
+            <a href="{{ item.href }}" data-grup="Diğer" {% if item.yeni_sekme %}target="_blank" rel="noopener"{% endif %} class="yt-nav-top {{ 'is-current' if bolum and bolum.grup == 'Diğer' and bolum.secili == item.id else '' }}">
+              <span aria-hidden="true">{{ pm_ikon(item.id, item.icon) }}</span>{{ item.label }}
             </a>
           {% endfor %}
         {% else %}
-          <details class="app-nav-group" name="app-nav-group" open>
-            <summary>{{ grup }}</summary>
+          <div class="app-nav-section" role="group" aria-label="{{ grup }}">
+            <h2>{{ grup }}</h2>
             {% for item in grup_items %}
               <a href="{{ item.href }}" class="{{ 'is-current' if request.endpoint == item.endpoint else '' }}">
-                <span aria-hidden="true">{{ item.icon }}</span>{{ item.label }}
+                <span aria-hidden="true">{{ pm_ikon(item.id, item.icon) }}</span>{{ item.label }}
               </a>
             {% endfor %}
-          </details>
+          </div>
         {% endif %}
       {% endfor %}
     </nav>
   {% endif %}
 
-  <div class="app-sidebar-footer">
-    <a href="{{ url_for('test_onay.help_page') }}">? Yardım ve kullanım kılavuzu</a>
-    <h2>Hesap</h2>
-    <button type="button" data-renk-ac>Renk paleti</button>
+  <div class="app-sidebar-footer yt-me">
+    {% set me_ad = (session.ogretmen_adi if ui_role != 'veli' else (ogr.ad_soyad if ogr else '')) or '' %}
+    {% set me_parca = me_ad.split() %}
+    <div class="yt-me-card">
+      <span class="yt-avatar yt-avatar--{{ (me_ad|length) % 6 }}" aria-hidden="true">{{ (me_parca[0][:1] ~ (me_parca[-1][:1] if me_parca|length > 1 else '')) if me_parca else '?' }}</span>
+      <div>
+        <b>{{ me_ad }}</b>
+        <small>{{ 'Veli' if ui_role == 'veli' else 'Rehber öğretmen' if rehber_only else 'Yönetici' if yetkili('yonetici') else 'Öğretmen' }} · <a href="{{ url_for('test_onay.help_page') }}">Yardım</a> · <button type="button" class="pm-renk-ac" data-pm-renk>Renk</button> · <a href="{{ url_for('veli_cikis' if ui_role == 'veli' else 'logout') }}">Çıkış</a></small>
+      </div>
+    </div>
     {% if ui_role == 'ogretmen' and not rehber_only %}
-      <details>
+      <details class="yt-me-gorsel">
         <summary>Öğretmen görseli</summary>
         {% for tipi, ad in [('kadin','Kadın öğretmen'),('erkek','Erkek öğretmen')] %}
           <form method="post" action="{{ url_for('profil_gorsel') }}">
@@ -75,7 +97,6 @@
         {% endfor %}
       </details>
     {% endif %}
-    <a href="{{ url_for('veli_cikis' if ui_role == 'veli' else 'logout') }}">Çıkış yap</a>
   </div>
 </aside>
 <button class="app-scrim" type="button" data-app-menu-close aria-label="Menüyü kapat" hidden></button>

@@ -1,0 +1,12 @@
+{% if ui_role == 'ogretmen' %}
+  {% set s_yetki = session.get('ogretmen_yetki') %}
+  {% set s_rol = 'rehber' if s_yetki == 'rehber' else ('rapor' if s_yetki == 'rapor' else ('yonetici' if yetkili('yonetici') else 'ogretmen')) %}
+  {% set s_bolum = aktif_bolum(ogretmen_menusu(secili_sinif_seviyesi|default(8), s_rol, nav_sinif_id), request.endpoint, request.args) %}
+  {% if s_bolum and s_bolum.grup not in ['Ana', 'Diğer'] and s_bolum['items']|length > 1 %}
+    <nav class="yt-tabs" aria-label="{{ s_bolum.grup }} sayfaları">
+      {% for item in s_bolum['items'] %}
+        <a href="{{ item.href }}" {% if item.id == s_bolum.secili %}class="is-current" aria-current="page"{% endif %}>{{ item.label }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+{% endif %}

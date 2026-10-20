@@ -13,6 +13,9 @@ import home_test_window as window
 import veli_auth
 from reportlab.pdfgen.canvas import Canvas
 
+if not Path(db.DB_PATH).resolve().is_relative_to(Path(tempfile.gettempdir()).resolve()):
+    raise unittest.SkipTest(f'Gerçek veritabanına yazmamak için atlandı: {db.DB_PATH}')
+
 class HomeWindowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

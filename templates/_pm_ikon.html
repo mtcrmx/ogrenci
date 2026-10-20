@@ -1,0 +1,17 @@
+{% set PM_IKONLAR = {
+  'bugun': 'home', 'haftalik_takip': 'checks', 'onay_kutusu': 'check', 'hizli_giris': 'edit', 'okul_yaprak': 'file',
+  'kayitlarim': 'clock', 'islem_gecmisi': 'undo', 'kitap_okuma': 'book', 'okuma_rapor': 'book', 'lgs_takip': 'target',
+  'deneme_analiz': 'chart', 'evde_test': 'send', 'kazanim': 'grid', 'siralama': 'trend', 'sinif_analiz': 'chart',
+  'soru_sinif_analiz': 'grid', 'birlesik_analiz': 'trend', 'analiz_merkezi': 'chart', 'karne': 'file',
+  'veli_iletisim': 'msg', 'yayin': 'tv', 'okul_analiz': 'school', 'bilgi_girisi': 'clock', 'ogrenci_ara': 'search',
+  'sinav_kayitlari': 'file', 'hesaplar': 'key',
+  'ana_sayfa': 'home', 'sorular_optik': 'edit', 'odev_kitap': 'checks', 'gelisim_sonuclar': 'trend', 'mesajlar': 'msg',
+  'rehberlik': 'heart', 'raporlar': 'file', 'lgs_sonuc': 'chart', 'lgs_siralama': 'trend', 'veli_sonuclar': 'chart',
+  'rehberlik_panel': 'home', 'rehberlik_ajanda': 'calendar', 'rehberlik_takip': 'users', 'rehberlik_lgs': 'target',
+  'rehberlik_ogretmenler': 'users', 'rehberlik_gorusmeler': 'msg', 'rehberlik_etkinlikler': 'star',
+  'rehberlik_kutuphane': 'book', 'rehberlik_yeni': 'plus', 'rehberlik_ozet': 'chart',
+  'Takip': 'checks', 'Kitap okuma': 'book', 'LGS merkezi': 'target', 'Raporlar': 'chart', 'Yönetici': 'school'
+} %}
+{% macro pm_ikon(anahtar, yedek='') -%}
+{%- if anahtar in PM_IKONLAR -%}<svg class="pm-ic"><use href="#pm-i-{{ PM_IKONLAR[anahtar] }}"/></svg>{%- else -%}{{ yedek }}{%- endif -%}
+{%- endmacro %}

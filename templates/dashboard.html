@@ -1,148 +1,127 @@
 {% extends "base.html" %}
 {% block title %}{{ aktif.sinif_adi if aktif else 'Panel' }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='dashboard_clay.css') }}?v=teacher2026a">{% endblock %}
+{% block head %}{% endblock %}
 
 {% block body %}
-{% set teacher_visual = ogretmen_gorsel_tipi|default('', true) %}
-{% set teacher_avatar = 'clay-teacher-' ~ teacher_visual ~ '-avatar.png' if teacher_visual in ['kadin', 'erkek'] else 'hero-clay-books.png' %}
-{% set teacher_hero = 'clay-teacher-' ~ teacher_visual ~ '-hero.png' if teacher_visual in ['kadin', 'erkek'] else 'hero-clay-books.png' %}
-<div class="dashboard-shell flex">
-
-  <main class="main-canvas flex-1 min-w-0 lg:ml-0">
-    {% if aktif %}
-    <div class="dashboard-topbar teacher-toolbar">
-      <button type="button" class="dashboard-classes-trigger lg:hidden" onclick="toggleSidebar()" aria-label="Sınıfları aç">☰</button>
-      <div class="dashboard-title-block">
-        <p class="dashboard-kicker">{{ aktif.sinif_adi }} ŞUBESİ</p>
-        <h1 class="dashboard-page-title">Kontrol paneli</h1>
-        <p class="dashboard-title-meta" id="guncelleme-info">{{ ogrenciler|length }} öğrenci · öğretmen alanı</p>
-      </div>
-      <div class="dashboard-top-actions">
-        <a href="{{ url_for('onay_kutusu') }}" class="dashboard-notification" aria-label="{{ onay_sayisi }} onay bekliyor">
-          <img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="38" height="38">
-          {% if onay_sayisi %}<span class="dashboard-notification-count">{{ onay_sayisi }}</span>{% endif %}
-        </a>
-        <button type="button" data-renk-ac class="dashboard-color-button">Renk</button>
-        <span class="dashboard-profile-button" aria-label="Öğretmen profili" role="img">
-          <img src="{{ url_for('static', filename=teacher_avatar) }}" alt="" width="42" height="42">
-        </span>
-      </div>
+{% set ilk_ad = (session.ogretmen_adi or '').split()[0]|default('', true)|title %}
+{% set lgs_sinifi = aktif and sinif_seviyesi(aktif) == 8 %}
+{% set hk = haftalik_kayit|default({}, true) %}
+{% set sayac = namespace(tamam=0, dikkat=0, girilmedi=0, odev_tam=0, odev_girilen=0) %}
+{% for o in ogrenciler %}
+  {% set k = hk.get(o.id, {}) %}
+  {% if k.kitap_okuma and k.kitap_getirme and k.odev_durum %}{% set sayac.tamam = sayac.tamam + 1 %}{% endif %}
+  {% if not (k.kitap_okuma or k.kitap_getirme or k.odev_durum) %}{% set sayac.girilmedi = sayac.girilmedi + 1 %}{% endif %}
+  {% if k.odev_durum in ['eksik', 'yok'] %}{% set sayac.dikkat = sayac.dikkat + 1 %}{% endif %}
+  {% if k.odev_durum %}{% set sayac.odev_girilen = sayac.odev_girilen + 1 %}{% if k.odev_durum == 'tam' %}{% set sayac.odev_tam = sayac.odev_tam + 1 %}{% endif %}{% endif %}
+{% endfor %}
+{% set diger_eksik = (eksik_siniflar|default([], true))|rejectattr('id', 'equalto', aktif.id if aktif else 0)|list %}
+{% set toplam = ogrenciler|length %}
+{% set yuzde = ((sayac.tamam * 100 / toplam)|round|int) if toplam else 0 %}
+<main class="dash" id="dashboard-main">
+  {% if aktif %}
+  <header class="dash-head">
+    <div>
+      <span class="pm-date" id="pm-bugun-tarih">Bugün</span>
+      <h1>Merhaba{{ ', ' ~ ilk_ad if ilk_ad else '' }}</h1>
+      <p>{{ aktif.sinif_adi }} · {{ toplam }} öğrenci{% if not lgs_sinifi %} · bu hafta {{ sayac.girilmedi }} öğrencinin takibi girilmedi{% endif %}</p>
     </div>
-
-    <section class="dashboard-greeting"><img src="{{ url_for('static', filename=teacher_avatar) }}" alt="" width="48" height="48"><div><h2>Merhaba, {{ session.ogretmen_adi.split()[0]|title }}</h2><p>Bugünkü takip ve bekleyen kayıtlar.</p></div><a class="app-primary" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}">Takibi aç</a></section>
-    {% if eksik_siniflar is defined and (eksik_siniflar or onay_sayisi or haftalik_dikkat) %}
-    <div class="dashboard-notices" aria-label="Güncel bildirimler">
-      {% if onay_sayisi %}
-      <a href="{{ url_for('onay_kutusu') }}" class="dashboard-notice dashboard-notice--peach">
-        <img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="28" height="28">
-        <span>{{ onay_sayisi }} onay bekliyor{% if onay_geciken %} · {{ onay_geciken }} tanesi 3 günü geçti{% endif %}</span>
-      </a>
-      {% endif %}
-      {% for s in eksik_siniflar if s.id == aktif.id %}<a href="{{ url_for('haftalik_takip', sinif=s.id) }}" class="dashboard-notice dashboard-notice--blue">{{ s.sinif_adi }} · İşaretlenmeyen durumlar var ({{ s.isaretli }}/{{ s.toplam }} tamam)</a>{% endfor %}
-      {% if haftalik_dikkat %}<a href="{{ url_for('haftalik_takip',sinif=aktif.id) }}" class="dashboard-notice">{{ haftalik_dikkat }} öğrencide eksik / yapılmamış ödev</a>{% endif %}
-      <details class="app-details"><summary class="app-muted">Diğer sınıfların durumu</summary><div class="app-row">{% for s in eksik_siniflar if s.id != aktif.id %}<a class="app-button" href="{{ url_for('haftalik_takip',sinif=s.id) }}">{{ s.sinif_adi }} · {{ s.isaretli }}/{{ s.toplam }} tamam</a>{% endfor %}</div></details>
-    </div>
-    {% endif %}
-
-    <section class="dashboard-stats dashboard-mobile-section mx-3 mt-4" data-dashboard-section="ozet" aria-label="Sınıf özeti">
-      <div class="dashboard-stat-grid grid grid-cols-2 lg:grid-cols-3 gap-3">
-      <div class="metric-card dashboard-stat dashboard-stat--lilac p-4">
-        <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-students.webp') }}" alt="" width="62" height="62"></span>
-        <p class="dashboard-stat-label mt-3 text-xs font-bold">Öğrenciler</p>
-        <strong class="dashboard-stat-value block text-2xl font-black" id="ozet-ogrenci-sayisi">{{ ogrenciler|length }}</strong>
-        <span class="dashboard-stat-hint text-xs">{{ aktif.sinif_adi }} şubesinde</span>
-      </div>
-      <div class="metric-card dashboard-stat dashboard-stat--pink p-4">
-        <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-classes.webp') }}" alt="" width="62" height="62"></span>
-        <p class="dashboard-stat-label mt-3 text-xs font-bold">Sınıflar</p>
-        <strong class="dashboard-stat-value block text-2xl font-black">{{ siniflar|length }}</strong>
-        <span class="dashboard-stat-hint text-xs">Panelinizde kayıtlı</span>
-      </div>
-      <div class="metric-card dashboard-stat dashboard-stat--peach p-4">
-        <span class="dashboard-stat-icon" aria-hidden="true"><img src="{{ url_for('static', filename='clay-icon-approval.webp') }}" alt="" width="62" height="62"></span>
-        <p class="dashboard-stat-label mt-3 text-xs font-bold">Bekleyen onay</p>
-        <strong class="dashboard-stat-value block text-2xl font-black">{{ onay_sayisi }}</strong>
-        <span class="dashboard-stat-hint text-xs">İncelenecek bildirim</span>
-      </div>
-      </div>
-    </section>
-
-    <div class="dashboard-lower-grid">
-    <div class="dashboard-mobile-section px-3 pt-6" data-dashboard-section="islem">
-      <div class="dashboard-section-heading mb-3">
-        <div>
-          <p class="dashboard-kicker text-[10px] font-black uppercase tracking-widest">Kısayollar</p>
-          <h2 class="text-lg font-black">Diğer işlemler</h2>
-        </div>
-        <span class="dashboard-heading-spark" aria-hidden="true">✦</span>
-      </div>
-      <section class="dashboard-actions grid gap-3 lg:grid-cols-2">
-        <div class="action-group dashboard-action-card dashboard-action-card--mint p-4">
-          <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Günlük takip</h3>
-          <div class="mt-3 grid gap-1.5">
-            <a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}" class="action-row">
-              <span class="nav-mark mark-emerald">KÖ</span>
-              <span>
-                <span class="block text-sm font-black text-slate-900">Kitap ve ödev</span>
-                <span class="block text-[11px] font-medium text-emerald-700">Haftalık okudu, getirdi, tam / eksik / yok</span>
-              </span>
-            </a>
-          </div>
-        </div>
-        <div class="action-group dashboard-action-card dashboard-action-card--cream p-4">
-          <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Raporlar</h3>
-          <div class="mt-3 grid gap-1.5">
-            <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}" class="action-row">
-              <span class="nav-mark mark-rose">AN</span>
-              <span class="block text-sm font-black text-slate-900">Sınıf analizi</span>
-            </a>
-            <a href="{{ url_for('kitap_odev_rapor', sinif=aktif.id) }}" class="action-row">
-              <span class="nav-mark mark-emerald">RP</span>
-              <span class="block text-sm font-black text-slate-900">Genel sınıf raporu</span>
-            </a>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <section class="dashboard-student-panel" aria-label="Öğrenci listesi">
-    <div class="dashboard-section-heading dashboard-mobile-section is-mobile-active mx-3 mt-6 mb-1" data-dashboard-section="liste">
-      <div class="dashboard-section-heading-inner flex items-center justify-between gap-3">
-        <div>
-          <p class="dashboard-kicker text-[10px] font-black uppercase tracking-widest">{{ aktif.sinif_adi }} şubesi</p>
-          <h2 class="text-lg font-black">Öğrenciler</h2>
-        </div>
-        <span class="dashboard-section-count text-xs font-black" id="ogrenci-sayisi">{{ ogrenciler|length }} öğrenci</span>
-      </div>
-    </div>
-    <div id="ogrenci-listesi" class="student-list dashboard-mobile-section is-mobile-active p-3 space-y-2" data-dashboard-section="liste">
-      {% for o in ogrenciler %}
-      {{ ogrenci_karti(o, aktif.id) }}
-      {% endfor %}
-    </div>
-    <p id="student-search-empty" class="app-notice mx-3" role="status" hidden>Aramanıza uygun öğrenci yok.</p>
-
-    <!-- Durum çubuğu -->
-    <div class="dashboard-mobile-section is-mobile-active text-center text-xs text-slate-400 py-3" id="durum-bar" data-dashboard-section="liste">
-      {{ ogrenciler|length }} öğrenci
-    </div>
-    </section>
-    </div>
-
+    {% if lgs_sinifi %}
+      <a class="app-primary" href="{{ url_for('lgs', sinif=aktif.id) }}">LGS merkezini aç →</a>
     {% else %}
-    <div class="dashboard-empty-state mx-3 mt-5 p-6 text-center">
-      <span class="block text-4xl" aria-hidden="true">📚</span>
-      <h1 class="mt-3 text-xl font-black">Henüz sınıf görünmüyor</h1>
-      <p class="mt-2 text-sm">Sınıfınızı görmek için soldaki menüyü kullanın.</p>
-    </div>
+      <a class="app-primary" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}">Haftalık takibi aç →</a>
     {% endif %}
-  </main>
-</div>
+  </header>
+
+  <nav class="pm-acts" aria-label="Hızlı işlemler">
+    {% if lgs_sinifi %}
+    <a class="pm-act pm-glass" href="{{ url_for('lgs', sinif=aktif.id) }}"><span class="pm-act-ic pm-g1"><svg><use href="#pm-i-target"/></svg></span><span>LGS merkezi<small>Deneme, test, sıralama</small></span></a>
+    {% else %}
+    <a class="pm-act pm-glass" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}"><span class="pm-act-ic pm-g1"><svg><use href="#pm-i-checks"/></svg></span><span>Kitap ve ödev<small>Bu haftanın takibi</small></span></a>
+    {% endif %}
+    <a class="pm-act pm-glass" href="{{ url_for('ort_giris', sinif_id=aktif.id) }}"><span class="pm-act-ic pm-g2"><svg><use href="#pm-i-edit"/></svg></span><span>Hızlı giriş<small>Sınav ve test sonucu</small></span></a>
+    <a class="pm-act pm-glass" href="{{ url_for('onay_kutusu') }}"><span class="pm-act-top"><span class="pm-act-ic pm-g3"><svg><use href="#pm-i-check"/></svg></span>{% if onay_sayisi %}<em class="yt-tag {{ 'yt-tag--bad' if onay_geciken else 'yt-tag--warn' }}">{{ onay_sayisi }}</em>{% endif %}</span><span>Onay kutusu<small>Bekleyen kayıtlar</small></span></a>
+    <a class="pm-act pm-glass" href="{{ url_for('sinif_analiz_v2', sinif=aktif.id) }}"><span class="pm-act-ic pm-g5"><svg><use href="#pm-i-chart"/></svg></span><span>Sınıf analizi<small>{{ aktif.sinif_adi }} gelişimi</small></span></a>
+  </nav>
+
+  <section class="dash-kpis" aria-label="Sınıf özeti">
+    {% if lgs_sinifi %}
+    <a class="dash-hero" href="{{ url_for('lgs', sinif=aktif.id) }}">
+      <small>LGS · {{ aktif.sinif_adi }}</small>
+      <strong><span data-pm-count>{{ toplam }}</span> öğrenci</strong>
+      <span>Denemeler, ev testleri, yaprak testler ve sıralama LGS merkezinde.</span>
+    </a>
+    {% else %}
+    <a class="dash-hero" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}">
+      <small>Bu haftanın takibi · {{ aktif.sinif_adi }}</small>
+      <strong><span data-pm-count>{{ sayac.tamam }}</span> / {{ toplam }} öğrenci</strong>
+      <span class="dash-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ yuzde }}" aria-label="Tamamlanan takip"><i class="pm-fill" style="width: {{ yuzde }}%"></i></span>
+      <span class="pm-ring" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="10"/><circle class="pm-ring-p" cx="50" cy="50" r="42" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" data-pm-ring="{{ yuzde }}"/></svg><span class="pm-ring-v">%{{ yuzde }}</span></span>
+      <span>{% if sayac.tamam == toplam %}Tüm öğrencilerin takibi tamam.{% else %}{{ toplam - sayac.tamam }} öğrencinin kitap ve ödev durumu eksik.{% endif %}</span>
+    </a>
+    {% endif %}
+    <a class="dash-kpi" href="{{ url_for('onay_kutusu') }}">
+      <small>Bekleyen onay</small>
+      <strong data-pm-count>{{ onay_sayisi }}</strong>
+      {% if onay_geciken %}<span class="yt-tag yt-tag--bad">{{ onay_geciken }} tanesi 3 günü geçti</span>{% elif onay_sayisi %}<span class="yt-tag yt-tag--warn">İncelenecek</span>{% else %}<span class="yt-tag yt-tag--ok">Hepsi onaylı</span>{% endif %}
+    </a>
+    {% if not lgs_sinifi %}
+    <a class="dash-kpi" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}">
+      <small>Ödev tamamlama</small>
+      <strong {% if sayac.odev_girilen %}data-pm-count{% endif %}>{% if sayac.odev_girilen %}%{{ (sayac.odev_tam * 100 / sayac.odev_girilen)|round|int }}{% else %}—{% endif %}</strong>
+      <span class="yt-tag {{ 'yt-tag--warn' if sayac.dikkat else 'yt-tag--muted' }}">{% if sayac.dikkat %}{{ sayac.dikkat }} öğrencide eksik/yok{% elif sayac.odev_girilen %}Eksik yok{% else %}Henüz girilmedi{% endif %}</span>
+    </a>
+    {% endif %}
+    <details class="dash-kpi dash-kpi--details">
+      <summary>
+        <small>Diğer sınıflar</small>
+        <strong data-pm-count>{{ diger_eksik|length }}</strong>
+        <span class="yt-tag {{ 'yt-tag--bad' if diger_eksik else 'yt-tag--ok' }}">{{ 'eksik takip' if diger_eksik else 'Hepsi tamam' }}</span>
+      </summary>
+      {% if diger_eksik %}<div class="dash-kpi-list">{% for s in diger_eksik %}<a href="{{ url_for('haftalik_takip', sinif=s.id) }}">{{ s.sinif_adi }}<span>{{ s.isaretli }}/{{ s.toplam }}</span></a>{% endfor %}</div>{% endif %}
+    </details>
+  </section>
+
+  <div class="dash-grid">
+    <section class="dash-card dash-students-card" aria-label="Öğrenci listesi">
+      <div class="dash-card-head">
+        <h2>Öğrenciler · {{ aktif.sinif_adi }}</h2>
+        <span class="dash-muted" id="ogrenci-sayisi">{{ toplam }} öğrenci</span>
+      </div>
+      <div id="ogrenci-listesi" class="dash-students">
+        {% for o in ogrenciler %}{{ ogrenci_satiri(o, aktif.id, hk.get(o.id, {}), lgs_sinifi) }}{% endfor %}
+      </div>
+      <p id="student-search-empty" class="app-notice" role="status" hidden>Aramanıza uygun öğrenci yok.</p>
+    </section>
+
+    <aside class="dash-card" aria-label="Dikkat isteyenler">
+      <div class="dash-card-head"><h2>Dikkat isteyenler</h2></div>
+      <div class="dash-alerts">
+        {% if onay_sayisi %}<a href="{{ url_for('onay_kutusu') }}"><span class="yt-tag {{ 'yt-tag--bad' if onay_geciken else 'yt-tag--warn' }}">Onay</span>{{ onay_sayisi }} kayıt onayınızı bekliyor</a>{% endif %}
+        {% if not lgs_sinifi and sayac.dikkat %}<a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}"><span class="yt-tag yt-tag--warn">Ödev</span>{{ sayac.dikkat }} öğrencinin ödevi eksik veya yapılmadı</a>{% endif %}
+        {% if not lgs_sinifi and sayac.girilmedi %}<a href="{{ url_for('haftalik_takip', sinif=aktif.id) }}"><span class="yt-tag yt-tag--muted">Takip</span>{{ sayac.girilmedi }} öğrencinin bu hafta kaydı yok</a>{% endif %}
+        {% for s in diger_eksik[:3] %}<a href="{{ url_for('haftalik_takip', sinif=s.id) }}"><span class="yt-tag yt-tag--muted">{{ s.sinif_adi }}</span>{{ s.toplam - s.isaretli }} öğrencinin takibi eksik</a>{% endfor %}
+        {% if not (onay_sayisi or diger_eksik or (not lgs_sinifi and (sayac.dikkat or sayac.girilmedi))) %}<p class="dash-muted">Şu an dikkat isteyen bir durum yok.</p>{% endif %}
+      </div>
+      <div class="dash-card-head dash-card-head--sub"><h2>Raporlar</h2></div>
+      <div class="dash-links">
+        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}">Sınıf analizi →</a>
+        {% if not lgs_sinifi %}<a href="{{ url_for('kitap_odev_rapor', sinif=aktif.id) }}">Kitap ve ödev raporu →</a>{% endif %}
+      </div>
+    </aside>
+  </div>
+
+  {% else %}
+  <section class="dash-card dash-empty">
+    <h1>Henüz sınıf görünmüyor</h1>
+    <p>Sınıfınızı görmek için üstteki sınıf seçimini veya menüyü kullanın.</p>
+  </section>
+  {% endif %}
+</main>
 
 <div id="ogrenci-bilgi" class="student-info-overlay fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
   <div class="student-info-dialog max-h-[calc(100svh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl"
        role="dialog" aria-modal="true" aria-labelledby="bilgi-ad">
-    <div class="student-info-header flex items-start justify-between gap-3 bg-gradient-to-r from-violet-300 to-pink-200 px-5 py-4 text-violet-950">
+    <div class="student-info-header flex items-start justify-between gap-3 px-5 py-4">
       <div>
         <p class="text-xs text-violet-800">Öğrenci</p>
         <h3 id="bilgi-ad" class="text-lg font-black">—</h3>
@@ -179,61 +158,35 @@
 
 {% endblock %}
 
-{# ── Makro: Öğrenci Kartı ─────────────────────────────────────────────── #}
-{% macro ogrenci_karti(o, sinif_id) %}
-<div class="ogrenci-kart flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300"
-     data-ad="{{ o.ad_soyad }}" data-no="{{ o.ogr_no }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}"
-     role="button" tabindex="0">
-  <span class="student-avatar flex-shrink-0" aria-hidden="true">{{ o.emoji }}</span>
-  <div class="flex-1 min-w-0">
-    <div class="font-bold text-slate-800 text-sm break-words">
-      {{ o.ad_soyad }}
-    </div>
-    <div class="text-xs text-slate-500">No: {{ o.ogr_no }}</div>
-  </div>
-  <span class="student-card-arrow flex-shrink-0" aria-hidden="true">→</span>
+{% macro ogrenci_satiri(o, sinif_id, k, lgs_sinifi) %}
+{% set parcalar = o.ad_soyad.split() %}
+{% set bas_harf = (parcalar[0][:1] ~ (parcalar[-1][:1] if parcalar|length > 1 else '')) if parcalar else '?' %}
+{% if lgs_sinifi %}{% set durum = none %}
+{% elif not (k.kitap_okuma or k.kitap_getirme or k.odev_durum) %}{% set durum = ('Girilmedi', 'muted') %}
+{% elif not (k.kitap_okuma and k.kitap_getirme and k.odev_durum) %}{% set durum = ('Yarım kaldı', 'muted') %}
+{% elif k.odev_durum == 'yok' %}{% set durum = ('Ödev yok', 'bad') %}
+{% elif k.odev_durum == 'eksik' %}{% set durum = ('Ödev eksik', 'warn') %}
+{% elif k.kitap_getirme == 'getirmedi' or k.kitap_okuma == 'okumadi' %}{% set durum = ('Kitap eksik', 'warn') %}
+{% else %}{% set durum = ('Tamam', 'ok') %}{% endif %}
+<div class="dash-student" role="button" tabindex="0"
+     data-ad="{{ o.ad_soyad }}" data-no="{{ o.ogr_no }}" data-id="{{ o.id }}" data-sinif="{{ sinif_id }}">
+  <span class="yt-avatar yt-avatar--{{ o.id % 6 }}" aria-hidden="true">{{ bas_harf|upper }}</span>
+  <span class="dash-student-name">{{ o.ad_soyad }}<small>No {{ o.ogr_no }}</small></span>
+  {% if durum %}<span class="yt-tag yt-tag--{{ durum[1] }}">{{ durum[0] }}</span>{% endif %}
 </div>
 {% endmacro %}
 
 
 {% block scripts %}
 <script>
-// ── Sidebar ──────────────────────────────────────────────────────────────
-let sidebarOpenedAt = 0;
-function setDashboardSection(section, shouldScroll = true) {
-  const allowed = ['ozet', 'islem', 'liste'];
-  const targetSection = allowed.includes(section) ? section : 'liste';
-  document.querySelectorAll('[data-dashboard-section]').forEach((el) => {
-    el.classList.toggle('is-mobile-active', el.dataset.dashboardSection === targetSection);
-  });
-  document.querySelectorAll('[data-dashboard-section-btn]').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.dashboardSectionBtn === targetSection);
-  });
-  try { localStorage.setItem('eco_dashboard_mobile_section', targetSection); } catch (e) {}
-  if (shouldScroll && window.innerWidth < 1024) {
-    const target = document.querySelector(`[data-dashboard-section="${targetSection}"]`);
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
-window.setDashboardSection = setDashboardSection;
-document.querySelectorAll('[data-dashboard-section-btn]').forEach((btn) => {
-  btn.addEventListener('click', () => setDashboardSection(btn.dataset.dashboardSectionBtn));
-});
-let savedDashboardSection = 'liste';
-{% if not teacher_visual %}
-savedDashboardSection = 'ozet';
-{% else %}
-try { savedDashboardSection = localStorage.getItem('eco_dashboard_mobile_section') || 'liste'; } catch (e) {}
-{% endif %}
-setDashboardSection(savedDashboardSection, false);
-
-function toggleSidebar() { window.appMenuToggle?.(); }
-function closeSidebar() { window.appMenuClose?.(); }
-
+(function () {
+  const t = document.getElementById('pm-bugun-tarih');
+  if (t) t.textContent = new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
+})();
 // ── Arama Filtresi ───────────────────────────────────────────────────────
 function filtrele() {
   const q = document.getElementById('ara').value.trim().toLocaleLowerCase('tr');
-  const cards = [...document.querySelectorAll('.ogrenci-kart')];
+  const cards = [...document.querySelectorAll('.dash-student')];
   let visible = 0;
   cards.forEach(k => {
     const match = window.studentSearchMatches ? window.studentSearchMatches(k.dataset.ad,k.dataset.no,q) : k.dataset.ad.toLocaleLowerCase('tr').includes(q);
@@ -246,40 +199,6 @@ function filtrele() {
   empty.hidden = visible > 0;
   empty.textContent = q ? 'Aramanıza uygun öğrenci yok. Adı kontrol edin veya aramayı temizleyin.' : 'Bu sınıfta öğrenci kaydı yok.';
 }
-
-const SINIF_ID = {{ aktif.id if aktif else 'null' }};
-
-async function yenile() {
-  if (!SINIF_ID) return;
-  try {
-    const res = await fetch('/api/sinif/' + SINIF_ID);
-    const data = await res.json();
-    if (!Array.isArray(data)) return;
-    const kont = document.getElementById('ogrenci-listesi');
-    const ara = (document.getElementById('ara').value || '').toLowerCase();
-    kont.innerHTML = data.map(kartHTML).join('');
-    const bar = document.getElementById('durum-bar');
-    if (bar) bar.textContent = data.length + ' öğrenci';
-    const sayi = document.getElementById('ogrenci-sayisi');
-    if (sayi) sayi.textContent = data.length + ' öğrenci';
-    const ozetSayi = document.getElementById('ozet-ogrenci-sayisi');
-    if (ozetSayi) ozetSayi.textContent = data.length;
-    filtrele();
-  } catch (e) {}
-}
-
-function kartHTML(o) {
-  const ad = String(o.ad_soyad || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  const emoji = String(o.emoji || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  return '<div class="ogrenci-kart flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 cursor-pointer hover:border-blue-300" data-ad="' + ad + '" data-no="' + o.ogr_no + '" data-id="' + o.id + '" data-sinif="' + SINIF_ID + '" role="button" tabindex="0">' +
-    '<span class="student-avatar flex-shrink-0" aria-hidden="true">' + emoji + '</span>' +
-    '<div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm break-words">' + ad + '</div>' +
-    '<div class="text-xs text-slate-500">No: ' + (o.ogr_no || '') + '</div></div>' +
-    '<span class="student-card-arrow flex-shrink-0" aria-hidden="true">→</span></div>';
-}
-
-// İlk yükleme + periyodik güncelleme
-setInterval(yenile, 10_000);
 
 const bilgi = document.getElementById('ogrenci-bilgi');
 let bilgiOgrenciId = 0;
@@ -381,12 +300,12 @@ document.addEventListener('keydown', (e) => {
 const ogrenciListesi = document.getElementById('ogrenci-listesi');
 if (ogrenciListesi) {
   ogrenciListesi.addEventListener('click', (e) => {
-    const kart = e.target.closest('.ogrenci-kart');
+    const kart = e.target.closest('.dash-student');
     if (kart) ogrenciBilgiAc(kart.dataset.id);
   });
   ogrenciListesi.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
-    const kart = e.target.closest('.ogrenci-kart');
+    const kart = e.target.closest('.dash-student');
     if (!kart) return;
     e.preventDefault();
     ogrenciBilgiAc(kart.dataset.id);
@@ -417,6 +336,7 @@ document.getElementById('bilgi-form').addEventListener('click', async (e) => {
   document.getElementById('bilgi-metin').value = '';
   document.getElementById('bilgi-sonuc').className = 'text-xs font-bold text-emerald-700';
   document.getElementById('bilgi-sonuc').textContent = 'Veli ekranına iletildi.';
+  window.pmToast?.('Not veli ekranına iletildi');
   await ogrenciBilgiAc(targetId, true);
   } catch {
     if (targetId === bilgiOgrenciId && !bilgi.classList.contains('hidden')) bilgiHata('Not kaydedilemedi. Metniniz korundu; tekrar deneyin.');

@@ -464,7 +464,14 @@ def _ekran_duzeni_context():
     )
     secili_kaynak = ogrenci if veli else (secili or (siniflar[0] if siniflar else None))
     moduller_kumesi = aktif_moduller(secili_kaynak) if secili_kaynak else set()
-    return {"ui_role": rol, "nav_siniflar": siniflar, "nav_sinif_id": secili, "nav_student": ogrenci, "rehber_yeni": rehber_yeni,
+    takip_eksik = 0
+    if rol == "ogretmen" and secili and "haftalik_takip" in moduller_kumesi:
+        bugun_gun = date.today()
+        hafta = (bugun_gun - timedelta(days=bugun_gun.weekday())).isoformat()
+        durum = next((s for s in sinif_hafta_durumu(hafta) if s["id"] == int(secili)), None)
+        takip_eksik = durum["toplam"] - durum["isaretli"] if durum else 0
+    return {"ui_role": rol, "nav_takip_eksik": takip_eksik, "nav_siniflar": siniflar, "nav_sinif_id": secili, "nav_student": ogrenci, "rehber_yeni": rehber_yeni,
+            "secili_sinif_seviyesi": sinif_seviyesi(secili_kaynak) if secili_kaynak else None,
             "aktif_moduller_kumesi": moduller_kumesi, "lgs_acik": "lgs" in moduller_kumesi,
             "lgs_sayac": lgs_sayac_verisi() if sayac_goster else None}
 
@@ -3152,6 +3159,7 @@ def dashboard():
                            toplu_sifirlamaya_izin=_toplu_sifirlamaya_izinli_mi(ogretmen_id),
                            eksik_siniflar=eksik_siniflar,
                            haftalik_dikkat=haftalik_dikkat,
+                           haftalik_kayit=haftalik_kayit,
                            onay_sayisi=len(kutu["odevler"]) + len(kutu["gorevler"]) + len(kutu["gunluk"]),
                            onay_geciken=kutu["geciken"])
 
@@ -5147,6 +5155,108 @@ def lgs_soru_sayfa(sinav_id,page):
     return page_image(yol,page)
 
 
+def _lgs_merkez_verisi(gruplar: list[dict], optik_sinavlar: list[dict], sube: str) -> dict:
+    """Öğretmen LGS genel bakışı; yalnızca kayıtlı deneme ve ev testi verisinden hesaplanır."""
+    sube_adlari = [g["sinif"]["sinif_adi"] for g in gruplar]
+    if sube not in sube_adlari:
+        sube = ""
+    ogrenciler = [
+        dict(o, sinif_adi=g["sinif"]["sinif_adi"], sinif_id=g["sinif"]["id"])
+        for g in gruplar if not sube or g["sinif"]["sinif_adi"] == sube
+        for o in g["ogrenciler"]
+    ]
+    hedef = {int(o["id"]) for o in ogrenciler}
+    sinif_idler = {int(g["sinif"]["id"]) for g in gruplar if not sube or g["sinif"]["sinif_adi"] == sube}
+
+    seri = []
+    katalog = [
+        k for k in deneme_sinav_katalog()
+        if k["tur"] in ("deneme", "kurum") and set(sube_adlari).intersection(k.get("siniflar") or [])
+    ]
+    for k in katalog[:6]:
+        satirlar = [r for r in deneme_sinav_ogrencileri(k["ad"], k["tarih"], k["tur"]) if int(r["ogrenci_id"]) in hedef]
+        if not satirlar:
+            continue
+        puanlar = [r["puan"] for r in satirlar if r.get("puan") is not None]
+        seri.append({
+            "ad": k["ad"], "tarih": k["tarih"], "satirlar": satirlar,
+            "net": round(sum(r["net"] for r in satirlar) / len(satirlar), 1),
+            "puan": round(sum(puanlar) / len(puanlar)) if puanlar else None,
+        })
+    seri.reverse()
+    son = seri[-1] if seri else None
+    onceki = seri[-2] if len(seri) > 1 else None
+    netler = [s["net"] for s in seri]
+    alt, ust = (min(netler), max(netler)) if netler else (0, 0)
+    for s in seri:
+        s["yukseklik"] = 34 + round(76 * (s["net"] - alt) / (ust - alt)) if ust > alt else 80
+
+    dersler = []
+    if son:
+        toplam: dict[str, list[int]] = {}
+        for r in son["satirlar"]:
+            for d in r["dersler"]:
+                kutu = toplam.setdefault(d["ders"], [0, 0])
+                kutu[0] += int(d["dogru"] or 0)
+                kutu[1] += int(d["dogru"] or 0) + int(d["yanlis"] or 0) + int(d["bos"] or 0)
+        sira = [d for d in _DENEME_DERS_SIRA if d in toplam] + [d for d in toplam if d not in _DENEME_DERS_SIRA]
+        dersler = [{"ders": d, "yuzde": round(100 * toplam[d][0] / toplam[d][1])} for d in sira if toplam[d][1]]
+
+    son_net = {int(r["ogrenci_id"]): r["net"] for r in (son["satirlar"] if son else [])}
+    onceki_net = {int(r["ogrenci_id"]): r["net"] for r in (onceki["satirlar"] if onceki else [])}
+
+    bugun_gun = test_window.now().date()
+    hafta_basi = (bugun_gun - timedelta(days=bugun_gun.weekday())).isoformat()
+    hafta_testleri = [
+        s for s in optik_sinavlar
+        if s.get("kaynak") != "kamera" and (s.get("tarih") or "") >= hafta_basi and s["tarih"] <= bugun_gun.isoformat()
+        and (not s.get("sinif_id") or int(s["sinif_id"]) in sinif_idler)
+    ]
+    cozen = {s["id"]: {int(r["ogrenci_id"]) for r in s.get("sonuclar") or []} for s in hafta_testleri}
+
+    satirlar = []
+    for o in ogrenciler:
+        oid = int(o["id"])
+        atanan = [s for s in hafta_testleri if not s.get("sinif_id") or int(s["sinif_id"]) == int(o["sinif_id"])]
+        cozulen = sum(1 for s in atanan if oid in cozen[s["id"]])
+        net = son_net.get(oid)
+        degisim = round(net - onceki_net[oid], 2) if net is not None and oid in onceki_net else None
+        if net is None:
+            durum = ("Deneme yok", "muted")
+        elif (degisim is not None and degisim <= -3) or (atanan and cozulen == 0):
+            durum = ("Destek gerekli", "bad")
+        elif (degisim is not None and degisim < 0) or cozulen < len(atanan):
+            durum = ("Takipte", "warn")
+        else:
+            durum = ("İyi gidiyor", "ok")
+        satirlar.append({**o, "net": net, "degisim": degisim, "test_atanan": len(atanan), "test_cozulen": cozulen, "durum": durum})
+    satirlar.sort(key=lambda s: (s["net"] is None, -(s["net"] or 0), s["ad_soyad"]))
+
+    yapilacaklar = []
+    for s in satirlar:
+        if s["degisim"] is not None and s["degisim"] <= -3:
+            dusus = f"{abs(s['degisim']):.1f}".replace(".", ",")
+            yapilacaklar.append(("Düşüş", "bad", f"{s['ad_soyad']}: son denemede {dusus} net düştü"))
+    for sinav in hafta_testleri:
+        atanan = [o for o in ogrenciler if not sinav.get("sinif_id") or int(sinav["sinif_id"]) == int(o["sinif_id"])]
+        eksik = sum(1 for o in atanan if int(o["id"]) not in cozen[sinav["id"]])
+        if eksik:
+            yapilacaklar.append(("Ev testi", "warn", f"{eksik} öğrenci “{sinav['ad']}” testini çözmedi"))
+    if not seri:
+        yapilacaklar.append(("Deneme", "muted", "Henüz deneme sonucu yüklenmedi"))
+
+    test_toplam = sum(s["test_atanan"] for s in satirlar)
+    test_cozulen = sum(s["test_cozulen"] for s in satirlar)
+    return {
+        "sube": sube, "subeler": [(g["sinif"]["sinif_adi"], len(g["ogrenciler"])) for g in gruplar],
+        "toplam_ogrenci": sum(len(g["ogrenciler"]) for g in gruplar),
+        "seri": seri, "son": son, "onceki": onceki, "dersler": dersler,
+        "en_zayif": min(dersler, key=lambda d: d["yuzde"]) if dersler else None,
+        "ogrenciler": satirlar, "yapilacaklar": yapilacaklar,
+        "hafta_test_sayisi": len(hafta_testleri), "test_toplam": test_toplam, "test_cozulen": test_cozulen,
+    }
+
+
 def _lgs_ekran(veli: bool):
     hafta = _lgs_hafta()
     if not veli and request.method == "POST" and request.form.get("islem") == "optik_ekle":
@@ -5348,10 +5458,12 @@ def _lgs_ekran(veli: bool):
             for ogrenci_satir in grup["ogrenciler"]:
                 ogrenci_satir["tempo"] = harita.get(int(ogrenci_satir["id"]), "")
                 ay_harita[int(ogrenci_satir["id"])] = lgs_ay_durum(int(ogrenci_satir["id"]))
+        optik_sinavlar = _lgs_optik_paketi()[0]
         return render_template(
             "lgs.html", gruplar=gruplar, ogrenci=None, veli=False, tempo_adlari=TEMPO_AD,
-            aylar=LGS_AYLAR, ay_harita=ay_harita, optik_sinavlar=_lgs_optik_paketi()[0], bugun=test_window.now().date().isoformat(),
-            lgs_dersler=LGS_DERSLER,
+            aylar=LGS_AYLAR, ay_harita=ay_harita, optik_sinavlar=optik_sinavlar, bugun=test_window.now().date().isoformat(),
+            lgs_dersler=LGS_DERSLER, merkez=_lgs_merkez_verisi(gruplar, optik_sinavlar, request.args.get("sube") or ""),
+            sekme=request.args.get("sekme") or ("siralama" if request.args.get("sr_olcut") else "genel"),
             ekran="evde" if request.args.get("ekran") == "evde" else "",
         )
 

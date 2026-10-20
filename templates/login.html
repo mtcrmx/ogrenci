@@ -20,7 +20,7 @@
       <div class="entry-field"><label for="sifre-input">Şifre</label><div class="entry-password"><input type="password" name="sifre" id="sifre-input" placeholder="Şifrenizi girin" autocomplete="current-password" required><button type="button" onclick="toggleSifre()" id="password-toggle" aria-label="Şifreyi göster" aria-pressed="false">Göster</button></div></div>
       <button type="submit" class="entry-submit">Giriş yap <span aria-hidden="true">→</span></button>
     </form>
-    <div class="entry-form-footer"><a href="{{ url_for('yonetici_login') }}">Yönetici girişi</a><a href="{{ url_for('admin_sifreler') }}">Şifre listesi</a><span>AkademiPuan · Öğrenci takip</span></div>
+    <div class="entry-form-footer"><a href="{{ url_for('yonetici_login') }}">Yönetici girişi</a><span>AkademiPuan · Öğrenci takip</span></div>
   </section>
 </main>
 {% endblock %}

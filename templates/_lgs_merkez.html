@@ -1,0 +1,124 @@
+{% set m = merkez %}
+{% set kapsam = m.sube or 'Tüm 8’ler' %}
+
+<div class="lm-chips" role="group" aria-label="Şube">
+  {% for ad, adet in m.subeler %}
+    <a href="{{ url_for('lgs', sube=ad, sekme=sekme if sekme != 'genel' else None) }}" class="{{ 'is-on' if m.sube == ad else '' }}">{{ ad }} · {{ adet }}</a>
+  {% endfor %}
+  {% if m.subeler|length > 1 %}
+    <a href="{{ url_for('lgs', sekme=sekme if sekme != 'genel' else None) }}" class="{{ 'is-on' if not m.sube else '' }}">Tüm 8’ler · {{ m.toplam_ogrenci }}</a>
+  {% endif %}
+</div>
+
+{% include '_bolum_sekmeleri.html' %}
+
+{% with mesajlar = get_flashed_messages(with_categories=true) %}
+  {% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--success' if kategori == 'success' else 'app-notice--error' }}" role="status">{{ mesaj }}</p>{% endfor %}
+{% endwith %}
+
+{% if sekme == 'siralama' %}
+  <div class="lm-card lm-card--pad">{% include '_lgs_ranking.html' %}</div>
+{% else %}
+<section class="lm-band" aria-label="LGS özeti">
+  {% if lgs_sayac %}
+    <div class="lm-band-item">
+      <small>LGS’ye kalan</small>
+      {% if lgs_sayac.durum == 'sayiyor' %}<b>{{ lgs_sayac.gun }} gün</b>{% else %}<b class="lm-band-text">{% if lgs_sayac.durum == 'bugun' %}Bugün{% elif lgs_sayac.durum == 'gecti' %}Tarih geçti{% else %}Tarih bekleniyor{% endif %}</b>{% endif %}
+      {% if lgs_sayac.tarih %}<small>{{ lgs_sayac.tarih }}{% if not lgs_sayac.kesin %} · tahmini tarih{% endif %}</small>{% endif %}
+    </div>
+    <span class="lm-band-sep" aria-hidden="true"></span>
+  {% endif %}
+  <div class="lm-band-item">
+    <small>Net ort. (son deneme)</small>
+    <b>{{ ('%.1f'|format(m.son.net))|replace('.', ',') if m.son else '—' }}</b>
+    {% if m.son and m.onceki %}
+      {% set fark = m.son.net - m.onceki.net %}
+      <small class="{{ 'lm-up' if fark > 0 else 'lm-down' if fark < 0 else '' }}">{{ '▲' if fark > 0 else '▼' if fark < 0 else '—' }} {{ ('%.1f'|format(fark|abs))|replace('.', ',') }} önceki denemeye göre</small>
+    {% elif m.son %}<small>{{ m.son.ad }}</small>{% else %}<small>Henüz deneme yok</small>{% endif %}
+  </div>
+  <div class="lm-band-item">
+    <small>Puan ort. (son deneme)</small>
+    <b>{{ m.son.puan if m.son and m.son.puan else '—' }}</b>
+    <small>{{ 'kurum listesinden' if m.son and m.son.puan else 'puan bilgisi yok' }}</small>
+  </div>
+  <div class="lm-band-item">
+    <small>Bu hafta ev testi</small>
+    <b>{% if m.test_toplam %}{{ m.test_cozulen }} / {{ m.test_toplam }}{% else %}—{% endif %}</b>
+    <small>{% if m.test_toplam %}{{ m.test_toplam - m.test_cozulen }} çözüm eksik{% else %}bu hafta test gönderilmedi{% endif %}</small>
+  </div>
+  {% if kurum_deneme_yetkili %}
+    <form method="post" action="{{ url_for('lgs_kurum_pdf') }}" enctype="multipart/form-data" class="lm-band-upload">
+      <label class="lm-band-btn">+ Deneme sonucu yükle<input type="file" name="pdf" accept="application/pdf" required onchange="this.form.submit()"></label>
+    </form>
+  {% endif %}
+</section>
+
+<div class="lm-grid">
+  <section class="lm-card lm-card--pad">
+    <div class="lm-card-head"><h2>Deneme gidişatı · {{ kapsam }} net ortalaması</h2><span class="lm-muted">Son {{ m.seri|length or 6 }} deneme</span></div>
+    {% if m.seri %}
+      <div class="lm-chart">
+        {% for s in m.seri %}
+          <a href="{{ url_for('deneme_analiz', sinav=s.ad, sinif=m.sube or None) }}" class="{{ 'is-last' if loop.last else '' }}" title="{{ s.ad }} · {{ s.tarih }}">
+            <i style="height: {{ s.yukseklik }}px"></i>
+            <b>{{ ('%.1f'|format(s.net))|replace('.', ',') }}</b>
+            <small>{{ s.ad|truncate(14, true, '…') }}</small>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="lm-empty">Henüz deneme sonucu yok. Kurum listesini “Deneme sonucu yükle” ile ekleyince grafik burada oluşur.</p>
+    {% endif %}
+  </section>
+
+  <section class="lm-card lm-card--pad">
+    <div class="lm-card-head"><h2>Derslere göre başarı</h2></div>
+    {% if m.dersler %}
+      <div class="lm-subj">
+        {% for d in m.dersler %}
+          <div><span>{{ d.ders }}</span><s><i class="{{ 'ok' if d.yuzde >= 70 else 'warn' if d.yuzde >= 50 else 'bad' }}" style="width: {{ d.yuzde }}%"></i></s><b>%{{ d.yuzde }}</b></div>
+        {% endfor %}
+      </div>
+      {% if m.en_zayif %}<p class="lm-muted lm-note">En zayıf ders: <b>{{ m.en_zayif.ders }}</b> → <a href="{{ url_for('kamera_test.index') }}">yaprak test hazırla</a></p>{% endif %}
+    {% else %}
+      <p class="lm-empty">Son denemede ders ayrıntısı yok.</p>
+    {% endif %}
+  </section>
+</div>
+
+<div class="lm-grid">
+  <section class="lm-card lm-card--pad">
+    <div class="lm-card-head"><h2>Öğrenciler · {{ kapsam }}</h2><span class="lm-muted">Sıra: son net</span></div>
+    <div class="lm-table-wrap">
+      <table class="lm-table">
+        <thead><tr><th>Öğrenci</th>{% if not m.sube %}<th>Şube</th>{% endif %}<th>Son net</th><th>Değişim</th><th>Ev testi</th><th>Durum</th></tr></thead>
+        <tbody>
+          {% for o in m.ogrenciler %}
+            <tr>
+              <td><a href="{{ url_for('lgs', ogrenci=o.id) }}" class="lm-ogr"><b>{{ o.ad_soyad }}</b> <span class="lm-muted">{{ o.ogr_no }}</span></a></td>
+              {% if not m.sube %}<td>{{ o.sinif_adi }}</td>{% endif %}
+              <td>{{ ('%.2f'|format(o.net))|replace('.', ',') if o.net is not none else '—' }}</td>
+              <td>{% if o.degisim is none %}<span class="lm-muted">—</span>{% elif o.degisim > 0 %}<span class="lm-up">▲ {{ ('%.1f'|format(o.degisim))|replace('.', ',') }}</span>{% elif o.degisim < 0 %}<span class="lm-down">▼ {{ ('%.1f'|format(o.degisim|abs))|replace('.', ',') }}</span>{% else %}<span class="lm-muted">— 0,0</span>{% endif %}</td>
+              <td>{% if o.test_atanan %}{{ o.test_cozulen }}/{{ o.test_atanan }}{% else %}<span class="lm-muted">—</span>{% endif %}</td>
+              <td><span class="yt-tag yt-tag--{{ o.durum[1] }}">{{ o.durum[0] }}</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="lm-muted">Bu şubede öğrenci yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="lm-card lm-card--pad">
+    <div class="lm-card-head"><h2>Bu hafta yapılacaklar</h2></div>
+    <div class="lm-todo">
+      {% for etiket, tur, metin in m.yapilacaklar[:8] %}
+        <div><span class="yt-tag yt-tag--{{ tur }}">{{ etiket }}</span>{{ metin }}</div>
+      {% else %}
+        <div><span class="yt-tag yt-tag--ok">Hazır</span>Bu hafta bekleyen iş yok</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endif %}

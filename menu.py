@@ -32,50 +32,54 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
         if "kitap_odev_rapor" in moduller:
             items.append({"id": "analiz_merkezi", "label": "Kitap/ödev analizi", "icon": "◒", "href": _guvenli_url("analiz_merkezi", sinif_id=sinif_id), "endpoint": "analiz_merkezi", "grup": "Analiz ve Raporlar"})
         items.append({"id": "okuma_rapor", "label": "Okuma raporları", "icon": "✎", "href": _guvenli_url("ogretmen_kitap_okuma"), "endpoint": "ogretmen_kitap_okuma", "grup": "Analiz ve Raporlar"})
-        items.append({"id": "yayin", "label": "Okul yayın ekranı", "icon": "▣", "href": _guvenli_url("yayin"), "endpoint": "yayin", "grup": "Okul"})
+        items.append({"id": "yayin", "label": "Okul yayın ekranı", "icon": "▣", "href": _guvenli_url("yayin"), "endpoint": "yayin", "grup": "Diğer"})
         return items
 
     items = [
         {"id": "bugun", "label": "Bugün", "icon": "⌂", "href": _guvenli_url("dashboard", sinif=sinif_id), "endpoint": "dashboard", "grup": "Ana"},
-        {"id": "hizli_giris", "label": "Hızlı giriş", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "Ana"},
     ]
 
+    lgs_var = "lgs" in moduller
+
+    # Takip: haftalık giriş, onaylar, yaprak test (5–7), geçmiş kayıtlar
     if "haftalik_takip" in moduller:
-        items.append({"id": "haftalik_takip", "label": "Haftalık takip", "icon": "▤", "href": _guvenli_url("haftalik_takip"), "endpoint": "haftalik_takip", "grup": "Günlük takip"})
-    if "onay" in moduller or "lgs" in moduller:
-        items.append({"id": "onay_kutusu", "label": "Bekleyen onaylar", "icon": "✓", "href": _guvenli_url("onay_kutusu"), "endpoint": "onay_kutusu", "grup": "Günlük takip"})
-    items.append({"id": "kitap_okuma", "label": "Okuma kayıtları ve onay (5–7. sınıf)", "icon": "✎", "href": _guvenli_url("ogretmen_kitap_okuma"), "endpoint": "ogretmen_kitap_okuma", "grup": "Günlük takip"})
+        items.append({"id": "haftalik_takip", "label": "Kitap ve ödev", "icon": "▤", "href": _guvenli_url("haftalik_takip"), "endpoint": "haftalik_takip", "grup": "Takip"})
+    if "onay" in moduller or lgs_var:
+        items.append({"id": "onay_kutusu", "label": "Bekleyen onaylar", "icon": "✓", "href": _guvenli_url("onay_kutusu"), "endpoint": "onay_kutusu", "grup": "Takip"})
+    items.append({"id": "hizli_giris", "label": "Hızlı giriş", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "Takip"})
+    if "yaprak_test" in moduller and not lgs_var:
+        items.append({"id": "okul_yaprak", "label": "Okulda yaprak test", "icon": "▤", "href": _guvenli_url("kamera_test.index"), "endpoint": "kamera_test.index", "grup": "Takip"})
+    items.append({"id": "kayitlarim", "label": "Geçmiş kayıtlar", "icon": "✎", "href": _guvenli_url("teacher_records"), "endpoint": "teacher_records", "grup": "Takip"})
+    items.append({"id": "islem_gecmisi", "label": "İşlem geçmişi", "icon": "↶", "href": _guvenli_url("islem_gecmisi"), "endpoint": "islem_gecmisi", "grup": "Takip"})
 
-    # LGS merkezi ve sınavlar
-    if "lgs" in moduller:
-        items.append({"id": "lgs_takip", "label": "Öğrenci takibi (LGS)", "icon": "✦", "href": _guvenli_url("lgs"), "endpoint": "lgs", "grup": "LGS merkezi"})
-    if "evde_test" in moduller:
-        items.append({"id": "evde_test", "label": "Evde soru testleri", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde"), "endpoint": "lgs", "grup": "LGS merkezi"})
-    if "yaprak_test" in moduller:
-        items.append({"id": "okul_yaprak", "label": "Okulda yaprak test", "icon": "▤", "href": _guvenli_url("kamera_test.index"), "endpoint": "kamera_test.index", "grup": "LGS merkezi" if "lgs" in moduller else "Sınavlar ve testler"})
-    if "lgs_analiz" in moduller:
-        items.append({"id": "kazanim", "label": "Soru kazanımları", "icon": "▤", "href": _guvenli_url("lgs_kazanim.index"), "endpoint": "lgs_kazanim.index", "grup": "LGS merkezi"})
+    if "kitap" in moduller:
+        items.append({"id": "kitap_okuma", "label": "Kitap okuma", "icon": "📚", "href": _guvenli_url("ogretmen_kitap_okuma"), "endpoint": "ogretmen_kitap_okuma", "grup": "Kitap okuma"})
 
-    # Analiz (Tek "Sıralama" girişi!)
-    analiz_grup = "LGS merkezi" if "lgs" in moduller else "Analiz"
-    items.append({"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("sinif_analiz_v2", sinif=sinif_id), "endpoint": "sinif_analiz_v2", "grup": analiz_grup})
-    items.append({"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": analiz_grup})
-    items.append({"id": "soru_sinif_analiz", "label": "Soru ve sınıf analizi", "icon": "▦", "href": _guvenli_url("test_sinif_analiz"), "endpoint": "test_sinif_analiz", "grup": analiz_grup})
-    if "deneme" in moduller:
-        items.append({"id": "deneme_analiz", "label": "Deneme analizi", "icon": "◈", "href": _guvenli_url("deneme_analiz"), "endpoint": "deneme_analiz", "grup": analiz_grup})
-    if "siralama" in moduller:
-        items.append({"id": "siralama", "label": "Sıralama", "icon": "▥", "href": _guvenli_url("lgs", sr_olcut="test", _anchor="lgs-siralama"), "endpoint": "lgs", "grup": analiz_grup})
+    # LGS (yalnızca 8. sınıf): sayfa içinde sekmeler
+    if lgs_var:
+        items.append({"id": "lgs_takip", "label": "Genel bakış", "icon": "✦", "href": _guvenli_url("lgs"), "endpoint": "lgs", "grup": "LGS merkezi"})
+        if "deneme" in moduller:
+            items.append({"id": "deneme_analiz", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("deneme_analiz"), "endpoint": "deneme_analiz", "grup": "LGS merkezi"})
+        if "evde_test" in moduller:
+            items.append({"id": "evde_test", "label": "Ev testleri", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde"), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "LGS merkezi"})
+        if "yaprak_test" in moduller:
+            items.append({"id": "okul_yaprak", "label": "Yaprak test", "icon": "▤", "href": _guvenli_url("kamera_test.index"), "endpoint": "kamera_test.index", "grup": "LGS merkezi"})
+        if "lgs_analiz" in moduller:
+            items.append({"id": "kazanim", "label": "Kazanımlar", "icon": "▤", "href": _guvenli_url("lgs_kazanim.index"), "endpoint": "lgs_kazanim.index", "grup": "LGS merkezi"})
+        if "siralama" in moduller:
+            items.append({"id": "siralama", "label": "Sıralama", "icon": "▥", "href": _guvenli_url("lgs", sekme="siralama", sr_olcut="test"), "endpoint": "lgs", "args": {"sekme": "siralama"}, "grup": "LGS merkezi"})
 
     # Raporlar
+    items.append({"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("sinif_analiz_v2", sinif=sinif_id), "endpoint": "sinif_analiz_v2", "grup": "Raporlar"})
+    items.append({"id": "soru_sinif_analiz", "label": "Soru ve sınıf analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Raporlar"})
+    items.append({"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Raporlar"})
     if "kitap_odev_rapor" in moduller:
         items.append({"id": "analiz_merkezi", "label": "Kitap/ödev analizi", "icon": "◒", "href": _guvenli_url("analiz_merkezi", sinif_id=sinif_id), "endpoint": "analiz_merkezi", "grup": "Raporlar"})
     items.append({"id": "karne", "label": "Dönem karnesi", "icon": "▣", "href": _guvenli_url("karne", sinif=sinif_id), "endpoint": "karne", "grup": "Raporlar"})
 
-    # Veli iletişimi ve Kayıtlar
-    items.append({"id": "veli_iletisim", "label": "Veli görüşme talepleri", "icon": "✉", "href": _guvenli_url("ogretmen_randevular"), "endpoint": "ogretmen_randevular", "grup": "Veli iletişimi"})
-    items.append({"id": "kayitlarim", "label": "Kayıtlarım · Düzenle / Sil", "icon": "✎", "href": _guvenli_url("teacher_records"), "endpoint": "teacher_records", "grup": "Kayıt yönetimi"})
-    items.append({"id": "islem_gecmisi", "label": "İşlem geçmişi", "icon": "↶", "href": _guvenli_url("islem_gecmisi"), "endpoint": "islem_gecmisi", "grup": "Kayıt yönetimi"})
-    items.append({"id": "yayin", "label": "Okul yayın ekranı", "icon": "▣", "href": _guvenli_url("yayin"), "endpoint": "yayin", "grup": "Okul"})
+    # Diğer
+    items.append({"id": "veli_iletisim", "label": "Veli görüşmeleri", "icon": "💬", "href": _guvenli_url("ogretmen_randevular"), "endpoint": "ogretmen_randevular", "grup": "Diğer"})
+    items.append({"id": "yayin", "label": "Okul yayın ekranı", "icon": "📺", "href": _guvenli_url("yayin"), "endpoint": "yayin", "yeni_sekme": True, "grup": "Diğer"})
 
     if rol == "yonetici":
         items.extend([
@@ -139,10 +143,41 @@ def rehber_menusu(seviye: int = 8) -> list[dict]:
     ]
 
 
+def menu_gruplari(items: list[dict]) -> list[tuple[str, list[dict]]]:
+    """Jinja groupby alfabetik sıralar; menü grupları tanımlandığı sırada kalmalı."""
+    gruplar: dict[str, list[dict]] = {}
+    for item in items:
+        gruplar.setdefault(item.get("grup") or "", []).append(item)
+    return list(gruplar.items())
+
+
+def _args_uyar(item: dict, args) -> bool:
+    if item.get("id") == "siralama":
+        return args.get("sekme") == "siralama" or bool(args.get("sr_olcut"))
+    beklenen = item.get("args") or {}
+    return bool(beklenen) and all(args.get(k) == v for k, v in beklenen.items())
+
+
+def aktif_bolum(items: list[dict], endpoint: str | None, args) -> dict | None:
+    """Açık sayfanın menü bölümü: {"grup", "items", "secili"}; bölüm dışıysa None."""
+    adaylar = [i for i in items if endpoint and (i.get("endpoint") == endpoint or endpoint in i.get("ek_endpointler", ()))]
+    if not adaylar:
+        return None
+    secili = (
+        next((i for i in adaylar if _args_uyar(i, args)), None)
+        or next((i for i in adaylar if not i.get("args")), None)
+        or adaylar[0]
+    )
+    grup = secili.get("grup") or ""
+    return {"grup": grup, "items": [i for i in items if (i.get("grup") or "") == grup], "secili": secili["id"]}
+
+
 def register_menu(app) -> None:
     @app.context_processor
     def _menu_context():
         return {
+            "aktif_bolum": aktif_bolum,
+            "menu_gruplari": menu_gruplari,
             "ogretmen_menusu": ogretmen_menusu,
             "veli_menusu": veli_menusu,
             "rehber_menusu": rehber_menusu,

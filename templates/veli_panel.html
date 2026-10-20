@@ -20,8 +20,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20261001logo">
 <link rel="stylesheet" href="{{ url_for('static', filename='veli_akis.css') }}?v=20261018a">
 <script src="{{ url_for('static', filename='veli_akis.js') }}?v=20261018a" defer></script>
+{% include '_pm_font.html' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}?v=premium1f">
 </head>
-<body class="ui-theme veli-ekran veli-clay-page layout-page">
+<body class="pm ui-theme veli-ekran veli-clay-page layout-page">
+{% include '_pm_ortak.html' %}<div class="pm-sk" aria-hidden="true"><i></i><i></i><i></i></div>
 {% include '_yonetici_banner.html' %}
 <a class="app-skip" href="#app-content">İçeriğe geç</a><div class="app-shell">{% include '_app_sidebar.html' %}<div class="app-workspace" id="app-content">{% include '_app_toolbar.html' %}
 <main class="vp-main" id="veli-icerik"><header class="vp-toolbar"><div><h1 id="parent-page-title">Ana sayfa</h1><p class="app-muted">{{ ogrenci.ad_soyad }} · {{ ogrenci.sinif_adi }}</p></div></header>
@@ -164,7 +167,9 @@
     {% if kitap_kazanimlari %}<a class="app-button" href="#kitap-kazanimlari">Onaylanan kitapların özetleri ve rozetleri →</a>{% endif %}
 
 </div></main></div></div>
+{% include '_app_dock.html' %}
 <script src="{{ url_for('static', filename='app_layout.js') }}?v=20261001books" defer></script>
+<script src="{{ url_for('static', filename='premium.js') }}?v=premium1f" defer></script>
 <script src="{{ url_for('static', filename='rozet_clay.js') }}?v=rozet20260930c" defer></script>
 <script>
 (function () {

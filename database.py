@@ -2312,6 +2312,7 @@ def deneme_sinav_katalog() -> list[dict]:
         JOIN ogrenciler o ON o.id = d.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
         LEFT JOIN lgs_deneme_ders dd ON dd.deneme_id = d.id
+        WHERE d.silindi_at IS NULL OR d.silindi_at = ''
         GROUP BY d.ad, d.tarih, d.tur
         ORDER BY d.tarih DESC, d.ad
         """
@@ -2331,7 +2332,7 @@ def deneme_sinav_ogrencileri(ad: str, tarih: str, tur: str | None = None) -> lis
         FROM lgs_deneme d
         JOIN ogrenciler o ON o.id = d.ogrenci_id
         JOIN siniflar s ON s.id = o.sinif_id
-        WHERE d.ad = ? AND d.tarih = ?
+        WHERE d.ad = ? AND d.tarih = ? AND (d.silindi_at IS NULL OR d.silindi_at = '')
     """
     params: list = [ad, tarih]
     if tur:

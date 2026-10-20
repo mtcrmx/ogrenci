@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
@@ -460,8 +460,13 @@
   {% block head %}{% endblock %}
 {% if lgs_sayac %}<link rel="stylesheet" href="{{ url_for('static', filename='lgs_sayac.css') }}?v=20261001a"><script src="{{ url_for('static', filename='lgs_sayac.js') }}?v=20261001a" defer></script>{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='app_layout.css') }}?v=20261018floatinghelp">
+<link rel="stylesheet" href="{{ url_for('static', filename='yeni_tema.css') }}?v=20261020i">
+{% include '_pm_font.html' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}?v=premium1f">
 </head>
-<body class="ui-theme app-background bg-slate-100 layout-page {{ 'dashboard-page' if request.endpoint == 'dashboard' else '' }}">
+<body class="pm ui-theme app-background bg-slate-100 layout-page {{ 'dashboard-page' if request.endpoint == 'dashboard' else '' }}">
+{% include '_pm_ortak.html' %}
+{% if request.endpoint in ['dashboard', 'ogrenci_detay_v2', 'veli_gelisim'] %}<div class="pm-sk" aria-hidden="true"><i></i><i></i><i></i></div>{% endif %}
 {% set aktif_sinif_id = nav_sinif_id %}
 {% if ui_role %}
 <a class="app-skip" href="#app-content">İçeriğe geç</a>
@@ -470,10 +475,12 @@
 <div class="app-workspace" id="app-content">
 {% include '_yonetici_banner.html' %}
 {% include "_app_toolbar.html" %}
+{% if not sekmeler_sayfada %}{% include "_bolum_sekmeleri.html" %}{% endif %}
 {% endif %}
 {% block body %}{% endblock %}
-{% if ui_role %}</div></div>{% endif %}
+{% if ui_role %}</div></div>{% include '_app_dock.html' %}{% endif %}
 <script src="{{ url_for('static', filename='app_layout.js') }}?v=20261001search" defer></script>
+<script src="{{ url_for('static', filename='premium.js') }}?v=premium1f" defer></script>
 
 {% block scripts %}{% endblock %}
 {% include "_renk_ayari.html" %}
