@@ -40,6 +40,36 @@ def answer_letters(text, key=False):
     return letters
 
 
+def birlesik_paket(ogrenci_id):
+    """Öğrencinin kaynak özeti ve elle girilmeyen (optik) sonuç kayıtları."""
+    from metrik import KAYNAK_ADLARI, birlesik_sonuclar, kaynak_ozeti
+    con = db._conn()
+    try:
+        satirlar = birlesik_sonuclar(con, [ogrenci_id])
+    finally:
+        con.close()
+    seviye = satirlar[0]['seviye'] if satirlar else None
+    if seviye is None:
+        from moduller import ogrenci_seviyesi
+        seviye = ogrenci_seviyesi(ogrenci_id)
+    optik = {}
+    for s in satirlar:
+        if not s['kayit'].startswith('optik-'):
+            continue
+        kayit = optik.setdefault(s['kayit'], {
+            'id': None, 'ad': s['ad'], 'tarih': s['tarih'], 'tur': s['kaynak'],
+            'tur_ad': KAYNAK_ADLARI[s['kaynak']] + ' · optik', 'dersler': [], 'duzenlenebilir': False,
+        })
+        kayit['dersler'].append({k: s[k] for k in ('ders', 'dogru', 'yanlis', 'bos', 'soru_sayisi', 'net')})
+    for kayit in optik.values():
+        kayit['net'] = round(sum(d['net'] for d in kayit['dersler']), 2)
+    return kaynak_ozeti(satirlar, seviye), list(optik.values())
+
+
+def tum_kayitlar(records, optik):
+    return sorted([*records, *optik], key=lambda r: str(r.get('tarih') or ''), reverse=True)
+
+
 def institution_allowed():
     from yetki import yetkili
     return yetkili(session.get('ogretmen_id'), 'yonetici')
@@ -442,8 +472,11 @@ def register_results(app, login_required, accessible):
                 return redirect(url_for('sonuclar', ogrenci=oid))
             except (ValueError, TypeError) as error:
                 flash(str(error) or 'Sonuç alanlarını kontrol edin.', 'warning')
+        ozet, optik = birlesik_paket(oid)
+        records = tum_kayitlar(records, optik)
         return render_template('sonuclar.html', ogrenci=dict(student), kayitlar=records, duzenlenen=editing,
-                               dersler=courses, bugun=date.today().isoformat(), analiz=course_analysis(records, True), form=form, veli=False)
+                               dersler=courses, bugun=date.today().isoformat(), analiz=course_analysis(records, True), form=form, veli=False,
+                               sonuc_ozeti=ozet)
 
     @app.route('/veli/sonuclar')
     def veli_sonuclar():
@@ -456,9 +489,13 @@ def register_results(app, login_required, accessible):
         if not student:
             abort(404)
         records = db.lgs_denemeler(oid, 200)
+        ozet, optik = birlesik_paket(oid)
         requested = request.args.get('sonuc', type=int)
         if requested:
             records = [r for r in records if r['id'] == requested]
             if not records:
                 flash('Bu sonuç artık mevcut değil veya bu öğrenciye ait değil.', 'warning')
-        return render_template('sonuclar.html', ogrenci=dict(student), kayitlar=records, analiz=course_analysis(records, True), veli=True)
+        else:
+            records = tum_kayitlar(records, optik)
+        return render_template('sonuclar.html', ogrenci=dict(student), kayitlar=records, analiz=course_analysis(records, True), veli=True,
+                               sonuc_ozeti=ozet)

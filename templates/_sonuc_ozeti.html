@@ -1,0 +1,18 @@
+{% if sonuc_ozeti %}
+<section class="app-card" aria-label="Sonuç özeti">
+  <h2 class="font-black">Sonuç özeti</h2>
+  <p class="app-muted">Evde soru, deneme{{ ' ve yaprak test' if sonuc_ozeti|length > 2 else '' }} sonuçları birlikte sayılır; sıralama da bu toplamlardan hesaplanır.</p>
+  <div class="grid gap-2 md:grid-cols-3">
+    {% for k in sonuc_ozeti %}
+    <article class="rounded-xl border border-slate-200 p-3">
+      <h3 class="font-black">{{ k.ad }}</h3>
+      {% if k.kayit %}
+      <p>{{ k.kayit }} kayıt · {{ k.soru }} soru</p>
+      <p>{{ k.dogru }} doğru / {{ k.yanlis }} yanlış / {{ k.bos }} boş</p>
+      <p><strong>{{ k.net|net }} net</strong> · başarı {{ k.oran|yuzde }}</p>
+      {% else %}<p class="app-muted">Henüz sonuç yok.</p>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

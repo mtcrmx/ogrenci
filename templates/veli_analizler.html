@@ -8,6 +8,8 @@
 {% if 'yaprak_test' in aktif_moduller(nav_student) %}<article class="app-card"><h2 class="font-black">Okul yaprak testi</h2><p>Doğru, yanlış, boş sayıları ve testler boyunca gelişim.</p><a class="app-button" href="{{ url_for('yaprak_analiz.index') }}">Okul testlerini incele →</a></article>{% endif %}
 {% if 'deneme' in aktif_moduller(nav_student) %}<article class="app-card"><h2 class="font-black">Deneme</h2><p>Derslere göre netler ve denemeler arasındaki değişim.</p><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizini aç →</a></article>{% endif %}
 </section>
-<p class="app-muted">Sonuç bulunmayan alanlar başarı veya başarısızlık olarak değerlendirilmez.</p>
+{% include '_sonuc_ozeti.html' %}
+<p class="app-muted">Sonuç bulunmayan alanlar başarı veya başarısızlık olarak değerlendirilmez. Tüm kayıtlar için <a href="{{ url_for('veli_sonuclar') }}">sonuç listesine</a> bakın.</p>
+{% include '_lgs_ranking.html' %}
 </main>
 {% endblock %}

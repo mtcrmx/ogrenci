@@ -1,14 +1,28 @@
-"""LGS test rankings. Parent payloads contain no other student identities."""
+"""Student rankings over evde soru, deneme and yaprak test results.
+
+Parent payloads contain no other student identities.
+"""
 from datetime import date, timedelta
 from flask import request, session, url_for
 import database as db
+from metrik import KAYNAK_ADLARI, _seviye_sql, birlesik_sonuclar, seviye_kaynaklari
 
-METRICS = {'test': 'Test', 'soru': 'Çözülen soru', 'dogru': 'Doğru',
-           'yanlis': 'Yanlış', 'bos': 'Boş', 'basari': 'Başarı %',
+METRICS = {'test': 'Kayıt', 'soru': 'Çözülen soru', 'dogru': 'Doğru',
+           'yanlis': 'Yanlış', 'bos': 'Boş', 'net': 'Net', 'basari': 'Başarı %',
            'aktif': 'Aktif gün', 'seri': 'En uzun çalışma serisi', 'ders': 'Ders çeşitliliği'}
 
+ENDPOINTS = {'lgs', 'veli_lgs', 'rehberlik_lgs', 'deneme_analiz', 'veli_deneme_analiz',
+             'veli_analizler', 'sonuclar', 'veli_sonuclar'}
 
-def build(con, args, own_id=None, today=None):
+
+def _level_of_class(con, sinif_id):
+    if not sinif_id:
+        return None
+    row = con.execute(f"SELECT {_seviye_sql(con)} FROM siniflar s WHERE s.id=?", (sinif_id,)).fetchone()
+    return int(row[0]) if row and row[0] else None
+
+
+def build(con, args, own_id=None, today=None, level=None):
     today = today or date.today()
     metric = args.get('sr_olcut', 'test')
     if metric not in METRICS:
@@ -19,22 +33,34 @@ def build(con, args, own_id=None, today=None):
         period = 'tum'
     start = {'tum': date.min, 'hafta': today-timedelta(days=today.weekday()),
              'ay': today.replace(day=1)}[period]
-    cols = {r[1] for r in con.execute("PRAGMA table_info(siniflar)").fetchall()}
-    sekiz_kosul = "COALESCE(s.seviye, CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER)) = 8" if "seviye" in cols else "s.sinif_adi LIKE '8/%'"
-    students = [dict(r) for r in con.execute(
-        f"SELECT o.id,o.ad_soyad,s.sinif_adi FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id WHERE {sekiz_kosul} ORDER BY o.id")]
-    if own_id is not None and not any(s['id'] == own_id for s in students):
-        return None
+    sev = _seviye_sql(con)
+    all_students = [dict(r) for r in con.execute(
+        f"SELECT o.id,o.ad_soyad,s.sinif_adi,{sev} AS seviye FROM ogrenciler o JOIN siniflar s ON s.id=o.sinif_id ORDER BY o.id")]
+    levels = sorted({int(s['seviye']) for s in all_students if s['seviye']})
+    if own_id is not None:
+        own = next((s for s in all_students if s['id'] == own_id), None)
+        if own is None:
+            return None
+        level = int(own['seviye'] or 0)
+    else:
+        try:
+            requested = int(args.get('sr_seviye') or 0)
+        except (TypeError, ValueError):
+            requested = 0
+        if requested in levels:
+            level = requested
+        if level not in levels:
+            level = 8 if 8 in levels else (levels[0] if levels else None)
+    students = [s for s in all_students if s['seviye'] == level]
     classes = sorted({s['sinif_adi'] for s in students})
     classroom = args.get('sr_sinif', '')
     if classroom not in classes:
         classroom = ''
-    tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    results = []
-    if {'lgs_optik_sinav', 'lgs_optik_sonuc'} <= tables:
-        results = [dict(r) for r in con.execute("""SELECT r.ogrenci_id,r.dogru,r.yanlis,r.bos,r.zaman,e.ders
-            FROM lgs_optik_sonuc r JOIN lgs_optik_sinav e ON e.id=r.sinav_id
-            WHERE e.tur='yaprak'""")]
+    sources = seviye_kaynaklari(level)
+    source = args.get('sr_kaynak', '')
+    if source not in sources:
+        source = ''
+    results = birlesik_sonuclar(con, [s['id'] for s in students])
     subjects = sorted({r['ders'] for r in results if r['ders']})
     subject = args.get('sr_ders', '')
     if subject not in subjects:
@@ -47,20 +73,21 @@ def build(con, args, own_id=None, today=None):
     for s in students:
         if classroom and s['sinif_adi'] != classroom:
             continue
-        totals[s['id']] = dict(test=0, soru=0, dogru=0, yanlis=0, bos=0, days=set(), subjects=set())
+        totals[s['id']] = dict(kayitlar=set(), soru=0, dogru=0, yanlis=0, bos=0, net=0.0, days=set(), subjects=set())
     for result in results:
         total = totals.get(result['ogrenci_id'])
-        if total is None or (subject and result['ders'] != subject):
+        if total is None or (subject and result['ders'] != subject) or (source and result['kaynak'] != source):
             continue
         try:
-            day = date.fromisoformat(result['zaman'][:10])
+            day = date.fromisoformat(result['tarih'][:10])
         except (ValueError, TypeError):
             continue
         if not start <= day <= today:
             continue
-        total['test'] += 1
+        total['kayitlar'].add(result['kayit'])
         for key in ('dogru', 'yanlis', 'bos'):
             total[key] += result[key]
+        total['net'] += result['net']
         total['days'].add(day)
         if result['ders']:
             total['subjects'].add(result['ders'])
@@ -69,6 +96,8 @@ def build(con, args, own_id=None, today=None):
         total = totals.get(student['id'])
         if total is None:
             continue
+        total['test'] = len(total.pop('kayitlar'))
+        total['net'] = round(total['net'], 2)
         total['soru'] = total['dogru'] + total['yanlis']
         if total['soru'] < minimum:
             continue
@@ -98,25 +127,36 @@ def build(con, args, own_id=None, today=None):
         last = row[metric]
     return dict(rows=rows, metrics=METRICS, metric=metric, direction=direction,
                 period=period, classes=classes, classroom=classroom, subjects=subjects,
-                subject=subject, minimum=minimum, parent=own_id is not None)
+                subject=subject, minimum=minimum, parent=own_id is not None,
+                level=level, levels=levels, sources={k: KAYNAK_ADLARI[k] for k in sources},
+                source=source)
 
 
 def register(app):
     @app.context_processor
     def ranking_context():
-        if request.endpoint not in {'lgs', 'veli_lgs', 'rehberlik_lgs'}:
+        if request.endpoint not in ENDPOINTS:
             return {}
-        parent = request.endpoint == 'veli_lgs'
+        parent = request.endpoint.startswith('veli_')
         own_id = session.get('veli_ogrenci_id') if parent else None
         if (parent and not own_id) or (not parent and not session.get('ogretmen_id')):
             return {}
         con = db._conn()
         try:
-            data = build(con, request.args, own_id)
+            level = None
+            if not parent:
+                sinif_id = request.args.get('sinif', type=int)
+                ogrenci_id = request.args.get('ogrenci', type=int)
+                if ogrenci_id and not sinif_id:
+                    row = con.execute('SELECT sinif_id FROM ogrenciler WHERE id=?', (ogrenci_id,)).fetchone()
+                    sinif_id = row[0] if row else None
+                level = _level_of_class(con, sinif_id or session.get('ui_sinif_id'))
+            data = build(con, request.args, own_id, level=level)
         finally:
             con.close()
         if not data:
             return {}
+
         def sorting_link(key):
             args = request.args.to_dict()
             if key == 'dogru' and data['metric'] == 'dogru':
@@ -129,6 +169,6 @@ def register(app):
 
     @app.after_request
     def ranking_cache(response):
-        if request.endpoint in {'lgs', 'veli_lgs', 'rehberlik_lgs'}:
+        if request.endpoint in ENDPOINTS:
             response.headers['Cache-Control'] = 'private, no-store'
         return response

@@ -397,7 +397,7 @@ _OGRETMEN_SINIF: dict[str, list[str]] = _programdan_siniflar()
 _REHBER_OGRETMENLER = ("ALPEREN MURAT LEBLEBİCİ",)
 _KADRO_DISI_OGRETMENLER = list(_REHBER_OGRETMENLER)
 _AYRILAN_OGRETMENLER = ("FATMA ÇAPKULAÇ", "YUSUF ERTÜRK")
-_AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B", "8/C")
+_AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B")
 _TUM_SUBE_OGRETMENLERI = tuple(
     dict.fromkeys(list(_OGRETMEN_SINIF.keys()) + _KADRO_DISI_OGRETMENLER)
 )
@@ -6516,7 +6516,7 @@ def haftalik_odev_bildir(ogrenci_id: int, hafta_basi: str, yaptim: bool) -> dict
     return {"ok": True, "deger": deger}
 
 
-_AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B", "8/C")
+_AKTIF_SUBELER = ("5/A", "5/B", "6/A", "6/B", "7/A", "7/B", "8/A", "8/B")
 
 
 def _uc_gun_gecti(metin: str) -> bool:

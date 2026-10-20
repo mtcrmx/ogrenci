@@ -202,7 +202,7 @@ class Workflows(unittest.TestCase):
         self.assertLess(lgs_grup, rapor_grup)
         self.assertNotIn('data-grup="Raporlar"', menu)
         self.assertIn('>Denemeler<', menu)
-        self.assertIn('Soru ve sınıf analizi', self.teacher_client.get('/evde-analiz').get_data(as_text=True))
+        self.assertIn('Evde soru analizi', self.teacher_client.get('/evde-analiz').get_data(as_text=True))
         ogr = self.teacher_client.get('/lgs', query_string={'ogrenci': self.oid}).get_data(as_text=True)
         self.assertNotIn('Ders ve deneme sonucu', ogr)
         evde = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)

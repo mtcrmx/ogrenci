@@ -25,21 +25,10 @@
       <h1>Merhaba{{ ', ' ~ ilk_ad if ilk_ad else '' }}</h1>
       <p>{{ aktif.sinif_adi }} · {{ toplam }} öğrenci{% if not lgs_sinifi %} · bu hafta {{ sayac.girilmedi }} öğrencinin takibi girilmedi{% endif %}</p>
     </div>
-    {% if lgs_sinifi %}
-      <a class="app-primary" href="{{ url_for('lgs', sinif=aktif.id) }}">LGS merkezini aç →</a>
-    {% else %}
-      <a class="app-primary" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}">Haftalık takibi aç →</a>
-    {% endif %}
   </header>
 
   <nav class="pm-acts" aria-label="Hızlı işlemler">
-    {% if lgs_sinifi %}
-    <a class="pm-act pm-glass" href="{{ url_for('lgs', sinif=aktif.id) }}"><span class="pm-act-ic pm-g1"><svg><use href="#pm-i-target"/></svg></span><span>LGS merkezi<small>Deneme, test, sıralama</small></span></a>
-    {% else %}
-    <a class="pm-act pm-glass" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}"><span class="pm-act-ic pm-g1"><svg><use href="#pm-i-checks"/></svg></span><span>Kitap ve ödev<small>Bu haftanın takibi</small></span></a>
-    {% endif %}
     <a class="pm-act pm-glass" href="{{ url_for('ort_giris', sinif_id=aktif.id) }}"><span class="pm-act-ic pm-g2"><svg><use href="#pm-i-edit"/></svg></span><span>Hızlı giriş<small>Sınav ve test sonucu</small></span></a>
-    <a class="pm-act pm-glass" href="{{ url_for('onay_kutusu') }}"><span class="pm-act-top"><span class="pm-act-ic pm-g3"><svg><use href="#pm-i-check"/></svg></span>{% if onay_sayisi %}<em class="yt-tag {{ 'yt-tag--bad' if onay_geciken else 'yt-tag--warn' }}">{{ onay_sayisi }}</em>{% endif %}</span><span>Onay kutusu<small>Bekleyen kayıtlar</small></span></a>
     <a class="pm-act pm-glass" href="{{ url_for('sinif_analiz_v2', sinif=aktif.id) }}"><span class="pm-act-ic pm-g5"><svg><use href="#pm-i-chart"/></svg></span><span>Sınıf analizi<small>{{ aktif.sinif_adi }} gelişimi</small></span></a>
   </nav>
 
@@ -48,7 +37,7 @@
     <a class="dash-hero" href="{{ url_for('lgs', sinif=aktif.id) }}">
       <small>LGS · {{ aktif.sinif_adi }}</small>
       <strong><span data-pm-count>{{ toplam }}</span> öğrenci</strong>
-      <span>Denemeler, ev testleri, yaprak testler ve sıralama LGS merkezinde.</span>
+      <span>Evde sorular, denemeler ve sıralama LGS merkezinde.</span>
     </a>
     {% else %}
     <a class="dash-hero" href="{{ url_for('haftalik_takip', sinif=aktif.id) }}">
@@ -102,11 +91,13 @@
         {% for s in diger_eksik[:3] %}<a href="{{ url_for('haftalik_takip', sinif=s.id) }}"><span class="yt-tag yt-tag--muted">{{ s.sinif_adi }}</span>{{ s.toplam - s.isaretli }} öğrencinin takibi eksik</a>{% endfor %}
         {% if not (onay_sayisi or diger_eksik or (not lgs_sinifi and (sayac.dikkat or sayac.girilmedi))) %}<p class="dash-muted">Şu an dikkat isteyen bir durum yok.</p>{% endif %}
       </div>
+      {% if not lgs_sinifi %}
       <div class="dash-card-head dash-card-head--sub"><h2>Raporlar</h2></div>
       <div class="dash-links">
-        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}">Sınıf analizi →</a>
-        {% if not lgs_sinifi %}<a href="{{ url_for('kitap_odev_rapor', sinif=aktif.id) }}">Kitap ve ödev raporu →</a>{% endif %}
+        <a href="{{ url_for('analiz_merkezi', sinif_id=aktif.id) }}">Kitap/ödev analizi →</a>
+        <a href="{{ url_for('kitap_odev_rapor', sinif=aktif.id) }}">Yazdırılabilir kitap-ödev raporu →</a>
       </div>
+      {% endif %}
     </aside>
   </div>
 

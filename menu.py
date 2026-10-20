@@ -46,9 +46,9 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
             {"id": "lgs_takip", "label": "Genel bakış", "icon": "✦", "href": _guvenli_url("lgs"), "endpoint": "lgs", "grup": "LGS merkezi"},
             {"id": "evde_test", "label": "Evde sorular", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde"), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "LGS merkezi"},
             {"id": "deneme_analiz", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("deneme_analiz"), "endpoint": "deneme_analiz", "grup": "LGS merkezi"},
-            {"id": "hizli_giris", "label": "Sonuç girişi", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "LGS merkezi"},
+            {"id": "hizli_giris", "label": "Hızlı giriş", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "LGS merkezi"},
             {"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("sinif_analiz_v2", sinif=sinif_id), "endpoint": "sinif_analiz_v2", "grup": "Analizler"},
-            {"id": "soru_sinif_analiz", "label": "Soru ve sınıf analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Analizler"},
+            {"id": "soru_sinif_analiz", "label": "Evde soru analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Analizler"},
             {"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Analizler"},
         ])
         if rol == "yonetici":
@@ -58,10 +58,10 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
     # Takip: haftalık giriş, onaylar, yaprak test (5–7), geçmiş kayıtlar
     if "haftalik_takip" in moduller:
         items.append({"id": "haftalik_takip", "label": "Kitap ve ödev", "icon": "▤", "href": _guvenli_url("haftalik_takip"), "endpoint": "haftalik_takip", "grup": "Takip"})
-    if "onay" in moduller or lgs_var:
+    if "onay" in moduller:
         items.append({"id": "onay_kutusu", "label": "Bekleyen onaylar", "icon": "✓", "href": _guvenli_url("onay_kutusu"), "endpoint": "onay_kutusu", "grup": "Takip"})
     items.append({"id": "hizli_giris", "label": "Hızlı giriş", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "Takip"})
-    if "yaprak_test" in moduller and not lgs_var:
+    if "yaprak_test" in moduller:
         items.append({"id": "okul_yaprak", "label": "Okulda yaprak test", "icon": "▤", "href": _guvenli_url("kamera_test.index"), "endpoint": "kamera_test.index", "grup": "Takip"})
     if "evde_test" in moduller:
         items.append({"id": "evde_test", "label": "Evde sorular", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde", sinif=sinif_id), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "Deneme ve evde soru"})
@@ -73,21 +73,9 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
     if "kitap" in moduller:
         items.append({"id": "kitap_okuma", "label": "Kitap okuma", "icon": "📚", "href": _guvenli_url("ogretmen_kitap_okuma"), "endpoint": "ogretmen_kitap_okuma", "grup": "Kitap okuma"})
 
-    # LGS (yalnızca 8. sınıf): sayfa içinde sekmeler
-    if lgs_var:
-        items.append({"id": "lgs_takip", "label": "Genel bakış", "icon": "✦", "href": _guvenli_url("lgs"), "endpoint": "lgs", "grup": "LGS merkezi"})
-        if "deneme" in moduller:
-            items.append({"id": "deneme_analiz", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("deneme_analiz"), "endpoint": "deneme_analiz", "grup": "LGS merkezi"})
-        if "evde_test" in moduller:
-            items.append({"id": "evde_test", "label": "Ev testleri", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde"), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "LGS merkezi"})
-        if "yaprak_test" in moduller:
-            items.append({"id": "okul_yaprak", "label": "Yaprak test", "icon": "▤", "href": _guvenli_url("kamera_test.index"), "endpoint": "kamera_test.index", "grup": "LGS merkezi"})
-        if "siralama" in moduller:
-            items.append({"id": "siralama", "label": "Sıralama", "icon": "▥", "href": _guvenli_url("lgs", sekme="siralama", sr_olcut="test"), "endpoint": "lgs", "args": {"sekme": "siralama"}, "grup": "LGS merkezi"})
-
     # Raporlar
     items.append({"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("sinif_analiz_v2", sinif=sinif_id), "endpoint": "sinif_analiz_v2", "grup": "Raporlar"})
-    items.append({"id": "soru_sinif_analiz", "label": "Soru ve sınıf analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Raporlar"})
+    items.append({"id": "soru_sinif_analiz", "label": "Evde soru analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Raporlar"})
     items.append({"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Raporlar"})
     if "kitap_odev_rapor" in moduller:
         items.append({"id": "analiz_merkezi", "label": "Kitap/ödev analizi", "icon": "◒", "href": _guvenli_url("analiz_merkezi", sinif_id=sinif_id), "endpoint": "analiz_merkezi", "grup": "Raporlar"})
@@ -126,9 +114,7 @@ def veli_menusu(seviye: int = 8) -> list[dict]:
             {"id": "gelisim_sonuclar", "label": "Analizler", "icon": "▥", "href": _guvenli_url("veli_analizler"), "endpoint": "veli_analizler"},
         ])
         return items
-    if "lgs" in moduller:
-        items.append({"id": "sorular_optik", "label": "Sorular ve optik", "icon": "✦", "href": _guvenli_url("veli_lgs", bolum="soru"), "endpoint": "veli_lgs"})
-    elif "odev" in moduller or "kitap" in moduller:
+    if "odev" in moduller or "kitap" in moduller:
         items.append({"id": "odev_kitap", "label": "Ödev ve kitap", "icon": "▤", "href": _guvenli_url("veli_panel") + "#hafta", "endpoint": "veli_panel", "parent_nav": "hafta"})
         items.append({"id": "kitap_okuma", "label": "Kitap okuma ve özet", "icon": "✎", "href": _guvenli_url("veli_kitap_okuma"), "endpoint": "veli_kitap_okuma"})
     if "evde_test" in moduller:
@@ -136,23 +122,11 @@ def veli_menusu(seviye: int = 8) -> list[dict]:
     if "deneme" in moduller:
         items.append({"id": "deneme_sonuc", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("veli_deneme_analiz"), "endpoint": "veli_deneme_analiz"})
 
-    items.append({"id": "gelisim_sonuclar", "label": "Gelişim ve sonuçlar", "icon": "◈", "href": _guvenli_url("veli_gelisim"), "endpoint": "veli_gelisim"})
+    items.append({"id": "veli_sonuclar", "label": "Sonuçlar ve sıralama", "icon": "▥", "href": _guvenli_url("veli_sonuclar"), "endpoint": "veli_sonuclar"})
+    items.append({"id": "gelisim", "label": "Gelişim", "icon": "◈", "href": _guvenli_url("veli_gelisim"), "endpoint": "veli_gelisim"})
     items.append({"id": "mesajlar", "label": "Mesajlar", "icon": "✉", "href": _guvenli_url("veli_panel") + "#mesajlar", "endpoint": "veli_panel", "parent_nav": "mesajlar"})
     items.append({"id": "rehberlik", "label": "Rehberlik", "icon": "❋", "href": _guvenli_url("veli_rehberlik"), "endpoint": "veli_rehberlik"})
     items.append({"id": "raporlar", "label": "Raporlar", "icon": "◒", "href": _guvenli_url("veli_panel") + "#raporlar", "endpoint": "veli_panel", "parent_nav": "raporlar"})
-
-    if "lgs" in moduller:
-        items.append({
-            "id": "lgs_grup",
-            "grup": "LGS",
-            "alt": [
-                {"id": "lgs_sonuc", "label": "Ders ve deneme sonuçları", "icon": "◈", "href": _guvenli_url("veli_lgs", bolum="sonuc"), "endpoint": "veli_lgs"},
-                {"id": "lgs_siralama", "label": "Sıralama", "icon": "▥", "href": _guvenli_url("veli_lgs", sr_olcut="test", _anchor="lgs-siralama"), "endpoint": "veli_lgs"},
-            ],
-        })
-    else:
-        items.append({"id": "veli_sonuclar", "label": "Ders ve deneme sonuçları", "icon": "◈", "href": _guvenli_url("veli_sonuclar"), "endpoint": "veli_sonuclar"})
-
     return items
 
 
@@ -170,7 +144,7 @@ def rehber_menusu(seviye: int = 8) -> list[dict]:
         {"id": "rehberlik_kutuphane", "label": "İçerik kütüphanesi", "icon": "▧", "href": _guvenli_url("rehberlik_kutuphane"), "endpoint": "rehberlik_kutuphane", "grup": "Rehberlik"},
         {"id": "rehberlik_yeni", "label": "İçerik paylaş", "icon": "＋", "href": _guvenli_url("rehberlik_yeni"), "endpoint": "rehberlik_yeni", "grup": "Rehberlik"},
         {"id": "rehberlik_ozet", "label": "Hizmet özeti", "icon": "▥", "href": _guvenli_url("rehberlik_ozet"), "endpoint": "rehberlik_ozet", "grup": "Rehberlik"},
-        {"id": "kayitlarim", "label": "Kayıtlarım · Düzenle / Sil", "icon": "✎", "href": _guvenli_url("teacher_records"), "endpoint": "teacher_records", "grup": "Kayıt yönetimi"},
+        {"id": "kayitlarim", "label": "Geçmiş kayıtlar", "icon": "✎", "href": _guvenli_url("teacher_records"), "endpoint": "teacher_records", "grup": "Kayıt yönetimi"},
     ]
 
 

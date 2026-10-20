@@ -37,7 +37,6 @@
 <p id="parent-filter-empty" class="pa-empty" hidden>Bu bölümde henüz kayıt yok.</p>
 <button type="button" id="parent-activity-more" class="app-button pa-more" hidden>Diğer kayıtları göster</button>
 </section>
-<div class="pa-shortcuts">{% if lgs_acik %}<a class="app-button" href="{{ url_for('veli_lgs',bolum='soru') }}">Evde soruları aç →</a><a class="app-button" href="{{ url_for('veli_lgs',bolum='sonuc') }}">Denemeler →</a><a class="app-button" href="{{ url_for('veli_analizler') }}">Analizler →</a>{% else %}<a class="app-button" href="#hafta">Ödev ve kitap takibi →</a><a class="app-button" href="#mesajlar">Öğretmenle iletişim →</a>{% endif %}</div>
 {% if program_bugun and not lgs_acik %}<section class="app-card"><h2>Bugünkü çalışma programı</h2><p>{{ program_bugun }}</p><a class="app-button" href="{{ url_for('veli_lgs') }}">Programı aç →</a></section>{% endif %}
 {% if rehber_yeni and not lgs_acik %}<section class="app-card"><div class="app-row" style="justify-content:space-between"><h2>Rehberlik servisinden</h2><a class="app-button" href="{{ url_for('veli_rehberlik') }}">Tüm içerikler →</a></div>{% for item in rehber_yeni %}<p style="margin-top:12px"><a href="{{ url_for('veli_rehberlik_detay',cid=item.id) }}"><strong>{{ item.baslik }}</strong></a><span class="app-muted"> · {{ item.kategori }}{{ ' · Yeni' if not item.acildi else '' }}</span></p>{% endfor %}</section>{% endif %}
     <details class="app-card app-details"><summary>Gelişim özeti</summary><div class="vp-overview vp-overview--secondary">
@@ -162,7 +161,7 @@
 </script>
 {% endif %}
 </div><div class="parent-section" data-parent-section="raporlar" id="raporlar" hidden>
-<section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2>{% if not lgs_acik %}<a class="app-button" href="{{ url_for('yaprak_analiz.index') }}">Okul yaprak testi analizi →</a>{% endif %}<div class="app-row" style="margin-top:12px">{% if not lgs_acik %}<a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a>{% endif %}{% if 'kitap_odev_rapor' in aktif_moduller(ogrenci) %}<a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a>{% endif %}{% if 'deneme' in aktif_moduller(ogrenci) %}<a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a>{% endif %}</div></section>
+<section class="app-card"><h2 style="font-size:18px;font-weight:800">Gelişim raporları</h2>{% if not lgs_acik %}<a class="app-button" href="{{ url_for('yaprak_analiz.index') }}">Okul yaprak testi analizi →</a>{% endif %}<div class="app-row" style="margin-top:12px">{% if not lgs_acik %}<a class="app-button" href="{{ url_for('veli_karne') }}">Dönem karnesi</a>{% endif %}{% if 'kitap_odev_rapor' in aktif_moduller(ogrenci) %}<a class="app-button" href="{{ url_for('veli_kitap_odev_rapor') }}">Okuma raporu</a>{% endif %}{% if lgs_acik and 'deneme' in aktif_moduller(ogrenci) %}<a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizi</a>{% endif %}</div></section>
 {% if 'rozet' in aktif_moduller(ogrenci) %}<details class="app-card app-details"><summary>Rozet koleksiyonu</summary>{% include '_rozet_koleksiyonu.html' %}</details>{% endif %}
     {% if kitap_kazanimlari %}<a class="app-button" href="#kitap-kazanimlari">Onaylanan kitapların özetleri ve rozetleri →</a>{% endif %}
 

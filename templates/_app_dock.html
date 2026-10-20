@@ -3,9 +3,9 @@
 {% if ui_role == 'veli' %}
   {% set d_ogr = nav_student if nav_student else ogrenci %}
   {% set d_items = veli_menusu(sinif_seviyesi(d_ogr) if d_ogr else 8) %}
-  {% for hedef in ['ana_sayfa', 'sorular_optik', 'lgs_sonuc', 'gelisim_sonuclar', 'mesajlar'] %}
+  {% for hedef in ['ana_sayfa', 'sorular_optik', 'lgs_sonuc', 'deneme_sonuc', 'gelisim_sonuclar', 'veli_sonuclar', 'mesajlar'] %}
     {% for item in d_items if not item.grup and item.id == hedef %}
-      {% set dock.ogeler = dock.ogeler + [{'id': item.id, 'label': 'Gelişim' if item.label == 'Gelişim ve sonuçlar' else item.label, 'href': item.href, 'parent_nav': item.parent_nav, 'on': request.endpoint == item.endpoint and (item.id == 'ana_sayfa' or not item.parent_nav)}] %}
+      {% set dock.ogeler = dock.ogeler + [{'id': item.id, 'label': 'Sonuçlar' if item.id == 'veli_sonuclar' else item.label, 'href': item.href, 'parent_nav': item.parent_nav, 'on': request.endpoint == item.endpoint and (item.id == 'ana_sayfa' or not item.parent_nav)}] %}
     {% endfor %}
   {% endfor %}
 {% else %}

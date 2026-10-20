@@ -4975,7 +4975,9 @@ def veli_lgs():
 def veli_analizler():
     if not session.get('veli_ogrenci_id'):
         return redirect(url_for('veli_giris'))
-    return render_template('veli_analizler.html')
+    from student_results import birlesik_paket
+    ozet, _ = birlesik_paket(int(session['veli_ogrenci_id']))
+    return render_template('veli_analizler.html', sonuc_ozeti=ozet)
 
 
 def _evde_siniflari(ogretmen_id: int) -> list[dict]:

@@ -121,6 +121,118 @@ def net_filtre(deger) -> str:
         return "—"
 
 
+KAYNAK_ADLARI = {"evde": "Evde soru", "deneme": "Deneme", "yaprak": "Yaprak test"}
+
+
+def seviye_kaynaklari(seviye: int | None) -> tuple[str, ...]:
+    """8. sınıfta yaprak test modülü yoktur; okul testleri deneme sayılır."""
+    return ("evde", "deneme") if seviye == 8 else ("evde", "deneme", "yaprak")
+
+
+def _seviye_sql(con) -> str:
+    cols = {r[1] for r in con.execute("PRAGMA table_info(siniflar)").fetchall()}
+    if "seviye" in cols:
+        return "COALESCE(s.seviye, CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER))"
+    return "CAST(SUBSTR(s.sinif_adi, 1, 1) AS INTEGER)"
+
+
+def birlesik_sonuclar(con, ogrenci_idler=None) -> list[dict]:
+    """Evde soru, deneme ve yaprak test sonuçlarını tek biçimde döner.
+
+    Her satır bir öğrencinin bir kayıttaki bir ders sonucudur:
+    {ogrenci_id, seviye, kaynak, kayit, ad, tarih, ders, dogru, yanlis, bos, soru_sayisi, net}.
+    Silinmiş sınav ve sonuçlar dahil edilmez.
+    """
+    tablolar = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    sev = _seviye_sql(con)
+    filtre, params = "", []
+    if ogrenci_idler is not None:
+        ids = [int(i) for i in ogrenci_idler]
+        if not ids:
+            return []
+        filtre = f" AND o.id IN ({','.join('?' * len(ids))})"
+        params = ids
+    satirlar: list[dict] = []
+
+    if {"lgs_optik_sinav", "lgs_optik_sonuc"} <= tablolar:
+        e_cols = {r[1] for r in con.execute("PRAGMA table_info(lgs_optik_sinav)").fetchall()}
+        silinme = " AND (e.silindi_at IS NULL OR e.silindi_at = '')" if "silindi_at" in e_cols else ""
+        kaynak = "COALESCE(e.kaynak, '')" if "kaynak" in e_cols else "''"
+        goturme = "e.yanlis_goturme" if "yanlis_goturme" in e_cols else "0"
+        for r in con.execute(
+            f"""SELECT r.ogrenci_id, {sev} AS seviye, e.id AS sinav_id, e.ad, e.tur, {kaynak} AS kaynak,
+                       COALESCE(e.ders, '') AS ders, r.dogru, r.yanlis, r.bos, r.net, r.zaman, e.tarih,
+                       e.soru_sayisi, {goturme} AS goturme
+                FROM lgs_optik_sonuc r
+                JOIN lgs_optik_sinav e ON e.id = r.sinav_id
+                JOIN ogrenciler o ON o.id = r.ogrenci_id
+                JOIN siniflar s ON s.id = o.sinif_id
+                WHERE 1=1{silinme}{filtre}""",
+            params,
+        ):
+            seviye = int(r["seviye"] or 0)
+            if r["tur"] == "deneme":
+                tur = "deneme"
+            elif str(r["kaynak"]).startswith("ev"):
+                tur = "evde"
+            else:
+                tur = "yaprak"
+            if tur not in seviye_kaynaklari(seviye):
+                tur = "deneme"
+            dogru, yanlis, bos = int(r["dogru"] or 0), int(r["yanlis"] or 0), int(r["bos"] or 0)
+            satirlar.append({
+                "ogrenci_id": int(r["ogrenci_id"]), "seviye": seviye, "kaynak": tur,
+                "kayit": f"optik-{r['sinav_id']}", "ad": r["ad"] or "",
+                "tarih": str(r["zaman"] or r["tarih"] or "")[:10], "ders": r["ders"] or "",
+                "dogru": dogru, "yanlis": yanlis, "bos": bos,
+                "soru_sayisi": int(r["soru_sayisi"] or (dogru + yanlis + bos)),
+                "net": float(r["net"]) if r["net"] is not None else net(dogru, yanlis, r["goturme"]),
+            })
+
+    if {"lgs_deneme", "lgs_deneme_ders"} <= tablolar:
+        d_cols = {r[1] for r in con.execute("PRAGMA table_info(lgs_deneme)").fetchall()}
+        silinme = " AND (d.silindi_at IS NULL OR d.silindi_at = '')" if "silindi_at" in d_cols else ""
+        for r in con.execute(
+            f"""SELECT d.ogrenci_id, {sev} AS seviye, d.id AS deneme_id, d.ad, d.tarih, d.tur,
+                       dd.ders, dd.dogru, dd.yanlis, dd.bos, dd.net, dd.soru_sayisi, dd.yanlis_goturme
+                FROM lgs_deneme d
+                JOIN lgs_deneme_ders dd ON dd.deneme_id = d.id
+                JOIN ogrenciler o ON o.id = d.ogrenci_id
+                JOIN siniflar s ON s.id = o.sinif_id
+                WHERE 1=1{silinme}{filtre}""",
+            params,
+        ):
+            seviye = int(r["seviye"] or 0)
+            tur = "yaprak" if r["tur"] == "ders" else "deneme"
+            if tur not in seviye_kaynaklari(seviye):
+                tur = "deneme"
+            dogru, yanlis, bos = int(r["dogru"] or 0), int(r["yanlis"] or 0), int(r["bos"] or 0)
+            satirlar.append({
+                "ogrenci_id": int(r["ogrenci_id"]), "seviye": seviye, "kaynak": tur,
+                "kayit": f"deneme-{r['deneme_id']}", "ad": r["ad"] or "",
+                "tarih": str(r["tarih"] or "")[:10], "ders": r["ders"] or "",
+                "dogru": dogru, "yanlis": yanlis, "bos": bos,
+                "soru_sayisi": int(r["soru_sayisi"] or (dogru + yanlis + bos)),
+                "net": float(r["net"]) if r["net"] is not None else net(dogru, yanlis, r["yanlis_goturme"]),
+            })
+    return satirlar
+
+
+def kaynak_ozeti(satirlar, seviye: int | None = None) -> list[dict]:
+    """Kaynak başına kayıt sayısı, D/Y/B, net ve başarı oranı."""
+    satirlar = list(satirlar or [])
+    out = []
+    for kod in seviye_kaynaklari(seviye):
+        grup = [s for s in satirlar if s["kaynak"] == kod]
+        t = topla(grup)
+        out.append({
+            "kod": kod, "ad": KAYNAK_ADLARI[kod], "kayit": len({s["kayit"] for s in grup}),
+            "dogru": t["toplam_dogru"], "yanlis": t["toplam_yanlis"], "bos": t["toplam_bos"],
+            "soru": t["toplam_soru"], "net": t["toplam_net"], "oran": t["oran"],
+        })
+    return out
+
+
 def register_metrik(app) -> None:
     """Jinja filtrelerini ve global fonksiyonlarını kaydeder."""
     app.jinja_env.filters["yuzde"] = yuzde_filtre
