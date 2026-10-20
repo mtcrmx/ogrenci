@@ -38,7 +38,7 @@
       {% set m_rol = 'rehber' if rehber_only else ('rapor' if rapor_only else ('yonetici' if yetkili('yonetici') else 'ogretmen')) %}
       {% set m_seviye = secili_sinif_seviyesi|default(8) %}
       {% set m_items = ogretmen_menusu(m_seviye, m_rol, nav_sinif_id) %}
-      {% set ana_basliklar = {'Takip': ('✓', 'Takip'), 'Kitap okuma': ('📚', 'Kitap okuma'), 'LGS merkezi': ('🎯', 'LGS'), 'Raporlar': ('📊', 'Raporlar'), 'Yönetici': ('🏫', 'Okul yönetimi')} %}
+      {% set ana_basliklar = {'Takip': ('✓', 'Takip'), 'Kitap okuma': ('📚', 'Kitap okuma'), 'LGS merkezi': ('🎯', 'LGS'), 'Raporlar': ('📊', 'Raporlar'), 'Analizler': ('📊', 'Analizler'), 'Yönetici': ('🏫', 'Okul yönetimi')} %}
       {% set bolum = aktif_bolum(m_items, request.endpoint, request.args) %}
       {% for grup, grup_items in menu_gruplari(m_items) %}
         {% if grup == 'Ana' %}

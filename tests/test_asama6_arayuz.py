@@ -32,9 +32,10 @@ def test_menu_uretici_ve_tek_siralama_kurali():
         v8 = veli_menusu(seviye=8)
         v6 = veli_menusu(seviye=6)
 
-    # 8. sınıfta Sıralama tam 1 kez geçmeli (3 kopya olmamalı)
-    siralama_8 = [x for x in m8 if x["label"] == "Sıralama"]
-    assert len(siralama_8) == 1
+    # 8. sınıfta yalnız evde sorular, denemeler ve analizler; Sıralama yok
+    assert not any(x["label"] == "Sıralama" for x in m8)
+    assert {"evde_test", "deneme_analiz"} <= {x["id"] for x in m8}
+    assert any(x.get("grup") == "Analizler" for x in m8)
     assert not any(x["id"] == "haftalik_takip" for x in m8)
 
     # 7. sınıfta haftalık takip var, LGS sıralama yok

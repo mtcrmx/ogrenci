@@ -3,9 +3,9 @@
 {% if ui_role == 'veli' %}
   {% set d_ogr = nav_student if nav_student else ogrenci %}
   {% set d_items = veli_menusu(sinif_seviyesi(d_ogr) if d_ogr else 8) %}
-  {% for hedef in ['ana_sayfa', 'gelisim_sonuclar', 'mesajlar'] %}
+  {% for hedef in ['ana_sayfa', 'sorular_optik', 'lgs_sonuc', 'gelisim_sonuclar', 'mesajlar'] %}
     {% for item in d_items if not item.grup and item.id == hedef %}
-      {% set dock.ogeler = dock.ogeler + [{'id': item.id, 'label': 'Ana sayfa' if item.id == 'ana_sayfa' else ('Gelişim' if item.id == 'gelisim_sonuclar' else item.label), 'href': item.href, 'parent_nav': item.parent_nav, 'on': request.endpoint == item.endpoint and (item.id == 'ana_sayfa' or not item.parent_nav)}] %}
+      {% set dock.ogeler = dock.ogeler + [{'id': item.id, 'label': 'Gelişim' if item.label == 'Gelişim ve sonuçlar' else item.label, 'href': item.href, 'parent_nav': item.parent_nav, 'on': request.endpoint == item.endpoint and (item.id == 'ana_sayfa' or not item.parent_nav)}] %}
     {% endfor %}
   {% endfor %}
 {% else %}
@@ -14,7 +14,7 @@
   {% set d_rol = 'rehber' if d_rehber else ('rapor' if d_rapor else ('yonetici' if yetkili('yonetici') else 'ogretmen')) %}
   {% set d_items = ogretmen_menusu(secili_sinif_seviyesi|default(8), d_rol, nav_sinif_id) %}
   {% set d_bolum = aktif_bolum(d_items, request.endpoint, request.args) %}
-  {% set d_basliklar = {'Takip': 'Takip', 'Kitap okuma': 'Kitap', 'LGS merkezi': 'LGS', 'Raporlar': 'Raporlar', 'Yönetici': 'Okul'} %}
+  {% set d_basliklar = {'Takip': 'Takip', 'Kitap okuma': 'Kitap', 'LGS merkezi': 'LGS', 'Raporlar': 'Raporlar', 'Analizler': 'Analizler', 'Yönetici': 'Okul'} %}
   {% for grup, grup_items in menu_gruplari(d_items) %}
     {% if grup == 'Ana' %}
       {% for item in grup_items %}{% set dock.ogeler = dock.ogeler + [{'id': item.id, 'label': item.label, 'href': item.href, 'on': request.endpoint == item.endpoint}] %}{% endfor %}

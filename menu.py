@@ -41,6 +41,21 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
 
     lgs_var = "lgs" in moduller
 
+    if lgs_var:
+        items.extend([
+            {"id": "lgs_takip", "label": "Genel bakış", "icon": "✦", "href": _guvenli_url("lgs"), "endpoint": "lgs", "grup": "LGS merkezi"},
+            {"id": "evde_test", "label": "Evde sorular", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde"), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "LGS merkezi"},
+            {"id": "deneme_analiz", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("deneme_analiz"), "endpoint": "deneme_analiz", "grup": "LGS merkezi"},
+            {"id": "hizli_giris", "label": "Sonuç girişi", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "LGS merkezi"},
+            {"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("sinif_analiz_v2", sinif=sinif_id), "endpoint": "sinif_analiz_v2", "grup": "Analizler"},
+            {"id": "soru_sinif_analiz", "label": "Soru ve sınıf analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Analizler"},
+            {"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Analizler"},
+            {"id": "kazanim", "label": "Kazanımlar", "icon": "▤", "href": _guvenli_url("lgs_kazanim.index"), "endpoint": "lgs_kazanim.index", "grup": "Analizler"},
+        ])
+        if rol == "yonetici":
+            items.extend(_yonetici_ogeleri())
+        return items
+
     # Takip: haftalık giriş, onaylar, yaprak test (5–7), geçmiş kayıtlar
     if "haftalik_takip" in moduller:
         items.append({"id": "haftalik_takip", "label": "Kitap ve ödev", "icon": "▤", "href": _guvenli_url("haftalik_takip"), "endpoint": "haftalik_takip", "grup": "Takip"})
@@ -82,15 +97,19 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
     items.append({"id": "yayin", "label": "Okul yayın ekranı", "icon": "📺", "href": _guvenli_url("yayin"), "endpoint": "yayin", "yeni_sekme": True, "grup": "Diğer"})
 
     if rol == "yonetici":
-        items.extend([
-            {"id": "okul_analiz", "label": "Okul analizi", "icon": "◈", "href": _guvenli_url("yonetici_okul_analiz"), "endpoint": "yonetici_okul_analiz", "grup": "Yönetici"},
-            {"id": "bilgi_girisi", "label": "Bilgi girişi", "icon": "◷", "href": _guvenli_url("giris_raporu"), "endpoint": "giris_raporu", "grup": "Yönetici"},
-            {"id": "ogrenci_ara", "label": "Öğrenci ara / önizleme", "icon": "⌕", "href": _guvenli_url("yonetici_students"), "endpoint": "yonetici_students", "grup": "Yönetici"},
-            {"id": "sinav_kayitlari", "label": "Sınav kayıtları", "icon": "▦", "href": _guvenli_url("yonetim_sinavlar"), "endpoint": "yonetim_sinavlar", "grup": "Yönetici"},
-            {"id": "hesaplar", "label": "Hesaplar ve roller", "icon": "⚿", "href": _guvenli_url("admin_sifreler"), "endpoint": "admin_sifreler", "grup": "Yönetici"},
-        ])
+        items.extend(_yonetici_ogeleri())
 
     return items
+
+
+def _yonetici_ogeleri() -> list[dict]:
+    return [
+        {"id": "okul_analiz", "label": "Okul analizi", "icon": "◈", "href": _guvenli_url("yonetici_okul_analiz"), "endpoint": "yonetici_okul_analiz", "grup": "Yönetici"},
+        {"id": "bilgi_girisi", "label": "Bilgi girişi", "icon": "◷", "href": _guvenli_url("giris_raporu"), "endpoint": "giris_raporu", "grup": "Yönetici"},
+        {"id": "ogrenci_ara", "label": "Öğrenci ara / önizleme", "icon": "⌕", "href": _guvenli_url("yonetici_students"), "endpoint": "yonetici_students", "grup": "Yönetici"},
+        {"id": "sinav_kayitlari", "label": "Sınav kayıtları", "icon": "▦", "href": _guvenli_url("yonetim_sinavlar"), "endpoint": "yonetim_sinavlar", "grup": "Yönetici"},
+        {"id": "hesaplar", "label": "Hesaplar ve roller", "icon": "⚿", "href": _guvenli_url("admin_sifreler"), "endpoint": "admin_sifreler", "grup": "Yönetici"},
+    ]
 
 
 def veli_menusu(seviye: int = 8) -> list[dict]:
@@ -99,6 +118,13 @@ def veli_menusu(seviye: int = 8) -> list[dict]:
     items = [
         {"id": "ana_sayfa", "label": "Ana sayfa", "icon": "⌂", "href": _guvenli_url("veli_panel") + "#genel", "endpoint": "veli_panel", "parent_nav": "genel"},
     ]
+    if "lgs" in moduller:
+        items.extend([
+            {"id": "sorular_optik", "label": "Evde sorular", "icon": "✦", "href": _guvenli_url("veli_lgs", bolum="soru"), "endpoint": "veli_lgs"},
+            {"id": "lgs_sonuc", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("veli_lgs", bolum="sonuc"), "endpoint": "veli_lgs"},
+            {"id": "gelisim_sonuclar", "label": "Analizler", "icon": "▥", "href": _guvenli_url("veli_analizler"), "endpoint": "veli_analizler"},
+        ])
+        return items
     if "lgs" in moduller:
         items.append({"id": "sorular_optik", "label": "Sorular ve optik", "icon": "✦", "href": _guvenli_url("veli_lgs", bolum="soru"), "endpoint": "veli_lgs"})
     elif "odev" in moduller or "kitap" in moduller:

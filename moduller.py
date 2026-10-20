@@ -12,13 +12,8 @@ MODULLER: dict[int | str, set[str]] = {
         "lgs",
         "deneme",
         "optik",
-        "yaprak_test",
         "evde_test",
         "lgs_analiz",
-        "siralama",
-        "rehberlik",
-        "mesaj",
-        "karne_lgs",
     },
     "diger": {
         "haftalik_takip",

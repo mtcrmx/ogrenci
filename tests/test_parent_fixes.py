@@ -20,8 +20,9 @@ class ParentFixes(unittest.TestCase):
 
     def test_navigation_and_missing_data(self):
         hub = self.client.get('/veli/analizler').get_data(as_text=True)
-        for target in ('/evde-analiz', '/okul-yaprak-analiz', '/veli/deneme-analiz'):
+        for target in ('/evde-analiz', '/veli/deneme-analiz'):
             self.assertIn(target, hub)
+        self.assertNotIn('/okul-yaprak-analiz', hub)
         home = self.client.get('/veli').get_data(as_text=True)
         self.assertNotIn('Geçen ayla aynı tempoda.', home)
         self.assertNotIn('0 hafta tam ödev', home)
