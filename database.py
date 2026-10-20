@@ -950,8 +950,36 @@ def _conn() -> sqlite3.Connection:
 # Başlatma + Seed
 # ══════════════════════════════════════════════════════════════════════════
 
+def _guncelleme_oncesi_yedek() -> str | None:
+    """Bekleyen migration varsa veritabanına dokunmadan önce tam kopyasını alır."""
+    if not os.path.exists(DB_PATH) or os.path.getsize(DB_PATH) == 0:
+        return None
+    from migrations import discover_migrations
+    kaynak = sqlite3.connect(DB_PATH, timeout=30)
+    try:
+        try:
+            uygulanan = {int(r[0]) for r in kaynak.execute("SELECT version FROM schema_version")}
+        except sqlite3.OperationalError:
+            uygulanan = set()
+        if all(ver in uygulanan for ver, _, _ in discover_migrations()):
+            return None
+        klasor = os.path.join(os.path.dirname(DB_PATH), "backups")
+        os.makedirs(klasor, exist_ok=True)
+        hedef_yol = os.path.join(klasor, f"guncelleme_oncesi_{datetime.now():%Y%m%d_%H%M%S}.db")
+        hedef = sqlite3.connect(hedef_yol)
+        try:
+            kaynak.backup(hedef)
+        finally:
+            hedef.close()
+    finally:
+        kaynak.close()
+    print(f"INFO: Guncelleme oncesi yedek alindi: {hedef_yol}")
+    return hedef_yol
+
+
 def initialize_db():
     """Tabloları oluşturur; ilk çalıştırmada gerçek verilerle doldurur."""
+    _guncelleme_oncesi_yedek()
     con = _conn()
     cur = con.cursor()
 
