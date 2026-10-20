@@ -37,7 +37,7 @@ class CounselorWorkspace(unittest.TestCase):
                 self.assertEqual(self.client.get(path).status_code,200)
         html=self.client.get('/evde-analiz?test='+str(exam)).get_data(as_text=True)
         self.assertIn(self.student['ad_soyad'],html)
-        self.assertIn('Kazanım haritası',html)
+        self.assertNotIn('Kazanım haritası',html)
         self.assertNotIn('id="ea-group-form"',html)
         self.assertNotIn('Açıklamayı kaydet',html)
         self.assertEqual(self.client.post('/evde-analiz',data={'test':exam,'action':'meta'}).status_code,403)

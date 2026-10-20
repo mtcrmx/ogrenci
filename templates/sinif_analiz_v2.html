@@ -139,7 +139,7 @@
         <a class="btn" href="{{ url_for('yaprak_analiz.combined') }}">◈ Birleşik analiz ve kazanım matrisi</a>
         <a class="btn" href="{{ url_for('test_sinif_analiz') }}">▦ Soru soru başarı ve en çok zorlayan sorular</a>
         <a class="btn" href="{{ url_for('yaprak_analiz.index') }}">▤ Okul yaprak testi analizi</a>
-        <a class="btn" href="{{ url_for('ev_analiz.index') }}">✉ Evde test analizi ve çalışma grupları</a>
+        <a class="btn" href="{{ url_for('ev_analiz.index') }}">✉ Evde test analizi</a>
         {% if 'deneme' in aktif_moduller %}
         <a class="btn" href="{{ url_for('deneme_analiz') }}">◈ Deneme analizi</a>
         {% if 'lgs' in aktif_moduller %}<a class="btn" href="{{ url_for('lgs', sr_olcut='test', _anchor='lgs-siralama') }}">▥ LGS sıralama</a>{% endif %}

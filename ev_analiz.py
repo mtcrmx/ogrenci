@@ -1,4 +1,4 @@
-"""Evde testlerden soru analizi, yardım ve öğretmen çalışma grupları."""
+"""Evde testlerden soru analizi."""
 from collections import defaultdict
 from datetime import date, timedelta
 import secrets
@@ -94,22 +94,9 @@ def index():
         if not exam: con.close(); abort(404)
         action = request.form.get('action')
         qno = request.form.get('no', type=int)
-        if action in {'help','meta','option_note'} and (not qno or not 1 <= qno <= exam['soru_sayisi']):
+        if action in {'meta','option_note'} and (not qno or not 1 <= qno <= exam['soru_sayisi']):
             con.close(); abort(400)
-        if action == 'help' and student:
-            con.execute('INSERT INTO ev_yardim(sinav_id,ogrenci_id,no,notu) VALUES(?,?,?,?) ON CONFLICT(sinav_id,ogrenci_id,no) DO UPDATE SET notu=excluded.notu, yanit=\'\', ogretmen_id=NULL, zaman=CURRENT_TIMESTAMP',
-                (exam['id'],oid,qno,request.form.get('note','').strip()[:1000]))
-            message = 'Yardım isteğiniz öğretmen ekranına eklendi.'
-        elif action == 'reply' and teacher:
-            ids = request.form.getlist('help_id', type=int)
-            reply = request.form.get('reply','').strip()
-            if not ids or not reply or len(reply)>4000: con.close(); abort(400)
-            rows = [dict(r) for r in con.execute('SELECT * FROM ev_yardim WHERE sinav_id=?',(exam['id'],)) if r['id'] in ids]
-            if len(rows)!=len(set(ids)) or any(not bp.can_access(teacher,r['ogrenci_id']) for r in rows): con.close(); abort(403)
-            for row in rows:
-                con.execute('UPDATE ev_yardim SET yanit=?,ogretmen_id=? WHERE id=?',(reply,teacher,row['id']))
-            message = 'Yanıt seçilen öğrencilerin veli paneline eklendi.'
-        elif action == 'meta' and teacher:
+        if action == 'meta' and teacher:
             if exam.get('ogretmen_id') != teacher: con.close(); abort(403)
             con.execute('INSERT INTO ev_soru_meta VALUES(?,?,?,?) ON CONFLICT(sinav_id,no) DO UPDATE SET konu=excluded.konu,cozum=excluded.cozum',
                 (exam['id'],qno,request.form.get('topic','').strip()[:160],request.form.get('solution','').strip()[:4000]))
@@ -121,31 +108,6 @@ def index():
             con.execute('INSERT INTO ev_option_note VALUES(?,?,?,?) ON CONFLICT(sinav_id,no,option) DO UPDATE SET note=excluded.note',
                 (exam['id'],qno,option,request.form.get('note','').strip()[:500]))
             message='Seçenek açıklaması kaydedildi.'
-        elif action == 'support' and teacher:
-            from analysis_support import assign
-            try:
-                assign(con,exam,teacher,bp.can_access,request.form)
-            except Exception:
-                con.rollback();con.close();raise
-            message='Tekrar testi seçilen öğrencilerin çalışma listesine eklendi. Önce–sonra takibi hazır.'
-        elif action == 'group' and teacher:
-            members=set(request.form.getlist('member',type=int))
-            actual={p['id'] for p in optik.cozen_ogrenciler(exam['id'])}
-            name=request.form.get('name','').strip()[:120]
-            if not members or not name or not members <= actual: con.close(); abort(400)
-            if any(not bp.can_access(teacher,m) for m in members): con.close(); abort(403)
-            cur=con.execute('INSERT INTO ev_grup(ad,ogretmen_id,kaynak_id) VALUES(?,?,?)',(name,teacher,exam['id']))
-            con.executemany('INSERT INTO ev_grup_uye VALUES(?,?)',[(cur.lastrowid,m) for m in members])
-            message='Çalışma grubu oluşturuldu. Gruba evde test atayabilirsiniz.'
-        elif action == 'assign' and teacher:
-            gid=request.form.get('group',type=int); target=request.form.get('target',type=int)
-            group=con.execute('SELECT * FROM ev_grup WHERE id=? AND ogretmen_id=?',(gid,teacher)).fetchone()
-            target_exam=next((e for e in exams if e['id']==target),None)
-            members=[r[0] for r in con.execute('SELECT ogrenci_id FROM ev_grup_uye WHERE grup_id=?',(gid,))]
-            if not group or not target_exam or not members: con.close(); abort(400)
-            if any(not bp.can_access(teacher,m) or not visible(target_exam,student_row(m) or {}) for m in members): con.close(); abort(403)
-            con.execute('INSERT OR IGNORE INTO ev_grup_test VALUES(?,?)',(gid,target))
-            message='Test grubun çalışma listesine eklendi; veliler kendi panellerinde görebilir.'
         else:
             con.close(); abort(403)
         con.commit(); con.close(); flash(message,'success')
@@ -166,14 +128,6 @@ def index():
     if student and not completed:
         # Never send answer keys / solutions before this student's submission.
         for q in questions: q.update(key='',cozum='',counts={},rate=None)
-    help_rows=[dict(r) for r in con.execute('SELECT h.*,o.ad_soyad FROM ev_yardim h JOIN ogrenciler o ON o.id=h.ogrenci_id WHERE h.sinav_id=? ORDER BY h.no,h.zaman DESC',(exam['id'],))] if exam else []
-    help_rows=[r for r in help_rows if (bp.can_access(teacher,r['ogrenci_id']) if teacher else r['ogrenci_id']==oid)]
-    groups=[dict(r) for r in con.execute('SELECT * FROM ev_grup WHERE ogretmen_id=? ORDER BY id DESC',(teacher,))] if teacher else [dict(r) for r in con.execute('SELECT g.* FROM ev_grup g JOIN ev_grup_uye u ON u.grup_id=g.id WHERE u.ogrenci_id=?',(oid,))]
-    for g in groups:
-        g['members']=[dict(r) for r in con.execute('SELECT o.id,o.ad_soyad FROM ev_grup_uye u JOIN ogrenciler o ON o.id=u.ogrenci_id WHERE u.grup_id=?',(g['id'],))] if teacher else []
-        g['tests']=[dict(r) for r in con.execute('SELECT e.id,e.ad,e.ogretmen_id,e.kaynak FROM ev_grup_test t JOIN lgs_optik_sinav e ON e.id=t.sinav_id WHERE t.grup_id=?',(g['id'],)) if optik.teacher_can_view(dict(r))]
-        from analysis_support import progress
-        g['progress']=progress(con,g,teacher,oid,bp.can_access)
     weekly=[]; trend=[]; pending=0; weekly_topics=defaultdict(lambda: {'dogru':0,'yanlis':0,'bos':0})
     week=request.args.get('week','')
     try: start=date.fromisoformat(week)
@@ -202,13 +156,10 @@ def index():
         topic_map[name]['correct']+=q['correct']; topic_map[name]['total']+=len(people)
         topic_map[name]['members'].update(q['wrong']+q['blank'])
     topics=[dict(name=name,rate=metrik.oran(v['correct'],v['total']),members=sorted(v['members'])) for name,v in topic_map.items()]
-    from analysis_support import matrix
-    outcome_matrix=matrix(exam,people,teacher,bp.can_access,selected_class)
-    targets=[e for e in exams if teacher and e.get('ogretmen_id')==teacher and e.get('kaynak')!='kamera' and (not exam or e['id']!=exam['id'])]
     con.close()
     totals={k:sum(p[k] for p in people) for k in ['dogru','yanlis','bos']}
     return render_template('ev_analiz.html',teacher=bool(teacher),read_only=bool(teacher and db.ogretmen_yetki_al(teacher)=='rehber'),student=student,exams=exams,exam=exam,
-      people=people,questions=questions,topics=topics,totals=totals,help_rows=help_rows,groups=groups,outcome_matrix=outcome_matrix,targets=targets,
+      people=people,questions=questions,topics=topics,totals=totals,
       csrf=csrf,classes=classes,selected_class=selected_class,completed=completed,
       can_edit=bool(teacher and db.ogretmen_yetki_al(teacher)!='rehber' and exam and exam.get('ogretmen_id')==teacher),
       weekly=weekly,weekly_topics=dict(weekly_topics),trend=sorted(trend,key=lambda x:x['date']),pending=pending,week=start.isoformat(),week_end=(end-timedelta(days=1)).isoformat(),

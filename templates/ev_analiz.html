@@ -42,10 +42,9 @@
 </form>
 {% if read_only %}<a class="ea-button secondary" href="{{ url_for('rehberlik_lgs') }}">← Rehberlik LGS takip merkezi</a>{% else %}<a class="ea-button secondary" href="{{ url_for('lgs',ekran='evde') if teacher else url_for('veli_lgs',bolum='soru') }}">{{ '+ Evde test ver' if teacher else 'Testlerimi aç →' }}</a>{% endif %}{% if teacher %}<a href="{{ url_for('yaprak_analiz.index') }}">Okul yaprak testi analizi →</a><a href="{{ url_for('test_sinif_analiz',kaynak='eski') }}">Diğer test sonuçları</a>{% endif %}
 </div>
-<nav class="ea-tabs" aria-label="Analiz bölümleri">{% for key,label in [('overview','Genel bakış'),('questions','Soru analizi'),('matrix','Cevap haritası'),('groups','Çalışma grupları'),('help','Yardım istekleri')] %}<button type="button" data-tab="{{ key }}" aria-pressed="false">{{ label }}{% if key=='help' %} <small>{{ help_rows|rejectattr('yanit')|list|length }}</small>{% endif %}
+<nav class="ea-tabs" aria-label="Analiz bölümleri">{% for key,label in [('overview','Genel bakış'),('questions','Soru analizi'),('matrix','Cevap haritası')] %}<button type="button" data-tab="{{ key }}" aria-pressed="false">{{ label }}
 </button>{% endfor %}
 {% if not teacher %}<button type="button" data-tab="weekly" aria-pressed="false">Haftalık özet</button>{% endif %}
-{% if teacher %}<button type="button" data-tab="outcomes" aria-pressed="false">Kazanım haritası</button>{% endif %}
 </nav>
 <section data-panel="overview">
 <div class="ea-section-title">
@@ -103,7 +102,7 @@
 <strong>{{ t.name }}</strong>
 <span>{{ '%' ~ t.rate if t.rate is not none else '—' }}</span>
 </div>
-<progress value="{{ t.rate or 0 }}" max="100">{{ '%' ~ t.rate if t.rate is not none else '—' }}</progress>{% if teacher and not read_only and t.members and t.name!='Konu tanımlanmamış' %}<button type="button" class="ea-text-button" data-members="{{ t.members|join(',') }}" data-group-name="{{ t.name }} tekrar grubu">{{ t.members|length }} öğrenciyle grup hazırla →</button>{% endif %}
+<progress value="{{ t.rate or 0 }}" max="100">{{ '%' ~ t.rate if t.rate is not none else '—' }}</progress>
 </div>{% endfor %}
 <p>Konu bilgileri öğretmen tarafından tanımlanır; eksik etiketlerden konu çıkarımı yapılmaz.</p>
 </article>
@@ -167,7 +166,7 @@
 {% endif %}
 
 {% if teacher %}<div class="ea-answer-people">{% for p in people %}<span>{{ p.ad }}: <b>{{ p.satirlar[q.no-1].verilen or 'Boş' }}</b> {{ '✓' if p.satirlar[q.no-1].durum=='dogru' else ('×' if p.satirlar[q.no-1].durum=='yanlis' else '—') }}</span>{% endfor %}
-</div>{% if not read_only and (q.wrong or q.blank) %}<button class="ea-button secondary" type="button" data-members="{{ (q.wrong+q.blank)|join(',') }}" data-group-name="{{ q.no }}. soru destek grubu">Zorlananlarla grup hazırla</button>{% endif %}
+</div>
 {% if can_edit %}<form method="post" class="ea-form">{{ fields('meta','questions') }}<input type="hidden" name="no" value="{{ q.no }}">
 <label>Konu / kazanım<input name="topic" maxlength="160" value="{{ q.konu }}">
 </label>
@@ -176,13 +175,7 @@
 <button class="ea-button">Kaydet</button>
 </form>{% endif %}
 
-{% else %}<form method="post" class="ea-form">{{ fields('help','help') }}<input type="hidden" name="no" value="{{ q.no }}">
-<label>Nerede zorlandınız? <small>(isteğe bağlı)</small>
-<textarea name="note" maxlength="1000" placeholder="Örneğin: İkinci adımı anlayamadım.">
-</textarea>
-</label>
-<button class="ea-button">Bu soruyu anlamadım</button>
-</form>{% endif %}
+{% endif %}
 </div>
 </details>{% else %}<p class="ea-empty">Öğretmen test verdiğinde sorular burada görünecek.</p>{% endfor %}
 </div>
@@ -215,69 +208,6 @@
 </tbody>
 </table>
 </div>
-</section>
-{% if teacher %}{% include '_outcome_matrix.html' %}{% endif %}
-<section data-panel="groups" hidden>
-<div class="ea-section-title">
-<div>
-<span class="ea-eyebrow">BİRLİKTE İLERLEYELİM</span>
-<h2>Çalışma grupları</h2><p>Buradaki testler çalışma listesine eklenir. Daha önce tamamlanan testler yeniden cevaplanamaz; yeni uygulama için öğretmen ayrı bir test vermelidir.</p>
-</div>
-</div>
-{% if teacher and exam and not read_only %}<form method="post" class="ea-card ea-form" id="ea-support-form">{{ fields('support','groups') }}
-<h3>Analizden tekrar testi ver</h3><p>Kazanımları, öğrencileri ve daha önce çözülmemiş bir testi seçin. Seçilen kazanımlar tekrar testinde de eşleştirilmiş olmalıdır.</p>
-<label>Çalışma adı<input name="name" required maxlength="120" placeholder="Örneğin: Mevsimler tekrar çalışması"></label>
-<fieldset><legend>Çalışılacak kazanımlar</legend><div class="ea-members">{% for c in outcome_matrix.columns %}<label><input type="checkbox" name="outcome" value="{{ c.id }}">{{ c.code }} · {{ c.topic }}</label>{% else %}<p>Önce bu testin sorularına kazanım atayın.</p>{% endfor %}</div></fieldset>
-<fieldset><legend>Öğrenciler</legend><div class="ea-members">{% for p in people %}<label><input type="checkbox" name="member" value="{{ p.id }}">{{ p.ad }}</label>{% endfor %}</div></fieldset>
-<label>Tekrar testi<select name="target" required><option value="">Test seçin</option>{% for e in targets %}<option value="{{ e.id }}">{{ e.ad }} · {{ e.sinif_adi or 'Tüm 8. sınıflar' }}</option>{% endfor %}</select></label>
-<p>Uygun test yoksa <a href="{{ url_for('lgs',ekran='evde') }}">yeni evde testi oluşturun</a> ve kazanımlarını eşleştirdikten sonra buraya dönün. Atama, seçilen öğrencilerin çalışma listesine eklenir; testin mevcut sınıf erişimi değişmez.</p>
-<button class="ea-button" {{ 'disabled' if not outcome_matrix.columns or not targets or not people }}>Seçilen öğrencilere tekrar testi ata</button>
-</form>{% endif %}
-{% if teacher and exam and not read_only %}<form method="post" class="ea-card ea-form" id="ea-group-form">{{ fields('group','groups') }}<h3>Yeni destek grubu</h3>
-<p>Soru analizinden önerilen öğrencileri seçebilir veya üyeleri kendiniz belirleyebilirsiniz. Gruplar öğretmenin seçtiği üyelerle kaydedilir.</p>
-<label>Grup adı<input name="name" maxlength="120" required placeholder="Örneğin: Kesirler tekrar çalışması">
-</label>
-<div class="ea-members">{% for p in people %}<label>
-<input type="checkbox" name="member" value="{{ p.id }}">{{ p.ad }}</label>{% endfor %}
-</div>
-<button class="ea-button">Grubu oluştur</button>
-</form>{% endif %}
-<div class="ea-grid">{% for g in groups %}<article class="ea-card">
-<span class="ea-eyebrow">DESTEK ÇALIŞMASI</span>
-<h3>{{ g.ad }}</h3>{% if teacher %}<p>{{ g.members|map(attribute='ad_soyad')|join(', ') }}</p>{% endif %}
-{% if g.progress %}<details class="ea-progress"><summary>Destek öncesi → sonrası · {{ g.progress.outcomes|join(', ') }}</summary><p>Başlangıç, atama anındaki kaynak testtir. Sonrası, tekrar testindeki aynı kazanımın güncel sonucudur. Fark yüzde puandır; testlerin zorluğu değişebilir.</p><div class="ea-matrix-wrap"><table class="ea-matrix"><thead><tr><th>Öğrenci / kazanım</th><th>Önce</th><th>Sonra</th><th>Değişim</th></tr></thead><tbody>{% for r in g.progress.rows %}<tr><th>{{ r.name }}<small>{{ r.outcome }}</small></th><td>%{{ r.before.rate }}<small>{{ r.before.correct }}/{{ r.before.total }} doğru</small></td><td>{% if r.after.rate is defined and r.after.rate is not none %}%{{ r.after.rate }}<small>{{ r.after.correct }}/{{ r.after.total }} doğru</small>{% else %}Sonuç / eşleşme bekleniyor{% endif %}</td><td>{{ ('+' if r.delta>0 else '') ~ r.delta if r.delta is not none else '—' }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
-{% for t in g.tests %}<a class="ea-assignment" href="{{ url_for('ev_analiz.index',test=t.id) if teacher else url_for('veli_lgs',bolum='soru',sinav=t.id) }}">{{ t.ad }} →</a>{% else %}<p>Henüz çalışma listesine test eklenmedi.</p>{% endfor %}
-{% if teacher and exam and not read_only %}<form method="post" class="ea-form">{{ fields('assign','groups') }}<input type="hidden" name="group" value="{{ g.id }}">
-<label>Evde soru testi<select name="target" required>{% for e in exams %}<option value="{{ e.id }}">{{ e.ad }}</option>{% endfor %}
-</select>
-</label>
-<button class="ea-button secondary">Gruba çalışma ata</button>
-</form>{% endif %}
-</article>{% else %}<p class="ea-empty">{{ 'Soru veya konu analizinden bir destek grubu hazırlayın.' if teacher else 'Öğretmeniniz bir çalışma atadığında burada görebilirsiniz.' }}</p>{% endfor %}
-</div>
-</section>
-<section data-panel="help" hidden>
-<span class="ea-eyebrow">SORULAR BİRLİKTE ÇÖZÜLÜR</span>
-<h2>Yardım istekleri</h2>
-<p>{{ 'Aynı sorunun isteklerini seçip tek açıklamayla yanıtlayabilirsiniz.' if teacher else 'Soru analizi bölümünden yardım isteyin. Öğretmeninizin yanıtı burada görünür.' }}</p>{% for bucket in help_rows|groupby('no') %}<article class="ea-card">
-<h3>{{ bucket.grouper }}. soru</h3>
-<form method="post" class="ea-form">{% if teacher %}{{ fields('reply','help') }}{% endif %}
-{% for h in bucket.list %}<div class="ea-help">
-<div>{% if teacher %}<label>
-<input type="checkbox" name="help_id" value="{{ h.id }}" {{ 'checked' if not h.yanit }}>{{ h.ad_soyad }}</label>{% endif %}
-<span class="ea-chip">{{ 'Yanıtlandı' if h.yanit else 'Bekliyor' }}</span>
-</div>
-<p>{{ h.notu or 'Bu soruyu anlamadım.' }}</p>{% if h.yanit %}<div class="ea-solution">
-<strong>Öğretmenin yanıtı</strong>
-<p>{{ h.yanit }}</p>
-</div>{% endif %}
-</div>{% endfor %}
-{% if teacher and not read_only %}<label>Açıklamanız<textarea name="reply" maxlength="4000" required>
-</textarea>
-</label>
-<button class="ea-button">Seçilen isteklere yanıtı kaydet</button>{% endif %}
-</form>
-</article>{% else %}<div class="ea-empty">Bu test için yardım isteği yok.</div>{% endfor %}
 </section>
 {% if not teacher %}<section data-panel="weekly" hidden>
 <div class="ea-section-title">
@@ -320,7 +250,7 @@
 <p>{{ t.dogru }} doğru · {{ t.yanlis }} yanlış · {{ t.bos }} boş{% if t.yanlis+t.bos %} — Birlikte tekrar edilebilir.{% endif %}
 </p>
 </div>{% endfor %}
-<p>Her testin konu ayrıntılarını ve öğretmen yanıtlarını testin analizinden açabilirsiniz.</p>
+<p>Her testin konu ayrıntılarını testin analizinden açabilirsiniz.</p>
 </article>
 </section>{% endif %}
 

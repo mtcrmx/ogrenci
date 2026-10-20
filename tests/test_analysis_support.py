@@ -4,7 +4,6 @@ from test_app_workflows import w,d
 import lgs_optik as optik
 import ev_analiz as ea
 from lgs_kazanim import connect,catalog
-from analysis_support import matrix
 
 class SupportAnalysis(unittest.TestCase):
     def test_matrix_assignment_progress_and_privacy(self):
@@ -26,24 +25,13 @@ class SupportAnalysis(unittest.TestCase):
             for child in students[:2]:optik.sonuc_kaydet(source,child['id'],['A','D'])
             page=client.get('/evde-analiz',query_string={'test':source,'tab':'outcomes','class':'8/A'})
             self.assertEqual(page.status_code,200)
-            grid=contexts[-1]['outcome_matrix']
-            row=next(r for r in grid['rows'] if r['id']==students[0]['id'])
-            self.assertEqual(row['cells'][outcome]['rate'],50)
-            self.assertIsNone(next(r for r in grid['rows'] if r['id']==students[2]['id'])['cells'][outcome]['rate'])
+            self.assertNotIn('outcome_matrix',contexts[-1])
             self.assertEqual({p['id'] for p in contexts[-1]['questions'][1]['options'][3]['members']},{p['id'] for p in students[:2]})
             payload=dict(csrf='token',test=source,action='option_note',no=2,option='D',note='İşlem hatası olabilir',tab='questions')
             self.assertEqual(client.post('/evde-analiz',data=payload).status_code,302)
             self.assertIn('İşlem hatası olabilir',client.get('/evde-analiz?test='+str(source)).get_data(as_text=True))
-            payload=dict(csrf='token',test=source,action='support',name='Support group',member=[students[0]['id'],students[1]['id']],outcome=outcome,target=target,tab='groups')
-            self.assertEqual(client.post('/evde-analiz',data=dict(payload,outcome='fake')).status_code,400)
-            self.assertEqual(client.post('/evde-analiz',data=dict(payload,target=source)).status_code,400)
-            self.assertEqual(client.post('/evde-analiz',data=payload).status_code,302)
-            optik.sonuc_kaydet(target,students[0]['id'],['A','B'])
-            client.get('/evde-analiz?test='+str(source))
-            group=next(g for g in contexts[-1]['groups'] if g['ad']=='Support group')
-            self.assertEqual(next(r for r in group['progress']['rows'] if r['name']==students[0]['ad_soyad'])['delta'],50)
-            self.assertIsNone(next(r for r in group['progress']['rows'] if r['name']==students[1]['ad_soyad'])['delta'])
-            self.assertEqual(client.post('/evde-analiz',data=payload).status_code,400)
+            payload=dict(csrf='token',test=source,action='support',name='Support group',member=[students[0]['id']],outcome=outcome,target=target,tab='groups')
+            self.assertEqual(client.post('/evde-analiz',data=payload).status_code,403)
             with client.session_transaction() as s:s.clear();s.update(veli_ogrenci_id=students[0]['id'],ev_csrf='token')
             page=client.get('/evde-analiz?test='+str(source))
             self.assertEqual(page.status_code,200)

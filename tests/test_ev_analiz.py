@@ -43,21 +43,14 @@ class HomeAnalysis(unittest.TestCase):
         q=ea.aggregate(optik.sinav_getir(self.exam),optik.cozen_ogrenciler(self.exam),{})
         self.assertEqual(q[1]['counts']['D'],1)
         self.assertEqual(q[2]['blank'],[self.students[0]['id']])
-    def test_02_help_reply_and_scope(self):
+    def test_02_removed_help_and_groups(self):
         parent=self.client();teacher=self.client(teacher=True)
-        self.assertEqual(self.post(parent,'help',no=2,note='İkinci adımı anlamadım').status_code,302)
-        con=ea.connection();hid=con.execute('SELECT id FROM ev_yardim WHERE sinav_id=?',(self.exam,)).fetchone()[0];con.close()
-        self.assertEqual(self.post(parent,'reply',help_id=hid,reply='forbidden').status_code,403)
-        self.assertEqual(self.post(teacher,'reply',help_id=hid,reply='Paydaları eşitleyelim.').status_code,302)
-        self.assertIn('Paydaları eşitleyelim.',parent.get('/evde-analiz',query_string={'test':self.exam}).get_data(as_text=True))
-        self.assertEqual(self.post(parent,'help',no=99).status_code,400)
-        self.assertEqual(parent.post('/evde-analiz',data={'test':self.exam,'action':'help','no':1}).status_code,400)
-    def test_03_group_assignment(self):
-        teacher=self.client(teacher=True)
-        self.assertEqual(self.post(teacher,'group',name='Kesirler',member=[s['id'] for s in self.students]).status_code,302)
-        con=ea.connection();gid=con.execute('SELECT max(id) FROM ev_grup').fetchone()[0];con.close()
-        self.assertEqual(self.post(teacher,'assign',group=gid,target=self.exam).status_code,302)
-        self.assertIn('Kesirler',self.client().get('/evde-analiz',query_string={'test':self.exam}).get_data(as_text=True))
+        for c,action in ((parent,'help'),(teacher,'reply'),(teacher,'group'),(teacher,'assign'),(teacher,'support')):
+            self.assertEqual(self.post(c,action,no=1).status_code,403)
+        for c in (parent,teacher):
+            html=c.get('/evde-analiz',query_string={'test':self.exam}).get_data(as_text=True)
+            for text in ('Çalışma grupları','Yardım istekleri','Kazanım haritası','Bu soruyu anlamadım'):
+                self.assertNotIn(text,html)
     def test_04_other_class_and_unsubmitted(self):
         outsider=self.client(self.other)
         self.assertEqual(outsider.get('/evde-analiz',query_string={'test':self.exam}).status_code,404)

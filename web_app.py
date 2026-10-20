@@ -361,7 +361,7 @@ def _alan_tanitimi_verisi(hedef: str) -> dict | None:
             "adimlar": [
                 {"etiket": "Tik geçmişi", "metin": "Her satırda tik tarihi, öğretmenin seçtiği davranış nedeni (kriter) ve kaydı işleyen öğretmen adı yer alır."},
                 {"etiket": "Test teslimi", "metin": "LGS alanındaki ev testini testin tarihinde Türkiye saatiyle 19.00–21.00 arasında açın. 21.00’den önce Bitir ile gönderin; doğru–yanlış–boş sayısı hemen görünür. Cevap anahtarı ve soru bazlı analiz 21.00’de açılır. Süre dışında soru açılmaz ve cevap gönderilemez."},
-                {"etiket": "Analiz ve yardım", "metin": "Ayrı ve birleşik analizlerle öğrencinizin sonuçlarını takip edin. Zorlandığı soru için soru analizinden yardım isteği bırakın. Ayrıntılı kullanım kılavuzuna menüdeki Yardım bağlantısından ulaşın."},
+                {"etiket": "Analiz ve yardım", "metin": "Ayrı ve birleşik analizlerle öğrencinizin sonuçlarını takip edin. Ayrıntılı kullanım kılavuzuna menüdeki Yardım bağlantısından ulaşın."},
             ],
         },
     }

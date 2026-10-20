@@ -12,11 +12,11 @@
   {% else %}
   {% if evde_ekrani %}
   <nav class="es" style="margin-bottom:12px" aria-label="Analiz bağlantıları"><div class="es-actions">
-    <a class="es-btn es-btn--ghost" href="{{ url_for('ev_analiz.index') }}">Soru analizi · Çalışma grupları · Yardım {{ "· Haftalık özet" if veli else "" }} →</a>
+    <a class="es-btn es-btn--ghost" href="{{ url_for('ev_analiz.index') }}">Soru analizi{{ " · Haftalık özet" if veli else "" }} →</a>
     <a class="es-btn es-btn--ghost" href="{{ url_for('yaprak_analiz.combined') }}">Birleşik analiz →</a>
   </div></nav>
   {% else %}
-  <a class="app-button" style="margin:12px 0" href="{{ url_for('ev_analiz.index') }}">Soru analizi · Çalışma grupları · Yardım {{ "· Haftalık özet" if veli else "" }} →</a>
+  <a class="app-button" style="margin:12px 0" href="{{ url_for('ev_analiz.index') }}">Soru analizi{{ " · Haftalık özet" if veli else "" }} →</a>
   {% endif %}
   {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
   {% if lgs_ogrencisi is not defined or lgs_ogrencisi %}{% include '_lgs_ranking.html' %}{% endif %}
