@@ -71,8 +71,10 @@
         <p class="mt-1 text-xs text-slate-600">Öğrenciye özel, QR kodlu · {{ ogrenciler|length }} öğrenci · A4, %100 ölçek</p>
         {% if optik_testler %}
           <a href="{{ url_for('kamera_test.batch_forms', eid=optik_testler[0].id) }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Optik formları yazdır</a>
+          <p class="mt-2 text-xs text-slate-500">{{ optik_testler[0].ad }}</p>
         {% else %}
-          <a href="{{ url_for('kamera_test.index') }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Yeni optik test hazırla</a>
+          <p class="mt-2 text-xs text-slate-600">{{ secili_sinif.sinif_adi if secili_sinif else 'Sınıf' }} · {{ secili_ders }} için henüz optik test yok. Önce soru belgesini yükleyin.</p>
+          <a href="{{ url_for('kamera_test.index', sinif_id=secili_sinif_id, ders=secili_ders, tur=tur) }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Optik test oluştur</a>
         {% endif %}
       </div>
       <div class="rounded-2xl border-2 border-indigo-200 bg-indigo-50/40 p-4">
@@ -80,15 +82,18 @@
         <h3 class="mt-1 text-base font-black text-slate-900">⇪ Taranmış PDF yükle</h3>
         <p class="mt-1 text-xs text-slate-600">Yazıcıda 200–300 dpi tek PDF · en fazla 60 sayfa</p>
         {% if optik_testler %}
-          <a href="{{ url_for('kamera_test.detail', eid=optik_testler[0].id) }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Taranmış PDF yükle</a>
+          <a href="{{ url_for('kamera_test.detail', eid=optik_testler[0].id) }}#optik-yukle" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Taranmış PDF yükle</a>
         {% else %}
-          <a href="{{ url_for('kamera_test.index') }}" class="mt-3 inline-block rounded-xl bg-indigo-800 px-3 py-2 text-xs font-black text-white">Optik ekrana git</a>
+          <p class="mt-3 text-xs text-slate-500">Test oluşunca bu adım taranmış PDF’yi açar.</p>
         {% endif %}
       </div>
       <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <div class="text-xs font-bold text-slate-500">Adım 3</div>
         <h3 class="mt-1 text-base font-black text-slate-900">✓ Kontrol et ve kaydet</h3>
         <p class="mt-1 text-xs text-slate-600">Otomatik okunanlar hazır gelir; yalnız şüpheliler kontrol edilir.</p>
+        {% if optik_testler %}
+          <a href="{{ url_for('kamera_test.detail', eid=optik_testler[0].id) }}#optik-yukle" class="mt-3 inline-block text-xs font-black text-indigo-800">Kontrol ekranını aç →</a>
+        {% endif %}
       </div>
     </div>
     {% else %}

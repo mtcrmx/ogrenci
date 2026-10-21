@@ -121,7 +121,11 @@ def index():
     exams=[dict(r) for r in con.execute("SELECT e.*,COUNT(r.id) AS scanned FROM kamera_sinav k JOIN lgs_optik_sinav e ON e.id=k.sinav_id LEFT JOIN lgs_optik_sonuc r ON r.sinav_id=e.id WHERE e.ogretmen_id=? AND (e.silindi_at IS NULL OR e.silindi_at='') GROUP BY e.id ORDER BY e.id DESC",(session['ogretmen_id'],))]
     con.close()
     classes={r['sinif_id']:r['sinif_adi'] for r in roster()}
-    return render_template('kamera_test.html',mode='index',exams=exams,classes=classes,csrf=csrf())
+    pre_sinif=request.args.get('sinif_id',type=int)
+    if pre_sinif not in classes: pre_sinif=None
+    prefill=dict(class_id=pre_sinif, course=(request.args.get('ders') or '').strip()[:40],
+                 tur='deneme' if request.args.get('tur')=='deneme' else 'yaprak')
+    return render_template('kamera_test.html',mode='index',exams=exams,classes=classes,csrf=csrf(),prefill=prefill)
 
 
 @bp.post('/hazirla')
@@ -136,6 +140,7 @@ def prepare():
     if not count or not 1<=count<=90 or choices not in ('ABCD','ABCDE'): raise ValueError('1-90 soru ve 4 veya 5 seçenek seçin.')
     if not name or len(name)>80: raise ValueError('Test adı 1-80 karakter olmalı.')
     if not sid or not roster(sid): abort(403)
+    tur='deneme' if request.form.get('tur')=='deneme' else 'yaprak'
     uploads=request.files.getlist('questions') or request.files.getlist('sorular')
     if not 1<=len(uploads)<=20: raise ValueError('1-20 dosya seçin.')
     try:
@@ -162,7 +167,7 @@ def prepare():
     ident=secrets.token_hex(16)
     (optik.klasor()/(ident+'.pdf')).write_bytes(pdf)
     if key_pdf: (optik.klasor()/(ident+'-key.pdf')).write_bytes(key_pdf)
-    payload=dict(name=name,count=count,choices=choices,class_id=sid,course=course,yanlis_goturme=goturme,
+    payload=dict(name=name,count=count,choices=choices,class_id=sid,course=course,yanlis_goturme=goturme,tur=tur,
                  answers=answers,warnings=warnings,text=text[:20000],pages=pages,key_pdf=bool(key_pdf),
                  key_pages=min(len(PdfReader(BytesIO(key_pdf)).pages),5) if key_pdf else 0)
     con=connect();con.execute('INSERT INTO kamera_taslak(id,owner,data) VALUES(?,?,?)',(ident,session['ogretmen_id'],json.dumps(payload)));con.commit();con.close()
@@ -189,7 +194,7 @@ def draft(ident):
                 con.execute('BEGIN IMMEDIATE')
                 if not con.execute('SELECT 1 FROM kamera_taslak WHERE id=? AND owner=?',(ident,session['ogretmen_id'])).fetchone(): abort(409)
                 cur=con.execute('INSERT INTO lgs_optik_sinav(ad,tarih,pdf_dosya,cevaplar,soru_sayisi,ogretmen_id,olusturma,tur,ders,sinif_id,yanlis_goturme,secenekler,kaynak) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                                (data['name'],date.today().isoformat(),ident+'.pdf',json.dumps(answers),data['count'],session['ogretmen_id'],datetime.now().strftime('%Y-%m-%d %H:%M'),'yaprak',data['course'],data['class_id'],int(data.get('yanlis_goturme',3)),data['choices'],'kamera'))
+                                (data['name'],date.today().isoformat(),ident+'.pdf',json.dumps(answers),data['count'],session['ogretmen_id'],datetime.now().strftime('%Y-%m-%d %H:%M'),data.get('tur') if data.get('tur') in ('deneme','yaprak') else 'yaprak',data['course'],data['class_id'],int(data.get('yanlis_goturme',3)),data['choices'],'kamera'))
                 eid=cur.lastrowid
                 con.execute('INSERT INTO kamera_sinav(sinav_id,choices) VALUES(?,?)',(eid,data['choices']))
                 con.execute('DELETE FROM kamera_taslak WHERE id=?',(ident,));con.commit()

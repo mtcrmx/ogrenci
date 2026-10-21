@@ -346,17 +346,24 @@ def register_hizli_giris(app, login_required):
                     yanlis_goturme=yanlis_goturme,
                 )
 
-        # Seçili sınıftaki optik testler
+        # Yalnız bu öğretmenin, seçili sınıf + ders + tür için yazdırılabilir optik testi
+        istenen_tur = "deneme" if tur == "deneme" else "yaprak"
+        import kamera_test as _kt
+        _kt.connect().close()
         con = db._conn()
         try:
             optik_testler = [
                 dict(r)
                 for r in con.execute(
                     """SELECT e.* FROM lgs_optik_sinav e
-                       WHERE (e.silindi_at IS NULL OR e.silindi_at='')
-                         AND (e.sinif_id = ? OR e.sinif_id IS NULL)
-                       ORDER BY e.id DESC LIMIT 30""",
-                    (secili_sinif_id,),
+                       JOIN kamera_sinav k ON k.sinav_id = e.id
+                       WHERE e.ogretmen_id = ?
+                         AND e.sinif_id = ?
+                         AND COALESCE(e.tur, 'yaprak') = ?
+                         AND COALESCE(e.ders, '') = ?
+                         AND (e.silindi_at IS NULL OR e.silindi_at = '')
+                       ORDER BY e.id DESC LIMIT 5""",
+                    (oid, secili_sinif_id, istenen_tur, secili_ders),
                 ).fetchall()
             ]
         finally:

@@ -416,3 +416,62 @@ def test_giris_ekrani_taslak_ve_tercih():
     # /yaprak-optik alias yönlendirmesi (O11)
     alias_resp = client.get("/yaprak-optik")
     assert alias_resp.status_code in (301, 302)
+
+
+def test_deneme_optik_karti_secili_sinif_ve_derse_baglanir():
+    """Deneme optik kartı başka teste gitmez; yoksa sınıf ve dersi taşıyarak oluşturma ekranını açar."""
+    import kamera_test as kt
+
+    con = db._conn()
+    try:
+        ogretmen = con.execute(
+            "SELECT id, ad_soyad FROM ogretmenler WHERE COALESCE(yetki,'tam')='tam' LIMIT 1"
+        ).fetchone()
+        sinif = con.execute("SELECT id, sinif_adi FROM siniflar ORDER BY id LIMIT 1").fetchone()
+    finally:
+        con.close()
+    tid, sid = int(ogretmen["id"]), int(sinif["id"])
+    ders = "Fen Bilimleri"
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess.update(ogretmen_id=tid, ogretmen_adi=ogretmen["ad_soyad"], ogretmen_yetki="tam")
+
+    bos = client.get(f"/giris?sinif_id={sid}&ders={ders}&tur=deneme")
+    html = bos.get_data(as_text=True)
+    assert bos.status_code == 200
+    assert "Optik test oluştur" in html
+    assert f"sinif_id={sid}" in html
+    assert "tur=deneme" in html
+    assert "/pdf-optik/formlar" not in html
+
+    hazir = client.get(f"/yaprak-kamera?sinif_id={sid}&ders={ders}&tur=deneme")
+    hazir_html = hazir.get_data(as_text=True)
+    assert hazir.status_code == 200
+    assert 'name="tur" value="deneme"' in hazir_html
+    assert f'value="{sid}" selected' in hazir_html or f'value="{sid}"  selected' in hazir_html
+
+    eid = lgs_optik.sinav_ekle(
+        "Fen deneme optik", "2026-10-21", "fen-deneme.pdf", ["A"], tid,
+        tur="deneme", ders=ders, sinif_id=sid, kaynak="kamera",
+    )
+    kcon = kt.connect()
+    try:
+        kcon.execute("INSERT INTO kamera_sinav(sinav_id, choices) VALUES(?, ?)", (eid, "ABCD"))
+        kcon.commit()
+    finally:
+        kcon.close()
+    try:
+        dolu = client.get(f"/giris?sinif_id={sid}&ders={ders}&tur=deneme")
+        dolu_html = dolu.get_data(as_text=True)
+        assert f"/yaprak-kamera/{eid}/pdf-optik/formlar" in dolu_html
+        assert f"/yaprak-kamera/{eid}#optik-yukle" in dolu_html
+        yaprak = client.get(f"/giris?sinif_id={sid}&ders={ders}&tur=okul_yaprak")
+        assert f"/yaprak-kamera/{eid}/pdf-optik/formlar" not in yaprak.get_data(as_text=True)
+    finally:
+        kcon = kt.connect()
+        try:
+            kcon.execute("DELETE FROM kamera_sinav WHERE sinav_id=?", (eid,))
+            kcon.execute("DELETE FROM lgs_optik_sinav WHERE id=?", (eid,))
+            kcon.commit()
+        finally:
+            kcon.close()
