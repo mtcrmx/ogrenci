@@ -94,8 +94,8 @@
   <section class="es-card" aria-labelledby="es-liste">
     <div class="es-test-top">
       <div>
-        <h2 id="es-liste">Gönderilen testler</h2>
-        <p class="es-sub">Evde çözülen testler. Deneme sonuçları bu listede durmaz.</p>
+        <h2 id="es-liste">Yayınlanan testler</h2>
+        <p class="es-sub">Öğrenci katılımına basınca katılanların sonucu açılır.</p>
       </div>
       <a class="es-btn es-btn--ghost" href="{{ url_for('teacher_records', tur='ev-testi') }}">Testlerimi düzenle / sil</a>
     </div>
@@ -131,16 +131,24 @@
           </div>
         </div>
         <details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in s.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>
-        <details {{ 'open' if loop.first else '' }}>
+        <details>
           <summary>Öğrenci katılımı</summary>
           <div class="es-table-wrap">
             <table class="es-table">
-              <thead><tr><th>Öğrenci</th><th>Sınıf</th><th>Katılım</th></tr></thead>
+              <thead><tr><th>Öğrenci</th><th>Sınıf</th><th>Doğru</th><th>Yanlış</th><th>Boş</th><th>Net</th></tr></thead>
               <tbody>
               {% for r in participants %}
-              <tr><td><b>{{ r.ad_soyad }}</b></td><td>{{ r.sinif_adi }}</td><td>{{ 'Tamamladı' if r.tamamlandi else 'Henüz tamamlamadı' }}</td></tr>
+              <tr>
+                <td><b>{{ r.ad_soyad }}</b></td>
+                <td>{{ r.sinif_adi }}</td>
+                {% if r.tamamlandi %}
+                <td>{{ r.dogru }}</td><td>{{ r.yanlis }}</td><td>{{ r.bos }}</td><td>{{ r.net }}</td>
+                {% else %}
+                <td colspan="4">Henüz tamamlamadı</td>
+                {% endif %}
+              </tr>
               {% else %}
-              <tr><td colspan="3">Bu testin hedef sınıfında öğrenci bulunamadı.</td></tr>
+              <tr><td colspan="6">Bu testin hedef sınıfında öğrenci bulunamadı.</td></tr>
               {% endfor %}
               </tbody>
             </table>

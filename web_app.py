@@ -5191,14 +5191,19 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
 
 def _evde_katilim_ekle(sinavlar, gruplar):
     for sinav in sinavlar:
-        completed = {r['ogrenci_id'] for r in sinav['sonuclar']}
-        sinav['katilim'] = [
-            dict(ad_soyad=o['ad_soyad'], sinif_adi=g['sinif']['sinif_adi'], tamamlandi=o['id'] in completed)
-            for g in gruplar
-            if (g['sinif']['id'] == sinav.get('sinif_id') if sinav.get('sinif_id') else g['sinif']['sinif_adi'].startswith('8/'))
-            for o in g['ogrenciler']
-        ]
-        sinav['katilim'].sort(key=lambda r:(r['sinif_adi'],r['ad_soyad']))
+        sonuclar = {int(r['ogrenci_id']): r for r in sinav.get('sonuclar') or []}
+        sinav['katilim'] = []
+        for g in gruplar:
+            if not (g['sinif']['id'] == sinav.get('sinif_id') if sinav.get('sinif_id') else g['sinif']['sinif_adi'].startswith('8/')):
+                continue
+            for o in g['ogrenciler']:
+                sonuc = sonuclar.get(int(o['id']))
+                sinav['katilim'].append(dict(
+                    ad_soyad=o['ad_soyad'], sinif_adi=g['sinif']['sinif_adi'], tamamlandi=bool(sonuc),
+                    dogru=sonuc.get('dogru') if sonuc else None, yanlis=sonuc.get('yanlis') if sonuc else None,
+                    bos=sonuc.get('bos') if sonuc else None, net=sonuc.get('net') if sonuc else None,
+                ))
+        sinav['katilim'].sort(key=lambda r: (not r['tamamlandi'], r['sinif_adi'], r['ad_soyad']))
         sinav['tamamlayan'] = sum(r['tamamlandi'] for r in sinav['katilim'])
 
 
