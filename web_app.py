@@ -4473,14 +4473,14 @@ def _deneme_ekran_verisi(veli: bool, kendi_id: int | None = None) -> dict:
     if veli and kendi_id:
         sahip = [s for s in sinavlar if any(
             int(o["ogrenci_id"]) == int(kendi_id)
-            for o in deneme_sinav_ogrencileri(s["ad"], s["tarih"], "deneme")
+            for o in deneme_sinav_ogrencileri(s["ad"], s["tarih"], s["tur"])
         )]
         if not sahip and ogrenci_seviyesi(int(kendi_id)) != 8:
             return {"sinavlar": [], "secili": None, "veli": veli}
         if sahip and not any(s["ad"] == secili["ad"] and s["tarih"] == secili["tarih"] for s in sahip):
             secili = sahip[0]
         sinavlar = sahip or sinavlar
-    hepsi = deneme_sinav_ogrencileri(secili["ad"], secili["tarih"], "deneme")
+    hepsi = deneme_sinav_ogrencileri(secili["ad"], secili["tarih"], secili["tur"])
     _deneme_sira(hepsi, "okul_sira")
     sinif_ad = (request.args.get("sinif") or "").strip()
     if veli and kendi_id:

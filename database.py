@@ -2317,10 +2317,10 @@ def deneme_sinav_listesi() -> list[dict]:
     _lgs_init(con)
     rows = [dict(r) for r in con.execute(
         """
-        SELECT ad, tarih, COUNT(*) AS adet
+        SELECT ad, tarih, tur, COUNT(*) AS adet
         FROM lgs_deneme
-        WHERE tur = 'deneme' AND (silindi_at IS NULL OR silindi_at = '')
-        GROUP BY ad, tarih
+        WHERE tur IN ('deneme','kurum') AND (silindi_at IS NULL OR silindi_at = '')
+        GROUP BY ad, tarih, tur
         ORDER BY tarih DESC, ad
         """
     ).fetchall()]
