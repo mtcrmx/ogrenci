@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set sekmeler_sayfada = not veli and not ogrenci and ekran != 'evde' %}
 {% block title %}LGS{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=7"><link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1"><link rel="stylesheet" href="{{ url_for('static', filename='evde_sorular.css') }}?v=1">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='student_results.css') }}?v=7"><link rel="stylesheet" href="{{ url_for('static', filename='lgs_clay.css') }}?v=deftergun1"><link rel="stylesheet" href="{{ url_for('static', filename='evde_sorular.css') }}?v=2">{% endblock %}
 {% block body %}
 {% set lgs_merkez = not veli and not ogrenci and ekran != 'evde' %}
 {% set evde_ekrani = (ekran == 'evde' and not ogrenci) or (veli and bolum == 'soru') %}
@@ -18,8 +18,10 @@
   {% else %}
   <a class="app-button" style="margin:12px 0" href="{{ url_for('ev_analiz.index') }}">Soru analizi{{ " · Haftalık özet" if veli else "" }} →</a>
   {% endif %}
+  {% if not (ekran == 'evde' and not ogrenci) %}
   {% if lgs_sayac %}{% include '_lgs_sayac.html' %}{% endif %}
   {% if lgs_ogrencisi is not defined or lgs_ogrencisi %}{% include '_lgs_ranking.html' %}{% endif %}
+  {% endif %}
   {% endif %}
   {% if not ogrenci %}
   {% if ekran == 'evde' %}
@@ -37,6 +39,65 @@
     var confirm = form.querySelector('[data-key-confirm]');
     var confirmLabel = form.querySelector('[data-key-confirm-label]');
     var reading = false, readVersion = 0;
+    var steps = form.querySelectorAll("[data-wizard-step]");
+    var backBtn = form.querySelector("[data-wizard-back]");
+    var nextBtn = form.querySelector("[data-wizard-next]");
+    var saveBtn = form.querySelector("[data-wizard-save]");
+    var wizardStatus = form.querySelector("[data-wizard-status]");
+    var current = Number(form.getAttribute("data-open-step") || "1");
+    function showStep(n) {
+      current = n;
+      steps.forEach(function (step) { step.hidden = Number(step.getAttribute("data-wizard-step")) !== n; });
+      if (backBtn) backBtn.hidden = n === 1;
+      if (nextBtn) nextBtn.hidden = n === steps.length;
+      if (saveBtn) saveBtn.hidden = n !== steps.length;
+      form.querySelectorAll("[data-wizard-goto]").forEach(function (btn) {
+        var i = Number(btn.getAttribute("data-wizard-goto"));
+        btn.setAttribute("aria-current", i === n ? "step" : "false");
+        btn.disabled = i > n;
+      });
+    }
+    function stepOk(n) {
+      if (n === 1) {
+        if (!form.querySelectorAll('input[name="sinif_id"]:checked').length) return "Sınıf seçin. 8. sınıfların hepsine verecekseniz her iki şubeyi işaretleyin.";
+        if (!form.querySelector('[name="ders"]').value) return "Ders seçin.";
+        if (!form.querySelector('[name="ad"]').value.trim()) return "Test adı yazın.";
+        if (!form.querySelector('[name="tarih"]').value) return "Çözüm gününü seçin.";
+        var count = Number(countInput.value);
+        if (!Number.isInteger(count) || count < 1 || count > 90) return "Soru sayısı 1 ile 90 arasında olmalı.";
+      }
+      if (n === 2) {
+        var pdf = form.querySelector('input[name="pdf"]');
+        var kept = form.querySelector('input[name="gecici_pdf"]');
+        if (!(kept && kept.value) && !(pdf && pdf.files && pdf.files.length)) return "Soru PDF’ini seçin.";
+      }
+      return "";
+    }
+    var allEight = form.querySelector("[data-all-eight]");
+    if (allEight) {
+      allEight.addEventListener("change", function () {
+        form.querySelectorAll('[data-grade="8"]').forEach(function (box) { box.checked = allEight.checked; });
+      });
+      form.querySelectorAll('[data-grade="8"]').forEach(function (box) {
+        box.addEventListener("change", function () {
+          var boxes = form.querySelectorAll('[data-grade="8"]');
+          allEight.checked = Array.prototype.every.call(boxes, function (item) { return item.checked; });
+        });
+      });
+    }
+    if (nextBtn) nextBtn.addEventListener("click", function () {
+      var message = stepOk(current);
+      wizardStatus.textContent = message;
+      if (!message) showStep(current + 1);
+    });
+    if (backBtn) backBtn.addEventListener("click", function () { wizardStatus.textContent = ""; showStep(current - 1); });
+    form.querySelectorAll("[data-wizard-goto]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var target = Number(btn.getAttribute("data-wizard-goto"));
+        if (target < current) { wizardStatus.textContent = ""; showStep(target); }
+      });
+    });
+    showStep(current);
     async function readKey() {
       var file = fileInput.files[0], count = Number(countInput.value);
       if (!file) { status.textContent='Cevap anahtarı belgesini seçin.'; return; }

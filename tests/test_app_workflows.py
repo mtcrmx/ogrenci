@@ -621,6 +621,8 @@ class Workflows(unittest.TestCase):
                     'islem': 'optik_ekle',
                     'ad': 'Optik deneme',
                     'tarih': '2026-10-08',
+                    'ders': 'Matematik',
+                    'sinif_id': str(self.sid),
                     'anahtar': 'A B C D',
                     'pdf': (BytesIO(pdf), 'soru.pdf'),
                 },
@@ -628,8 +630,8 @@ class Workflows(unittest.TestCase):
                 follow_redirects=True,
             )
             html = response.get_data(as_text=True)
-            self.assertIn('4 soruluk deneme', html)
-            self.assertIn('Henüz optik bitirilmedi', html)
+            self.assertIn('4 soruluk test', html)
+            self.assertIn('Henüz tamamlamadı', html)
             sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Optik deneme')
             soru = self.parent.get('/veli/lgs?bolum=soru&sinav=' + str(sinav['id']))
             sayfa = soru.get_data(as_text=True)
@@ -655,7 +657,7 @@ class Workflows(unittest.TestCase):
             self.assertIn('2. soru yanlış', sonuc)
             self.assertIn('4. soru boş', sonuc)
             self.assertIn('Yapılan testler', sonuc)
-            self.assertLess(sonuc.index('Yapılan testler'), sonuc.index('Optik deneme'))
+            self.assertIn('Optik deneme', sonuc.split('Yapılan testler', 1)[1])
             analiz = self.parent.get('/veli/lgs?bolum=deneme').get_data(as_text=True)
             self.assertIn('Soru analizi', analiz)
             self.assertIn('Optik deneme', analiz)
@@ -746,7 +748,7 @@ class Workflows(unittest.TestCase):
         evde = self.teacher_client.get('/lgs', query_string={'ekran': 'evde'}).get_data(as_text=True)
         self.assertIn('Soruları gönder', evde)
         self.assertNotIn('Yaprak testler', evde)
-        self.assertNotIn('Yeni Türkçe', evde)
+        self.assertIn('Yeni Türkçe', evde)
         self.assertNotIn('8/A ·', evde)
         students = d.sinif_ogrencileri(self.sid)[:1]
         self.teacher_client.post('/sonuclar', data={
@@ -776,8 +778,12 @@ class Workflows(unittest.TestCase):
         from unittest.mock import patch
         pdf = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
         with patch.object(home_test_window, 'now', return_value=datetime.fromisoformat('2026-10-13T19:30:00+03:00')):
+            con = d._conn()
+            sinif_b = con.execute("SELECT id FROM siniflar WHERE sinif_adi='8/B'").fetchone()[0]
+            con.close()
             self.teacher_client.post('/lgs', data={
-                'islem': 'optik_ekle', 'ad': 'Sınıf analiz denemesi', 'tarih': '2026-10-13', 'tur': 'deneme',
+                'islem': 'optik_ekle', 'ad': 'Sınıf analiz denemesi', 'tarih': '2026-10-13',
+                'ders': 'Türkçe', 'sinif_id': [str(self.sid), str(sinif_b)],
                 'anahtar': 'ABCD', 'pdf': (BytesIO(pdf), 'sinif.pdf'),
             }, content_type='multipart/form-data')
             sinav = next(s for s in lgs_optik.sinavlari_listele() if s['ad'] == 'Sınıf analiz denemesi')

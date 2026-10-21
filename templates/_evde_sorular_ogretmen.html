@@ -1,11 +1,12 @@
 {% set ef = evde_form if evde_form is defined and evde_form else {} %}
 {% set evde_denemeler = optik_sinavlar|rejectattr('kaynak', 'equalto', 'kamera')|list %}
+{% set acik_adim = ef.get('adim', 1) %}
 <div class="es">
   <header class="es-card es-head">
     <div>
-      <p class="es-eyebrow">Evde soru ve katılım</p>
+      <p class="es-eyebrow">Evde soru</p>
       <h1>Evde sorular</h1>
-      <p class="es-sub">Soru PDF’ini ve cevap anahtarını gönderin; öğrenciler seçtiğiniz gün evde çözer, katılımı buradan takip edin.</p>
+      <p class="es-sub">Öğrencilerin evde çözeceği testi üç adımda gönderin. Bu ekranda deneme yok; yalnız test var.</p>
     </div>
     <div class="es-stats">
       <div class="es-stat"><b>{{ gruplar|length }}</b><small>sınıf</small></div>
@@ -17,67 +18,92 @@
   {% endwith %}
 
   <section class="es-card" aria-labelledby="es-yeni">
-    <h2 id="es-yeni">Yeni evde soru testi</h2>
-    <p class="es-note">Yükleme tarihini değil, öğrencilerin testi çözeceği günü seçin. Sorular o gün Türkiye saatiyle 19.00–21.00 arasında açılır; cevaplar 21.00’den önce gönderilmelidir. Bitiren öğrenci toplam doğru–yanlış sayısını hemen, cevap anahtarını 21.00’den sonra görür. Soru PDF’ine cevap anahtarı eklemeyin.</p>
-    <form method="post" enctype="multipart/form-data" class="es-steps" data-optik-form>
+    <h2 id="es-yeni">Yeni test</h2>
+    <p class="es-note">Çözüm günü Türkiye saatiyle 19.00–21.00 arasındadır. Cevap anahtarı 21.00’den sonra açılır. Soru PDF’ine cevap anahtarı koymayın.</p>
+    <form method="post" enctype="multipart/form-data" class="es-steps" data-optik-form data-open-step="{{ acik_adim }}">
       <input type="hidden" name="islem" value="optik_ekle">
+      <input type="hidden" name="tur" value="yaprak">
       {% if gecici_pdf %}<input type="hidden" name="gecici_pdf" value="{{ gecici_pdf }}">{% endif %}
-      <div class="es-step">
-        <p class="es-step-title"><span>1</span> Sınıf ve test</p>
-        <div class="es-seg" role="radiogroup" aria-label="Test türü">
-          <label><input type="radio" name="tur" value="deneme" {{ 'checked' if ef.get('tur', 'deneme') == 'deneme' else '' }}><span>Deneme</span></label>
-          <label><input type="radio" name="tur" value="yaprak" {{ 'checked' if ef.get('tur') == 'yaprak' else '' }}><span>Yaprak test</span></label>
-        </div>
+      <ol class="es-progress">
+        <li><button type="button" data-wizard-goto="1">1. Sınıf ve test</button></li>
+        <li><button type="button" data-wizard-goto="2">2. Sorular</button></li>
+        <li><button type="button" data-wizard-goto="3">3. Cevap anahtarı</button></li>
+      </ol>
+      <p class="es-sub" role="status" data-wizard-status></p>
+
+      <div class="es-step" data-wizard-step="1" {% if acik_adim != 1 %}hidden{% endif %}>
+        <p class="es-step-title"><span>1</span> Sınıf, ders ve test</p>
+        <fieldset class="es-checks">
+          <legend>Hangi sınıflar çözecek?</legend>
+          {% set ns = namespace(sekiz=0) %}
+          {% for g in gruplar if g.sinif.sinif_adi.startswith('8/') %}{% set ns.sekiz = ns.sekiz + 1 %}{% endfor %}
+          {% if ns.sekiz > 1 %}
+          <label class="es-check es-check--all"><input type="checkbox" data-all-eight><span><b>8. sınıfların hepsi</b><em>8/A ve 8/B aynı testi çözer</em></span></label>
+          {% endif %}
+          {% for g in gruplar %}
+          <label class="es-check">
+            <input type="checkbox" name="sinif_id" value="{{ g.sinif.id }}" data-grade="{{ '8' if g.sinif.sinif_adi.startswith('8/') else '' }}" {{ 'checked' if g.sinif.id in (ef.get('sinif_idler') or []) or ef.get('sinif_id') == g.sinif.id or (not ef and nav_sinif_id == g.sinif.id) else '' }}>
+            <span><b>{{ g.sinif.sinif_adi }}</b><em>{{ g.ogrenciler|length }} öğrenci</em></span>
+          </label>
+          {% endfor %}
+        </fieldset>
         <div class="es-grid">
-          <label class="es-field">Sınıf
-            <select name="sinif_id">
-              <option value="">Deneme: tüm 8. sınıflar</option>
-              {% for g in gruplar %}<option value="{{ g.sinif.id }}" {{ 'selected' if ef.get('sinif_id') == g.sinif.id or (not ef and nav_sinif_id == g.sinif.id) else '' }}>{{ g.sinif.sinif_adi }} ({{ g.ogrenciler|length }} öğrenci)</option>{% endfor %}
-            </select>
-            <small>5, 6 ve 7. sınıflarda bir şube seçin.</small>
-          </label>
           <label class="es-field">Ders
-            <select name="ders"><option value="">Deneme için boş</option>{% for ders in lgs_dersler %}<option {{ 'selected' if ef.get('ders') == ders else '' }}>{{ ders }}</option>{% endfor %}</select>
-            <small>Yaprak testte zorunlu.</small>
+            <select name="ders" required>
+              <option value="">Ders seçin</option>
+              {% for ders in lgs_dersler %}<option value="{{ ders }}" {{ 'selected' if ef.get('ders') == ders else '' }}>{{ ders }}</option>{% endfor %}
+            </select>
           </label>
-          <label class="es-field">Ad<input name="ad" required maxlength="80" value="{{ ef.get('ad', '') }}" placeholder="Kasım denemesi"></label>
-          <label class="es-field">Çözüm günü · 19.00–21.00<input type="date" name="tarih" min="{{ bugun }}" value="{{ ef.get('tarih', '') }}" required></label>
+          <label class="es-field">Test adı<input name="ad" required maxlength="80" value="{{ ef.get('ad', '') }}" placeholder="Türkçe testi"></label>
+          <label class="es-field">Çözüm günü<input type="date" name="tarih" min="{{ bugun }}" value="{{ ef.get('tarih', '') }}" required></label>
           <label class="es-field">Soru sayısı<input name="soru_sayisi" type="number" min="1" max="90" value="{{ ef.get('soru_sayisi', 20) }}" required data-question-count></label>
         </div>
-        <ul class="es-chips" aria-label="Evde soru gönderilebilen sınıflar">
-          {% for g in gruplar %}<li class="es-chip">{{ g.sinif.sinif_adi }}<em>{{ g.ogrenciler|length }} öğr.</em></li>{% endfor %}
-        </ul>
       </div>
-      <div class="es-step">
-        <p class="es-step-title"><span>2</span> Sorular ve cevap anahtarı</p>
-        <label class="es-field es-file">Soru PDF{% if gecici_pdf %} <small>(Seçilen PDF korundu)</small>{% endif %}<input type="file" name="pdf" accept="application/pdf" {% if not gecici_pdf %}required{% endif %}></label>
+
+      <div class="es-step" data-wizard-step="2" {% if acik_adim != 2 %}hidden{% endif %}>
+        <p class="es-step-title"><span>2</span> Soru PDF’i</p>
+        <label class="es-field es-file">Soru dosyası{% if gecici_pdf %} <small>(Seçilen PDF korundu)</small>{% endif %}
+          <input type="file" name="pdf" accept="application/pdf" {% if not gecici_pdf %}required{% endif %}>
+        </label>
+        <p class="es-sub">Yalnızca soruların PDF’i. Cevap anahtarı bir sonraki adımda.</p>
+      </div>
+
+      <div class="es-step" data-wizard-step="3" {% if acik_adim != 3 %}hidden{% endif %}>
+        <p class="es-step-title"><span>3</span> Cevap anahtarı</p>
         <div class="answer-key-box" data-key-box>
-          <div class="es-test-top"><strong>Cevap anahtarı</strong><button type="button" class="es-btn es-btn--ghost" data-key-toggle>Gizle</button></div>
-          <p class="es-sub">Her kutu bir soru. Soru sayısını değiştirince kutu sayısı da değişir.</p>
-          <label class="es-field" style="margin-top:10px">Cevap anahtarı belgesi (soru PDF’inden ayrı)
+          <p class="es-sub">Şıklar yalnız A, B, C ve D. Her kutu bir soru.</p>
+          <label class="es-field" style="margin-top:10px">Cevap anahtarı belgesi
             <input type="file" accept=".pdf,.docx,.jpg,.jpeg,.png" data-key-file>
           </label>
-          <div class="es-actions" style="margin-top:8px"><button type="button" class="es-btn es-btn--ghost" data-key-read>Belgeden cevapları oku</button></div>
-          <p class="es-sub" role="status" aria-live="polite" data-key-status>PDF, DOCX, JPEG veya PNG seçin. Belge seçilince cevaplar otomatik okunur; soru sayısını önce doğru girin.</p>
+          <div class="es-actions" style="margin-top:8px"><button type="button" class="es-btn es-btn--ghost" data-key-read>Belgeden cevapları oku</button><button type="button" class="es-btn es-btn--ghost" data-key-toggle>Gizle</button></div>
+          <p class="es-sub" role="status" aria-live="polite" data-key-status>PDF, DOCX, JPEG veya PNG seçin. Belge seçilince cevaplar okunur.</p>
           <label class="es-sub" data-key-confirm-label hidden><input type="checkbox" data-key-confirm> Okunan cevapları belgeyle karşılaştırdım.</label>
           <div class="answer-key-slots" data-key-slots style="margin-top:10px"></div>
           <input type="hidden" name="anahtar" value="{{ ef.get('anahtar', '') }}" data-key-value>
         </div>
       </div>
-      <div class="es-actions"><button class="es-btn">Soruları gönder</button></div>
+
+      <div class="es-actions">
+        <button type="button" class="es-btn es-btn--ghost" data-wizard-back {% if acik_adim == 1 %}hidden{% endif %}>Geri</button>
+        <button type="button" class="es-btn" data-wizard-next {% if acik_adim == 3 %}hidden{% endif %}>Devam</button>
+        <button class="es-btn" data-wizard-save {% if acik_adim != 3 %}hidden{% endif %}>Soruları gönder</button>
+      </div>
     </form>
   </section>
 
   <section class="es-card" aria-labelledby="es-liste">
     <div class="es-test-top">
-      <div><h2 id="es-liste">Gönderilen tüm ev testleri</h2><p class="es-sub">Deneme ve yaprak türündeki ev testleri birlikte listelenir. Sonuç ayrıntıları Analizler bölümündedir.</p></div>
+      <div>
+        <h2 id="es-liste">Gönderilen testler</h2>
+        <p class="es-sub">Evde çözülen testler. Deneme sonuçları bu listede durmaz.</p>
+      </div>
       <a class="es-btn es-btn--ghost" href="{{ url_for('teacher_records', tur='ev-testi') }}">Testlerimi düzenle / sil</a>
     </div>
     <form method="get" class="es-filter-form" style="margin:16px 0">
       <input type="hidden" name="ekran" value="evde">
-      <label>Sınıf<select name="es_sinif"><option value="">Tüm sınıflar</option><option value="8" {{ 'selected' if request.args.get('es_sinif') == '8' else '' }}>8/A + 8/B ortak</option>{% for g in gruplar %}<option value="{{ g.sinif.sinif_adi }}" {{ 'selected' if request.args.get('es_sinif') == g.sinif.sinif_adi else '' }}>{{ g.sinif.sinif_adi }}</option>{% endfor %}</select></label>
+      <label>Sınıf<select name="es_sinif"><option value="">Tüm sınıflar</option><option value="8" {{ 'selected' if request.args.get('es_sinif') == '8' else '' }}>8/A ve 8/B</option>{% for g in gruplar %}<option value="{{ g.sinif.sinif_adi }}" {{ 'selected' if request.args.get('es_sinif') == g.sinif.sinif_adi else '' }}>{{ g.sinif.sinif_adi }}</option>{% endfor %}</select></label>
       <label>Ders<select name="es_ders"><option value="">Tüm dersler</option>{% for d in lgs_dersler %}<option value="{{ d }}" {{ 'selected' if request.args.get('es_ders') == d else '' }}>{{ d }}</option>{% endfor %}</select></label>
-      <label>Ev testi<select name="es_test"><option value="">Tüm ev testleri</option>{% for s in evde_denemeler %}<option value="{{ s.id }}" {{ 'selected' if request.args.get('es_test') == s.id|string else '' }}>{{ s.ad }} · {{ s.sinif_adi or '8/A + 8/B' }} · {{ s.tarih }}</option>{% endfor %}</select></label>
+      <label>Test<select name="es_test"><option value="">Tüm testler</option>{% for s in evde_denemeler %}<option value="{{ s.id }}" {{ 'selected' if request.args.get('es_test') == s.id|string else '' }}>{{ s.ad }} — {{ s.sinif_adi or '8/A ve 8/B' }} — {{ s.tarih }}</option>{% endfor %}</select></label>
       <button class="es-btn">Uygula</button>
     </form>
     {% set ec=request.args.get('es_sinif','') %}{% set ed=request.args.get('es_ders','') %}{% set et=request.args.get('es_test','') %}
@@ -90,8 +116,10 @@
           <div>
             <h3>{{ s.ad }}</h3>
             <div class="es-meta">
-              <span class="es-chip es-chip--acc">{{ s.tarih }}</span>
-              <span class="es-chip">{{ s.sinif_adi or 'Tüm 8. sınıflar' }}</span>
+              <span class="es-chip es-chip--acc">Test</span>
+              {% if s.ders %}<span class="es-chip">{{ s.ders }}</span>{% endif %}
+              <span class="es-chip">{{ s.tarih }}</span>
+              <span class="es-chip">{{ s.sinif_adi or '8/A ve 8/B' }}</span>
               <span class="es-chip">{{ s.soru_sayisi }} soru</span>
               <span class="es-chip {{ 'es-chip--ok' if s.tamamlayan else 'es-chip--warn' }}">{{ completed }} / {{ participants|length }} tamamladı</span>
             </div>
@@ -120,8 +148,9 @@
         </details>
       </article>
     {% else %}
-      <p class="es-empty">Seçili filtrelere uygun ev testi bulunamadı.</p>
+      <p class="es-empty">Seçili filtrelere uygun test bulunamadı.</p>
     {% endfor %}
     </div>
   </section>
+  {% if lgs_ogrencisi is not defined or lgs_ogrencisi %}{% include '_lgs_ranking.html' %}{% endif %}
 </div>

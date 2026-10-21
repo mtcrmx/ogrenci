@@ -71,7 +71,7 @@ def build(con, args, own_id=None, today=None, level=None):
             WHERE e.kaynak IN ('ev','ev_yaprak') AND (e.silindi_at IS NULL OR e.silindi_at='')
             ORDER BY e.tarih DESC,e.id DESC""")
             if (r['sinif_adi'] in classes or (not r['sinif_adi'] and level == 8))]
-    tests = {f"optik-{r['id']}": f"{r['ad']} · {r['sinif_adi'] or '8/A + 8/B'} · {r['tarih']}" for r in home_tests}
+    tests = {f"optik-{r['id']}": f"{r['ad']} — {r['sinif_adi'] or '8/A ve 8/B'} — {r['tarih']}" for r in home_tests}
     home_keys = set(tests)
     selected_test = args.get('sr_test', '')
     if selected_test not in tests and selected_test != 'ev-tumu':

@@ -5065,6 +5065,19 @@ def _lgs_evde_render_hata(hata_mesaji: str, form_data: dict, gecici_pdf: str = "
     ), 422
 
 
+def _evde_hedef_sinif(secilen: list[int], izinli: list[dict]):
+    """Tek şube kaydedilir. 8/A ve 8/B birlikte seçilirse sınav tüm 8. sınıflara açılır."""
+    izin = {int(s["id"]): s for s in izinli}
+    if any(i not in izin for i in secilen):
+        return None, "Bu sınıfa test gönderemezsiniz."
+    if len(secilen) == 1:
+        return secilen[0], ""
+    sekiz = [i for i, s in izin.items() if str(s.get("sinif_adi") or "").startswith("8/")]
+    if len(sekiz) >= 2 and set(secilen) == set(sekiz):
+        return None, ""
+    return None, "Bir testi tek sınıfa verin. 8. sınıflarda 8/A ve 8/B’yi birlikte seçebilirsiniz."
+
+
 def _lgs_optik_ekle():
     from pathlib import Path
     from uuid import uuid4
@@ -5072,24 +5085,33 @@ def _lgs_optik_ekle():
     gecici_pdf = (request.form.get("gecici_pdf") or "").strip()
     secenekler = "ABCD"
     ad = (request.form.get("ad") or "").strip()
-    tur = request.form.get("tur") or "deneme"
-    if tur not in ("yaprak", "deneme"):
-        tur = "deneme"
     ders = (request.form.get("ders") or "").strip()
-    sinif_id = request.form.get("sinif_id", type=int)
+    secilen = []
+    for raw in request.form.getlist("sinif_id"):
+        try:
+            secilen.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    secilen = list(dict.fromkeys(secilen))
     count = request.form.get("soru_sayisi", type=int)
     raw_anahtar = request.form.get("anahtar") or ""
     form_data = {
         "ad": ad,
-        "tur": tur,
+        "tur": "yaprak",
         "ders": ders,
-        "sinif_id": sinif_id,
+        "sinif_id": secilen[0] if len(secilen) == 1 else None,
+        "sinif_idler": secilen,
+        "adim": 1,
         "tarih": request.form.get("tarih") or "",
         "soru_sayisi": count if count is not None else 20,
         "anahtar": raw_anahtar,
         "secenekler": secenekler,
         "yanlis_goturme": request.form.get("yanlis_goturme", type=int) or 3,
     }
+
+    def _hata(mesaj, adim):
+        form_data["adim"] = adim
+        return _lgs_evde_render_hata(mesaj, form_data, gecici_pdf)
     # Geçici PDF kontrolü / kaydı
     ham = b""
     if dosya and (dosya.filename or "").lower().endswith(".pdf"):
@@ -5104,31 +5126,27 @@ def _lgs_optik_ekle():
     try:
         tarih = test_window.validate_schedule_date(request.form.get("tarih"))
     except ValueError as exc:
-        return _lgs_evde_render_hata(str(exc), form_data, gecici_pdf)
+        return _hata(str(exc), 1)
     if not ad:
-        return _lgs_evde_render_hata("Sınav adı yazın.", form_data, gecici_pdf)
+        return _hata("Test adı yazın.", 1)
     anahtar = lgs_optik.anahtar_oku(raw_anahtar, secenekler=secenekler)
     secenek_metin = "A, B, C veya D"
     if not anahtar:
-        return _lgs_evde_render_hata(f"Cevap anahtarına her soru için {secenek_metin} yazın. En fazla 90 soru.", form_data, gecici_pdf)
+        return _hata(f"Cevap anahtarına her soru için {secenek_metin} yazın. En fazla 90 soru.", 3)
     if count is not None and (not 1 <= count <= 90 or len(anahtar) != count):
-        return _lgs_evde_render_hata("Cevap sayısı soru sayısıyla aynı olmalı. Eksik cevapları kontrol edin.", form_data, gecici_pdf)
+        return _hata("Cevap sayısı soru sayısıyla aynı olmalı. Eksik cevapları kontrol edin.", 3)
     if not ham:
         if not dosya or not (dosya.filename or "").lower().endswith(".pdf"):
-            return _lgs_evde_render_hata("Soruların PDF dosyasını seçin.", form_data, gecici_pdf)
-        return _lgs_evde_render_hata("PDF boş, bozuk veya 20 MB'dan büyük.", form_data, gecici_pdf)
+            return _hata("Soruların PDF dosyasını seçin.", 2)
+        return _hata("PDF boş, bozuk veya 20 MB'dan büyük.", 2)
     if not ham.startswith(b"%PDF-") or len(ham) > lgs_optik.AZAMI_BOYUT:
-        return _lgs_evde_render_hata("PDF boş, bozuk veya 20 MB'dan büyük.", form_data, gecici_pdf)
-    izinli_siniflar = {int(s["id"]) for s in _evde_siniflari(session["ogretmen_id"])}
-    if tur == "yaprak":
-        if ders not in LGS_DERSLER or sinif_id not in izinli_siniflar:
-            return _lgs_evde_render_hata("Yaprak test için sınıf ve ders seçin.", form_data, gecici_pdf)
-    else:
-        ders = ""
-        if sinif_id and sinif_id not in izinli_siniflar:
-            return _lgs_evde_render_hata("Bu sınıfa evde soru gönderemezsiniz.", form_data, gecici_pdf)
-        if sinif_id and sinif_seviyesi(sinif_id) == 8:
-            sinif_id = None
+        return _hata("PDF boş, bozuk veya 20 MB'dan büyük.", 2)
+    izinli = _evde_siniflari(session["ogretmen_id"])
+    if ders not in LGS_DERSLER or not secilen:
+        return _hata("Test için sınıf ve ders seçin.", 1)
+    sinif_id, sinif_hata = _evde_hedef_sinif(secilen, izinli)
+    if sinif_hata:
+        return _hata(sinif_hata, 1)
     ad_dosya = uuid4().hex + ".pdf"
     (lgs_optik.klasor() / ad_dosya).write_bytes(ham)
     if gecici_pdf and gecici_pdf.startswith("tmp_"):
@@ -5136,8 +5154,9 @@ def _lgs_optik_ekle():
     goturme = request.form.get("yanlis_goturme", type=int)
     if goturme not in (0, 3, 4):
         goturme = 3
-    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), tur, ders, sinif_id, yanlis_goturme=goturme, secenekler=secenekler)
-    flash(f"{ad}: {len(anahtar)} soruluk {'yaprak test' if tur == 'yaprak' else 'deneme'} {tarih} günü 19.00–21.00 için kaydedildi. Cevap anahtarı {tarih} 21.00’de açılacak.", "success")
+    lgs_optik.sinav_ekle(ad, tarih, ad_dosya, anahtar, session.get("ogretmen_id"), "yaprak", ders, sinif_id, yanlis_goturme=goturme, secenekler=secenekler)
+    sinif_yazi = "8/A ve 8/B" if sinif_id is None else next(s["sinif_adi"] for s in izinli if int(s["id"]) == sinif_id)
+    flash(f"{ad}: {len(anahtar)} soruluk test {tarih} günü 19.00–21.00 için {sinif_yazi} sınıfına kaydedildi. Cevap anahtarı {tarih} 21.00’de açılacak.", "success")
     return redirect(url_for("lgs", ekran="evde"))
 
 
