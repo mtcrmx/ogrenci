@@ -588,7 +588,16 @@ html body.pm .school-entry-form a { color: var(--pm-acc); font-weight: 700; }
 /* ── Mobil sade düzen ────────────────────────────────────── */
 @media (max-width: 768px) {
   html body.pm { font-size: 15px; -webkit-text-size-adjust: 100%; }
-  html body.pm, html body.pm .app-workspace { overflow-x: hidden; }
+  html body.pm { overflow-x: hidden; }
+  html body.pm .app-workspace { overflow-x: hidden; }
+  html body.pm.layout-page .app-workspace main,
+  html body.pm.veli-ekran main,
+  html body.pm.pm-solo .pm-solo-main {
+    overflow-x: auto !important;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
   html body.pm.layout-page .app-workspace main, html body.pm.layout-page .app-workspace main.pm-page { padding: 16px 16px 24px; }
   html body.pm.layout-page .app-workspace { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
   html body.pm.veli-ekran { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
@@ -625,15 +634,30 @@ html body.pm .school-entry-form a { color: var(--pm-acc); font-weight: 700; }
   html body.pm :is(.card-footer, .app-card-footer, .form-actions) > :is(a, button) { flex: 1 1 100%; justify-content: center; text-align: center; }
   html body.pm :is(.pm-hero-actions, .app-actions, .vp-actions) > :is(a, button) { flex: 1 1 calc(50% - 10px); justify-content: center; }
 
-  /* Tablolar: kap içinde yatay kaydırma */
-  html body.pm .app-workspace table, html body.pm.veli-ekran table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-  html body.pm :is(.table-responsive, .overflow-x-auto, .tablo-kap) { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  html body.pm :is(.table-responsive, .overflow-x-auto, .tablo-kap) table { display: table; }
+  /* Tablolar: sığmazsa kap içinde yana kayar (display:block tabloyu sıkıştırıyordu) */
+  html body.pm :is(.table-responsive, .overflow-x-auto, .tablo-kap, .es-table-wrap, .ya-table-wrap, .lm-table-wrap, .gw-table, .rh-table-wrap, .ranking-scroll, .ya-chart, .table-card),
+  html body.pm :is(.app-card, .dash-card, .card, .vp-card, .lm-card, .pm-hero):has(table),
+  html body.pm :is(.app-card, .dash-card, .card):has(canvas),
+  html body.pm :is(.app-card, .dash-card, .card):has(svg:not(.pm-ic)) {
+    max-width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  html body.pm table:not(.tracking-table):not(.analysis-table) {
+    display: table !important;
+    width: max-content !important;
+    min-width: 100%;
+    max-width: none !important;
+  }
+  html body.pm table:not(.tracking-table):not(.analysis-table) :is(th, td) { white-space: nowrap; }
+  html body.pm :is(.table-responsive, .overflow-x-auto, .tablo-kap, .es-table-wrap, .ya-table-wrap, .lm-table-wrap, .gw-table, .rh-table-wrap, .ranking-scroll) table:not(.tracking-table):not(.analysis-table) { display: table !important; }
 
   /* Formlar: tam genişlik, iOS zoom yok */
   html body.pm :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) { font-size: 16px !important; max-width: 100%; min-height: 44px; }
   html body.pm form :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]), select, textarea) { width: 100%; }
-  html body.pm img, html body.pm video, html body.pm canvas, html body.pm svg:not(.pm-ic) { max-width: 100%; }
+  html body.pm img, html body.pm video { max-width: 100%; }
+  html body.pm :is(.ya-chart, .overflow-x-auto, .ranking-scroll) :is(canvas, svg) { max-width: none; }
 
   /* Eski pastel tonlar → premium palet */
   html body.pm .app-workspace :is([class*="bg-violet-5"], [class*="bg-violet-1"], [class*="bg-purple-5"], [class*="bg-purple-1"], [class*="bg-pink-5"], [class*="bg-pink-1"], [class*="bg-rose-5"], [class*="bg-fuchsia-5"], [class*="bg-sky-5"], [class*="bg-indigo-5"], [class*="bg-emerald-5"], [class*="bg-amber-5"], [class*="bg-yellow-5"], [class*="bg-lime-5"], [class*="bg-teal-5"]),
