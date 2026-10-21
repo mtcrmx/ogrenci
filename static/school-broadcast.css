@@ -71,3 +71,35 @@
 @media(max-width:700px),(orientation:portrait){.header-side{width:100%;justify-content:space-between}.header-climate strong{font-size:6vw}.header-climate span{font-size:2.4vw}.header-climate .climate-label{font-size:2.2vw}}
 
 .net-leaders #net-exam{font-size:.65vw;line-height:1.2;margin:.25vh 0 .6vh;color:#86788c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.net-leader{display:flex;align-items:center;gap:.45vw;padding:.35vh 0;border-bottom:1px solid #dbcde34d}.net-leader:last-child{border:0}.net-rank{font-size:.8vw;font-weight:800;color:#795199;min-width:1vw}.net-person{flex:1;min-width:0}.net-person strong{display:block;font-size:.72vw;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.net-person small{font-size:.58vw;color:#86788c;display:block}.net-score{font-size:.75vw;white-space:nowrap;color:#60437e;font-variant-numeric:tabular-nums}.net-empty{font-size:.85vw;color:#86788c}@media(max-width:700px),(orientation:portrait){.net-leaders #net-exam,.net-person small{font-size:1.4vw}.net-person strong,.net-score,.net-rank,.net-empty{font-size:1.65vw}}
+
+/* Give the complete leaderboard a dedicated, bounded five-row area. */
+@media(min-width:701px) and (orientation:landscape){
+ .status-column{grid-template-rows:minmax(0,.72fr) minmax(0,1.2fr) minmax(0,.23fr)}
+ .status-column .lesson-card{padding:1.2vh 1vw}
+ .lesson-card h2{font-size:min(1.8vw,3.2vh)}
+ .countdown{font-size:min(4vw,7vh);line-height:1.05}
+ #countdown-label{margin-bottom:.6vh}.next-lesson{margin-top:.5vh}
+ .net-leaders{display:flex;flex-direction:column;padding:1vh .8vw;min-height:0}
+ .net-leaders .eyebrow{flex:none;font-size:min(.8vw,1.5vh)}
+ .net-leaders #net-exam{flex:none;font-size:min(.65vw,1.2vh)}
+ #net-leaders{flex:1;min-height:0;display:grid;grid-template-rows:repeat(5,minmax(0,1fr))}
+ .net-leader{min-height:0;padding:.15vh 0;gap:.35vw}
+ .net-person strong{font-size:min(.78vw,1.5vh);line-height:1.12;white-space:normal;overflow-wrap:anywhere}
+ .net-person small{font-size:min(.6vw,1.15vh);line-height:1.1}
+ .net-score,.net-rank{font-size:min(.8vw,1.5vh)}
+}
+@media(max-width:700px),(orientation:portrait){
+ .net-leaders{overflow:visible;min-height:36vw}
+ .net-person strong{white-space:normal;font-size:2.2vw}
+ .net-person small{font-size:1.8vw}.net-score,.net-rank{font-size:2.2vw}
+ .net-leader{padding:.7vw 0}.net-leaders #net-exam{font-size:1.8vw}
+}
+
+@media(min-width:701px) and (orientation:landscape){
+ .lesson-card .eyebrow{font-size:1.1vh;margin-bottom:.3vh}
+ .lesson-card h2{font-size:min(1.8vw,2.6vh)}
+ .countdown{font-size:min(4vw,5vh)}
+ #lesson-hours{font-size:1.2vh;margin:.3vh 0}
+ #countdown-label{font-size:1.15vh;margin:0 0 .4vh}
+ .lesson-progress{height:.4vh}.next-lesson{font-size:1.1vh;margin-top:.4vh}
+}

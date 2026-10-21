@@ -1,0 +1,8 @@
+.es-filter-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}
+.es-filter-form label{min-width:0;font-weight:700;font-size:14px}
+.es-filter-form select{display:block;width:100%;max-width:100%;min-width:0;min-height:44px;padding:8px;border-radius:12px;border:1px solid #ded5ed;background:white}
+#lgs-siralama .ranking-table.course-table{min-width:540px!important;table-layout:auto}
+#lgs-siralama .course-table tr>:first-child{width:auto;min-width:180px;text-align:left}
+#lgs-siralama .course-table tr>:nth-child(2){width:auto;background:transparent!important;box-shadow:none}
+#lgs-siralama .course-table th,#lgs-siralama .course-table td{padding:12px;border-bottom:1px solid #e7deed;text-align:left}
+@media(max-width:640px){.es-filter-form{grid-template-columns:1fr}.es-filter-form button{width:100%}}

@@ -73,8 +73,18 @@
       <div><h2 id="es-liste">Gönderilen tüm ev testleri</h2><p class="es-sub">Deneme ve yaprak türündeki ev testleri birlikte listelenir. Sonuç ayrıntıları Analizler bölümündedir.</p></div>
       <a class="es-btn es-btn--ghost" href="{{ url_for('teacher_records', tur='ev-testi') }}">Testlerimi düzenle / sil</a>
     </div>
+    <form method="get" class="es-filter-form" style="margin:16px 0">
+      <input type="hidden" name="ekran" value="evde">
+      <label>Sınıf<select name="es_sinif"><option value="">Tüm sınıflar</option><option value="8" {{ 'selected' if request.args.get('es_sinif') == '8' else '' }}>8/A + 8/B ortak</option>{% for g in gruplar %}<option value="{{ g.sinif.sinif_adi }}" {{ 'selected' if request.args.get('es_sinif') == g.sinif.sinif_adi else '' }}>{{ g.sinif.sinif_adi }}</option>{% endfor %}</select></label>
+      <label>Ders<select name="es_ders"><option value="">Tüm dersler</option>{% for d in lgs_dersler %}<option value="{{ d }}" {{ 'selected' if request.args.get('es_ders') == d else '' }}>{{ d }}</option>{% endfor %}</select></label>
+      <label>Ev testi<select name="es_test"><option value="">Tüm ev testleri</option>{% for s in evde_denemeler %}<option value="{{ s.id }}" {{ 'selected' if request.args.get('es_test') == s.id|string else '' }}>{{ s.ad }} · {{ s.sinif_adi or '8/A + 8/B' }} · {{ s.tarih }}</option>{% endfor %}</select></label>
+      <button class="es-btn">Uygula</button>
+    </form>
+    {% set ec=request.args.get('es_sinif','') %}{% set ed=request.args.get('es_ders','') %}{% set et=request.args.get('es_test','') %}
     <div class="es-list">
-    {% for s in evde_denemeler %}
+    {% for s in evde_denemeler if (not et or et == s.id|string) and (not ed or s.ders == ed) and (not ec or (ec == '8' and (not s.sinif_adi or s.sinif_adi in ['8/A','8/B'])) or s.sinif_adi == ec or (not s.sinif_adi and ec in ['8/A','8/B'])) %}
+      {% set participants=s.katilim|selectattr('sinif_adi','equalto',ec)|list if ec and ec != '8' else s.katilim %}
+      {% set completed=participants|selectattr('tamamlandi')|list|length %}
       <article class="es-test">
         <div class="es-test-top">
           <div>
@@ -83,7 +93,7 @@
               <span class="es-chip es-chip--acc">{{ s.tarih }}</span>
               <span class="es-chip">{{ s.sinif_adi or 'Tüm 8. sınıflar' }}</span>
               <span class="es-chip">{{ s.soru_sayisi }} soru</span>
-              <span class="es-chip {{ 'es-chip--ok' if s.tamamlayan else 'es-chip--warn' }}">{{ s.tamamlayan }} / {{ s.katilim|length }} tamamladı</span>
+              <span class="es-chip {{ 'es-chip--ok' if s.tamamlayan else 'es-chip--warn' }}">{{ completed }} / {{ participants|length }} tamamladı</span>
             </div>
           </div>
           <div class="es-actions">
@@ -99,7 +109,7 @@
             <table class="es-table">
               <thead><tr><th>Öğrenci</th><th>Sınıf</th><th>Katılım</th></tr></thead>
               <tbody>
-              {% for r in s.katilim %}
+              {% for r in participants %}
               <tr><td><b>{{ r.ad_soyad }}</b></td><td>{{ r.sinif_adi }}</td><td>{{ 'Tamamladı' if r.tamamlandi else 'Henüz tamamlamadı' }}</td></tr>
               {% else %}
               <tr><td colspan="3">Bu testin hedef sınıfında öğrenci bulunamadı.</td></tr>
@@ -110,7 +120,7 @@
         </details>
       </article>
     {% else %}
-      <p class="es-empty">Henüz gönderilmiş ev testi yok.</p>
+      <p class="es-empty">Seçili filtrelere uygun ev testi bulunamadı.</p>
     {% endfor %}
     </div>
   </section>

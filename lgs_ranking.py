@@ -7,8 +7,8 @@ from flask import request, session, url_for
 import database as db
 from metrik import KAYNAK_ADLARI, _seviye_sql, birlesik_sonuclar, seviye_kaynaklari
 
-METRICS = {'test': 'Kayıt', 'soru': 'Çözülen soru', 'dogru': 'Doğru',
-           'yanlis': 'Yanlış', 'bos': 'Boş', 'net': 'Net', 'basari': 'Başarı %',
+METRICS = {'net': 'Toplam net', 'test': 'Kayıt', 'soru': 'Çözülen soru', 'dogru': 'Doğru',
+           'yanlis': 'Yanlış', 'bos': 'Boş', 'basari': 'Başarı %',
            'aktif': 'Aktif gün', 'seri': 'En uzun çalışma serisi', 'ders': 'Ders çeşitliliği'}
 
 ENDPOINTS = {'lgs', 'veli_lgs', 'rehberlik_lgs', 'deneme_analiz', 'veli_deneme_analiz',
@@ -24,9 +24,9 @@ def _level_of_class(con, sinif_id):
 
 def build(con, args, own_id=None, today=None, level=None):
     today = today or date.today()
-    metric = args.get('sr_olcut', 'test')
+    metric = args.get('sr_olcut', 'net')
     if metric not in METRICS:
-        metric = 'test'
+        metric = 'net'
     direction = 'artan' if args.get('sr_yon') == 'artan' else 'azalan'
     period = args.get('sr_donem', 'tum')
     if period not in {'tum', 'hafta', 'ay'}:
@@ -53,7 +53,7 @@ def build(con, args, own_id=None, today=None, level=None):
             level = 8 if 8 in levels else (levels[0] if levels else None)
     students = [s for s in all_students if s['seviye'] == level]
     classes = sorted({s['sinif_adi'] for s in students})
-    classroom = args.get('sr_sinif', '')
+    classroom = args.get('sr_sinif', args.get('sube', ''))
     if classroom not in classes:
         classroom = ''
     sources = seviye_kaynaklari(level)
@@ -62,6 +62,22 @@ def build(con, args, own_id=None, today=None, level=None):
         source = ''
     results = birlesik_sonuclar(con, [s['id'] for s in students])
     subjects = sorted({r['ders'] for r in results if r['ders']})
+    # Include assigned home tests even before their first submission.
+    tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    home_tests = []
+    if 'lgs_optik_sinav' in tables:
+        home_tests = [dict(r) for r in con.execute("""SELECT e.id,e.ad,e.tarih,e.ders,s.sinif_adi
+            FROM lgs_optik_sinav e LEFT JOIN siniflar s ON s.id=e.sinif_id
+            WHERE e.kaynak IN ('ev','ev_yaprak') AND (e.silindi_at IS NULL OR e.silindi_at='')
+            ORDER BY e.tarih DESC,e.id DESC""")
+            if (r['sinif_adi'] in classes or (not r['sinif_adi'] and level == 8))]
+    tests = {f"optik-{r['id']}": f"{r['ad']} · {r['sinif_adi'] or '8/A + 8/B'} · {r['tarih']}" for r in home_tests}
+    home_keys = set(tests)
+    selected_test = args.get('sr_test', '')
+    if selected_test not in tests and selected_test != 'ev-tumu':
+        selected_test = ''
+    subjects = sorted(set(subjects) | {r['ders'] for r in home_tests if r['ders']})
+    filtered_results = []
     subject = args.get('sr_ders', '')
     if subject not in subjects:
         subject = ''
@@ -78,12 +94,17 @@ def build(con, args, own_id=None, today=None, level=None):
         total = totals.get(result['ogrenci_id'])
         if total is None or (subject and result['ders'] != subject) or (source and result['kaynak'] != source):
             continue
+        if selected_test == 'ev-tumu' and result['kayit'] not in home_keys:
+            continue
+        if selected_test and selected_test != 'ev-tumu' and result['kayit'] != selected_test:
+            continue
         try:
             day = date.fromisoformat(result['tarih'][:10])
         except (ValueError, TypeError):
             continue
         if not start <= day <= today:
             continue
+        filtered_results.append(result)
         total['kayitlar'].add(result['kayit'])
         for key in ('dogru', 'yanlis', 'bos'):
             total[key] += result[key]
@@ -125,7 +146,17 @@ def build(con, args, own_id=None, today=None, level=None):
             rank = index
         row['sira'] = rank
         last = row[metric]
-    return dict(rows=rows, metrics=METRICS, metric=metric, direction=direction,
+    course_stats = []
+    for name in sorted({r['ders'] or 'Dersi belirtilmemiş / karma test' for r in filtered_results}):
+        items = [r for r in filtered_results if (r['ders'] or 'Dersi belirtilmemiş / karma test') == name]
+        count = len({r['ogrenci_id'] for r in items})
+        correct = sum(r['dogru'] for r in items)
+        total = sum(r['dogru'] + r['yanlis'] + r['bos'] for r in items)
+        course_stats.append(dict(ad=name,katilim=count,net=round(sum(r['net'] for r in items)/count,2) if count else 0,
+                                 basari=round(correct*100/total,1) if total else 0))
+    return dict(tests=tests, selected_test=selected_test, course_stats=course_stats,
+                participant_count=sum(1 for r in rows if r['test']),
+                rows=rows, metrics=METRICS, metric=metric, direction=direction,
                 period=period, classes=classes, classroom=classroom, subjects=subjects,
                 subject=subject, minimum=minimum, parent=own_id is not None,
                 level=level, levels=levels, sources={k: KAYNAK_ADLARI[k] for k in sources},
@@ -151,6 +182,8 @@ def register(app):
                     row = con.execute('SELECT sinif_id FROM ogrenciler WHERE id=?', (ogrenci_id,)).fetchone()
                     sinif_id = row[0] if row else None
                 level = _level_of_class(con, sinif_id or session.get('ui_sinif_id'))
+            if request.endpoint == 'lgs' and request.args.get('ekran') == 'analiz':
+                level = 8
             data = build(con, request.args, own_id, level=level)
         finally:
             con.close()

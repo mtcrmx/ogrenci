@@ -4353,7 +4353,7 @@ def _lgs_ogrenci(ogrenci_id: int) -> dict:
 @app.route("/lgs", methods=["GET", "POST"])
 @giris_zorunlu
 def lgs():
-    if session.get('ogretmen_yetki') == 'rapor':
+    if session.get('ogretmen_yetki') == 'rapor' or (request.method == 'GET' and request.args.get('ekran') == 'analiz'):
         return render_template('lgs_ranking_page.html')
     return _lgs_ekran(veli=False)
 

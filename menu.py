@@ -43,7 +43,7 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
 
     if lgs_var:
         items.extend([
-            {"id": "lgs_takip", "label": "Genel bakış", "icon": "✦", "href": _guvenli_url("lgs"), "endpoint": "lgs", "grup": "LGS merkezi"},
+            {"id": "lgs_takip", "label": "Sıralama ve analiz", "icon": "✦", "href": _guvenli_url("lgs", ekran="analiz", sr_seviye=8), "endpoint": "lgs", "grup": "LGS merkezi"},
             {"id": "evde_test", "label": "Evde sorular", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde"), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "LGS merkezi"},
             {"id": "deneme_analiz", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("deneme_analiz"), "endpoint": "deneme_analiz", "grup": "LGS merkezi"},
             {"id": "hizli_giris", "label": "Hızlı giriş", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "LGS merkezi"},
@@ -55,6 +55,8 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
         if rol == "yonetici":
             items.extend(_yonetici_ogeleri())
         return items
+
+    items.append({"id": "lgs_takip", "label": "Sıralama ve analiz", "icon": "✦", "href": _guvenli_url("lgs", ekran="analiz", sr_seviye=8), "endpoint": "lgs", "args": {"ekran": "analiz"}, "grup": "LGS merkezi"})
 
     # Takip: haftalık giriş, onaylar, yaprak test (5–7), geçmiş kayıtlar
     if "haftalik_takip" in moduller:
