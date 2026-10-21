@@ -5070,9 +5070,7 @@ def _lgs_optik_ekle():
     from uuid import uuid4
     dosya = request.files.get("pdf")
     gecici_pdf = (request.form.get("gecici_pdf") or "").strip()
-    secenekler = (request.form.get("secenekler") or request.form.get("choices") or "ABCD").strip().upper()
-    if secenekler not in ("ABCD", "ABCDE"):
-        secenekler = "ABCD"
+    secenekler = "ABCD"
     ad = (request.form.get("ad") or "").strip()
     tur = request.form.get("tur") or "deneme"
     if tur not in ("yaprak", "deneme"):
@@ -5110,7 +5108,7 @@ def _lgs_optik_ekle():
     if not ad:
         return _lgs_evde_render_hata("Sınav adı yazın.", form_data, gecici_pdf)
     anahtar = lgs_optik.anahtar_oku(raw_anahtar, secenekler=secenekler)
-    secenek_metin = "A, B, C, D veya E" if secenekler == "ABCDE" else "A, B, C veya D"
+    secenek_metin = "A, B, C veya D"
     if not anahtar:
         return _lgs_evde_render_hata(f"Cevap anahtarına her soru için {secenek_metin} yazın. En fazla 90 soru.", form_data, gecici_pdf)
     if count is not None and (not 1 <= count <= 90 or len(anahtar) != count):

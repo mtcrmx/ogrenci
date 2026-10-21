@@ -72,7 +72,7 @@
         lab.textContent = String(i + 1);
         var secim = document.createElement("select");
         secim.setAttribute("aria-label", (i + 1) + ". soru");
-        ["", "A", "B", "C", "D", "E"].forEach(function (harf) {
+        ["", "A", "B", "C", "D"].forEach(function (harf) {
           var opt = document.createElement("option");
           opt.value = harf;
           opt.textContent = harf || "–";

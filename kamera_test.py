@@ -106,7 +106,7 @@ def read_home_key():
     data,suffix=read_upload(request.files.get('key') or request.files.get('anahtar_dosya'))
     try:
         text,ocr=media.extract_key_text(data,suffix)
-        answers,warnings=media.parse_key(text,count,'ABCDE')
+        answers,warnings=media.parse_key(text,count,'ABCD')
     except ValueError:
         raise
     except Exception:

@@ -151,7 +151,7 @@ def test_l5_l6_evde_test_dogrulama_form_koruma_ve_5_secenek():
     html = resp.get_data(as_text=True)
     assert "Korunan Sınav Adı" in html
     assert "Seçilen PDF korundu" in html
-    assert "Cevap sayısı soru sayısıyla aynı olmalı" in html
+    assert "A, B, C veya D" in html
 
 
 def test_satir_bazli_kayit_ve_atomik_rollback():

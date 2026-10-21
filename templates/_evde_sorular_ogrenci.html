@@ -76,7 +76,7 @@
         {% for n in range(optik_secili.soru_sayisi) %}
         <fieldset>
           <legend>{{ n + 1 }}</legend>
-          {% for harf in (optik_secili.secenekler or 'ABCD') %}
+          {% for harf in 'ABCD' %}
           <label><input type="radio" name="c{{ n }}" value="{{ harf }}" aria-label="{{ n + 1 }}. soru {{ harf }}"><span>{{ harf }}</span></label>
           {% endfor %}
         </fieldset>
