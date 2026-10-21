@@ -233,12 +233,32 @@ def calendar_display(stamp):
                 yaklasan=[i for i in ordered if i['baslangic'] > stamp][:3])
 
 
+def net_leaders(con, stamp):
+    """Top five active students by cumulative home-question test net."""
+    tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if not {'lgs_optik_sinav','lgs_optik_sonuc'} <= tables:
+        return dict(ogrenciler=[])
+    rows = con.execute('''SELECT o.ad_soyad,s.sinif_adi,ROUND(SUM(r.net),2) AS net,
+            COUNT(*) AS test_sayisi FROM lgs_optik_sonuc r
+            JOIN lgs_optik_sinav e ON e.id=r.sinav_id
+            JOIN ogrenciler o ON o.id=r.ogrenci_id JOIN siniflar s ON s.id=o.sinif_id
+            WHERE e.tur='yaprak' AND e.kaynak IN ('ev','ev_yaprak')
+              AND e.tarih<=? AND s.sinif_adi GLOB '[5-8]/*'
+            GROUP BY o.id ORDER BY net DESC,o.ad_soyad,o.id LIMIT 5''', (stamp,)).fetchall()
+    output=[]
+    for i,r in enumerate(rows):
+        rank=output[-1]['sira'] if output and r['net']==output[-1]['net'] else i+1
+        output.append(dict(sira=rank,ad=r['ad_soyad'],sinif=r['sinif_adi'],net=r['net'],test_sayisi=r['test_sayisi']))
+    return dict(ogrenciler=output)
+
+
 def payload(token=None, now=None):
     now = (now or datetime.now(ISTANBUL)).astimezone(ISTANBUL)
     stamp = now.date().isoformat()
     info = day_info(stamp)
     periods = slots(now.weekday())
     con = db._conn()
+    leaders = net_leaders(con, stamp)
     items = [dict(r) for r in con.execute('''SELECT id,baslik,metin,tur,sure,baslangic,bitis,dosya FROM okul_yayin_icerik
         WHERE aktif=1 AND baslangic<=? AND bitis>=? ORDER BY id''', (stamp, stamp))]
     con.close()
@@ -263,11 +283,11 @@ def payload(token=None, now=None):
                     item['page_url'] = url_for('okul_ekran_sayfa', token=token, cid=item['id']) if token else url_for('yayin_sayfa', cid=item['id'])
             except (OSError, ValueError):
                 pass
-    # Only whitelist public timetable fields. Never merge student/parent/guidance data.
+    # Whitelist timetable and the explicitly requested top-five display fields.
     program = program_for(now.weekday())
     return dict(simdi=now.isoformat(), tarih=stamp, gun=now.weekday(), **info,
                 saatler=periods, program=program, siniflar=sorted({r['sinif_adi'] for r in timetable()}),
-                icerikler=items, takvim=calendar_display(stamp), lgs=lgs_sayac_verisi(now))
+                icerikler=items, takvim=calendar_display(stamp), lgs=lgs_sayac_verisi(now), net_liderleri=leaders)
 
 
 def valid_media(upload):
