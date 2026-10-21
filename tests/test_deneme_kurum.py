@@ -15,6 +15,12 @@ Sınav Tarihi: 04.10.2026
 
 
 class DenemeKurum(unittest.TestCase):
+    def test_school_number_and_class_match_abbreviated_name(self):
+        row=_satir('17 158 - MAMİ ZEYBEK 8 / A 5 14 0.33 2 5 0.33 5 5 3.33 0 0 0.00 4 12 0.00 4 11 0.33 20 47 4.32 208.763')
+        self.assertEqual(row['dersler'][1]['ders'],'T.C. İnkılap Tarihi')
+        students=[dict(id=1,ogr_no=158,sinif_adi='8/A',ad_soyad='MUHAMMET HASAN ZEYBEK'),dict(id=2,ogr_no=158,sinif_adi='7/A',ad_soyad='MAMİ ZEYBEK')]
+        self.assertEqual(kurum_ogrenci_esle([row],students)['eslesen'][0]['ogrenci_id'],1)
+        self.assertEqual(kurum_ogrenci_esle([row],students[1:])['eslesen'],[])
     def test_lgs_sirali_liste(self):
         liste = kurum_metin_oku(_LGS, "liste.pdf")
         self.assertEqual(liste["ad"], "VİP LGS-1")

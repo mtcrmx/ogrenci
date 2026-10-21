@@ -4380,7 +4380,7 @@ def lgs_kurum_pdf():
     ogrenciler = []
     for sinif in aktif_sube_siniflari():
         for ogr in sinif_ogrencileri(sinif["id"]):
-            ogrenciler.append({"id": ogr["id"], "ad_soyad": ogr["ad_soyad"], "sinif_adi": sinif["sinif_adi"]})
+            ogrenciler.append({"id": ogr["id"], "ad_soyad": ogr["ad_soyad"], "ogr_no": ogr["ogr_no"], "sinif_adi": sinif["sinif_adi"]})
     sonuc = kurum_ogrenci_esle(liste["satirlar"], ogrenciler)
     yazilan = 0
     hatali = 0

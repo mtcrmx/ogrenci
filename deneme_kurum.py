@@ -59,7 +59,10 @@ def kurum_ogrenci_esle(satirlar: list[dict], ogrenciler: list[dict]) -> dict:
     eslesen = []
     kalan = []
     for satir in satirlar:
-        bulunan = _bul(satir["ad"], indeks, ogrenciler)
+        if satir.get('ogr_no') and satir.get('sinif'):
+            bulunan = [o for o in ogrenciler if str(o.get('ogr_no')) == str(satir['ogr_no']) and o.get('sinif_adi') == satir['sinif']]
+        else:
+            bulunan = _bul(satir["ad"], indeks, ogrenciler)
         if len(bulunan) == 1:
             eslesen.append({**satir, "ogrenci_id": int(bulunan[0]["id"]), "ad_soyad": bulunan[0]["ad_soyad"]})
         else:
@@ -200,23 +203,27 @@ def _tarih(dosya_adi: str, metin: str) -> str:
 
 def _satir(satir: str) -> dict | None:
     m = re.match(
-        r"^\d+\s+0\s+-\s+(.+?)\s+(\d+)\s*/\s*[A-ZÇĞİÖŞÜ]\s+(.+)$",
+        r"^\d+\s+(\d+)\s+-\s+(.+?)\s+(\d+)\s*/\s*([A-ZÇĞİÖŞÜ])\s+(.+)$",
         satir.strip(),
     )
     if not m:
         return None
-    sayilar = re.findall(r"-?\d+(?:\.\d+)?", m.group(3))
+    sayilar = re.findall(r"-?\d+(?:\.\d+)?", m.group(5))
     if len(sayilar) < 22:
         return None
     dersler = []
-    for i, (ders, tavan) in enumerate(_DERSLER):
+    for i, (ders, tavan) in enumerate(_LGS_DERSLER if m.group(3) == '8' else _DERSLER):
         dogru = int(float(sayilar[i * 3]))
         yanlis = int(float(sayilar[i * 3 + 1]))
         net = round(float(sayilar[i * 3 + 2]), 2)
-        bos = max(0, tavan - dogru - yanlis)
+        if dogru < 0 or yanlis < 0 or dogru + yanlis > tavan or abs(dogru-yanlis/3-net) > .05:
+            return None
+        bos = tavan - dogru - yanlis
         dersler.append({"ders": ders, "dogru": dogru, "yanlis": yanlis, "bos": bos, "net": net})
     return {
-        "ad": m.group(1).strip(),
+        "ad": m.group(2).strip(),
+        "ogr_no": int(m.group(1)),
+        "sinif": f'{m.group(3)}/{m.group(4)}',
         "dersler": dersler,
         "puan": round(float(sayilar[21]), 3),
         "net": round(sum(d["net"] for d in dersler), 2),
