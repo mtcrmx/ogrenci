@@ -5157,6 +5157,8 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
         sinav["sonuc"] = lgs_optik.sonuc_getir(sinav["id"], ogrenci_id) if ogrenci_id else None
         if sinav.get("sonuc"):
             sinav["analiz"] = lgs_optik.puan_hesapla(sinav["cevaplar"], sinav["sonuc"]["isaretler"], sinav.get("yanlis_goturme", 3))
+    if not ogrenci_id and session.get('ogretmen_id'):
+        _evde_katilim_ekle(sinavlar, _evde_gruplari(session['ogretmen_id']))
     if test_window.parent_request():
         for sinav in sinavlar:
             test_window.parent_exam(sinav)
@@ -5168,6 +5170,19 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
     if secili and secili.get("sonuc") and (not test_window.parent_request() or test_window.released(secili)):
         detay = lgs_optik.puan_hesapla(secili["cevaplar"], secili["sonuc"]["isaretler"], secili.get("yanlis_goturme", 3))
     return sinavlar, secili, detay
+
+
+def _evde_katilim_ekle(sinavlar, gruplar):
+    for sinav in sinavlar:
+        completed = {r['ogrenci_id'] for r in sinav['sonuclar']}
+        sinav['katilim'] = [
+            dict(ad_soyad=o['ad_soyad'], sinif_adi=g['sinif']['sinif_adi'], tamamlandi=o['id'] in completed)
+            for g in gruplar
+            if (g['sinif']['id'] == sinav.get('sinif_id') if sinav.get('sinif_id') else g['sinif']['sinif_adi'].startswith('8/'))
+            for o in g['ogrenciler']
+        ]
+        sinav['katilim'].sort(key=lambda r:(r['sinif_adi'],r['ad_soyad']))
+        sinav['tamamlayan'] = sum(r['tamamlandi'] for r in sinav['katilim'])
 
 
 @app.route("/lgs/optik/<int:sinav_id>/pdf")
