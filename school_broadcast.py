@@ -242,7 +242,8 @@ def net_leaders(con, stamp):
             COUNT(*) AS test_sayisi FROM lgs_optik_sonuc r
             JOIN lgs_optik_sinav e ON e.id=r.sinav_id
             JOIN ogrenciler o ON o.id=r.ogrenci_id JOIN siniflar s ON s.id=o.sinif_id
-            WHERE e.tur='yaprak' AND e.kaynak IN ('ev','ev_yaprak')
+            WHERE e.tur IN ('yaprak','deneme') AND e.kaynak IN ('ev','ev_yaprak')
+              AND (e.silindi_at IS NULL OR e.silindi_at='')
               AND e.tarih<=? AND s.sinif_adi GLOB '[5-8]/*'
             GROUP BY o.id ORDER BY net DESC,o.ad_soyad,o.id LIMIT 5''', (stamp,)).fetchall()
     output=[]
