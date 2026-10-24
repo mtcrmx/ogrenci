@@ -3130,6 +3130,8 @@ def bilgilendirme_yonetimi():
 @app.route("/dashboard")
 @giris_zorunlu
 def dashboard():
+    if not request.args.get('sinif'):
+        return render_template('simple_home.html', quick_classes=ogretmen_siniflari(session['ogretmen_id']))
     ogretmen_id  = session["ogretmen_id"]
     ogretmen_adi = session.get("ogretmen_adi", "")
     ogretmen_gorsel_tipi = ogretmen_gorsel_tipi_al(ogretmen_id)
@@ -5020,9 +5022,8 @@ def veli_lgs():
 def veli_analizler():
     if not session.get('veli_ogrenci_id'):
         return redirect(url_for('veli_giris'))
-    from student_results import birlesik_paket
-    ozet, _ = birlesik_paket(int(session['veli_ogrenci_id']))
-    return render_template('veli_analizler.html', sonuc_ozeti=ozet)
+    from simple_ui import parent_analysis
+    return parent_analysis()
 
 
 def _evde_siniflari(ogretmen_id: int) -> list[dict]:
@@ -5114,12 +5115,28 @@ def _lgs_optik_ekle():
         return _lgs_evde_render_hata(mesaj, form_data, gecici_pdf)
     # Geçici PDF kontrolü / kaydı
     ham = b""
-    if dosya and (dosya.filename or "").lower().endswith(".pdf"):
-        ham = dosya.read(lgs_optik.AZAMI_BOYUT + 1)
-        if ham.startswith(b"%PDF-") and len(ham) <= lgs_optik.AZAMI_BOYUT:
-            gecici_ad = "tmp_" + uuid4().hex + ".pdf"
-            (lgs_optik.klasor() / gecici_ad).write_bytes(ham)
-            gecici_pdf = gecici_ad
+    if dosya and dosya.filename:
+        from kamera_media import convert_document
+        from zipfile import BadZipFile
+        from pypdf.errors import PdfReadError
+        from lxml.etree import XMLSyntaxError
+        raw = dosya.read(lgs_optik.AZAMI_BOYUT + 1)
+        if len(raw) > lgs_optik.AZAMI_BOYUT:
+            return _hata("Belge 20 MB'dan büyük.", 2)
+        suffix = Path(dosya.filename).suffix.lower()
+        if suffix not in ('.pdf', '.docx'):
+            return _hata('PDF veya Word (.docx) seçin.', 2)
+        try:
+            ham = raw if suffix == '.pdf' else convert_document(raw, suffix)
+        except ValueError as exc:
+            return _hata(str(exc), 2)
+        except (BadZipFile, PdfReadError, XMLSyntaxError):
+            return _hata('Word belgesi okunamadı. Geçerli bir .docx veya PDF seçin.', 2)
+        if len(ham) > lgs_optik.AZAMI_BOYUT:
+            return _hata("Dönüştürülen PDF 20 MB'dan büyük.", 2)
+        gecici_ad = "tmp_" + uuid4().hex + ".pdf"
+        (lgs_optik.klasor() / gecici_ad).write_bytes(ham)
+        gecici_pdf = gecici_ad
     elif gecici_pdf and gecici_pdf.startswith("tmp_") and (lgs_optik.klasor() / Path(gecici_pdf).name).is_file():
         ham = (lgs_optik.klasor() / Path(gecici_pdf).name).read_bytes()
 
@@ -5170,7 +5187,7 @@ def _lgs_optik_paketi(ogrenci_id: int | None = None):
             if ogr and ev_test_visible(s, ogr)
         ]
     for sinav in sinavlar:
-        sinav["sonuclar"] = lgs_optik.sinav_sonuclari(sinav["id"])
+        sinav["sonuclar"] = [] if test_window.parent_request() else lgs_optik.sinav_sonuclari(sinav["id"])
         sinav["sonuc"] = lgs_optik.sonuc_getir(sinav["id"], ogrenci_id) if ogrenci_id else None
         if sinav.get("sonuc"):
             sinav["analiz"] = lgs_optik.puan_hesapla(sinav["cevaplar"], sinav["sonuc"]["isaretler"], sinav.get("yanlis_goturme", 3))
@@ -5228,7 +5245,7 @@ def _lgs_soru_belgesi(sinav_id):
             abort(403)
     else:
         abort(403)
-    if test_window.parent_request() and not test_window.state(sinav)["open"]:
+    if test_window.parent_request() and not (test_window.state(sinav)["open"] or test_window.state(sinav)["released"]):
         abort(403, description=test_window.state(sinav)["message"])
     yol = lgs_optik.pdf_yolu(sinav)
     if not yol:
@@ -5240,7 +5257,7 @@ def _lgs_soru_belgesi(sinav_id):
 def lgs_soru_goruntule(sinav_id):
     from question_viewer import view
     sinav, yol = _lgs_soru_belgesi(sinav_id)
-    return view(yol, sinav['ad'], lambda page: url_for('lgs_soru_sayfa', sinav_id=sinav_id, page=page), remaining=test_window.state(sinav)['remaining'] if test_window.parent_request() else None)
+    return view(yol, sinav['ad'], lambda page: url_for('lgs_soru_sayfa', sinav_id=sinav_id, page=page), remaining=None)
 
 
 @app.get('/lgs/optik/<int:sinav_id>/sayfa/<int:page>')
@@ -8019,6 +8036,8 @@ from menu import register_menu
 register_menu(app)
 from asama6_routes import register_asama6
 register_asama6(app, giris_zorunlu, _ogretmen_ogrencisine_erisebilir)
+from simple_ui import register as register_simple_ui
+register_simple_ui(app, giris_zorunlu)
 import batch_optik
 try:
     batch_optik.cleanup_expired_batches(force=True)

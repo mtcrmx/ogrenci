@@ -21,6 +21,7 @@
 <script src="{{ url_for('static', filename='veli_akis.js') }}?v=20261018a" defer></script>
 {% include '_pm_font.html' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}?v=premium1i">
+<link rel="stylesheet" href="{{ url_for('static', filename='simple-ui.css') }}">
 </head>
 <body class="pm ui-theme veli-ekran veli-clay-page layout-page">
 {% include '_pm_ortak.html' %}<div class="pm-sk" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -30,48 +31,13 @@
 {% with mesajlar = get_flashed_messages(with_categories=true) %}{% if mesajlar %}<div class="parent-feedback" role="status">{% for kategori, mesaj in mesajlar %}<p class="app-notice {{ 'app-notice--error' if kategori in ['warning','error'] else 'app-notice--success' }}">{{ mesaj }}</p>{% endfor %}</div>{% endif %}{% endwith %}
 <h1 id="parent-page-title" class="vpz-baslik">Ana sayfa</h1>
 <div class="parent-section" data-parent-section="genel" id="genel">
-<section class="app-card vpz-hero" aria-labelledby="vpz-ad">
-  <p class="vpz-eyebrow">{{ ogrenci.sinif_adi }}</p>
-  <h2 id="vpz-ad">{{ ogrenci.ad_soyad }}</h2>
-  <ul class="vpz-durum" aria-label="Son durum">
-    <li><span>Son sonuç</span><strong>{% if ozet.son %}{{ ozet.son.ad or ozet.son.kaynak_ad }} · {{ ozet.son.net|net }} net{% else %}Henüz sonuç yok{% endif %}</strong></li>
-    {% if ozet.sira %}<li><span>Sıralama</span><strong>{{ ozet.sira.toplam }} öğrenci arasında {{ ozet.sira.sira }}. sırada</strong></li>{% endif %}
-    {% if ozet.evde %}<li><span>Evde sorular</span><strong>{% if ozet.evde.bekleyen %}{{ ozet.evde.bekleyen }} test bekliyor{% else %}Bekleyen test yok{% endif %}</strong></li>{% endif %}
-  </ul>
-</section>
-
-<div class="vpz-grid">
-  {% if ozet.evde %}<section class="app-card vpz-kart">
-    <p class="vpz-eyebrow">{{ 'Sorular ve optik' if lgs_acik else 'Ev çalışması' }}</p>
-    <h2>Evde sorular</h2>
-    <p class="vpz-sayi"><strong>{{ ozet.evde.bekleyen }}</strong> bekleyen · <strong>{{ ozet.evde.biten }}</strong> çözülen</p>
-    <a class="app-button" href="{{ url_for('veli_lgs', bolum='soru') }}">Sorulara git</a>
-  </section>{% endif %}
-  {% if ozet.deneme_acik %}<section class="app-card vpz-kart">
-    <p class="vpz-eyebrow">Denemeler</p>
-    <h2>Son deneme</h2>
-    <p class="vpz-sayi">{% if ozet.son_deneme %}<strong>{{ ozet.son_deneme.net|net }}</strong> net · {{ ozet.son_deneme.ad }}{% else %}Henüz deneme sonucu yok.{% endif %}</p>
-    {% if hikaye %}<p class="app-muted">{{ hikaye }}</p>{% endif %}
-    <a class="app-button" href="{{ url_for('veli_lgs', bolum='sonuc') if lgs_acik else url_for('veli_deneme_analiz') }}">Denemeleri aç</a>
-  </section>{% endif %}
-  <section class="app-card vpz-kart">
-    <p class="vpz-eyebrow">{{ 'Analizler' if lgs_acik else 'Sonuçlar ve sıralama' }}</p>
-    <h2>Tüm sonuçlar</h2>
-    {% if ozet.kaynaklar %}<ul class="vpz-liste">{% for k in ozet.kaynaklar %}<li><span>{{ k.ad }} · {{ k.kayit }} kayıt</span><strong>{{ k.net|net }} net{% if k.oran is not none %} · %{{ k.oran|yuzde }}{% endif %}</strong></li>{% endfor %}</ul>{% else %}<p class="app-muted">Henüz sonuç kaydı yok.</p>{% endif %}
-    <a class="app-button" href="{{ url_for('veli_analizler') if lgs_acik else url_for('veli_sonuclar') }}">{{ 'Analizleri aç' if lgs_acik else 'Sonuçları ve sıralamayı aç' }}</a>
-  </section>
-  {% if not lgs_acik %}<section class="app-card vpz-kart">
-    <p class="vpz-eyebrow">Bu hafta</p>
-    <h2>Kitap ve ödev</h2>
-    <ul class="vpz-liste">
-      <li><span>Kitap</span><strong>{{ odev_ogr.kitap_adi or hafta.kitap_adi or 'Seçilmedi' }}</strong></li>
-      <li><span>Ödev</span><strong>{{ odev_ogr.odev_ders or odev.ders or 'Yazılmadı' }} · {{ hafta.odev_durum }}</strong></li>
-      {% if duzen.seri %}<li><span>Seri</span><strong>{{ duzen.seri }} hafta üst üste tam ödev</strong></li>{% endif %}
-    </ul>
-    <a class="app-button" href="#hafta">Haftalık takibi aç</a>
-  </section>{% endif %}
+<section class="app-card"><p class="simple-eyebrow">{{ ogrenci.sinif_adi }}</p><h2>{{ ogrenci.ad_soyad }}</h2><p>Bugünkü çalışmaların burada.</p></section>
+<div class="simple-grid">
+{% if ozet.evde %}<a class="simple-card" href="{{ url_for('veli_lgs', bolum='soru') }}"><span>ÖNCE BURADAN BAŞLA</span><h2>Evde sorular</h2><p>{{ ozet.evde.bekleyen }} bekleyen çalışma · Soruları aç ve cevap kâğıdını doldur.</p><p>Türkiye saatiyle 19.00–21.00</p></a>{% endif %}
+{% if not lgs_acik and (odev_ogr.odev_ders or odev.ders or odev.aciklama) %}<a class="simple-card" href="#hafta"><h2>Ödevim</h2><p>{{ odev_ogr.odev_ders or odev.ders }}</p><p>Ödev ayrıntısı ve tamamlanma bildirimi</p></a>{% endif %}
+{% if not lgs_acik and (odev_ogr.kitap_adi or hafta.kitap_adi or kitaplar or surpriz_kitaplar) %}<a class="simple-card" href="{{ url_for('veli_kitap_okuma') }}"><h2>Kitaplarım</h2><p>{{ odev_ogr.kitap_adi or hafta.kitap_adi or 'Atanmış kitaplar' }}</p><p>Oku, takip et ve tamamladığını bildir.</p></a>{% endif %}
 </div>
-
+<a class="app-button" href="{{ url_for('veli_analizler') }}">Analizler →</a>
 <details class="app-card app-details vpz-akis" id="parent-activity" aria-labelledby="parent-activity-title">
 <summary><span id="parent-activity-title">Öğretmenden gelenler</span> <small id="parent-activity-status" role="status">Güncel</small></summary>
 <div class="pa-header"><div class="pa-filters" aria-label="Kayıtları filtrele"><button type="button" data-feed-filter="all" aria-pressed="true">Tümü</button><button type="button" data-feed-filter="gorev" aria-pressed="false">Ödev ve testler</button><button type="button" data-feed-filter="sonuc" aria-pressed="false">Sonuçlar</button><button type="button" data-feed-filter="mesaj" aria-pressed="false">Mesajlar</button></div><button type="button" id="parent-refresh">Yenile ↻</button></div>

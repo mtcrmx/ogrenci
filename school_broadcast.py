@@ -259,7 +259,6 @@ def payload(token=None, now=None):
     info = day_info(stamp)
     periods = slots(now.weekday())
     con = db._conn()
-    leaders = net_leaders(con, stamp)
     items = [dict(r) for r in con.execute('''SELECT id,baslik,metin,tur,sure,baslangic,bitis,dosya FROM okul_yayin_icerik
         WHERE aktif=1 AND baslangic<=? AND bitis>=? ORDER BY id''', (stamp, stamp))]
     con.close()
@@ -288,7 +287,7 @@ def payload(token=None, now=None):
     program = program_for(now.weekday())
     return dict(simdi=now.isoformat(), tarih=stamp, gun=now.weekday(), **info,
                 saatler=periods, program=program, siniflar=sorted({r['sinif_adi'] for r in timetable()}),
-                icerikler=items, takvim=calendar_display(stamp), lgs=lgs_sayac_verisi(now), net_liderleri=leaders)
+                icerikler=items, takvim=calendar_display(stamp), lgs=lgs_sayac_verisi(now))
 
 
 def valid_media(upload):

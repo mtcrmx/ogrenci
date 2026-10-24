@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Analizler{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{{ url_for('static', filename='simple-ui.css') }}">
+<main class="simple-page">
+<header><p class="simple-eyebrow">SONUÇLARI İNCELE</p><h1>Analizler</h1>{% if chosen %}<p>{{ chosen.ad_soyad }}</p>{% endif %}</header>
+{% if not parent %}
+<form method="get" class="simple-card"><fieldset><legend>Bir veya birkaç sınıf seçin</legend><div class="simple-choices">
+{% for c in classes %}<label><input type="checkbox" name="sinif" value="{{ c.id }}" {% if c.id in selected_ids %}checked{% endif %}> {{ c.sinif_adi }}</label>{% else %}<p>Hesabınıza atanmış sınıf bulunamadı.</p>{% endfor %}
+</div></fieldset><button class="app-button">Seçili sınıfları incele</button></form>
+{% endif %}
+{% if parent or selected_ids %}
+{% if chosen %}<a class="simple-back" href="{{ back }}">← {{ 'Ana sayfa' if parent else 'Seçili sınıflara dön' }}</a>{% endif %}
+<form method="get" class="simple-card simple-filters">
+{% for sid in selected_ids %}<input type="hidden" name="sinif" value="{{ sid }}">{% endfor %}
+{% if chosen and not parent %}<input type="hidden" name="ogrenci" value="{{ chosen.id }}">{% endif %}
+<label>Başlangıç<input type="date" name="start" value="{{ filters.start }}"></label>
+<label>Bitiş<input type="date" name="end" value="{{ filters.end }}"></label>
+<label>Çalışma<select name="source"><option value="">Tüm türler</option>{% for key,label in [('ev','Evde sorular'),('deneme','Denemeler'),('okul','Okulda sorular')] %}<option value="{{ key }}" {% if filters.source==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label>Ders<select name="course"><option value="">Tüm dersler</option>{% for course in courses %}<option {% if filters.course==course %}selected{% endif %}>{{ course }}</option>{% endfor %}</select></label><button class="app-button">Uygula</button>
+</form>
+<p>Başarı, toplam doğru / toplam soru üzerinden hesaplanır. Sınıflar ve çalışma türleri ayrı gösterilir.</p>
+<section class="simple-grid">
+{% for panel in panels %}<article class="simple-card"><h2>{{ panel.title }}</h2>
+{% if panel.percent is none %}<p>Henüz sonuç yok. Başarı değerlendirmesi yapılmadı.</p>
+{% else %}<p class="simple-value">%{{ panel.percent }} <small>{{ panel.questions }} soru üzerinden</small></p>
+<svg class="simple-chart" viewBox="0 0 100 100" role="img" aria-label="Tarihe göre doğru yüzdesi"><path d="M5 5V95H95" fill="none" stroke="#d9dfeb" stroke-width=".5"/>
+{% if panel.points|length > 1 %}<polyline points="{% for p in panel.points %}{{ p.cx }},{{ p.cy }} {% endfor %}" fill="none" stroke="#5362bf" stroke-width="1"/>{% endif %}
+{% for p in panel.points %}<circle cx="{{ p.cx }}" cy="{{ p.cy }}" r="1.8" fill="#5362bf"><title>{{ p.day }}: %{{ p.percent }}</title></circle>{% endfor %}</svg>
+<details><summary>Tarih ve yüzde değerleri</summary><ul>{% for p in panel.points %}<li>{{ p.day }} · %{{ p.percent }}</li>{% endfor %}</ul></details>{% endif %}</article>{% endfor %}
+</section>
+{% if not parent and not chosen %}<section class="simple-card"><h2>Öğrenci ayrıntısı</h2><div class="simple-choices">{% for o in student_links %}<a class="app-button" href="{{ o.url }}">{{ o.name }}</a>{% else %}<p>Seçili sınıflarda öğrenci yok.</p>{% endfor %}</div></section>{% endif %}
+{% if parent %}<section class="simple-card"><h2>Sorular ve seçimlerim</h2><p>Kapanan testin belgesini ve kendi cevaplarını inceleyebilirsin.</p><a class="app-button" href="{{ url_for('veli_lgs', bolum='soru') }}">Evde sorular</a><a class="app-button" href="{{ url_for('ev_analiz.index') }}">Evde test analizini aç</a><a class="app-button" href="{{ url_for('veli_deneme_analiz') }}">Deneme analizini aç</a></section>{% endif %}
+{% endif %}</main>
+{% endblock %}

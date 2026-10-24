@@ -36,7 +36,7 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
         return items
 
     items = [
-        {"id": "bugun", "label": "Bugün", "icon": "⌂", "href": _guvenli_url("dashboard", sinif=sinif_id), "endpoint": "dashboard", "grup": "Ana"},
+        {"id": "bugun", "label": "Bugün", "icon": "⌂", "href": _guvenli_url("dashboard"), "endpoint": "dashboard", "grup": "Ana"},
     ]
 
     lgs_var = "lgs" in moduller
@@ -47,7 +47,7 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
             {"id": "evde_test", "label": "Evde sorular", "icon": "✉", "href": _guvenli_url("lgs", ekran="evde"), "endpoint": "lgs", "args": {"ekran": "evde"}, "grup": "LGS merkezi"},
             {"id": "deneme_analiz", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("deneme_analiz"), "endpoint": "deneme_analiz", "grup": "LGS merkezi"},
             {"id": "hizli_giris", "label": "Hızlı giriş", "icon": "✎", "href": _guvenli_url("ort_giris", sinif_id=sinif_id), "endpoint": "ort_giris", "grup": "LGS merkezi"},
-            {"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("sinif_analiz_v2", sinif=sinif_id), "endpoint": "sinif_analiz_v2", "grup": "Analizler"},
+            {"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("simple_analysis"), "endpoint": "sinif_analiz_v2", "grup": "Analizler"},
             {"id": "soru_sinif_analiz", "label": "Evde soru analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Analizler"},
             {"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Analizler"},
         ])
@@ -77,7 +77,7 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
         items.append({"id": "kitap_okuma", "label": "Kitap okuma", "icon": "📚", "href": _guvenli_url("ogretmen_kitap_okuma"), "endpoint": "ogretmen_kitap_okuma", "grup": "Kitap okuma"})
 
     # Raporlar
-    items.append({"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("sinif_analiz_v2", sinif=sinif_id), "endpoint": "sinif_analiz_v2", "grup": "Raporlar"})
+    items.append({"id": "sinif_analiz", "label": "Sınıf analizi", "icon": "◈", "href": _guvenli_url("simple_analysis"), "endpoint": "sinif_analiz_v2", "grup": "Raporlar"})
     items.append({"id": "soru_sinif_analiz", "label": "Evde soru analizi", "icon": "▦", "href": _guvenli_url("ev_analiz.index"), "endpoint": "ev_analiz.index", "ek_endpointler": ("test_sinif_analiz",), "grup": "Raporlar"})
     items.append({"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Raporlar"})
     if "kitap_odev_rapor" in moduller:

@@ -154,8 +154,12 @@ def build(con, args, own_id=None, today=None, level=None):
         total = sum(r['dogru'] + r['yanlis'] + r['bos'] for r in items)
         course_stats.append(dict(ad=name,katilim=count,net=round(sum(r['net'] for r in items)/count,2) if count else 0,
                                  basari=round(correct*100/total,1) if total else 0))
+    participant_count = sum(1 for r in rows if r['test'])
+    if own_id is not None:
+        rows = [r for r in rows if r['kendi']]
+        course_stats = []
     return dict(tests=tests, selected_test=selected_test, course_stats=course_stats,
-                participant_count=sum(1 for r in rows if r['test']),
+                participant_count=participant_count,
                 rows=rows, metrics=METRICS, metric=metric, direction=direction,
                 period=period, classes=classes, classroom=classroom, subjects=subjects,
                 subject=subject, minimum=minimum, parent=own_id is not None,

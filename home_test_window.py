@@ -27,7 +27,7 @@ def state(exam, at=None):
     released = current >= end
     label = day.strftime('%d.%m.%Y')
     message = (f'{label} · Türkiye saatiyle 19.00–21.00. Testi 21.00’den önce bitirip gönderin. Cevap anahtarı 21.00’de açılır.' if opened
-               else 'Çözüm süresi sona erdi. Sorular kapalı; cevap anahtarı ve sonuçlar açık.' if released
+               else 'Çözüm süresi sona erdi. Sorular ve kendi seçimleriniz okunabilir; cevap gönderimi kapalı.' if released
                else f'Sorular {label} tarihinde Türkiye saatiyle 19.00–21.00 arasında açılır. Cevap anahtarı aynı gün 21.00’de açılır.')
     return dict(home=True, open=opened, released=released, message=message, start=start.isoformat(), end=end.isoformat(),
                 remaining=max(0, (end-current).total_seconds()) if opened else None)

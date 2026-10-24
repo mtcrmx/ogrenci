@@ -8,9 +8,9 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: OGR_TAKIP_DB_PATH
-        value: /data/ogrenci_takip.db
+        value: /var/data/ogrenci_takip.db
       - key: OGR_TAKIP_DATA_DIR
-        value: /data
+        value: /var/data
       - key: IKLIM_ANAHTAR
         value: LDsIng3TpqPBo7yMSc2bfY0t
       - key: ADMIN_SIFRE_HASH
@@ -19,5 +19,5 @@ services:
         sync: false
     disk:
       name: veritabani
-      mountPath: /data
+      mountPath: /var/data
       sizeGB: 1

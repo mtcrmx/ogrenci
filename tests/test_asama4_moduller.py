@@ -108,7 +108,8 @@ class TestAsama4Moduller(unittest.TestCase):
 
         analiz_html = client.get("/veli/analizler").get_data(as_text=True)
         self.assertIn("Deneme analizini aç", analiz_html)
-        self.assertIn("Okul yaprak testi", analiz_html)
+        self.assertIn("Evde test analizini aç", analiz_html)
+        self.assertNotIn("7/A · Okulda sorular", analiz_html)
 
     def test_ogretmen_8_sinif_analiz_ve_rapor_yonlendirme(self):
         client = w.app.test_client()

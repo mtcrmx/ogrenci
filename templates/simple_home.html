@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Ana sayfa{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{{ url_for('static', filename='simple-ui.css') }}">
+<main class="simple-page">
+<header><p class="simple-eyebrow">AKADEMİPUAN · ÖĞRETMEN</p><h1>Bugün ne yapmak istersiniz?</h1><p>Bir işlem seçerek başlayın.</p></header>
+<section class="simple-grid" aria-label="Hızlı işlemler">
+<a class="simple-card" href="{{ url_for('lgs', ekran='evde') }}"><span>01</span><h2>Evde sorular</h2><p>Belge yükle, cevap anahtarını düzenle ve test gönder.</p></a>
+<a class="simple-card" href="{{ url_for('simple_analysis') }}"><span>02</span><h2>Analizler</h2><p>Önce sınıfları seç, sonra sonuçları incele.</p></a>
+<a class="simple-card" href="{{ url_for('lgs', bolum='deneme') }}"><span>03</span><h2>Denemeler</h2><p>Mevcut deneme girişlerini ve ders sonuçlarını aç.</p></a>
+<a class="simple-card" href="{{ url_for('kamera_test.index') }}"><span>04</span><h2>Okulda sorular</h2><p>Soru belgesi, optik okuma ve PDF inceleme.</p></a>
+<a class="simple-card" href="{{ url_for('haftalik_takip') }}"><span>05</span><h2>Ödev ve sınıf takibi</h2><p>Sınıfını seç, haftalık ve günlük takibi sürdür.</p></a>
+<a class="simple-card" href="{{ url_for('ogretmen_kitap_okuma') }}"><span>06</span><h2>Kitap okuma</h2><p>Atanmış kitapları ve okuma bildirimlerini yönet.</p></a>
+</section></main>
+{% endblock %}

@@ -85,7 +85,7 @@ class HomeWindowTests(unittest.TestCase):
         self.assertTrue(window.state({'kaynak':'kamera'})['open'])
 
     def test_question_routes_are_gated(self):
-        for time,expected in [('18:59:59',403),('19:00:00',200),('21:00:00',403)]:
+        for time,expected in [('18:59:59',403),('19:00:00',200),('21:00:00',200)]:
             with self.at(time):
                 for suffix in ('pdf','goruntule','sayfa/1'):
                     response=self.client.get(f'/lgs/optik/{self.exam}/{suffix}')
@@ -115,7 +115,7 @@ class HomeWindowTests(unittest.TestCase):
             page=self.client.get(f'/veli/lgs?sinav={self.exam}').text
             self.assertIn('<summary>Cevap anahtarı</summary>',page)
             self.assertIn('soru-hucre',page)
-            self.assertNotIn(f'/lgs/optik/{self.exam}/goruntule',page)
+            self.assertIn(f'/lgs/optik/{self.exam}/goruntule',page)
             self.assertEqual(self.client.get(f'/evde-analiz?test={self.exam}').status_code,200)
 
     def test_late_submission_and_teacher_access(self):

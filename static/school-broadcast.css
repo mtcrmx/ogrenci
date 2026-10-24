@@ -103,3 +103,4 @@
  #countdown-label{font-size:1.15vh;margin:0 0 .4vh}
  .lesson-progress{height:.4vh}.next-lesson{font-size:1.1vh;margin-top:.4vh}
 }
+.daily-period{display:flex;justify-content:space-between;gap:12px;margin:9px 0;font-size:14px}

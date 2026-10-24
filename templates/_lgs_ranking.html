@@ -1,5 +1,8 @@
 <link rel="stylesheet" href="{{ url_for('static',filename='lgs_hub.css') }}?v=1">
 {% if lgs_ranking %}{% set r = lgs_ranking %}
+{% if r.parent %}
+{% set own = r.rows|first %}{% if own and own.test %}<p class="app-notice" id="lgs-siralama">Kendi sıra bilginiz: {{ own.sira }}.</p>{% endif %}
+{% else %}
 <link rel="stylesheet" href="{{ url_for('static',filename='ranking_mobile.css') }}?v=1">
 <details id="lgs-siralama" class="mt-4 rounded-2xl border border-slate-200 bg-white p-4"{% if request.args.get('ekran') == 'analiz' or request.args.get('sr_olcut') or request.args.get('sr_yon') %} open{% endif %}>
   <summary class="cursor-pointer text-lg font-black" style="padding:4px 0">Sıralama</summary>
@@ -41,4 +44,5 @@
   <p class="mt-2 text-xs text-slate-500">Çözülen soru = doğru + yanlış. Başarı = doğru / (doğru + yanlış + boş). Net, her kaydın kendi götürme kuralıyla hesaplanır. Eşit değerler aynı sırayı paylaşır. Aktif gün ve çalışma serisi test teslim tarihlerinden hesaplanır.</p>
   </div>
 </details>
+{% endif %}
 {% endif %}

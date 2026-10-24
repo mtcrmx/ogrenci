@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');
+const {bind}=require('../static/home-test-lock.js');
+let now=0, disabled=[{disabled:false},{disabled:false}],messages=[],listeners={},formListeners={};
+const form={addEventListener:(k,f)=>formListeners[k]=f,prepend:m=>messages.push(m)};
+const doc={querySelectorAll:s=>s==='[data-home-test]'?[form]:disabled,querySelector:()=>form,addEventListener:(k,f)=>listeners[k]=f,createElement:()=>({setAttribute(){}})};
+let tick;const check=bind(doc,2,()=>now,f=>{tick=f;});
+now=1999;assert.equal(check(),false);assert(disabled.every(x=>!x.disabled));
+now=2000;let prevented=false;formListeners.submit({preventDefault(){prevented=true}});
+assert(prevented);assert(disabled.every(x=>x.disabled));assert.equal(messages.length,1);
+tick();listeners.visibilitychange();assert.equal(messages.length,1);
+console.log('deadline, submit, visibility and repeated lock checks passed');

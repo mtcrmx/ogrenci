@@ -66,7 +66,7 @@ import {BroadcastPlayback} from './school-broadcast-playback.mjs?v=20261001-dura
     txt('lesson-state',st.ad);txt('lesson-hours',st.hours||'');txt('countdown',st.hedef!==null?`${String(Math.floor(st.kalan/60)).padStart(2,'0')}:${String(st.kalan%60).padStart(2,'0')}`:'—');txt('countdown-label',st.etiket||st.aciklama||'Yarın yeni bir gün.');$('lesson-progress').style.width=`${Math.round((st.oran||0)*100)}%`;
     const following=data.saatler.find(p=>p.no===(st.inLesson?st.ders+1:st.ders));txt('next-lesson',following&&!st.kapali?`Sıradaki · ${following.no}. ders ${following.baslangic}`:st.kapali?'İyi dinlenmeler.':st.inLesson?'Günün son dersi':'Günün dersleri tamamlandı.');
     const key=`${data.tarih}:${sameDay}:${st.ad}:${st.ders}:${st.inLesson}`;
-    if(key!==periodKey){periodKey=key;renderNetLeaders();renderTeacherTable(st,sameDay);}
+    if(key!==periodKey){periodKey=key;renderDailyPeriods();renderTeacherTable(st,sameDay);}
     for(let i=0;i<3;i++)txt(`duty-${i}`,!sameDay?'Güncelleniyor':data.kapali?'Bugün nöbet yok':data.nobet[i]||'Çizelge bekleniyor');
     const lgs=data.lgs;if(lgs.durum==='sayiyor'){const days=Math.max(0,Math.ceil((Date.parse(lgs.hedef)-now())/86400000));txt('lgs-days',`LGS hedefine ${days} gün`);txt('lgs-caption',`${lgs.tarih}${lgs.kesin?'':' · Planlama hedefi'}`);}else{txt('lgs-days',lgs.durum==='bugun'?'LGS bugün · Başarılar!':'Her gün bir adım ileri');txt('lgs-caption','Birlikte başaracağız.');}
     if(playback.due()){
@@ -75,14 +75,12 @@ import {BroadcastPlayback} from './school-broadcast-playback.mjs?v=20261001-dura
       else{index++;render();}
     }
   }
-  function renderNetLeaders(){
-    const leaders=data.net_liderleri||{ogrenciler:[]}, box=$('net-leaders');box.replaceChildren();
-    txt('net-exam','Evde soru testleri · Toplam net');
-    if(!leaders.ogrenciler.length){box.append(node('p','net-empty','Henüz ev testi sonucu yok.'));return;}
-    for(const person of leaders.ogrenciler){
-      const row=node('div','net-leader'), detail=node('div','net-person');
-      detail.append(node('strong','',person.ad),node('small','',`${person.sinif} · ${person.test_sayisi} test`));
-      row.append(node('span','net-rank',String(person.sira)),detail,node('b','net-score',`${Number(person.net).toLocaleString('tr-TR',{maximumFractionDigits:2})} net`));box.append(row);
+  function renderDailyPeriods(){
+    const box=$('daily-periods');box.replaceChildren();
+    if(data.kapali){box.append(node('p','','Bugün ders yok.'));return;}
+    for(const period of data.saatler){
+      const row=node('p','daily-period');
+      row.append(node('strong','',`${period.no}. ders`),node('span','',`${period.baslangic} – ${period.bitis}`));box.append(row);
     }
   }
   function renderTeacherTable(st,sameDay){

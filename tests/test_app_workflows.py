@@ -402,8 +402,8 @@ class Workflows(unittest.TestCase):
     def test_parent_menu_has_reading_entry(self):
         html=self.parent.get('/veli').get_data(as_text=True)
         self.assertNotIn('data-parent-nav="hafta"', html)
-        self.assertIn('Sorular ve optik', html)
-        self.assertIn('bolum=sonuc', html)
+        self.assertIn('Evde sorular', html)
+        self.assertNotIn('Son sonuç</span>', html)
         self.assertIn('<span>Denemeler</span>', html)
         self.assertIn('/veli/analizler', html)
         self.assertNotIn('Ders ve deneme sonuçları', html)

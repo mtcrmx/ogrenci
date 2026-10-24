@@ -51,11 +51,11 @@
     {% if veli and optik_secili.window.home %}
     <p class="app-notice" role="status">{{ optik_secili.window.message }}</p>
     {% if optik_secili.window.released %}<details class="saved-key"><summary>Cevap anahtarı</summary><ol>{% for harf in optik_secili.cevaplar %}<li><b>{{ loop.index }}</b> {{ harf }}</li>{% endfor %}</ol></details>{% endif %}
-    {% if optik_secili.window.open %}<script>
-    (function(){const expires=performance.now()+{{ optik_secili.window.remaining|tojson }}*1000;function closeTest(){if(performance.now()>=expires){document.querySelectorAll('[data-home-test],iframe[title$=" soruları"]').forEach(el=>el.remove());location.reload();}}setInterval(closeTest,1000);document.addEventListener('visibilitychange',closeTest);})();
-    </script>{% endif %}
+    {% if optik_secili.window.open %}
+    <script src="{{ url_for('static', filename='home-test-lock.js') }}" defer data-remaining="{{ optik_secili.window.remaining }}"></script>
     {% endif %}
-    {% if not veli or optik_secili.window.open %}
+    {% endif %}
+    {% if not veli or optik_secili.window.open or optik_secili.window.released %}
     <iframe class="es-frame" src="{{ url_for('lgs_soru_goruntule', sinav_id=optik_secili.id) }}" title="{{ optik_secili.ad }} soruları"></iframe>
     {% endif %}
     {% if optik_secili.sonuc %}

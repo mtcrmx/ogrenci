@@ -63,7 +63,8 @@
       <div class="es-step" data-wizard-step="2" {% if acik_adim != 2 %}hidden{% endif %}>
         <p class="es-step-title"><span>2</span> Soru PDF’i</p>
         <label class="es-field es-file">Soru dosyası{% if gecici_pdf %} <small>(Seçilen PDF korundu)</small>{% endif %}
-          <input type="file" name="pdf" accept="application/pdf" {% if not gecici_pdf %}required{% endif %}>
+          <input type="file" name="pdf" accept=".pdf,.docx" {% if not gecici_pdf %}required{% endif %}>
+          <small>PDF veya Word (.docx). Word belgesi mevcut dönüştürücüyle PDF olarak hazırlanır.</small>
         </label>
         <p class="es-sub">Yalnızca soruların PDF’i. Cevap anahtarı bir sonraki adımda.</p>
       </div>
