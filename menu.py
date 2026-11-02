@@ -123,6 +123,7 @@ def veli_menusu(seviye: int = 8) -> list[dict]:
             {"id": "lgs_sonuc", "label": "Denemeler", "icon": "◈", "href": _guvenli_url("veli_lgs", bolum="sonuc"), "endpoint": "veli_lgs"},
             {"id": "gelisim_sonuclar", "label": "Analizler", "icon": "▥", "href": _guvenli_url("veli_analizler"), "endpoint": "veli_analizler"},
         ])
+        items.append(_veli_sifre_ogesi())
         return items
     if "odev" in moduller or "kitap" in moduller:
         items.append({"id": "odev_kitap", "label": "Ödev ve kitap", "icon": "▤", "href": _guvenli_url("veli_panel") + "#hafta", "endpoint": "veli_panel", "parent_nav": "hafta"})
@@ -137,7 +138,18 @@ def veli_menusu(seviye: int = 8) -> list[dict]:
     items.append({"id": "mesajlar", "label": "Mesajlar", "icon": "✉", "href": _guvenli_url("veli_panel") + "#mesajlar", "endpoint": "veli_panel", "parent_nav": "mesajlar"})
     items.append({"id": "rehberlik", "label": "Rehberlik", "icon": "❋", "href": _guvenli_url("veli_rehberlik"), "endpoint": "veli_rehberlik"})
     items.append({"id": "raporlar", "label": "Raporlar", "icon": "◒", "href": _guvenli_url("veli_panel") + "#raporlar", "endpoint": "veli_panel", "parent_nav": "raporlar"})
+    items.append(_veli_sifre_ogesi())
     return items
+
+
+def _veli_sifre_ogesi() -> dict:
+    return {
+        "id": "sifre",
+        "label": "Şifre değiştir",
+        "icon": "⚿",
+        "href": _guvenli_url("veli_sifre_degistir"),
+        "endpoint": "veli_sifre_degistir",
+    }
 
 
 def rehber_menusu(seviye: int = 8) -> list[dict]:

@@ -76,3 +76,38 @@ class ParentCredentials(unittest.TestCase):
         con=auth.connect()
         con.execute('UPDATE veli_credentials SET ticket_until=0 WHERE ogrenci_id=?',(oid,));con.commit();con.close()
         self.assertEqual(self.client.get('/veli/sifre-belirle').location,'/veli/giris')
+
+    def enroll(self, password='Velinin kişisel şifresi'):
+        self.login(w.VELI_SIFRE)
+        self.client.get('/veli/sifre-belirle')
+        with self.client.session_transaction() as s:
+            csrf = s['veli_setup_csrf']
+        self.client.post('/veli/sifre-belirle', data={'csrf': csrf, 'password': password, 'confirm': password})
+        return password
+
+    def test_parent_can_change_password_and_other_sessions_end(self):
+        old = self.enroll()
+        page = self.client.get('/veli/sifre')
+        self.assertEqual(page.status_code, 200)
+        html = page.get_data(as_text=True)
+        self.assertIn('Şifre değiştir', html)
+        self.assertIn('href="/veli/sifre"', html)
+        with self.client.session_transaction() as s:
+            csrf = s['veli_sifre_csrf']
+        self.assertEqual(self.client.post('/veli/sifre', data={'password': 'x'}).status_code, 400)
+        new = 'Yeni veli şifresi 2026'
+        self.assertIn('Mevcut şifre hatalı', self.client.post('/veli/sifre', data={'csrf': csrf, 'current': 'yanlis', 'password': new, 'confirm': new}).get_data(as_text=True))
+        self.assertIn('12–128', self.client.post('/veli/sifre', data={'csrf': csrf, 'current': old, 'password': 'kisa', 'confirm': 'kisa'}).get_data(as_text=True))
+        self.assertIn('aynı değil', self.client.post('/veli/sifre', data={'csrf': csrf, 'current': old, 'password': new, 'confirm': 'farkli uzun sifre'}).get_data(as_text=True))
+        self.assertIn('farklı olmalı', self.client.post('/veli/sifre', data={'csrf': csrf, 'current': old, 'password': old, 'confirm': old}).get_data(as_text=True))
+        other = w.app.test_client()
+        self.assertEqual(other.post('/veli/giris', data={'ogr_no': self.student['ogr_no'], 'sifre': old}).location, '/veli')
+        self.assertEqual(self.client.post('/veli/sifre', data={'csrf': csrf, 'current': old, 'password': new, 'confirm': new}).location, '/veli')
+        self.assertIn('Şifreniz güncellendi', self.client.get('/veli').get_data(as_text=True))
+        self.assertEqual(auth.authenticate(self.student['id'], old), (None, None))
+        self.assertEqual(auth.authenticate(self.student['id'], new)[0], 'login')
+        self.assertEqual(other.get('/veli').location, '/veli/giris')
+        self.assertEqual(self.client.get('/veli').status_code, 200)
+
+    def test_change_password_requires_parent_session(self):
+        self.assertEqual(self.client.get('/veli/sifre').location, '/veli/giris')

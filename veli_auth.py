@@ -4,7 +4,7 @@ import os
 import secrets
 import time
 
-from flask import abort, redirect, render_template, request, session, url_for
+from flask import abort, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 import database as db
 
@@ -39,6 +39,55 @@ def issue_code(oid):
                 ticket_hash=NULL,ticket_until=NULL,failures=0,blocked_until=0''',
                 (oid, generate_password_hash(code), time.time()+30*86400))
         return code
+    finally:
+        con.close()
+
+
+def _sifre_kurallari(password, confirm, *, code_hash=None):
+    if len(password) < 12 or len(password) > 128:
+        return 'Şifreniz 12–128 karakter olmalı. Hatırlayabileceğiniz birkaç kelime kullanabilirsiniz.'
+    if password != confirm:
+        return 'Yazdığınız iki şifre aynı değil.'
+    if code_hash and check_password_hash(code_hash, password):
+        return 'Geçici giriş kodundan farklı bir şifre belirleyin.'
+    if password == os.environ.get('VELI_SIFRE', 'veli'):
+        return 'Ortak veli şifresinden farklı bir şifre seçin.'
+    return None
+
+
+def change_password(oid, current, new, confirm):
+    """Kişisel veli şifresini günceller. Başarıda (auth_version, None), aksi halde (None, hata)."""
+    con = connect()
+    try:
+        with con:
+            con.execute('BEGIN IMMEDIATE')
+            row = con.execute('SELECT * FROM veli_credentials WHERE ogrenci_id=?', (oid,)).fetchone()
+            now = time.time()
+            if not row or not row['password_hash']:
+                return None, 'Önce kişisel şifrenizi belirlemeniz gerekir.'
+            if row['blocked_until'] > now:
+                return None, 'Çok sayıda hatalı deneme yaptınız. 15 dakika sonra tekrar deneyin.'
+            if not current or not check_password_hash(row['password_hash'], current):
+                failures = (row['failures'] if row['blocked_until'] == 0 else 0) + 1
+                con.execute(
+                    'UPDATE veli_credentials SET failures=?,blocked_until=? WHERE ogrenci_id=?',
+                    (failures, now + 900 if failures >= 5 else 0, oid),
+                )
+                return None, 'Mevcut şifre hatalı. Çok sayıda deneme yaptıysanız 15 dakika sonra tekrar deneyin.'
+            if check_password_hash(row['password_hash'], new):
+                return None, 'Yeni şifreniz mevcut şifrenizden farklı olmalı.'
+            error = _sifre_kurallari(new, confirm, code_hash=row['code_hash'])
+            if error:
+                return None, error
+            version = secrets.token_urlsafe(24)
+            con.execute(
+                '''UPDATE veli_credentials SET password_hash=?,failures=0,blocked_until=0,auth_version=?
+                WHERE ogrenci_id=?''',
+                (generate_password_hash(new), version, oid),
+            )
+            if con.execute("SELECT 1 FROM sqlite_master WHERE name='veli_cihaz'").fetchone():
+                con.execute('DELETE FROM veli_cihaz WHERE ogrenci_id=?', (oid,))
+        return version, None
     finally:
         con.close()
 
@@ -109,13 +158,8 @@ def register(app):
                 if not secrets.compare_digest(request.form.get('csrf',''), session['veli_setup_csrf']):
                     abort(400)
                 password = request.form.get('password','')
-                if len(password) < 12 or len(password) > 128:
-                    error = 'Şifreniz 12–128 karakter olmalı. Hatırlayabileceğiniz birkaç kelime kullanabilirsiniz.'
-                elif password != request.form.get('confirm',''):
-                    error = 'Yazdığınız iki şifre aynı değil.'
-                elif row['code_hash'] and check_password_hash(row['code_hash'], password):
-                    error = 'Geçici giriş kodundan farklı bir şifre belirleyin.'
-                else:
+                error = _sifre_kurallari(password, request.form.get('confirm',''), code_hash=row['code_hash'])
+                if not error:
                     hashed = generate_password_hash(password)
                     version = secrets.token_urlsafe(24)
                     with con:
@@ -137,8 +181,31 @@ def register(app):
         finally:
             con.close()
 
+    @app.route('/veli/sifre', methods=['GET', 'POST'])
+    def veli_sifre_degistir():
+        oid = session.get('veli_ogrenci_id')
+        if not enabled() or not oid or session.get('ogretmen_id'):
+            return redirect(url_for('veli_giris' if not oid else 'dashboard'))
+        session.setdefault('veli_sifre_csrf', secrets.token_urlsafe(32))
+        error = None
+        if request.method == 'POST':
+            if not secrets.compare_digest(request.form.get('csrf', ''), session['veli_sifre_csrf']):
+                abort(400)
+            version, error = change_password(
+                oid,
+                request.form.get('current', ''),
+                request.form.get('password', ''),
+                request.form.get('confirm', ''),
+            )
+            if version:
+                session['veli_auth_version'] = version
+                session['veli_sifre_csrf'] = secrets.token_urlsafe(32)
+                flash('Şifreniz güncellendi. Bundan sonra yeni şifrenizle giriş yapın.', 'success')
+                return redirect(url_for('veli_panel'))
+        return render_template('veli_sifre_degistir.html', hata=error)
+
     @app.after_request
     def credential_cache(response):
-        if request.endpoint in {'veli_giris', 'veli_sifre_belirle'}:
+        if request.endpoint in {'veli_giris', 'veli_sifre_belirle', 'veli_sifre_degistir'}:
             response.headers['Cache-Control'] = 'private, no-store'
         return response

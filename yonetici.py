@@ -66,7 +66,7 @@ def register(app):
         if active():
             if request.method != 'GET' and request.endpoint not in {'yonetici_select', 'yonetici_login'}:
                 abort(403, 'Yönetici önizlemesinde öğrenci verileri değiştirilemez.')
-            if request.endpoint in {'veli_cihaz_anahtar', 'veli_sifre_belirle'}:
+            if request.endpoint in {'veli_cihaz_anahtar', 'veli_sifre_belirle', 'veli_sifre_degistir'}:
                 abort(403)
 
     @app.route('/yonetici/giris', methods=['GET', 'POST'])

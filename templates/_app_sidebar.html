@@ -82,7 +82,7 @@
       <span class="yt-avatar yt-avatar--{{ (me_ad|length) % 6 }}" aria-hidden="true">{{ (me_parca[0][:1] ~ (me_parca[-1][:1] if me_parca|length > 1 else '')) if me_parca else '?' }}</span>
       <div>
         <b>{{ me_ad }}</b>
-        <small>{{ 'Veli' if ui_role == 'veli' else 'Rehber öğretmen' if rehber_only else 'Yönetici' if yetkili('yonetici') else 'Öğretmen' }} · <a href="{{ url_for('test_onay.help_page') }}">Yardım</a> · <button type="button" class="pm-renk-ac" data-pm-renk>Renk</button> · <a href="{{ url_for('veli_cikis' if ui_role == 'veli' else 'logout') }}">Çıkış</a></small>
+        <small>{{ 'Veli' if ui_role == 'veli' else 'Rehber öğretmen' if rehber_only else 'Yönetici' if yetkili('yonetici') else 'Öğretmen' }}{% if ui_role == 'veli' %} · <a href="{{ url_for('veli_sifre_degistir') }}">Şifre</a>{% endif %} · <a href="{{ url_for('test_onay.help_page') }}">Yardım</a> · <button type="button" class="pm-renk-ac" data-pm-renk>Renk</button> · <a href="{{ url_for('veli_cikis' if ui_role == 'veli' else 'logout') }}">Çıkış</a></small>
       </div>
     </div>
     {% if ui_role == 'ogretmen' and not rehber_only %}

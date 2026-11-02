@@ -54,6 +54,8 @@ def test_menu_uretici_ve_tek_siralama_kurali():
     assert not any(x["id"] == "odev_kitap" for x in v8)
     assert any(x["id"] == "odev_kitap" for x in v6)
     assert {"sorular_optik", "deneme_sonuc"} <= {x["id"] for x in v6}
+    assert any(x["id"] == "sifre" for x in v8)
+    assert any(x["id"] == "sifre" for x in v6)
 
     # Kazanımlar 8. sınıf menüsünden kaldırıldı; 5-7 öğretmeninde deneme ve evde soru var
     assert not any(x["id"] == "kazanim" for x in m8 + m_yon)
