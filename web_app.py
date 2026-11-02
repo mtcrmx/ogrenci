@@ -2496,6 +2496,92 @@ def _veli_oturumu_kapat():
     session.pop("veli_ogrenci_id", None)
 
 
+def _ogrenci_sifre_csrf() -> str:
+    if "ogrenci_sifre_csrf" not in session:
+        session["ogrenci_sifre_csrf"] = secrets.token_urlsafe(32)
+    return session["ogrenci_sifre_csrf"]
+
+
+def _ogrenci_sifre_ara(q: str) -> list[dict]:
+    from student_results import normalize
+    query = normalize((q or "")[:100])
+    if not query:
+        return []
+    classes = aktif_sube_siniflari() or ogretmen_siniflari(session["ogretmen_id"])
+    results = []
+    for classroom in classes:
+        for student in sinif_ogrencileri(classroom["id"]):
+            name = normalize(student["ad_soyad"])
+            number = str(student["ogr_no"])
+            if query.isdecimal():
+                matched = number == query
+            else:
+                matched = all(part in name for part in query.split())
+            if matched:
+                results.append({
+                    "id": student["id"],
+                    "ad_soyad": student["ad_soyad"],
+                    "ogr_no": student["ogr_no"],
+                    "sinif_adi": classroom["sinif_adi"],
+                })
+    results.sort(key=lambda row: (str(row["ogr_no"]) != query, row["sinif_adi"], normalize(row["ad_soyad"])))
+    return results[:25]
+
+
+def _ogrenci_sifre_sayfasi(**extra):
+    resp = make_response(render_template(
+        "ogrenci_sifre_yenile.html",
+        csrf=_ogrenci_sifre_csrf(),
+        **extra,
+    ))
+    resp.headers["Cache-Control"] = "private, no-store"
+    return resp
+
+
+@app.route("/ogretmen/ogrenci-sifre", methods=["GET", "POST"])
+@giris_zorunlu
+def ogretmen_ogrenci_sifre():
+    """Öğretmen, şifresini unutan öğrenciye tek kullanımlık giriş kodu verir."""
+    sorgu = (request.values.get("arama") or request.values.get("q") or "").strip()
+    secili_id = request.values.get("ogrenci", type=int)
+    if request.method == "POST":
+        if not secrets.compare_digest(request.form.get("csrf", ""), session.get("ogrenci_sifre_csrf") or ""):
+            abort(400)
+        oid = request.form.get("ogrenci_id", type=int)
+        ogrenci = _ogrenci_bul(oid) if oid else None
+        if not ogrenci or not _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], oid):
+            abort(404)
+        import veli_auth
+        from database import denetim_kaydet
+        kod = veli_auth.issue_code(oid)
+        denetim_kaydet(
+            "veli_sifre_kodu",
+            "Tek kullanımlık giriş kodu verildi. Kod günlüğe yazılmadı.",
+            ogretmen_id=session["ogretmen_id"],
+            ogrenci_id=oid,
+        )
+        session["ogrenci_sifre_csrf"] = secrets.token_urlsafe(32)
+        return _ogrenci_sifre_sayfasi(
+            sorgu=sorgu,
+            sonuclar=[],
+            kod=kod,
+            secilen=ogrenci,
+        )
+    sonuclar = []
+    if secili_id:
+        ogrenci = _ogrenci_bul(secili_id)
+        if ogrenci and _ogretmen_ogrencisine_erisebilir(session["ogretmen_id"], secili_id):
+            sonuclar = [{
+                "id": ogrenci["id"],
+                "ad_soyad": ogrenci["ad_soyad"],
+                "ogr_no": ogrenci["ogr_no"],
+                "sinif_adi": ogrenci["sinif_adi"],
+            }]
+    elif sorgu:
+        sonuclar = _ogrenci_sifre_ara(sorgu)
+    return _ogrenci_sifre_sayfasi(sorgu=sorgu, sonuclar=sonuclar, kod=None, secilen=None)
+
+
 @app.route("/veli/giris", methods=["GET", "POST"])
 def veli_giris():
     hata = None

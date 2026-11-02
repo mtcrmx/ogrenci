@@ -111,3 +111,65 @@ class ParentCredentials(unittest.TestCase):
 
     def test_change_password_requires_parent_session(self):
         self.assertEqual(self.client.get('/veli/sifre').location, '/veli/giris')
+
+    def _teacher(self, yetki='tam'):
+        con = auth.connect()
+        teacher = dict(con.execute('SELECT id, ad_soyad FROM ogretmenler ORDER BY id LIMIT 1').fetchone())
+        con.close()
+        client = w.app.test_client()
+        with client.session_transaction() as s:
+            s.update(ogretmen_id=teacher['id'], ogretmen_adi=teacher['ad_soyad'], ogretmen_yetki=yetki)
+        return client
+
+    def test_teacher_issues_code_when_password_was_forgotten(self):
+        from veli_cihaz import veli_cihaz_kaydet, veli_cihaz_ogrenci
+        import re
+        from database import denetim_listesi
+        old = self.enroll()
+        oid = self.student['id']
+        veli_cihaz_kaydet(oid, 'unutulan-telefon')
+        self.assertEqual(veli_cihaz_ogrenci('unutulan-telefon'), oid)
+        self.assertEqual(self.client.get('/veli').status_code, 200)
+        for _ in range(5):
+            auth.authenticate(oid, 'wrong')
+        self.assertEqual(auth.authenticate(oid, old), (None, None))
+
+        teacher = self._teacher()
+        page = teacher.get('/ogretmen/ogrenci-sifre', query_string={'q': self.student['ogr_no']})
+        html = page.get_data(as_text=True)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(self.student['ad_soyad'], html)
+        self.assertIn('Giriş kodu ver', html)
+        with teacher.session_transaction() as s:
+            csrf = s['ogrenci_sifre_csrf']
+        self.assertEqual(teacher.post('/ogretmen/ogrenci-sifre', data={'ogrenci_id': oid}).status_code, 400)
+        self.assertEqual(teacher.post('/ogretmen/ogrenci-sifre', data={'csrf': csrf, 'ogrenci_id': 999999}).status_code, 404)
+        issued = teacher.post('/ogretmen/ogrenci-sifre', data={'csrf': csrf, 'ogrenci_id': oid})
+        body = issued.get_data(as_text=True)
+        self.assertEqual(issued.status_code, 200)
+        match = re.search(r'id="giris-kodu"[^>]*>([^<]+)', body)
+        self.assertIsNotNone(match)
+        code = match.group(1).strip()
+        self.assertNotIn(code, denetim_listesi(20)[0]['detay'])
+        self.assertEqual(denetim_listesi(20)[0]['islem'], 'veli_sifre_kodu')
+        self.assertIsNone(veli_cihaz_ogrenci('unutulan-telefon'))
+        self.assertEqual(self.client.get('/veli').location, '/veli/giris')
+        self.assertEqual(auth.authenticate(oid, code)[0], 'setup')
+        fresh = w.app.test_client()
+        self.assertIn('/veli/sifre-belirle', fresh.post('/veli/giris', data={'ogr_no': self.student['ogr_no'], 'sifre': code}).location)
+        fresh.get('/veli/sifre-belirle')
+        with fresh.session_transaction() as s:
+            setup_csrf = s['veli_setup_csrf']
+        new = 'Hatirlayacagim yeni sifre'
+        self.assertEqual(fresh.post('/veli/sifre-belirle', data={'csrf': setup_csrf, 'password': new, 'confirm': new}).location, '/veli')
+        self.assertEqual(auth.authenticate(oid, old), (None, None))
+        self.assertEqual(auth.authenticate(oid, code), (None, None))
+        self.assertEqual(auth.authenticate(oid, new)[0], 'login')
+        self.assertEqual(teacher.post('/ogretmen/ogrenci-sifre', data={'csrf': csrf, 'ogrenci_id': oid}).status_code, 400)
+
+    def test_password_reset_page_is_teacher_only(self):
+        self.enroll()
+        self.assertEqual(self.client.get('/ogretmen/ogrenci-sifre').location, '/login')
+        self.assertEqual(w.app.test_client().get('/ogretmen/ogrenci-sifre').location, '/login')
+        rapor = self._teacher('rapor')
+        self.assertEqual(rapor.get('/ogretmen/ogrenci-sifre').location, '/analiz')

@@ -263,7 +263,7 @@ def register_rehberlik(app):
             ep = request.endpoint or ''
             if ep == 'yonetici_login':
                 return None
-            if ep.startswith('rehberlik_') or ep in {'teacher_records', 'teacher_record_edit', 'teacher_record_restore', 'static', 'login', 'logout', 'manifest', 'manifest_veli', 'service_worker', 'favicon', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_yonetim'}:
+            if ep.startswith('rehberlik_') or ep in {'teacher_records', 'teacher_record_edit', 'teacher_record_restore', 'ogretmen_ogrenci_sifre', 'static', 'login', 'logout', 'manifest', 'manifest_veli', 'service_worker', 'favicon', 'okul_ekran', 'okul_ekran_veri', 'okul_ekran_medya', 'yayin_yonetim'}:
                 return None
             if request.method == 'GET' and ep in READ_REPORTS:
                 return None

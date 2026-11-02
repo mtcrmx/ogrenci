@@ -26,18 +26,28 @@ def connect():
 
 
 def issue_code(oid):
-    """Return a one-time distribution code; never store its plaintext."""
+    """Return a one-time distribution code; never store its plaintext.
+
+    A new code replaces any unused code, ends open parent sessions, and
+    clears the lockout so a forgotten password can be replaced at the school.
+    The current password keeps working until the new one is saved.
+    """
     code = secrets.token_urlsafe(12)
+    version = secrets.token_urlsafe(24)
     con = connect()
     try:
         if not con.execute('SELECT id FROM ogrenciler WHERE id=?', (oid,)).fetchone():
             raise ValueError('Öğrenci bulunamadı.')
         with con:
-            con.execute('''INSERT INTO veli_credentials (ogrenci_id,code_hash,code_until)
-                VALUES (?,?,?) ON CONFLICT(ogrenci_id) DO UPDATE SET
+            con.execute('''INSERT INTO veli_credentials
+                (ogrenci_id,code_hash,code_until,auth_version)
+                VALUES (?,?,?,?) ON CONFLICT(ogrenci_id) DO UPDATE SET
                 code_hash=excluded.code_hash,code_until=excluded.code_until,
-                ticket_hash=NULL,ticket_until=NULL,failures=0,blocked_until=0''',
-                (oid, generate_password_hash(code), time.time()+30*86400))
+                ticket_hash=NULL,ticket_until=NULL,failures=0,blocked_until=0,
+                auth_version=excluded.auth_version''',
+                (oid, generate_password_hash(code), time.time()+30*86400, version))
+            if con.execute("SELECT 1 FROM sqlite_master WHERE name='veli_cihaz'").fetchone():
+                con.execute('DELETE FROM veli_cihaz WHERE ogrenci_id=?', (oid,))
         return code
     finally:
         con.close()

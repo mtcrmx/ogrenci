@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Öğrenci şifre yenile{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-xl px-4 py-5 pb-16">
+  <header class="mb-4">
+    <h1 class="text-2xl font-black">Öğrenci şifre yenile</h1>
+    <p class="mt-2 text-sm text-slate-600">Şifresini unutan öğrenci yanınıza geldiğinde numarasını veya adını yazın. Sistem tek kullanımlık bir giriş kodu üretir. Öğrenci bu kodu veli girişine yazar ve kendi yeni şifresini belirler.</p>
+  </header>
+
+  {% if kod and secilen %}
+  <section class="app-card mb-4 grid gap-2 p-5" aria-live="polite">
+    <p class="text-sm font-bold text-emerald-800">Giriş kodu hazır. Bu kod yalnız bu ekranda görünür.</p>
+    <p class="text-sm text-slate-700">{{ secilen.ad_soyad }} · {{ secilen.sinif_adi }} · No {{ secilen.ogr_no }}</p>
+    <p id="giris-kodu" class="rounded-xl border border-emerald-300 bg-white px-3 py-3 font-mono text-lg font-black tracking-wide">{{ kod }}</p>
+    <p class="text-sm text-slate-600">Öğrenci veli girişinde öğrenci numarasını ve bu kodu yazsın. Açılan sayfada en az 12 karakterlik yeni şifresini belirlesin. Kod bir kez kullanılınca geçersiz olur. Açık veli oturumları kapanır. Eski şifre, yeni şifre kaydedilene kadar çalışmaya devam eder.</p>
+  </section>
+  {% endif %}
+
+  <form id="ogrenci-sifre-form" method="get" class="app-card mb-4 grid gap-3 p-5">
+    <label class="grid gap-1 text-sm font-bold">Öğrenci numarası veya adı
+      <input id="ogrenci-sifre-ara" class="rounded-xl border border-slate-300 p-3 font-normal" type="search" name="arama" value="{{ sorgu }}" placeholder="Örn. 365 veya ad soyad" autocomplete="off">
+    </label>
+    <button type="submit" class="app-primary">Öğrenciyi bul</button>
+  </form>
+
+  {% if sorgu and not sonuclar and not kod %}
+  <p class="app-notice app-notice--error" role="alert">Bu numarayla veya adla öğrenci bulunamadı.</p>
+  {% endif %}
+
+  {% if sonuclar %}
+  <section class="grid gap-3">
+    {% for ogr in sonuclar %}
+    <form method="post" class="app-card grid gap-3 p-5">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="ogrenci_id" value="{{ ogr.id }}">
+      <p class="font-black">{{ ogr.ad_soyad }}</p>
+      <p class="text-sm text-slate-600">{{ ogr.sinif_adi }} · No {{ ogr.ogr_no }}</p>
+      <button type="submit" class="app-primary">Giriş kodu ver</button>
+    </form>
+    {% endfor %}
+  </section>
+  {% endif %}
+</main>
+{% endblock %}

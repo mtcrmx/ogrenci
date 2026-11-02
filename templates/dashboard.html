@@ -141,6 +141,7 @@
           <button type="button" data-tur="duyuru" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-900">Duyuru</button>
         </div>
         <a id="bilgi-rapor" class="inline-flex text-xs font-black text-sky-700" href="#" hidden>Bireysel rapor</a>
+        <a id="bilgi-sifre" class="inline-flex text-xs font-black text-sky-700" href="{{ url_for('ogretmen_ogrenci_sifre') }}">Şifresini unuttuysa yenile</a>
         <p id="bilgi-sonuc" class="text-xs font-bold text-emerald-700" role="status"></p>
       </form>
     </div>
@@ -233,6 +234,8 @@ async function ogrenciBilgiAc(id, refresh = false) {
   document.getElementById('bilgi-notlar').innerHTML = '';
   if (!refresh) document.getElementById('bilgi-sonuc').textContent = '';
   document.getElementById('bilgi-rapor').hidden = true;
+  const sifreLink = document.getElementById('bilgi-sifre');
+  if (sifreLink) sifreLink.search = '?ogrenci=' + Number(id);
   if (!refresh) {
     document.getElementById('bilgi-metin').value = '';
     ['bilgi-alt','bilgi-okuma','bilgi-getirme','bilgi-odev','bilgi-odev-metin'].forEach(key=>document.getElementById(key).textContent='—');

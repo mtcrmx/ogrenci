@@ -52,6 +52,7 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
             {"id": "birlesik_analiz", "label": "Birleşik analiz", "icon": "◈", "href": _guvenli_url("yaprak_analiz.combined"), "endpoint": "yaprak_analiz.combined", "grup": "Analizler"},
         ])
         items.extend(_yayin_ogeleri())
+        items.append(_ogrenci_sifre_ogesi())
         if rol == "yonetici":
             items.extend(_yonetici_ogeleri())
         return items
@@ -88,10 +89,22 @@ def ogretmen_menusu(seviye: int = 8, rol: str = "ogretmen", sinif_id: int | None
     items.append({"id": "veli_iletisim", "label": "Veli görüşmeleri", "icon": "💬", "href": _guvenli_url("ogretmen_randevular"), "endpoint": "ogretmen_randevular", "grup": "Diğer"})
     items.extend(_yayin_ogeleri())
 
+    items.append(_ogrenci_sifre_ogesi())
     if rol == "yonetici":
         items.extend(_yonetici_ogeleri())
 
     return items
+
+
+def _ogrenci_sifre_ogesi() -> dict:
+    return {
+        "id": "ogrenci_sifre",
+        "label": "Öğrenci şifre yenile",
+        "icon": "⚿",
+        "href": _guvenli_url("ogretmen_ogrenci_sifre"),
+        "endpoint": "ogretmen_ogrenci_sifre",
+        "grup": "Diğer",
+    }
 
 
 def _yayin_ogeleri() -> list[dict]:
@@ -167,6 +180,7 @@ def rehber_menusu(seviye: int = 8) -> list[dict]:
         {"id": "rehberlik_yeni", "label": "İçerik paylaş", "icon": "＋", "href": _guvenli_url("rehberlik_yeni"), "endpoint": "rehberlik_yeni", "grup": "Rehberlik"},
         {"id": "rehberlik_ozet", "label": "Hizmet özeti", "icon": "▥", "href": _guvenli_url("rehberlik_ozet"), "endpoint": "rehberlik_ozet", "grup": "Rehberlik"},
         {"id": "kayitlarim", "label": "Geçmiş kayıtlar", "icon": "✎", "href": _guvenli_url("teacher_records"), "endpoint": "teacher_records", "grup": "Kayıt yönetimi"},
+        _ogrenci_sifre_ogesi(),
     ]
 
 
