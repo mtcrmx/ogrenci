@@ -1,2 +1,2 @@
-# Son duzeltme: Flask rotalari <int:...> tam surum — Render bu dosyayi gormeli
-REVISION=2026-05-09-routes
+# Son duzeltme: ogretmen ogrenci sifre yenileme — Render bu dosyayi gormeli
+REVISION=2026-11-03-ogrenci-sifre
