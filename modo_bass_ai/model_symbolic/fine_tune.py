@@ -19,7 +19,6 @@ from typing import Callable, List, Optional, Sequence
 import numpy as np
 import pretty_midi
 import torch
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -28,7 +27,6 @@ if str(_ROOT) not in sys.path:
 
 from data_prep.build_dataset import encode_sample  # noqa: E402
 from model_symbolic.bass_groove_model import (  # noqa: E402
-    NOTE_OFFSET,
     PAD_ID,
     PITCH_MAX,
     PITCH_MIN,
@@ -36,7 +34,13 @@ from model_symbolic.bass_groove_model import (  # noqa: E402
     BassGrooveModel,
     load_checkpoint,
 )
-from model_symbolic.train import TensorGrooveDataset, collate, resolve_device  # noqa: E402
+from model_symbolic.train import (  # noqa: E402
+    DEFAULT_LOSS_WEIGHTS,
+    TensorGrooveDataset,
+    collate,
+    compute_multitask_loss,
+    resolve_device,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("fine_tune")
@@ -199,27 +203,23 @@ def run_fine_tune(
             inp = tokens.clone()
             inp[:, 1:] = tokens[:, :-1]
             inp[:, 0] = REST_ID
+            style = batch["style"].to(device)
+            meter = batch["meter"].to(device)
+            vels = batch["vels"].to(device)
+            micro = batch.get("micro_ms")
+            micro = torch.zeros_like(vels) if micro is None else micro.to(device)
             pad_mask = tokens == PAD_ID
-            logits, vel_pred = model(
+            out = model(
                 inp,
-                batch["style"].to(device),
+                style,
                 batch["drum"].to(device),
                 batch["chord"].to(device),
-                batch["meter"].to(device),
+                meter,
                 src_key_padding_mask=pad_mask,
             )
-            _, _, V = logits.shape
-            loss_ce = F.cross_entropy(
-                logits.reshape(-1, V), tokens.reshape(-1), ignore_index=PAD_ID
+            loss, _ = compute_multitask_loss(
+                out, tokens, vels, micro, style, meter, weights=DEFAULT_LOSS_WEIGHTS
             )
-            note_mask = tokens >= NOTE_OFFSET
-            if note_mask.any():
-                loss_vel = F.mse_loss(
-                    vel_pred[note_mask], batch["vels"].to(device)[note_mask]
-                ) / (127.0**2)
-            else:
-                loss_vel = torch.tensor(0.0, device=device)
-            loss = loss_ce + 0.1 * loss_vel
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
