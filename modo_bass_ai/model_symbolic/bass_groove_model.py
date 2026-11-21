@@ -187,11 +187,45 @@ class BassGrooveModel(nn.Module):
     def save(self, path: str | Path) -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save({"state_dict": self.state_dict(), "vocab": VOCAB_SIZE}, path)
+        torch.save(
+            {
+                "state_dict": self.state_dict(),
+                "vocab": VOCAB_SIZE,
+                "d_model": self.d_model,
+            },
+            path,
+        )
 
     def load(self, path: str | Path, map_location: str = "cpu") -> None:
+        load_checkpoint(self, path, map_location=map_location)
+
+
+def load_checkpoint(
+    model: BassGrooveModel,
+    path: str | Path,
+    map_location: str = "cpu",
+) -> BassGrooveModel:
+    """Load a training/fine-tune checkpoint into `model` (in-place) and return it."""
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    try:
+        ckpt = torch.load(path, map_location=map_location, weights_only=False)
+    except TypeError:
         ckpt = torch.load(path, map_location=map_location)
-        self.load_state_dict(ckpt["state_dict"])
+    state = ckpt["state_dict"] if isinstance(ckpt, dict) and "state_dict" in ckpt else ckpt
+    model.load_state_dict(state)
+    model.eval()
+    return model
+
+
+def load_model_from_checkpoint(
+    path: str | Path,
+    map_location: str = "cpu",
+) -> BassGrooveModel:
+    """Construct a BassGrooveModel and load weights from disk."""
+    model = BassGrooveModel()
+    return load_checkpoint(model, path, map_location=map_location)
 
 
 # ----------------------------------------------------------- theory helpers

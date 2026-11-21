@@ -1,24 +1,27 @@
-"""Train BassGrooveModel on synthetic rule-generated sequences (bootstrapping).
+"""Train BassGrooveModel from `dataset/processed/train_data.pt` (GPU/CPU).
 
-Usage (from project root or via -m):
-  python -m model_symbolic.train --epochs 5 --out checkpoints/bass_groove.pt
+Falls back to synthetic bootstrap via data_prep.build_dataset if the tensor
+file is missing. Saves best weights to `checkpoints/best_bass_model.pt` and
+writes a sanity-check MIDI after training.
+
+Usage:
+  python -m model_symbolic.train --epochs 5
+  python -m model_symbolic.train --data dataset/processed/train_data.pt --device cuda
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
-import math
-import random
 import sys
+import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import Callable, List, Optional
 
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, random_split
 
-# Allow running as script from project root
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
@@ -26,130 +29,33 @@ if str(_ROOT) not in sys.path:
 from model_symbolic.bass_groove_model import (  # noqa: E402
     NOTE_OFFSET,
     PAD_ID,
-    PITCH_MIN,
     REST_ID,
-    STYLE_TO_ID,
     BassGrooveModel,
-    beat_duration_ms,
-    generate_bass_line_rules,
-    parse_chord,
-    parse_time_signature,
+    generate_bass_line,
+    load_checkpoint,
 )
+from modo_mapper.articulation_engine import ArticulationEngine, BassMelodyNote  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("train")
 
-SYNTH_PROGRESSIONS = [
-    "Am7 | D9 | Gmaj7 | Cmaj7",
-    "Cm7 | F7 | Bbmaj7 | Ebmaj7",
-    "Em7 | A7 | Dmaj7 | Gmaj7",
-    "Dm7 | G7 | Cmaj7 | Fmaj7",
-    "Am | F | C | G",
-    "Em | C | G | D",
-    "F#m7 | B7 | Emaj7 | Amaj7",
-    "Gm7 | C7 | Fmaj7 | Bbmaj7",
-]
-METERS = ["4/4", "3/4", "7/8", "9/8", "5/8", "6/8"]
-STYLES = list(STYLE_TO_ID.keys())
+BEST_CKPT = _ROOT / "checkpoints" / "best_bass_model.pt"
+DEFAULT_DATA = _ROOT / "dataset" / "processed" / "train_data.pt"
+CONFIG_PATH = _ROOT / "config" / "modo_bass_map.json"
+OUTPUT_DIR = _ROOT / "outputs"
 
 
-class SyntheticGrooveDataset(Dataset):
-    def __init__(self, n_samples: int = 256, max_steps: int = 128, seed: int = 0) -> None:
-        self.n_samples = n_samples
-        self.max_steps = max_steps
-        self.rng = random.Random(seed)
-        self.cache: List[dict] = [self._make_one(i) for i in range(n_samples)]
+class TensorGrooveDataset(Dataset):
+    """Wraps list of sample dicts from train_data.pt."""
 
-    def _make_one(self, idx: int) -> dict:
-        rng = random.Random(self.rng.randint(0, 10_000_000) + idx)
-        prog = rng.choice(SYNTH_PROGRESSIONS)
-        chords = [c.strip() for c in prog.split("|")]
-        bpm = rng.uniform(70, 140)
-        ts = rng.choice(METERS)
-        style = rng.choice(STYLES)
-        groove = rng.uniform(0.2, 0.9)
-        human = rng.uniform(4, 18)
-        num, den = parse_time_signature(ts)
-        beat_ms = beat_duration_ms(bpm, den)
-        bar_ms = beat_ms * num
-        total_ms = bar_ms * len(chords)
-
-        # Fake kick/snare on beats
-        kick = [b * beat_ms for b in range(0, int(total_ms / beat_ms), num)]
-        snare = []
-        if den == 4 and num >= 4:
-            for bar in range(len(chords)):
-                snare.append(bar * bar_ms + 2 * beat_ms)
-
-        notes = generate_bass_line_rules(
-            chords,
-            bpm,
-            ts,
-            style,
-            kick_ms=kick,
-            snare_ms=snare,
-            humanize_ms=human,
-            groove_amount=groove,
-            seed=rng.randint(0, 99999),
-        )
-
-        step = beat_ms / 2
-        n_steps = min(self.max_steps, max(8, int(math.ceil(total_ms / step))))
-        tokens = [REST_ID] * n_steps
-        vels = [0.0] * n_steps
-        for n in notes:
-            i = int(round(n.start_ms / step))
-            if 0 <= i < n_steps:
-                tokens[i] = int(n.pitch - PITCH_MIN + NOTE_OFFSET)
-                vels[i] = float(n.velocity)
-
-        drum = torch.zeros(n_steps, 2)
-        chord_f = torch.zeros(n_steps, 12)
-        meter = torch.zeros(n_steps, 4)
-        for i in range(n_steps):
-            t_ms = i * step
-            bar_i = min(len(chords) - 1, int(t_ms // bar_ms))
-            root, tones = parse_chord(chords[bar_i])
-            for tt in tones:
-                chord_f[i, (root + tt) % 12] = 1.0
-            beat_idx = int(round(t_ms / beat_ms))
-            if any(abs(t_ms - k) < step for k in kick):
-                drum[i, 0] = 1.0
-            if any(abs(t_ms - s) < step for s in snare):
-                drum[i, 1] = 1.0
-            meter[i] = torch.tensor(
-                [num / 16.0, den / 16.0, min(bpm, 240) / 240.0, (t_ms % bar_ms) / bar_ms]
-            )
-
-        # Pad to max_steps
-        pad_n = self.max_steps - n_steps
-        if pad_n > 0:
-            tokens = tokens + [PAD_ID] * pad_n
-            vels = vels + [0.0] * pad_n
-            drum = torch.cat([drum, torch.zeros(pad_n, 2)], dim=0)
-            chord_f = torch.cat([chord_f, torch.zeros(pad_n, 12)], dim=0)
-            meter = torch.cat([meter, torch.zeros(pad_n, 4)], dim=0)
-            length = n_steps
-        else:
-            tokens = tokens[: self.max_steps]
-            vels = vels[: self.max_steps]
-            length = self.max_steps
-
-        return {
-            "tokens": torch.tensor(tokens, dtype=torch.long),
-            "vels": torch.tensor(vels, dtype=torch.float32),
-            "drum": drum,
-            "chord": chord_f,
-            "meter": meter,
-            "style": torch.tensor(STYLE_TO_ID[style], dtype=torch.long),
-            "length": length,
-        }
+    def __init__(self, samples: List[dict]) -> None:
+        self.samples = samples
 
     def __len__(self) -> int:
-        return self.n_samples
+        return len(self.samples)
 
     def __getitem__(self, idx: int) -> dict:
-        return self.cache[idx]
+        return self.samples[idx]
 
 
 def collate(batch: List[dict]) -> dict:
@@ -160,17 +66,57 @@ def collate(batch: List[dict]) -> dict:
         "chord": torch.stack([b["chord"] for b in batch]),
         "meter": torch.stack([b["meter"] for b in batch]),
         "style": torch.stack([b["style"] for b in batch]),
-        "length": torch.tensor([b["length"] for b in batch]),
+        "length": torch.tensor([int(b["length"]) for b in batch]),
     }
 
 
-def train_epoch(model: BassGrooveModel, loader: DataLoader, opt: torch.optim.Optimizer, device: str) -> float:
+def resolve_device(requested: str = "auto") -> str:
+    if requested == "auto":
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    if requested == "cuda" and not torch.cuda.is_available():
+        logger.warning("CUDA requested but unavailable — using CPU.")
+        return "cpu"
+    return requested
+
+
+def load_train_payload(path: Path) -> List[dict]:
+    payload = torch.load(path, map_location="cpu", weights_only=False)
+    if isinstance(payload, dict) and "samples" in payload:
+        return list(payload["samples"])
+    if isinstance(payload, list):
+        return payload
+    raise ValueError(f"Unexpected train_data format in {path}")
+
+
+def ensure_train_data(
+    data_path: Path,
+    raw_dir: Optional[Path] = None,
+    log: Callable[[str], None] = logger.info,
+) -> Path:
+    if data_path.exists():
+        return data_path
+    log(f"{data_path} missing — building dataset (synthetic OK if raw empty)…")
+    from data_prep.build_dataset import build_dataset
+
+    return build_dataset(
+        raw_dir=raw_dir or (_ROOT / "dataset" / "raw_songs"),
+        processed_dir=data_path.parent,
+        allow_synthetic=True,
+        log=log,
+    )
+
+
+def train_epoch(
+    model: BassGrooveModel,
+    loader: DataLoader,
+    opt: torch.optim.Optimizer,
+    device: str,
+) -> float:
     model.train()
     total = 0.0
     n = 0
     for batch in loader:
         tokens = batch["tokens"].to(device)
-        # Teacher forcing: input is shifted right
         inp = tokens.clone()
         inp[:, 1:] = tokens[:, :-1]
         inp[:, 0] = REST_ID
@@ -178,18 +124,16 @@ def train_epoch(model: BassGrooveModel, loader: DataLoader, opt: torch.optim.Opt
         drum = batch["drum"].to(device)
         chord = batch["chord"].to(device)
         meter = batch["meter"].to(device)
-        lengths = batch["length"]
-        # Padding mask: True where pad
         pad_mask = tokens == PAD_ID
 
         logits, vel_pred = model(inp, style, drum, chord, meter, src_key_padding_mask=pad_mask)
-        # Loss only on non-pad positions
-        B, T, V = logits.shape
+        _, _, V = logits.shape
         loss_ce = F.cross_entropy(logits.reshape(-1, V), tokens.reshape(-1), ignore_index=PAD_ID)
-        # Velocity where note tokens
         note_mask = tokens >= NOTE_OFFSET
         if note_mask.any():
-            loss_vel = F.mse_loss(vel_pred[note_mask], batch["vels"].to(device)[note_mask]) / (127.0**2)
+            loss_vel = F.mse_loss(vel_pred[note_mask], batch["vels"].to(device)[note_mask]) / (
+                127.0**2
+            )
         else:
             loss_vel = torch.tensor(0.0, device=device)
         loss = loss_ce + 0.1 * loss_vel
@@ -199,33 +143,174 @@ def train_epoch(model: BassGrooveModel, loader: DataLoader, opt: torch.optim.Opt
         opt.step()
         total += float(loss.item())
         n += 1
-        _ = lengths
     return total / max(n, 1)
 
 
+@torch.no_grad()
+def eval_loss(model: BassGrooveModel, loader: DataLoader, device: str) -> float:
+    model.eval()
+    total = 0.0
+    n = 0
+    for batch in loader:
+        tokens = batch["tokens"].to(device)
+        inp = tokens.clone()
+        inp[:, 1:] = tokens[:, :-1]
+        inp[:, 0] = REST_ID
+        pad_mask = tokens == PAD_ID
+        logits, vel_pred = model(
+            inp,
+            batch["style"].to(device),
+            batch["drum"].to(device),
+            batch["chord"].to(device),
+            batch["meter"].to(device),
+            src_key_padding_mask=pad_mask,
+        )
+        _, _, V = logits.shape
+        loss_ce = F.cross_entropy(logits.reshape(-1, V), tokens.reshape(-1), ignore_index=PAD_ID)
+        note_mask = tokens >= NOTE_OFFSET
+        if note_mask.any():
+            loss_vel = F.mse_loss(vel_pred[note_mask], batch["vels"].to(device)[note_mask]) / (
+                127.0**2
+            )
+        else:
+            loss_vel = torch.tensor(0.0, device=device)
+        total += float((loss_ce + 0.1 * loss_vel).item())
+        n += 1
+    return total / max(n, 1)
+
+
+def write_sample_midi(
+    checkpoint: Path,
+    out_dir: Path,
+    log: Callable[[str], None] = logger.info,
+) -> Path:
+    """Generate a held-out-style sanity MIDI (ghost notes / groove check)."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    chords = "Am7 | D9 | Gmaj7 | Cmaj7"
+    notes = generate_bass_line(
+        chords,
+        bpm=100.0,
+        time_signature="4/4",
+        play_style="Fingerstyle",
+        humanize_ms=10.0,
+        groove_amount=0.7,
+        checkpoint=checkpoint,
+        force_rules=False,
+        seed=7,
+    )
+    melody = [
+        BassMelodyNote(
+            start_ms=n.start_ms,
+            end_ms=n.end_ms,
+            pitch=n.pitch,
+            velocity=n.velocity,
+            articulation=n.articulation,
+            is_passing=n.is_passing,
+        )
+        for n in notes
+    ]
+    eng = ArticulationEngine(CONFIG_PATH)
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    path = out_dir / f"train_sample_{stamp}.mid"
+    eng.write_midi(melody, path, play_style="Fingerstyle")
+    ghosts = sum(1 for n in notes if n.articulation == "ghost" or n.velocity <= 40)
+    log(f"Sample MIDI → {path} ({len(notes)} notes, ~{ghosts} ghost/low-vel)")
+    return path
+
+
+def run_training(
+    data_path: Path = DEFAULT_DATA,
+    epochs: int = 5,
+    batch_size: int = 16,
+    lr: float = 3e-4,
+    device: str = "auto",
+    out_ckpt: Path = BEST_CKPT,
+    raw_dir: Optional[Path] = None,
+    val_fraction: float = 0.1,
+    log: Callable[[str], None] = logger.info,
+) -> Path:
+    device = resolve_device(device)
+    data_path = ensure_train_data(Path(data_path), raw_dir=raw_dir, log=log)
+    samples = load_train_payload(data_path)
+    log(f"Loaded {len(samples)} samples from {data_path} | device={device}")
+
+    ds = TensorGrooveDataset(samples)
+    n_val = max(1, int(len(ds) * val_fraction)) if len(ds) > 4 else 0
+    n_train = len(ds) - n_val
+    if n_val > 0:
+        train_ds, val_ds = random_split(
+            ds, [n_train, n_val], generator=torch.Generator().manual_seed(42)
+        )
+    else:
+        train_ds, val_ds = ds, None
+
+    train_loader = DataLoader(
+        train_ds, batch_size=min(batch_size, max(1, len(train_ds))), shuffle=True, collate_fn=collate
+    )
+    val_loader = (
+        DataLoader(val_ds, batch_size=min(batch_size, max(1, len(val_ds))), collate_fn=collate)
+        if val_ds is not None
+        else None
+    )
+
+    model = BassGrooveModel().to(device)
+    opt = torch.optim.AdamW(model.parameters(), lr=lr)
+    best = float("inf")
+    out_ckpt = Path(out_ckpt)
+    out_ckpt.parent.mkdir(parents=True, exist_ok=True)
+
+    for epoch in range(1, epochs + 1):
+        tr = train_epoch(model, train_loader, opt, device)
+        if val_loader is not None:
+            va = eval_loss(model, val_loader, device)
+            metric = va
+            log(f"epoch {epoch}/{epochs}  train_loss={tr:.4f}  val_loss={va:.4f}")
+        else:
+            metric = tr
+            log(f"epoch {epoch}/{epochs}  train_loss={tr:.4f}")
+        if metric < best:
+            best = metric
+            model.save(out_ckpt)
+            log(f"  ↳ saved best → {out_ckpt} (loss={best:.4f})")
+
+    if not out_ckpt.exists():
+        model.save(out_ckpt)
+        log(f"saved final → {out_ckpt}")
+
+    sample = write_sample_midi(out_ckpt, OUTPUT_DIR, log=log)
+    log(f"Training done. Best checkpoint: {out_ckpt}")
+    log(f"Sanity MIDI: {sample}")
+    return out_ckpt
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train MODO bass groove Transformer")
-    parser.add_argument("--epochs", type=int, default=3)
+    parser = argparse.ArgumentParser(description="Train MODO bass groove model")
+    parser.add_argument("--data", type=str, default=str(DEFAULT_DATA))
+    parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--samples", type=int, default=256)
     parser.add_argument("--lr", type=float, default=3e-4)
-    parser.add_argument("--out", type=str, default=str(_ROOT / "checkpoints" / "bass_groove.pt"))
-    parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"])
+    parser.add_argument("--out", type=str, default=str(BEST_CKPT))
+    parser.add_argument(
+        "--raw-dir",
+        type=str,
+        default="",
+        help="Optional override for dataset/raw_songs (or MODO_RAW_SONGS_DIR env)",
+    )
     args = parser.parse_args()
 
-    device = args.device
-    ds = SyntheticGrooveDataset(n_samples=args.samples)
-    loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True, collate_fn=collate)
-    model = BassGrooveModel().to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    import os
 
-    for epoch in range(1, args.epochs + 1):
-        loss = train_epoch(model, loader, opt, device)
-        logger.info("epoch %d/%d  loss=%.4f", epoch, args.epochs, loss)
-
-    out = Path(args.out)
-    model.save(out)
-    logger.info("saved %s", out)
+    raw = args.raw_dir or os.environ.get("MODO_RAW_SONGS_DIR", "")
+    run_training(
+        data_path=Path(args.data),
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        device=args.device,
+        out_ckpt=Path(args.out),
+        raw_dir=Path(raw) if raw else None,
+    )
 
 
 if __name__ == "__main__":

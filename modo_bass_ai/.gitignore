@@ -6,6 +6,16 @@ __pycache__/
 outputs/
 *.mid
 checkpoints/*.pt
+dataset/cache/**
+!dataset/cache/.gitkeep
+!dataset/cache/README.md
+dataset/processed/*.pt
+dataset/raw_songs/*
+!dataset/raw_songs/README.md
+!dataset/raw_songs/.gitkeep
+dataset/custom_midi/*
+!dataset/custom_midi/README.md
+!dataset/custom_midi/.gitkeep
 .DS_Store
 *.log
 .gradio/
