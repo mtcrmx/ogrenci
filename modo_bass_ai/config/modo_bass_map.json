@@ -1,0 +1,51 @@
+{
+  "_comment": "MODO BASS 2 control assignments measured against this installation (Control panel and the VST3 electric bass). Adjust the map if MIDI Learn or Slide Range is changed in the plug-in.",
+  "assumptions": {
+    "channel": 1,
+    "modo_note_offset": 12,
+    "slide_range_semitones": 2,
+    "default_play_style": "Fingerstyle"
+  },
+  "play_styles": {
+    "Fingerstyle": "fingerstyle",
+    "Pick": "pick",
+    "Slap": "slap",
+    "Mute": "fingerstyle",
+    "Fretless": "fingerstyle"
+  },
+  "keyswitches": {
+    "fingerstyle": 25,
+    "pick": 27,
+    "slap": 30,
+    "legato": 24,
+    "hammer_on": 24,
+    "pull_off": 24,
+    "ghost_note": 22,
+    "harmonics": 29,
+    "thumb": 13,
+    "pop": 15
+  },
+  "string_selection": {
+    "E": 28,
+    "A": 21,
+    "D": 26,
+    "G": 31
+  },
+  "open_string_midi": {
+    "E": 28,
+    "A": 33,
+    "D": 38,
+    "G": 43
+  },
+  "cc": {
+    "vibrato": 1,
+    "legato_slide": 64,
+    "palm_mute": 9,
+    "bend": 5
+  },
+  "timing": {
+    "keyswitch_pre_roll_ms": 12,
+    "keyswitch_velocity": 100,
+    "ghost_velocity_max": 40
+  }
+}
