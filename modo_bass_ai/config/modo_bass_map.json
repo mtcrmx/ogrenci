@@ -1,0 +1,66 @@
+{
+  "_comment": "MODO BASS 2 articulation / CC map. Vendor MIDI maps can vary by preset and MIDI Learn; these are common factory-style defaults for the standard electric-bass keyswitch layout. Remap in Fender Studio Pro 8 / MODO if your instance differs. Playable bass range assumed E1 (MIDI 28) .. G4 (MIDI 67).",
+  "assumptions": {
+    "keyswitch_octave": "C-1 .. B-1 (MIDI 12-23) for articulations; C0 .. D0 (24-26) for string select",
+    "channel": 1,
+    "velocity_ghost_threshold": 40,
+    "pre_note_keyswitch_ms": 18,
+    "default_play_style": "Fingerstyle"
+  },
+  "play_styles": {
+    "Fingerstyle": "fingerstyle",
+    "Pick": "pick",
+    "Slap": "slap",
+    "Mute": "mute",
+    "Fretless": "fingerstyle"
+  },
+  "keyswitches": {
+    "fingerstyle": 12,
+    "pick": 13,
+    "slap": 14,
+    "mute": 15,
+    "slide": 16,
+    "legato": 17,
+    "hammer_on": 17,
+    "pull_off": 17,
+    "ghost_note": 18,
+    "harmonics": 19,
+    "palm_mute": 15
+  },
+  "string_selection": {
+    "E": 24,
+    "A": 25,
+    "D": 26,
+    "G": 27
+  },
+  "open_string_midi": {
+    "E": 28,
+    "A": 33,
+    "D": 38,
+    "G": 43
+  },
+  "cc": {
+    "vibrato": 1,
+    "expression": 11,
+    "mod_wheel_alias": 1
+  },
+  "cc_curves": {
+    "vibrato": {
+      "start": 0,
+      "peak": 72,
+      "rise_fraction_of_duration": 0.55
+    },
+    "expression": {
+      "start": 90,
+      "peak": 120,
+      "rise_fraction_of_duration": 0.65
+    },
+    "long_note_ms_threshold": 480
+  },
+  "timing": {
+    "keyswitch_pre_roll_ms_min": 15,
+    "keyswitch_pre_roll_ms_max": 20,
+    "keyswitch_velocity": 100,
+    "ghost_velocity_max": 40
+  }
+}
