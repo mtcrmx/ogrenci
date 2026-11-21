@@ -56,9 +56,21 @@ def main() -> int:
     ]
     with tempfile.TemporaryDirectory() as td:
         out = Path(td) / "smoke.mid"
-        eng.write_midi(melody, out, play_style="Fingerstyle")
+        eng.write_midi(
+            melody, out, play_style="Fingerstyle", bpm=96, time_signature="4/4", duration_s=9.6
+        )
         assert out.exists() and out.stat().st_size > 0
         print("midi bytes", out.stat().st_size)
+        import mido
+
+        mid = mido.MidiFile(out)
+        tempos = [m.tempo for m in mid if m.type == "set_tempo"]
+        assert tempos, "MIDI must embed set_tempo meta"
+        bpm_from_mid = mido.tempo2bpm(tempos[0])
+        assert abs(bpm_from_mid - 96) < 0.05, bpm_from_mid
+        sigs = [m for m in mid if m.type == "time_signature"]
+        assert sigs and sigs[0].numerator == 4 and sigs[0].denominator == 4
+        print(f"midi tempo meta OK ({bpm_from_mid:.2f} BPM, {sigs[0].numerator}/{sigs[0].denominator})")
 
     # Build dataset (synthetic) + 1-epoch train dry-run
     processed = ROOT / "dataset" / "processed"

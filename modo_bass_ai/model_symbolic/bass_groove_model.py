@@ -250,6 +250,8 @@ class BassGrooveModel(nn.Module):
         self.technique_model = None
         self.technique_model_state = None
         self.onset_rates = {}
+        self.recording_velocity = None
+        self.ege_accompaniment = False
         self.pitch_emb = nn.Embedding(VOCAB_SIZE, d_model)
         self.style_emb = nn.Embedding(N_STYLES, d_model)
         self.drum_proj = nn.Linear(2, d_model)  # kick/snare density per step
@@ -286,6 +288,7 @@ class BassGrooveModel(nn.Module):
         meter_feats: torch.Tensor,
         src_key_padding_mask: Optional[torch.Tensor] = None,
         next_chord_feats: Optional[torch.Tensor] = None,
+        recording_velocity: bool = False,
     ) -> BassGrooveOutput:
         """
         tokens: (B, T) long
@@ -309,6 +312,10 @@ class BassGrooveModel(nn.Module):
         h = self.encoder(x, mask=causal, src_key_padding_mask=src_key_padding_mask)
         logits = self.head(h)
         vel = torch.sigmoid(self.vel_head(h)).squeeze(-1) * 127.0
+        if recording_velocity and self.recording_velocity is not None:
+            from model_symbolic.recording_dynamics import recording_velocity_prediction
+
+            vel = recording_velocity_prediction(h, vel, self.recording_velocity)
         micro = self.timing_head(h).squeeze(-1)
         duration = F.softplus(self.dur_head(h).squeeze(-1)) + 1.0
         ks_logits = self.ks_head(h)
@@ -338,6 +345,10 @@ class BassGrooveModel(nn.Module):
             payload["technique_model"] = self.technique_model_state
         if self.onset_rates:
             payload["onset_rates"] = self.onset_rates
+        if self.recording_velocity is not None:
+            payload["recording_velocity"] = self.recording_velocity
+        if self.ege_accompaniment:
+            payload["ege_accompaniment"] = True
         torch.save(payload, path)
 
     def load(self, path: str | Path, map_location: str = "cpu") -> None:
@@ -374,6 +385,8 @@ def load_checkpoint(
         raise ValueError(f"Unsupported checkpoint rhythm resolution: {resolution}")
     model.steps_per_quarter = resolution
     model.onset_rates = ckpt.get("onset_rates", {})
+    model.recording_velocity = ckpt.get("recording_velocity")
+    model.ege_accompaniment = bool(ckpt.get("ege_accompaniment"))
     model.duration_model_state = ckpt.get("duration_model")
     model.duration_model = None
     if resolution == 4 and model.duration_model_state is not None:
@@ -781,6 +794,7 @@ def _generate_on_grid(
     downbeat_times_ms=None,
     performance_level="Sade",
     beat_energy=None,
+    recording_pulse_quarters=1.0,
 ):
     if performance_level not in PERFORMANCE_LEVELS:
         raise ValueError(f"Unknown performance level: {performance_level}")
@@ -811,13 +825,14 @@ def _generate_on_grid(
     anchors.update(i for i in range(count) if i == 0 or beat_chords[i] != beat_chords[i - 1])
     beat_lengths = np.diff(beat_times)
     native_resolution = getattr(model, "steps_per_quarter", None)
-    quarters_per_pulse = 1 if quarter_pulse else 4 / den
+    ege = getattr(model, "ege_accompaniment", False)
+    quarters_per_pulse = recording_pulse_quarters if quarter_pulse else 4 / den
     subdivisions = max(1, round(native_resolution * quarters_per_pulse)) if native_resolution else 2
     step_lengths = np.repeat(beat_lengths / subdivisions, subdivisions)
     step_times = np.repeat(beat_times[:-1], subdivisions)
     step_times += np.tile(np.arange(subdivisions), count) * step_lengths
     n_steps = len(step_times)
-    nominal_bar = num * 4 / den if quarter_pulse else float(num)
+    nominal_bar = num * 4 / den / quarters_per_pulse if quarter_pulse else float(num)
     phase, barline_attacks = _bar_phase(
         beat_times, downbeats, downbeat_times_ms, nominal_bar, subdivisions
     )
@@ -848,6 +863,7 @@ def _generate_on_grid(
         drum = torch.tensor(np.column_stack((kick, snare)), device=device).unsqueeze(0)
         chord = torch.tensor(chroma, device=device).unsqueeze(0)
         lookahead = model.next_chord_proj is not None
+        recording_mode = bool(quarter_pulse and beat_energy is not None and model.recording_velocity is not None)
         future_chords = next_quarter_harmony(chord) if lookahead else None
         meter = np.column_stack(
             (
@@ -867,6 +883,12 @@ def _generate_on_grid(
     notes = []
     previous_pitch = 38
     pitches = np.arange(PITCH_MIN, PITCH_MAX + 1)
+    if ege:
+        # Anchor the groove to eighths even when an odd bar begins halfway
+        # through the analyzer's quarter-note pulse.
+        bar_steps = np.rint(phase * (num * 16 / den)).astype(int)
+        aksak_steps = tuple(range(4, (num - 1) * 2, 4)) if den == 8 and num in (5, 7, 9) else ()
+        density_bias = {"Sade": .35, "Dengeli": 0., "Hareketli": -.30}[performance_level]
     for step_index, grid_time in enumerate(step_times):
         if grid_time >= duration_ms:
             break
@@ -900,6 +922,12 @@ def _generate_on_grid(
                 passing_classes = [(bass_class + 2) % 12, (bass_class + 5) % 12]
                 approach |= np.isin(pitches % 12, passing_classes) & (abs(pitches-previous_pitch) <= 2)
             allowed |= approach
+        if ege and not anchor and next_beat in anchors and next_beat < count and harmonies[next_beat]:
+            # Leave a small step into the next chord available at the cadence.
+            target_pc = harmonies[next_beat][0]
+            approach |= np.isin(pitches % 12, [(target_pc+i) % 12 for i in (-2,-1,1,2)])
+            approach &= abs(pitches-previous_pitch) <= 5
+            allowed |= approach
         if model is not None:
             context_start = max(0, (step_index // phrase - 1) * phrase, step_index + 1 - capacity)
             inputs = [REST_ID if context_start == 0 else tokens[context_start - 1]] + tokens[
@@ -910,6 +938,7 @@ def _generate_on_grid(
             logits, velocity = model(
                 prefix, style, drum[:, context], chord[:, context], meter[:, context],
                 next_chord_feats=future_chords[:, context] if lookahead else None,
+                recording_velocity=recording_mode,
             )
             scores = logits[0, -1].clone() / max(temperature, 0.01)
             scores[PAD_ID] = -torch.inf
@@ -928,6 +957,10 @@ def _generate_on_grid(
             penalty = 0.22 * np.maximum(abs(pitches - center) - 5, 0) + 0.26 * np.maximum(
                 pitches - 52, 0
             )
+            if ege:
+                penalty += .54 * np.maximum(abs(pitches - previous_pitch) - 2, 0)
+                penalty += .26 * np.maximum(pitches - 40, 0)
+                penalty -= .48 * (pitches == previous_pitch)
             bias = np.where(allowed, -penalty, -np.inf)
             scores[NOTE_OFFSET:] += torch.as_tensor(bias, dtype=scores.dtype, device=device)
             if native_resolution == 4:
@@ -947,6 +980,14 @@ def _generate_on_grid(
                         weight = .35
                         rest = (1 - weight) * rest + weight * (note_mass - style_onset_odds[subdivision])
                     scores[REST_ID] = rest + ((.55 - groove) * 1.5 if within_beat else 0)
+                    if ege:
+                        active_slot = bar_steps[step_index]
+                        off_eighth = active_slot % 2
+                        group_accent = .56 if active_slot in aksak_steps else 0.
+                        scores[REST_ID] += (
+                            (2.35 if off_eighth else -.25) + density_bias
+                            - .43 * kick[step_index] - group_accent
+                        )
             token = int(torch.multinomial(scores.softmax(-1), 1, generator=generator).item())
             note_velocity = int(np.clip(round(velocity[0, -1].item()), 1, 127))
         else:
@@ -1001,7 +1042,7 @@ def _generate_on_grid(
                 start_ms, float(end_ms), previous_pitch, note_velocity, is_passing=passing
             )
         )
-    if performance_level != "Sade":
+    if performance_level != "Sade" and not ege:
         if phrase_performance is None:
             raise ImportError(
                 "performance_phrasing is required for non-Sade performance levels"
@@ -1015,7 +1056,12 @@ def _generate_on_grid(
         )
     duration_model = getattr(model, "duration_model", None)
     bar_times = downbeat_times_ms if downbeat_times_ms is not None else beat_times[downbeats]
-    if native_resolution == 4 and duration_model is not None:
+    if ege:
+        from model_symbolic.ege_phrasing import shape_notes
+
+        notes = shape_notes(notes, beat_times, beat_chords, downbeat_times_ms=bar_times,
+                            duration_ms=duration_ms, level=performance_level, bpm=bpm)
+    elif native_resolution == 4 and duration_model is not None:
         from model_symbolic.note_lengths import apply_note_lengths
 
         notes = apply_note_lengths(
@@ -1024,7 +1070,7 @@ def _generate_on_grid(
             quarters_per_pulse=quarters_per_pulse,
         )
     technique_model = getattr(model, "technique_model", None)
-    if native_resolution == 4 and technique_model is not None:
+    if native_resolution == 4 and technique_model is not None and not ege:
         from model_symbolic.technique_choice import apply_techniques
 
         notes = apply_techniques(
@@ -1056,6 +1102,7 @@ def generate_song_bass_line(
     downbeat_times_ms: Optional[Sequence[float]] = None,
     performance_level: str = "Sade",
     beat_energy: Optional[Sequence[float]] = None,
+    pulse_quarters: float = 1.0,
 ) -> List[GeneratedNote]:
     """Accompany a recording on its own quarter-pulse grid (N starts and one end).
 
@@ -1067,6 +1114,8 @@ def generate_song_bass_line(
     model = None
     if checkpoint is not None and not force_rules:
         model = load_model_from_checkpoint(checkpoint)
+    if pulse_quarters not in (0.5, 1.0):
+        raise ValueError("A recording pulse must be a quarter or an eighth note.")
     config = GrooveConfig(
         bpm=bpm,
         time_signature=time_signature,
@@ -1092,6 +1141,7 @@ def generate_song_bass_line(
         downbeat_times_ms=downbeat_times_ms,
         performance_level=performance_level,
         beat_energy=beat_energy,
+        recording_pulse_quarters=pulse_quarters,
     )
 
 

@@ -1,37 +1,35 @@
 {
-  "_comment": "MODO BASS 2 articulation / CC map. Vendor MIDI maps can vary by preset and MIDI Learn; these are common factory-style defaults for the standard electric-bass keyswitch layout. Remap in Fender Studio Pro 8 / MODO if your instance differs. Playable bass range assumed E1 (MIDI 28) .. G4 (MIDI 67).",
+  "_comment": "MODO BASS 2 control assignments measured against this installation (Control panel and the VST3 electric bass). Adjust the map if MIDI Learn or Slide Range is changed in the plug-in.",
   "assumptions": {
-    "keyswitch_octave": "C-1 .. B-1 (MIDI 12-23) for articulations; C0 .. D0 (24-26) for string select",
     "channel": 1,
-    "velocity_ghost_threshold": 40,
-    "pre_note_keyswitch_ms": 18,
+    "modo_note_offset": 12,
+    "slide_range_semitones": 2,
     "default_play_style": "Fingerstyle"
   },
   "play_styles": {
     "Fingerstyle": "fingerstyle",
     "Pick": "pick",
     "Slap": "slap",
-    "Mute": "mute",
+    "Mute": "fingerstyle",
     "Fretless": "fingerstyle"
   },
   "keyswitches": {
-    "fingerstyle": 12,
-    "pick": 13,
-    "slap": 14,
-    "mute": 15,
-    "slide": 16,
-    "legato": 17,
-    "hammer_on": 17,
-    "pull_off": 17,
-    "ghost_note": 18,
-    "harmonics": 19,
-    "palm_mute": 15
+    "fingerstyle": 25,
+    "pick": 27,
+    "slap": 30,
+    "legato": 24,
+    "hammer_on": 24,
+    "pull_off": 24,
+    "ghost_note": 22,
+    "harmonics": 29,
+    "thumb": 13,
+    "pop": 15
   },
   "string_selection": {
-    "E": 24,
-    "A": 25,
+    "E": 28,
+    "A": 21,
     "D": 26,
-    "G": 27
+    "G": 31
   },
   "open_string_midi": {
     "E": 28,
@@ -41,25 +39,12 @@
   },
   "cc": {
     "vibrato": 1,
-    "expression": 11,
-    "mod_wheel_alias": 1
-  },
-  "cc_curves": {
-    "vibrato": {
-      "start": 0,
-      "peak": 72,
-      "rise_fraction_of_duration": 0.55
-    },
-    "expression": {
-      "start": 90,
-      "peak": 120,
-      "rise_fraction_of_duration": 0.65
-    },
-    "long_note_ms_threshold": 480
+    "legato_slide": 64,
+    "palm_mute": 9,
+    "bend": 5
   },
   "timing": {
-    "keyswitch_pre_roll_ms_min": 15,
-    "keyswitch_pre_roll_ms_max": 20,
+    "keyswitch_pre_roll_ms": 12,
     "keyswitch_velocity": 100,
     "ghost_velocity_max": 40
   }
